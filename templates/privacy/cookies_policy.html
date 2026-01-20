@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Cookies Policy{% endblock %}
+
+{% block content %}
+<header class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto text-center">
+                <div class="hero-content">
+                    <div class="hero-badge"><i class="fas fa-cookie-bite"></i><span>Simple cookie practices</span></div>
+                    <h1>Cookies Policy</h1>
+                    <p class="hero-description">What cookies we use and how you can control them at {{ business_name|default:default_business_name }}.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="container mt-5">
+    <p><strong>Last updated:</strong> December 18, 2025</p>
+
+    <h2 class="section-title">1. What Are Cookies?</h2>
+    <p>
+        Cookies are small text files stored on your device by your browser. Cookies help websites remember your
+        preferences, keep you signed in, and improve performance and security.
+    </p>
+
+    <h2 class="section-title">2. How We Use Cookies</h2>
+    <p>We use cookies and similar technologies for the following purposes:</p>
+    <ul>
+        <li><strong>Essential / Strictly Necessary:</strong> Required for core site functionality such as security, session management, CSRF protection, and user authentication (e.g., staying logged in to the customer portal).</li>
+        <li><strong>Functional:</strong> Remembering your preferences and improving your experience (for example, UI/display preferences).</li>
+        <li><strong>Analytics:</strong> Understanding how visitors use our site so we can improve performance and content. Analytics cookies are used only when enabled and where applicable consent requirements are met.</li>
+    </ul>
+
+    <h2 class="section-title">3. Third-Party Cookies</h2>
+    <p>
+        Some third-party tools we use may set cookies or similar technologies (for example, payment processing,
+        accounting/invoicing integrations, mapping, or embedded content). These third parties are responsible for their
+        own cookies and data practices under their respective privacy policies. We do not control third-party cookies.
+    </p>
+
+    <h2 class="section-title">4. Managing Cookies</h2>
+    <p>
+        You can set your browser to refuse or delete cookies. However, please note that disabling cookies may affect the
+        functionality of our Platform, making it difficult or impossible to use certain features.
+    </p>
+    <ul>
+        <li><strong>Browser settings:</strong> Most browsers let you delete existing cookies and block future cookies.</li>
+        <li><strong>Essential cookies:</strong> If you block essential cookies, some features (like logging in) may not work.</li>
+    </ul>
+
+    <h2 class="section-title">5. Changes to This Cookies Policy</h2>
+    <p>
+        We may update this Cookies Policy periodically. Changes will be effective upon posting to the Website. We encourage you to review this policy regularly to stay informed about our use of cookies.
+    </p>
+
+    <h2 class="section-title">6. Contact Information</h2>
+    <p>
+        If you have any questions regarding this Cookies Policy, please contact us:
+    </p>
+    <ul>
+        <li><strong>Business:</strong> {{ business_name|default:default_business_name }}</li>
+        <li><strong>Email:</strong> <a href="mailto:{{ business_contact_email }}">{{ business_contact_email }}</a></li>
+        <li><strong>Phone:</strong> <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}">{{ business_contact_phone }}</a></li>
+        <li><strong>Address:</strong> {{ business_contact_address|linebreaksbr }}</li>
+    </ul>
+</div>
+{% endblock %}

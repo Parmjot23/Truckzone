@@ -1,0 +1,174 @@
+{% extends 'accounts/mach/mach_portal_base.html' %}
+{% block title %}Contact Message{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  {% include 'accounts/communications/_comm_styles.html' %}
+{% endblock %}
+{% block content %}
+<div class="comm-wrapper container-fluid">
+  <div class="comm-header">
+    <div>
+      <div class="eyebrow">Communication hub</div>
+      <h1>Contact message</h1>
+      <p class="comm-subtitle">Review inbound details and follow up quickly.</p>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <a class="pill" href="{% url 'accounts:contacts_list' %}">
+        <i class="fa-solid fa-arrow-left"></i>
+        Back to messages
+      </a>
+      <a class="pill pill-primary" href="{% url 'accounts:communication_hub' %}">
+        <i class="fa-solid fa-tower-broadcast"></i>
+        Hub overview
+      </a>
+    </div>
+  </div>
+
+  <div class="mt-3">
+    {% include 'accounts/communications/_comm_nav.html' %}
+  </div>
+
+  <div class="row g-3 mt-2">
+    <div class="col-lg-8">
+      <div class="comm-card">
+        <div class="comm-card-header">
+          <div>
+            <h3>Message details</h3>
+            <p>{{ message_obj.get_message_type_display }} received {{ message_obj.created_at|date:'M d, Y g:i a' }}</p>
+          </div>
+          <span class="status-pill {% if message_obj.status == 'new' %}status-new{% else %}status-open{% endif %}">
+            <span class="dot"></span>
+            {{ message_obj.get_status_display }}
+          </span>
+        </div>
+        <div class="comm-detail-grid">
+          <div class="comm-detail">
+            <div class="comm-detail-label">Full name</div>
+            <div class="comm-detail-value">{{ message_obj.full_name }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Email</div>
+            <div class="comm-detail-value">{{ message_obj.email }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Phone</div>
+            <div class="comm-detail-value">{{ message_obj.phone|default:'N/A' }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Company</div>
+            <div class="comm-detail-value">{{ message_obj.company|default:'N/A' }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Subject</div>
+            <div class="comm-detail-value">{{ message_obj.subject|default:'N/A' }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Topic</div>
+            <div class="comm-detail-value">{{ message_obj.get_message_type_display }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Reference ID</div>
+            <div class="comm-detail-value">{{ message_obj.reference_code|default:'N/A' }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Service</div>
+            <div class="comm-detail-value">
+              {% if message_obj.service_type %}
+                {{ message_obj.get_service_type_display }}
+              {% else %}
+                N/A
+              {% endif %}
+            </div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Source</div>
+            <div class="comm-detail-value">{{ message_obj.get_source_display }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Customer</div>
+            <div class="comm-detail-value">
+              {% if message_obj.customer %}
+                {{ message_obj.customer.name }}
+              {% else %}
+                N/A
+              {% endif %}
+            </div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Submitted by</div>
+            <div class="comm-detail-value">
+              {% if message_obj.submitted_by %}
+                {{ message_obj.submitted_by.get_full_name|default:message_obj.submitted_by.username }}
+              {% else %}
+                N/A
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comm-card mt-3">
+        <div class="comm-card-header">
+          <div>
+            <h3>Message</h3>
+            <p>Original request content.</p>
+          </div>
+        </div>
+        {% if message_obj.message %}
+          <div class="comm-message">{{ message_obj.message }}</div>
+        {% else %}
+          <div class="comm-empty">No message provided.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="comm-card h-100">
+        <div class="comm-card-header">
+          <div>
+            <h3>Quick access</h3>
+            <p>Jump to related records or templates.</p>
+          </div>
+        </div>
+        {% if has_direct_matches %}
+        <div class="mb-3">
+          <h6 class="text-uppercase text-muted small mb-2">Matches from message</h6>
+          <div class="d-flex flex-wrap gap-2">
+            {% for invoice in matched_invoices %}
+            <a class="pill pill-primary" href="{% url 'accounts:groupedinvoice_detail' invoice.pk %}" target="_blank" rel="noopener noreferrer">
+              <i class="fas fa-file-invoice"></i>
+              Invoice {% if invoice.invoice_number %}#{{ invoice.invoice_number }}{% else %}#{{ invoice.pk }}{% endif %}
+            </a>
+            {% endfor %}
+            {% for workorder in matched_workorders %}
+            <a class="pill pill-primary" href="{% url 'accounts:workorder_detail' workorder.pk %}" target="_blank" rel="noopener noreferrer">
+              <i class="fas fa-clipboard-list"></i>
+              Work Order #{{ workorder.pk }}
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        <div class="d-flex flex-wrap gap-2">
+          <a class="pill pill-ghost" href="{% url 'accounts:groupedinvoice_list' %}" target="_blank" rel="noopener noreferrer">
+            <i class="fas fa-file-invoice"></i>
+            Invoices
+          </a>
+          <a class="pill pill-ghost" href="{% url 'accounts:workorder_list' %}" target="_blank" rel="noopener noreferrer">
+            <i class="fas fa-clipboard-list"></i>
+            Work Orders
+          </a>
+          <a class="pill pill-ghost" href="{% url 'accounts:vehicle_management' %}" target="_blank" rel="noopener noreferrer">
+            <i class="fas fa-truck"></i>
+            Vehicles
+          </a>
+          <a class="pill pill-ghost" href="{% url 'accounts:pm_inspection_download' %}" target="_blank" rel="noopener noreferrer">
+            <i class="fas fa-tools"></i>
+            Maintenance templates
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

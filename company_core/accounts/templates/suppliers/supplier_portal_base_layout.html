@@ -1,0 +1,461 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Supplier Portal{% endblock %}</title>
+
+  <link rel="icon" type="image/png" href="{{ default_company_logo_url }}">
+
+  <!-- Core Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    :root {
+      --supplier-gradient: linear-gradient(135deg, rgba(14, 165, 233, 0.92), rgba(15, 118, 110, 0.92));
+      --supplier-surface: #f0fdf9;
+      --supplier-text: #0f172a;
+      --supplier-muted: #475569;
+      --desktop-font-scale-md: 0.95;
+      --desktop-font-scale-lg: 0.9;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background-color: #f8fafc;
+      color: var(--supplier-text);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media (min-width: 1200px) {
+      html {
+        font-size: 15px;
+      }
+
+      body {
+        font-size: calc(1rem * var(--desktop-font-scale-md));
+        line-height: 1.55;
+        zoom: 0.95;
+      }
+    }
+
+    @media (min-width: 1400px) {
+      html {
+        font-size: 14px;
+      }
+
+      body {
+        font-size: calc(1rem * var(--desktop-font-scale-lg));
+        line-height: 1.5;
+        zoom: 0.9;
+      }
+    }
+
+    .supplier-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+      background: var(--supplier-gradient);
+      color: #ffffff;
+      padding: 0.55rem 0;
+      box-shadow: 0 12px 30px rgba(15, 118, 110, 0.25);
+    }
+
+    .supplier-topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .supplier-topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .supplier-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      color: #ffffff;
+      letter-spacing: 0.01em;
+    }
+
+    .supplier-brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(4px);
+      font-size: 0.95rem;
+    }
+
+    .supplier-brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 0.25rem;
+      box-shadow: 0 6px 18px rgba(15, 118, 110, 0.25);
+      overflow: hidden;
+    }
+
+    .supplier-brand-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .supplier-brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      line-height: 1.1;
+      align-items: flex-start;
+    }
+
+    .supplier-brand-business {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .supplier-brand-portal {
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 500;
+      opacity: 0.85;
+    }
+
+    .supplier-topnav {
+      display: flex;
+      align-items: center;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .supplier-topnav-list {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+    }
+
+    .supplier-topnav-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.32rem 0.6rem;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.78rem;
+      color: rgba(255, 255, 255, 0.85);
+      text-decoration: none;
+      transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .supplier-topnav-link i {
+      font-size: 0.78rem;
+    }
+
+    .supplier-topnav-link span {
+      font-size: 0.78rem;
+    }
+
+    .supplier-topnav-link:hover,
+    .supplier-topnav-link:focus {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .supplier-topnav-link.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 10px 20px rgba(15, 118, 110, 0.25);
+    }
+
+    .supplier-topbar-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .supplier-user-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.8rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      font-weight: 500;
+      font-size: 0.85rem;
+    }
+
+    .supplier-support-link {
+      border-radius: 999px;
+      padding: 0.35rem 0.85rem;
+      font-weight: 600;
+      color: #0f172a;
+      background: #ffffff;
+      text-decoration: none;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+    }
+
+    .supplier-support-link:hover,
+    .supplier-support-link:focus {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 22px rgba(15, 118, 110, 0.25);
+      color: #0f172a;
+    }
+
+    .supplier-topbar-logout button {
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      background: transparent;
+      color: #ffffff;
+      padding: 0.35rem 0.95rem;
+      font-weight: 600;
+      font-size: 0.8rem;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .supplier-topbar-logout button:hover,
+    .supplier-topbar-logout button:focus {
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+
+    main {
+      flex: 1;
+      padding: 2.5rem 0;
+    }
+
+    .supplier-portal-wrapper {
+      padding-top: 1rem;
+      padding-bottom: 2.5rem;
+    }
+
+    .supplier-messages {
+      max-width: 960px;
+      margin: 0 auto 1.5rem auto;
+    }
+
+    .supplier-footer {
+      margin-top: auto;
+      background: #0f172a;
+      color: rgba(255, 255, 255, 0.85);
+      text-align: center;
+      padding: 1.5rem 0;
+    }
+
+    .supplier-footer a {
+      color: rgba(56, 189, 248, 0.95);
+      text-decoration: none;
+      margin: 0 0.35rem;
+      font-weight: 500;
+    }
+
+    .supplier-footer a:hover,
+    .supplier-footer a:focus {
+      text-decoration: underline;
+    }
+
+    .supplier-footer .supplier-footer-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 767.98px) {
+      .supplier-topbar-inner {
+        justify-content: center;
+      }
+
+      .supplier-topbar-left {
+        flex-direction: column;
+        gap: 0.85rem;
+        align-items: center;
+      }
+
+      .supplier-brand-text {
+        align-items: center;
+        text-align: center;
+      }
+
+      .supplier-topnav-list {
+        justify-content: center;
+        flex-wrap: wrap;
+        white-space: normal;
+      }
+
+      .supplier-topbar-actions {
+        justify-content: center;
+      }
+
+      .supplier-support-link,
+      .supplier-topbar-logout button {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .supplier-topbar-actions {
+        gap: 0.5rem;
+      }
+    }
+  </style>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <header class="supplier-topbar" role="banner">
+    <div class="container">
+      <div class="supplier-topbar-inner">
+        <div class="supplier-topbar-left">
+          <a class="supplier-brand" href="{% url 'accounts:supplier_dashboard' %}" aria-label="Supplier dashboard">
+            {% if business_contact.logo_url %}
+              <span class="supplier-brand-logo">
+                <img src="{{ business_contact.logo_url }}" alt="{{ business_contact.name|default:'Your Business' }} logo">
+              </span>
+            {% else %}
+              <span class="supplier-brand-icon"><i class="fas fa-truck-loading"></i></span>
+            {% endif %}
+            <span class="supplier-brand-text">
+              <span class="supplier-brand-business">{{ business_contact.name|default:request.user.get_full_name|default:request.user.get_username|default:'Your Business' }}</span>
+              <span class="supplier-brand-portal">Supplier Portal</span>
+            </span>
+          </a>
+          {% if request.user.is_authenticated %}
+            <nav class="supplier-topnav" aria-label="Supplier portal navigation">
+              <ul class="supplier-topnav-list">
+                <li>
+                  <a class="supplier-topnav-link {% if active_supplier_page == 'supplier_dashboard' %}active{% endif %}" href="{% url 'accounts:supplier_dashboard' %}">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Overview</span>
+                  </a>
+                </li>
+                <li>
+                  <a class="supplier-topnav-link {% if active_supplier_page == 'supplier_receipts' or active_supplier_page == 'supplier_receipt_detail' %}active{% endif %}" href="{% url 'accounts:supplier_receipts' %}">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Invoices</span>
+                  </a>
+                </li>
+                <li>
+                  {% url 'accounts:contact_support' as contact_support_url %}
+                  <a class="supplier-topnav-link {% if active_supplier_page == 'contact_support' %}active{% endif %}" href="{% if business_contact and business_contact.support_url %}{{ business_contact.support_url }}{% else %}{{ contact_support_url }}?source=supplier_portal{% endif %}">
+                    <i class="fas fa-life-ring"></i>
+                    <span>Support</span>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          {% endif %}
+        </div>
+        <div class="supplier-topbar-actions">
+          {% if request.user.is_authenticated %}
+            {% if supplier_account or request.user %}
+              <span class="supplier-user-chip">
+                <i class="fas fa-user-circle"></i>
+                {% if supplier_account and supplier_account.name %}
+                  {{ supplier_account.name }}
+                {% elif request.user.get_full_name %}
+                  {{ request.user.get_full_name }}
+                {% else %}
+                  {{ request.user.get_username }}
+                {% endif %}
+              </span>
+            {% endif %}
+          {% endif %}
+          {% url 'accounts:contact_support' as contact_support_url %}
+          <a class="supplier-support-link" href="{% if business_contact and business_contact.support_url %}{{ business_contact.support_url }}{% else %}{{ contact_support_url }}?source=supplier_portal{% endif %}">
+            <i class="fas fa-headset"></i>
+            <span>Need help?</span>
+          </a>
+          {% if request.user.is_authenticated %}
+            <form class="supplier-topbar-logout" action="{% url 'accounts:logout' %}" method="post">
+              {% csrf_token %}
+              <button type="submit">
+                <i class="fas fa-arrow-right-from-bracket me-1"></i>
+                Logout
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </header>
+  <main role="main">
+    <div class="supplier-portal-wrapper">
+      <div class="supplier-messages">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} mb-3" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer class="supplier-footer" role="contentinfo">
+    <div class="container">
+      <div class="supplier-footer-meta">
+        <div>&copy; 2024 {{ business_name|default:default_business_name }}. All rights reserved.</div>
+        <div>
+          <a href="{% url 'accounts:privacy_policy' %}">Privacy Policy</a>
+          |
+          <a href="{% url 'accounts:terms_and_conditions' %}">Terms and Conditions</a>
+          |
+          <a href="{% url 'accounts:cookies_policy' %}">Cookies Policy</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  {% block extra_js %}{% endblock %}
+  <script src="{% static 'js/select2_autoinit.js' %}"></script>
+</body>
+</html>

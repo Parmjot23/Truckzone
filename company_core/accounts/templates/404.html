@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 - Page Not Found | {{ business_name|default:default_business_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-500: #6366f1;
+      --primary-600: #4f46e5;
+      --primary-700: #4338ca;
+      --accent-500: #f43f5e;
+      --neutral-100: #f8fafc;
+      --neutral-300: #e2e8f0;
+      --neutral-700: #334155;
+      --neutral-900: #0f172a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Inter', 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--neutral-900);
+      background: radial-gradient(circle at 10% 20%, rgba(99,102,241,0.14), transparent 30%),
+                  radial-gradient(circle at 80% 0%, rgba(244,63,94,0.12), transparent 32%),
+                  linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 1.5rem;
+    }
+    .shell {
+      position: relative;
+      width: 100%;
+      max-width: 720px;
+    }
+    .glow {
+      position: absolute;
+      inset: -80px -60px auto auto;
+      width: 240px;
+      height: 240px;
+      background: radial-gradient(circle, rgba(99,102,241,0.18), transparent 60%);
+      filter: blur(8px);
+      z-index: 0;
+    }
+    .card {
+      position: relative;
+      z-index: 1;
+      background: rgba(255,255,255,0.94);
+      border: 1px solid rgba(226,232,240,0.9);
+      border-radius: 22px;
+      padding: 2.5rem 2.25rem;
+      box-shadow: 0 24px 70px rgba(15,23,42,0.12);
+      backdrop-filter: blur(6px);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.8rem;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.14), rgba(244,63,94,0.12));
+      color: var(--neutral-700);
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .eyebrow .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-500);
+      display: inline-block;
+      box-shadow: 0 0 0 6px rgba(244,63,94,0.14);
+    }
+    .error-code {
+      font-family: 'Space Grotesk', 'Inter', sans-serif;
+      font-size: clamp(3rem, 6vw, 4.5rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 1rem 0 0.35rem;
+      color: var(--neutral-900);
+    }
+    .title {
+      font-size: clamp(1.6rem, 3vw, 2.15rem);
+      margin: 0 0 0.5rem;
+      font-weight: 700;
+      color: var(--neutral-900);
+    }
+    .subtitle {
+      margin: 0 0 1.5rem;
+      color: #475569;
+      font-size: 1.05rem;
+      line-height: 1.7;
+    }
+    .hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 0.9rem;
+      background: rgba(99,102,241,0.08);
+      color: #1f2937;
+      border-radius: 14px;
+      border: 1px solid rgba(99,102,241,0.18);
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    .hint svg {
+      width: 18px;
+      height: 18px;
+      color: var(--primary-600);
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      padding: 0.85rem 1.2rem;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
+      color: #fff;
+      box-shadow: 0 12px 30px rgba(99,102,241,0.25);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 38px rgba(99,102,241,0.3); }
+    .btn-ghost {
+      border-color: var(--neutral-300);
+      color: var(--neutral-900);
+      background: #fff;
+    }
+    .btn-ghost:hover { border-color: var(--primary-500); color: var(--primary-700); }
+    .support {
+      margin-top: 0.5rem;
+      color: #475569;
+      font-size: 0.98rem;
+    }
+    .support a {
+      color: var(--primary-600);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .support a:hover { text-decoration: underline; }
+    @media (max-width: 600px) {
+      .card { padding: 2rem 1.6rem; }
+      .actions { flex-direction: column; }
+      .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="glow"></div>
+    <div class="card">
+      <div class="eyebrow"><span class="dot"></span> Error 404</div>
+      <div class="error-code">Page not found</div>
+      <div class="title">We can't find the page you're after.</div>
+      <p class="subtitle">
+        The link may be outdated or the address could have a typo. If you just updated something,
+        a quick refresh usually clears it up.
+      </p>
+      <div class="hint">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4.5 12a7.5 7.5 0 0112.722-5.303M19.5 12A7.5 7.5 0 016.778 17.303M8.25 8.25H5.25V5.25M15.75 15.75h3v3" />
+        </svg>
+        Try refreshing or head back to the homepage.
+      </div>
+      <div class="actions">
+        <button id="refreshButton" class="btn btn-primary" type="button">
+          <span>Refresh page</span>
+        </button>
+        <a class="btn btn-ghost" href="{% url 'accounts:public_home' %}">Back to homepage</a>
+      </div>
+      <div class="support">
+        Still stuck? Call <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}">{{ business_contact_phone }}</a>
+        or email <a href="mailto:{{ business_contact_email }}">{{ business_contact_email }}</a>.
+      </div>
+    </div>
+  </div>
+  <script>
+    const refreshButton = document.getElementById('refreshButton');
+    if (refreshButton) {
+      refreshButton.addEventListener('click', () => window.location.reload());
+    }
+  </script>
+</body>
+</html>

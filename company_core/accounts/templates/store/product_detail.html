@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block body_class %}public-page-road-bg page-without-hero topbar-light no-scroll-animations storefront-page{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/storefront_public.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container product-detail-wrap">
+  <nav class="storefront-breadcrumbs" aria-label="Breadcrumb">
+    {% for crumb in breadcrumbs %}
+      {% if crumb.url %}
+      <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+      {% else %}
+      <span>{{ crumb.label }}</span>
+      {% endif %}
+      {% if not forloop.last %}
+      <span class="crumb-sep">/</span>
+      {% endif %}
+    {% endfor %}
+  </nav>
+
+  <div class="row g-4 align-items-stretch">
+    <div class="col-lg-6">
+      <div class="product-detail-media">
+        {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+        {% else %}
+        <i class="fas fa-box-open fa-3x text-muted" style="font-size: 5rem; opacity: 0.2;"></i>
+        {% endif %}
+      </div>
+      {% if product_overview or interchange_skus %}
+        <div class="product-detail-sections product-detail-sections--media">
+          {% if product_overview %}
+            <section class="product-detail-section">
+              <h2 class="product-detail-section-title">Product Overview</h2>
+              <div class="product-detail-overview">{{ product_overview|linebreaks }}</div>
+            </section>
+          {% endif %}
+
+          {% if interchange_skus %}
+            <section class="product-detail-section">
+              <h2 class="product-detail-section-title">Interchanges & Equivalent Parts</h2>
+              <ul class="product-detail-interchange-list">
+                {% for sku in interchange_skus %}
+                  <li>{{ sku }}</li>
+                {% endfor %}
+              </ul>
+            </section>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+    <div class="col-lg-6">
+      <div class="product-detail-panel">
+        <h1 class="product-detail-title">{{ product.name }}</h1>
+        <div class="product-detail-meta">
+          {% if product.brand %}
+            <span class="badge bg-light text-dark me-2">{{ product.brand.name }}</span>
+          {% endif %}
+          <span class="text-muted">SKU: {{ product.sku|default:"N/A" }}</span>
+        </div>
+
+        {% if product.has_promotion %}
+          {% if product.promotion_discount_percent %}
+            <div class="discount-badge">Save {{ product.promotion_discount_percent }}%</div>
+          {% else %}
+            <div class="discount-badge">Promo</div>
+          {% endif %}
+        {% endif %}
+
+        {% if customer_account or show_prices_catalog %}
+          {% if product.has_promotion %}
+            <div class="product-detail-price">
+              <span class="text-muted text-decoration-line-through fs-4 fw-normal me-2">${{ product.sale_price|floatformat:2 }}</span>
+              <span>${{ product.promotion_price|floatformat:2 }}</span>
+            </div>
+          {% elif product.storefront_price %}
+            <div class="product-detail-price">${{ product.storefront_price|floatformat:2 }}</div>
+          {% elif product.cost_price %}
+            <div class="product-detail-price">
+              ${{ product.cost_price|floatformat:2 }} <span class="text-muted small fw-normal ms-2">Account price</span>
+            </div>
+          {% else %}
+            <div class="product-detail-meta">Call for price</div>
+          {% endif %}
+        {% else %}
+          <div class="product-detail-meta">Sign in to view price</div>
+        {% endif %}
+
+        {% if not customer_account %}
+          <div class="alert alert-info mt-3 mb-0">Log in to your customer account to add this product to your cart.</div>
+        {% endif %}
+
+        {% if attribute_values %}
+          <div class="product-specs">
+            <h5>Specifications</h5>
+            <ul>
+              {% for value in attribute_values %}
+                {% if value.get_display_value %}
+                  <li><strong>{{ value.attribute.name }}</strong> <span>{{ value.get_display_value }}</span></li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <div class="product-detail-actions">
+          {% if customer_account %}
+            <div class="cart-slot w-100{% if in_cart %} is-in-cart{% endif %}" data-cart-slot data-product-id="{{ product.id }}">
+              <div class="cart-action-add w-100">
+                {% if product.quantity_in_stock > 0 %}
+                  <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" class="d-flex gap-3 align-items-center w-100" data-add-to-cart>
+                    {% csrf_token %}
+                    <div style="width: 100px;">
+                        <input type="number" name="quantity" value="1" min="1" max="{{ product.quantity_in_stock }}" class="form-control form-control-lg text-center fw-bold" />
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg flex-grow-1" title="Add to cart" aria-label="Add to cart" data-loading-label="Adding..." data-success-label="Added">
+                      <i class="fas fa-cart-plus me-2"></i>
+                      <span class="btn-text">Add to Cart</span>
+                    </button>
+                  </form>
+                {% else %}
+                  <div class="btn btn-light btn-lg w-100 disabled">Out of stock</div>
+                {% endif %}
+              </div>
+              <div class="cart-action-in w-100">
+                <div class="alert alert-success d-flex align-items-center justify-content-between w-100 mb-0">
+                    <div><i class="fas fa-check-circle me-2"></i> Added to cart</div>
+                    <a href="{% url 'accounts:store_cart' %}" class="btn btn-sm btn-success">View Cart</a>
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_product_detail' product.id %}" class="btn btn-outline-primary btn-lg w-100">
+              Log in to purchase
+            </a>
+          {% endif %}
+        </div>
+
+        <div class="mt-4 pt-3 border-top">
+             <a href="{{ back_url }}" class="text-decoration-none fw-bold text-muted small">
+              <i class="fas fa-arrow-left me-1"></i> Back to catalog
+            </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if feature_items %}
+    <div class="product-detail-sections mt-5">
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">Features & Benefits</h2>
+        <ul class="product-detail-feature-list">
+          {% for item in feature_items %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

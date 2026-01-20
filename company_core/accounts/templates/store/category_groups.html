@@ -1,0 +1,1784 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Parts Catalog - {{ business_name|default:default_business_name }}{% endblock %}
+{% block body_class %}public-page-road-bg page-without-hero topbar-light storefront-page no-scroll-animations{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/storefront_public.css' %}">
+<link rel="stylesheet" href="{% static 'css/storefront_live_search.css' %}">
+<style>
+    :root {
+        --2g-blue: #0047AB;
+        --2g-blue-light: #2563EB;
+        --2g-blue-dark: #003080;
+        --2g-black: #0A0A0A;
+        --2g-charcoal: #1A1A1A;
+        --2g-slate: #2D2D2D;
+        --2g-white: #FFFFFF;
+        --2g-off-white: #F5F7FA;
+    }
+
+    /* === MESSAGE BANNER === */
+    .hero-message-banner {
+        background: var(--banner-gradient);
+        padding: 0.65rem 0;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-message-banner::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
+        opacity: 0.7;
+        pointer-events: none;
+    }
+
+    .hero-message-banner--sky {
+        --banner-gradient: linear-gradient(135deg, #e0f2fe 0%, #e0f7ff 45%, #dbeafe 100%);
+    }
+
+    .hero-message-banner--sunrise {
+        --banner-gradient: linear-gradient(135deg, #ffedd5 0%, #fde68a 45%, #fecdd3 100%);
+    }
+
+    .hero-message-banner--mint {
+        --banner-gradient: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 45%, #ccfbf1 100%);
+    }
+
+    .hero-message-banner--sand {
+        --banner-gradient: linear-gradient(135deg, #fef9c3 0%, #fde68a 45%, #f5d0c5 100%);
+    }
+
+    .hero-message-banner--ice {
+        --banner-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
+    }
+
+    .hero-message-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #0f172a;
+        text-align: center;
+    }
+
+    .hero-message-text {
+        font-size: 0.95rem;
+    }
+
+    .hero-message-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.8rem;
+        color: #0f172a;
+        text-decoration: none;
+    }
+
+    .hero-message-link:hover {
+        text-decoration: underline;
+        color: #0f172a;
+    }
+
+    /* === HERO SECTION - FEATURED PRODUCTS === */
+    .hero-showcase {
+        padding: 6rem 0 5rem;
+        background: var(--hero-gradient);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-showcase::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.7), transparent 55%);
+        opacity: 0.7;
+    }
+
+    .hero-showcase--sky {
+        --hero-gradient: linear-gradient(135deg, #e0f2fe 0%, #e0f7ff 45%, #dbeafe 100%);
+    }
+
+    .hero-showcase--sunrise {
+        --hero-gradient: linear-gradient(135deg, #ffedd5 0%, #fde68a 45%, #fecdd3 100%);
+    }
+
+    .hero-showcase--mint {
+        --hero-gradient: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 45%, #ccfbf1 100%);
+    }
+
+    .hero-showcase--sand {
+        --hero-gradient: linear-gradient(135deg, #fef9c3 0%, #fde68a 45%, #f5d0c5 100%);
+    }
+
+    .hero-showcase--ice {
+        --hero-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
+    }
+
+    .hero-showcase .container {
+        position: relative;
+        z-index: 1;
+    }
+
+    .hero-showcase-inner {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2.5rem;
+        align-items: center;
+    }
+
+    .hero-showcase-content {
+        max-width: 540px;
+    }
+
+    .hero-showcase-eyebrow {
+        display: inline-block;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.8rem;
+        margin-bottom: 1rem;
+        color: #0f172a;
+    }
+
+    .hero-showcase-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(2.2rem, 4vw, 3.4rem);
+        font-weight: 800;
+        margin-bottom: 1rem;
+        color: #0f172a;
+    }
+
+    .hero-showcase-subtitle {
+        font-size: 1.05rem;
+        color: #334155;
+        line-height: 1.7;
+        margin-bottom: 2rem;
+    }
+
+    .hero-showcase-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .btn-hero-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.85rem 1.8rem;
+        background: #0f172a;
+        color: #ffffff;
+        font-weight: 700;
+        border-radius: 10px;
+        text-decoration: none;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.9rem;
+        border: none;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-hero-primary:hover {
+        color: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.25);
+    }
+
+    .btn-hero-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.85rem 1.8rem;
+        background: rgba(255, 255, 255, 0.7);
+        color: #0f172a;
+        font-weight: 700;
+        border-radius: 10px;
+        text-decoration: none;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.9rem;
+        border: 1px solid rgba(15, 23, 42, 0.1);
+    }
+
+    .hero-showcase-carousel {
+        position: relative;
+        min-height: 320px;
+    }
+
+    .hero-showcase-slide {
+        display: none;
+    }
+
+    .hero-showcase-slide.is-active {
+        display: block;
+    }
+
+    .hero-showcase-card {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 22px;
+        padding: 2rem;
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 1.5rem;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+        align-items: center;
+        position: relative;
+    }
+
+    .hero-showcase-card--package {
+        grid-template-columns: 1fr;
+        text-align: left;
+    }
+
+    .hero-showcase-media {
+        width: 120px;
+        height: 120px;
+        border-radius: 18px;
+        background: #f1f5f9;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        font-size: 2rem;
+    }
+
+    .hero-showcase-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .hero-showcase-name {
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        color: #0f172a;
+    }
+
+    .hero-showcase-price {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1d4ed8;
+        margin-bottom: 1rem;
+    }
+
+    .hero-showcase-discount {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: #0f172a;
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        position: absolute;
+        top: 1.25rem;
+        right: 1.25rem;
+        z-index: 1;
+    }
+
+    .hero-showcase-link {
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.8rem;
+        color: #0f172a;
+        text-decoration: none;
+    }
+
+    .hero-showcase-package-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-showcase-package-title {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+    }
+
+    .hero-showcase-package-subtitle {
+        color: #475569;
+        margin-bottom: 1rem;
+    }
+
+    .hero-showcase-package-products {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .hero-showcase-package-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(248, 250, 252, 0.9);
+        border-radius: 999px;
+        padding: 0.35rem 0.75rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .hero-showcase-package-item img {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        object-fit: cover;
+    }
+
+    .hero-showcase-package-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: #0f172a;
+        color: #fff;
+        padding: 0.45rem 0.85rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .hero-showcase-dots {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-top: 1.5rem;
+    }
+
+    .hero-showcase-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(15, 23, 42, 0.25);
+    }
+
+    .hero-showcase-dot.is-active {
+        background: #0f172a;
+    }
+
+    /* === SHARED SECTION HEADER === */
+    .section-header {
+        text-align: center;
+        margin-bottom: 4rem;
+    }
+
+    .section-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: linear-gradient(135deg, rgba(0, 71, 171, 0.1), rgba(0, 71, 171, 0.05));
+        color: var(--2g-blue);
+        padding: 0.5rem 1.25rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 1rem;
+    }
+
+    .section-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 800;
+        color: var(--2g-charcoal);
+        margin-bottom: 1rem;
+        letter-spacing: -0.02em;
+    }
+
+    .section-subtitle {
+        font-size: 1.1rem;
+        color: #64748B;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.7;
+    }
+
+    /* Featured Products */
+    .featured-products-section {
+        padding: 6rem 0;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.5) 100%),
+            url("{% static 'images/featured_parts_bg.png' %}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+
+    .featured-products-section .section-title {
+        color: var(--2g-white);
+    }
+
+    .featured-products-section .section-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .product-card {
+        background: var(--2g-white);
+        border-radius: 20px;
+        border: 1px solid #E8ECF2;
+        overflow: hidden;
+        transition: all 0.4s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .featured-discount-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: #0f172a;
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        z-index: 2;
+    }
+
+    .product-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+        border-color: transparent;
+    }
+
+    .product-media {
+        height: 200px;
+        background: #F8FAFC;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .product-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .product-body {
+        padding: 1.75rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .product-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--2g-charcoal);
+        margin-bottom: 0.5rem;
+    }
+
+    .product-price {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--2g-blue);
+        margin-bottom: 0.75rem;
+    }
+
+    .product-meta {
+        font-size: 0.9rem;
+        color: #64748B;
+        margin-top: auto;
+    }
+
+    .catalog-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--2g-blue);
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .catalog-link i {
+        font-size: 0.75rem;
+        transition: transform 0.3s ease;
+    }
+
+    .catalog-link:hover {
+        color: var(--2g-blue-dark);
+    }
+
+    .catalog-link:hover i {
+        transform: translateX(4px);
+    }
+
+    /* === WHY CHOOSE US - BOLD FEATURES === */
+    .features-section {
+        padding: 8rem 0;
+        background: var(--2g-charcoal);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .features-section::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 60%;
+        height: 200%;
+        background: radial-gradient(ellipse at center, rgba(0, 71, 171, 0.15) 0%, transparent 60%);
+        pointer-events: none;
+    }
+
+    .features-section .section-eyebrow {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--2g-blue-light);
+    }
+
+    .features-section .section-title {
+        color: var(--2g-white);
+    }
+
+    .features-section .section-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .feature-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 2.5rem;
+        text-align: center;
+        transition: all 0.4s ease;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(0, 71, 171, 0.1) 0%, transparent 100%);
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    .feature-card:hover {
+        border-color: var(--2g-blue);
+        transform: translateY(-8px);
+    }
+
+    .feature-card:hover::before {
+        opacity: 1;
+    }
+
+    .feature-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1.5rem;
+        background: linear-gradient(135deg, var(--2g-blue) 0%, var(--2g-blue-light) 100%);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-icon i {
+        font-size: 2rem;
+        color: var(--2g-white);
+    }
+
+    .feature-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--2g-white);
+        margin-bottom: 0.75rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-text {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.95rem;
+        line-height: 1.7;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* === CTA SECTION - BOLD BANNER === */
+    .cta-section {
+        padding: 6rem 0;
+        background: linear-gradient(135deg, var(--2g-blue) 0%, var(--2g-blue-dark) 100%);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cta-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        opacity: 0.5;
+    }
+
+    .cta-content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+    }
+
+    .cta-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 800;
+        color: var(--2g-white);
+        margin-bottom: 1rem;
+        letter-spacing: -0.02em;
+    }
+
+    .cta-text {
+        font-size: 1.15rem;
+        color: rgba(255, 255, 255, 0.9);
+        max-width: 600px;
+        margin: 0 auto 2rem;
+        line-height: 1.7;
+    }
+
+    .cta-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-cta-light {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 2rem;
+        background: var(--2g-white);
+        color: var(--2g-blue);
+        font-weight: 700;
+        font-size: 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-cta-light:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        color: var(--2g-blue);
+    }
+
+    .btn-cta-dark {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 2rem;
+        background: var(--2g-charcoal);
+        color: var(--2g-white);
+        font-weight: 700;
+        font-size: 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-cta-dark:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        color: var(--2g-white);
+    }
+
+    @media (max-width: 991px) {
+        .hero-showcase {
+            padding: 5rem 0 4rem;
+        }
+
+        .hero-showcase-card {
+            grid-template-columns: 1fr;
+            text-align: center;
+        }
+
+        .hero-showcase-card--package {
+            text-align: center;
+        }
+
+        .hero-showcase-package-header {
+            justify-content: center;
+        }
+
+        .hero-showcase-package-products {
+            justify-content: center;
+        }
+
+        .hero-showcase-media {
+            margin: 0 auto;
+        }
+
+        .hero-showcase-actions {
+            justify-content: center;
+        }
+
+        .features-section {
+            padding: 5rem 0;
+        }
+
+        .featured-products-section {
+            background-attachment: scroll;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .hero-showcase-carousel {
+            min-height: 360px;
+        }
+
+        .hero-showcase-card {
+            padding: 1.5rem;
+        }
+
+        .btn-hero-primary,
+        .btn-hero-secondary {
+            width: 100%;
+            max-width: 280px;
+            justify-content: center;
+        }
+
+        .cta-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .btn-cta-light,
+        .btn-cta-dark {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    /* === FLYER MODAL === */
+    .flyer-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        z-index: 1200;
+    }
+
+    .flyer-modal.is-open {
+        display: flex;
+    }
+
+    body.flyer-modal-open {
+        overflow: hidden;
+    }
+
+    .flyer-modal-dialog {
+        background: #ffffff;
+        border-radius: 20px;
+        max-width: 960px;
+        width: 100%;
+        max-height: 90vh;
+        overflow: hidden;
+        box-shadow: 0 30px 80px rgba(15, 23, 42, 0.25);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .flyer-modal-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        background: #f8fafc;
+    }
+
+    .flyer-modal-title {
+        font-weight: 700;
+        font-size: 1rem;
+        color: #0f172a;
+    }
+
+    .flyer-modal-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .flyer-action-btn {
+        border: 1px solid #0f172a;
+        background: #0f172a;
+        color: #ffffff;
+        padding: 0.45rem 0.95rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .flyer-action-btn.secondary {
+        background: #ffffff;
+        color: #0f172a;
+    }
+
+    .flyer-action-btn.ghost {
+        background: transparent;
+        border-color: #cbd5f5;
+        color: #0f172a;
+    }
+
+    .flyer-modal-body {
+        padding: 1.5rem;
+        background: #e9edf2;
+        overflow-y: auto;
+    }
+
+    .flyer-sheet {
+        font-family: 'Space Grotesk', 'Inter', sans-serif;
+        color: #0f172a;
+        background-color: #f7f6f3;
+        background-image:
+            radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.08) 1px, transparent 0),
+            radial-gradient(circle at 0 0, rgba(15, 23, 42, 0.04) 1px, transparent 0);
+        background-size: 12px 12px, 24px 24px;
+        border: 2px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 1.75rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+    }
+
+    .flyer-sheet::before {
+        content: '';
+        position: absolute;
+        top: -160px;
+        right: -160px;
+        width: 320px;
+        height: 320px;
+        background: radial-gradient(circle, rgba(250, 204, 21, 0.35), transparent 70%);
+        opacity: 0.8;
+        pointer-events: none;
+    }
+
+    .flyer-sheet::after {
+        content: '';
+        position: absolute;
+        bottom: -190px;
+        left: -150px;
+        width: 340px;
+        height: 340px;
+        background: radial-gradient(circle, rgba(30, 58, 138, 0.2), transparent 70%);
+        opacity: 0.75;
+        pointer-events: none;
+    }
+
+    .flyer-sheet > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    .flyer-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: end;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e2e8f0;
+        position: relative;
+    }
+
+    .flyer-header::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: -2px;
+        width: 140px;
+        height: 4px;
+        border-radius: 999px;
+        background: #facc15;
+    }
+
+    .flyer-title {
+        font-size: clamp(1.8rem, 2.2vw, 2.6rem);
+        font-weight: 800;
+        margin-bottom: 0.4rem;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+    }
+
+    .flyer-subtitle {
+        color: #475569;
+        font-size: 0.95rem;
+    }
+
+    .flyer-meta {
+        text-align: right;
+        font-size: 0.75rem;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+    }
+
+    .flyer-business {
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.35rem;
+    }
+
+    .flyer-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .flyer-section-title {
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #0f172a;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        font-size: 0.7rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 0.35rem 0.85rem;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .flyer-section-title::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        background: #facc15;
+    }
+
+    .flyer-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(260px, 1fr));
+        gap: 1.1rem;
+    }
+
+    .flyer-grid--packages {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+
+    .flyer-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 1rem;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 130px;
+        gap: 1rem;
+        position: relative;
+        background: rgba(255, 255, 255, 0.95);
+        align-items: center;
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+        min-height: 150px;
+    }
+
+    .flyer-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(180deg, #facc15 0%, #f97316 100%);
+    }
+
+    .flyer-card-media {
+        width: 120px;
+        height: 120px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        font-size: 2rem;
+        flex: 0 0 120px;
+        border: 1px solid #e2e8f0;
+        justify-self: end;
+    }
+
+    .flyer-card-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 14px 18px rgba(15, 23, 42, 0.18));
+    }
+
+    .flyer-card-body {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .flyer-card-brand {
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #dc2626;
+    }
+
+    .flyer-card-title {
+        font-weight: 700;
+        margin: 0;
+        color: #0f172a;
+        font-size: 1rem;
+        line-height: 1.2;
+    }
+
+    .flyer-card-meta {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .flyer-card-price {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #1e3a8a;
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        align-items: baseline;
+    }
+
+    .flyer-price-original {
+        color: #94a3b8;
+        text-decoration: line-through;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .flyer-price-main {
+        display: inline-flex;
+        align-items: flex-start;
+        gap: 0.1rem;
+        color: #1e3a8a;
+        font-weight: 800;
+    }
+
+    .flyer-price-currency {
+        font-size: 0.9rem;
+        margin-top: 0.4rem;
+    }
+
+    .flyer-price-dollars {
+        font-size: 2.2rem;
+        line-height: 1;
+    }
+
+    .flyer-price-cents {
+        font-size: 0.95rem;
+        line-height: 1;
+        margin-top: 0.2rem;
+    }
+
+    .flyer-price-call {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #475569;
+    }
+
+    .flyer-card-badge {
+        position: absolute;
+        top: 0.6rem;
+        right: 0.6rem;
+        background: #facc15;
+        color: #0f172a;
+        font-size: 0.6rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 0.3rem 0.6rem;
+        border-radius: 999px;
+        border: 1px solid #f59e0b;
+        box-shadow: 0 10px 16px rgba(15, 23, 42, 0.15);
+        transform: rotate(-3deg);
+    }
+
+    .flyer-package-card {
+        border: 2px dashed #e2e8f0;
+        border-radius: 16px;
+        padding: 1.1rem 1.1rem 1.1rem 1.35rem;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .flyer-package-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 5px;
+        height: 100%;
+        background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%);
+    }
+
+    .flyer-package-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        margin-bottom: 0.25rem;
+        color: #0f172a;
+    }
+
+    .flyer-package-subtitle {
+        color: #64748b;
+        margin-bottom: 0.75rem;
+    }
+
+    .flyer-package-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .flyer-package-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .flyer-package-item img {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        object-fit: cover;
+    }
+
+    .flyer-package-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: #0f172a;
+        color: #ffffff;
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        border: 1px solid #0f172a;
+        box-shadow: 0 10px 16px rgba(15, 23, 42, 0.2);
+    }
+
+    .flyer-footer {
+        border-top: 1px solid rgba(148, 163, 184, 0.3);
+        padding: 0.85rem 1rem;
+        margin-top: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        font-size: 0.72rem;
+        color: #64748b;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 12px;
+    }
+
+    @media (max-width: 900px) {
+        .flyer-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .flyer-card {
+            grid-template-columns: 1fr;
+        }
+
+        .flyer-card-media {
+            width: 100%;
+            height: 140px;
+            justify-self: stretch;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .flyer-modal-dialog {
+            max-height: 95vh;
+        }
+
+        .flyer-modal-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+
+    @media print {
+        body.flyer-print-mode * {
+            visibility: hidden;
+        }
+
+        body.flyer-print-mode .flyer-print-surface,
+        body.flyer-print-mode .flyer-print-surface * {
+            visibility: visible;
+        }
+
+        body.flyer-print-mode .flyer-modal {
+            position: static;
+            display: block;
+            background: none;
+            padding: 0;
+        }
+
+        body.flyer-print-mode .flyer-modal-dialog {
+            max-height: none;
+            box-shadow: none;
+        }
+
+        body.flyer-print-mode .flyer-modal-actions,
+        body.flyer-print-mode .flyer-modal-close {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/storefront_hero_products.js' %}" defer></script>
+<script src="{% static 'js/storefront_search.js' %}" defer></script>
+<script src="{% static 'js/storefront_flyer.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+{% url 'accounts:store_product_list' as store_url %}
+{% url 'accounts:public_contact' as contact_url %}
+
+<div class="storefront-shell">
+    <section class="storefront-hero">
+        <div class="container">
+            <nav class="storefront-breadcrumbs" aria-label="Breadcrumb">
+                {% for crumb in breadcrumbs %}
+                    {% if crumb.url %}
+                    <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+                    {% else %}
+                    <span>{{ crumb.label }}</span>
+                    {% endif %}
+                    {% if not forloop.last %}
+                    <span class="crumb-sep">/</span>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+            <div class="storefront-hero-inner">
+                <div class="storefront-hero-copy">
+                    <div class="storefront-eyebrow">
+                        <i class="fas fa-layer-group"></i>
+                        Parts Catalog
+                    </div>
+                    <h1>All Categories</h1>
+                    <p>Browse every system and component group to find the exact part you need.</p>
+                </div>
+                <div class="storefront-hero-actions">
+                    {% if storefront_selected_profile %}
+                        {% if storefront_has_multiple_locations %}
+                        <div class="dropdown">
+                            <button class="btn btn-light dropdown-toggle storefront-store-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-store"></i>
+                                <span class="store-label">My Store:</span>
+                                <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end storefront-store-menu">
+                                {% for profile in storefront_locations %}
+                                <form method="post" action="{% url 'accounts:storefront_location_set' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button class="dropdown-item{% if storefront_selected_profile and profile.user_id == storefront_selected_profile.user_id %} active{% endif %}"
+                                        type="submit" name="storefront_location" value="{{ profile.user_id }}">
+                                        {{ profile.storefront_label }}
+                                    </button>
+                                </form>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="btn btn-light storefront-store-toggle storefront-store-static">
+                            <i class="fas fa-store"></i>
+                            <span class="store-label">My Store:</span>
+                            <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                    {% if customer_account %}
+                    <a href="{% url 'accounts:customer_dashboard' %}" class="btn btn-light">My Account</a>
+                    <a href="{% url 'accounts:store_cart' %}" class="btn btn-primary">View Cart</a>
+                    {% else %}
+                    <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_product_list' %}" class="btn btn-light">Sign In</a>
+                    <a href="{% url 'accounts:customer_signup' %}?next={% url 'accounts:store_product_list' %}" class="btn btn-primary">Create Account</a>
+                    {% endif %}
+                </div>
+            </div>
+            <form class="storefront-search" method="get" action="{% url 'accounts:store_search' %}"
+                data-storefront-search-form data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}">
+                <input type="search" name="q" value="{{ search_query }}" placeholder="Search parts, SKUs, or keywords"
+                    data-storefront-search-input autocomplete="off">
+                <button type="submit">Search</button>
+            </form>
+        </div>
+    </section>
+
+    {% if hero_banner %}
+    <section class="hero-message-banner hero-message-banner--{{ hero_banner.theme|default:'sunrise' }}">
+        <div class="container">
+            <div class="hero-message-content">
+                <span class="hero-message-text">{{ hero_banner.message }}</span>
+                {% if hero_banner.link_url and hero_banner.link_text %}
+                <a class="hero-message-link" href="{{ hero_banner.link_url }}">
+                    {{ hero_banner.link_text }}
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if hero_cards %}
+    <section class="hero-showcase hero-showcase--{{ hero_showcase.gradient_theme|default:'sky' }}" data-hero-showcase>
+        <div class="container">
+            <div class="hero-showcase-inner">
+                <div class="hero-showcase-content">
+                    <span class="hero-showcase-eyebrow">Featured Products</span>
+                    <h1 class="hero-showcase-title">{{ business_name|default:default_business_name }}</h1>
+                    <p class="hero-showcase-subtitle">Hand-picked parts and supplies ready for fast pickup or delivery.</p>
+                    <div class="hero-showcase-actions">
+                        <a href="{{ store_url }}" class="btn-hero-primary">
+                            <i class="fas fa-store"></i>
+                            Shop All Parts
+                        </a>
+                        <a href="{{ contact_url }}" class="btn-hero-secondary">
+                            <i class="fas fa-headset"></i>
+                            Contact Parts Desk
+                        </a>
+                        {% if flyer and flyer_has_content %}
+                        <button type="button" class="btn-hero-secondary" data-flyer-open>
+                            <i class="fas fa-file-lines"></i>
+                            View Flyer
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="hero-showcase-carousel" data-hero-carousel>
+                    {% for card in hero_cards %}
+                    <article class="hero-showcase-slide{% if forloop.first %} is-active{% endif %}" data-hero-slide>
+                        {% if card.kind == 'product' %}
+                        {% with product=card.product %}
+                        <div class="hero-showcase-card">
+                            <div class="hero-showcase-media">
+                                {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                                {% else %}
+                                <i class="fas fa-box"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if card.slide.discount_percent %}
+                                <div class="hero-showcase-discount">Save {{ card.slide.discount_percent }}%</div>
+                                {% elif product.has_promotion %}
+                                    {% if product.promotion_discount_percent %}
+                                    <div class="hero-showcase-discount">Save {{ product.promotion_discount_percent }}%</div>
+                                    {% else %}
+                                    <div class="hero-showcase-discount">Promo</div>
+                                    {% endif %}
+                                {% endif %}
+                                <div class="hero-showcase-name">{{ product.name }}</div>
+                                {% if show_prices_hero %}
+                                <div class="hero-showcase-price">
+                                    {% if product.has_promotion %}
+                                    <span class="text-decoration-line-through text-muted">${{ product.sale_price|floatformat:2 }}</span>
+                                    <span class="ms-2">${{ product.promotion_price|floatformat:2 }}</span>
+                                    {% elif product.sale_price %}
+                                    ${{ product.sale_price|floatformat:2 }}
+                                    {% else %}
+                                    Call for price
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                <a class="hero-showcase-link" href="{% url 'accounts:store_product_detail' product.id %}">View product</a>
+                            </div>
+                        </div>
+                        {% endwith %}
+                        {% else %}
+                        {% with package=card.package %}
+                        <div class="hero-showcase-card hero-showcase-card--package">
+                            <div class="hero-showcase-package-header">
+                                <h3 class="hero-showcase-package-title">{{ package.title }}</h3>
+                                <span class="hero-showcase-package-badge">
+                                    {% if package.free_product and package.discount_percent %}
+                                    Free {{ package.free_product.name }} + {{ package.discount_percent }}% off
+                                    {% elif package.free_product %}
+                                    Free {{ package.free_product.name }}
+                                    {% elif package.discount_percent %}
+                                    Save {{ package.discount_percent }}%
+                                    {% else %}
+                                    Bundle deal
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <p class="hero-showcase-package-subtitle">
+                                {{ package.subtitle|default:"Bundle savings for fleet-ready orders." }}
+                            </p>
+                            <div class="hero-showcase-package-products">
+                                {% if package.primary_product %}
+                                <div class="hero-showcase-package-item">
+                                    {% if package.primary_product.image %}
+                                    <img src="{{ package.primary_product.image.url }}" alt="{{ package.primary_product.name }}" loading="lazy">
+                                    {% else %}
+                                    <i class="fas fa-box"></i>
+                                    {% endif %}
+                                    <span>{{ package.primary_product.name }}</span>
+                                </div>
+                                {% endif %}
+                                {% if package.secondary_product %}
+                                <div class="hero-showcase-package-item">
+                                    {% if package.secondary_product.image %}
+                                    <img src="{{ package.secondary_product.image.url }}" alt="{{ package.secondary_product.name }}" loading="lazy">
+                                    {% else %}
+                                    <i class="fas fa-box"></i>
+                                    {% endif %}
+                                    <span>{{ package.secondary_product.name }}</span>
+                                </div>
+                                {% endif %}
+                                {% if package.free_product %}
+                                <div class="hero-showcase-package-item">
+                                    {% if package.free_product.image %}
+                                    <img src="{{ package.free_product.image.url }}" alt="{{ package.free_product.name }}" loading="lazy">
+                                    {% else %}
+                                    <i class="fas fa-gift"></i>
+                                    {% endif %}
+                                    <span>{{ package.free_product.name }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% if package.primary_product %}
+                            <a class="hero-showcase-link" href="{% url 'accounts:store_product_detail' package.primary_product.id %}">View deal</a>
+                            {% else %}
+                            <a class="hero-showcase-link" href="{{ store_url }}">View deal</a>
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                    <div class="hero-showcase-dots" data-hero-dots>
+                        {% for card in hero_cards %}
+                        <button
+                            type="button"
+                            class="hero-showcase-dot{% if forloop.first %} is-active{% endif %}"
+                            data-hero-dot="{{ forloop.counter0 }}"
+                            aria-label="Go to slide {{ forloop.counter }}">
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if flyer and flyer_has_content %}
+    <div class="flyer-modal" data-flyer-modal aria-hidden="true">
+        <div class="flyer-modal-dialog" role="dialog" aria-modal="true" aria-label="Storefront flyer">
+            <div class="flyer-modal-header">
+                <div class="flyer-modal-title">Storefront Flyer</div>
+                <div class="flyer-modal-actions">
+                    <button type="button" class="flyer-action-btn secondary" data-flyer-print>
+                        <i class="fas fa-print"></i>
+                        Print
+                    </button>
+                    <a class="flyer-action-btn" href="{% url 'accounts:storefront_flyer_pdf' %}" target="_blank" rel="noopener">
+                        <i class="fas fa-file-pdf"></i>
+                        Download PDF
+                    </a>
+                    <button type="button" class="flyer-action-btn ghost flyer-modal-close" data-flyer-close>
+                        <i class="fas fa-xmark"></i>
+                        Close
+                    </button>
+                </div>
+            </div>
+            <div class="flyer-modal-body">
+                <div class="flyer-print-surface">
+                    {% include 'store/partials/_storefront_flyer_content.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <section class="storefront-section category-groups-section">
+        <div class="container">
+            {% if grouped_categories %}
+                {% for bundle in grouped_categories %}
+                <div class="category-group-block">
+                    <div class="group-banner">
+                        <div>
+                            <div class="group-banner-title">{{ bundle.group.name }}</div>
+                            {% if bundle.group.description %}
+                            <div class="group-banner-subtitle">{{ bundle.group.description|truncatewords:18 }}</div>
+                            {% else %}
+                            <div class="group-banner-subtitle">Browse {{ bundle.group.name|lower }} parts and accessories.</div>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'accounts:store_group_detail' bundle.group.id %}">View Group</a>
+                    </div>
+                    {% if bundle.categories %}
+                    <div class="category-grid">
+                        {% for category in bundle.categories %}
+                        <a href="{% url 'accounts:store_category_detail' category.id %}" class="category-card">
+                            <div class="category-card-media">
+                                {% if category.image %}
+                                <img src="{{ category.image.url }}" alt="{{ category.name }}" loading="lazy">
+                                {% else %}
+                                <i class="fas fa-box-open fa-2x text-muted"></i>
+                                {% endif %}
+                            </div>
+                            <div class="category-card-body">
+                                <div class="category-card-title">{{ category.name }}</div>
+                                {% if category.description %}
+                                <div class="category-card-meta">{{ category.description|truncatewords:12 }}</div>
+                                {% endif %}
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state">No categories added to this group yet.</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="category-group-block">
+                <div class="empty-state">No category groups available yet.</div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<section class="featured-products-section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">
+                <i class="fas fa-star"></i>
+                Featured Parts
+            </span>
+            <h2 class="section-title">Ready-to-Ship Inventory</h2>
+            <p class="section-subtitle">Highlighting popular parts available for pickup or delivery.</p>
+        </div>
+
+        <div class="row g-4">
+            {% for product in featured_products %}
+            <div class="col-md-6 col-lg-4 d-flex">
+                <div class="product-card w-100">
+                    {% if product.has_promotion %}
+                        {% if product.promotion_discount_percent %}
+                        <div class="featured-discount-badge">Save {{ product.promotion_discount_percent }}%</div>
+                        {% else %}
+                        <div class="featured-discount-badge">Promo</div>
+                        {% endif %}
+                    {% endif %}
+                    <div class="product-media">
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                        {% else %}
+                        <i class="fas fa-box-open fa-3x text-muted"></i>
+                        {% endif %}
+                    </div>
+                    <div class="product-body">
+                        <div class="product-title">{{ product.name }}</div>
+                        {% if show_prices_featured %}
+                        <div class="product-price">
+                            {% if product.has_promotion %}
+                            <span class="text-muted text-decoration-line-through">${{ product.sale_price|floatformat:2 }}</span>
+                            <span class="ms-2">${{ product.promotion_price|floatformat:2 }}</span>
+                            {% elif product.sale_price %}
+                            ${{ product.sale_price|floatformat:2 }}
+                            {% else %}
+                            Call for price
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        <div class="product-meta">{{ product.category.name|default:"Heavy-duty parts" }}</div>
+                        <a href="{% url 'accounts:store_product_detail' product.id %}" class="catalog-link mt-3">
+                            View Details <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-light text-center">
+                    Featured parts will appear once products are published to the store.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="{% url 'accounts:store_product_list' %}" class="btn-hero-primary">
+                Browse Full Catalog
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="features-section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">
+                <i class="fas fa-star"></i>
+                Why Choose Us
+            </span>
+            <h2 class="section-title">The {{ business_name|default:default_business_name }} Difference</h2>
+            <p class="section-subtitle">
+                A dedicated parts partner focused on uptime, accuracy, and value.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h3 class="feature-title">Fitment Support</h3>
+                    <p class="feature-text">Confirm specs fast so you get the right part on the first order.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <h3 class="feature-title">Fast Fulfillment</h3>
+                    <p class="feature-text">Same-day pickup options and quick delivery across the region.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-tags"></i>
+                    </div>
+                    <h3 class="feature-title">Fleet Pricing</h3>
+                    <p class="feature-text">Account pricing and volume programs tailored for operators.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 class="feature-title">OEM-Grade Quality</h3>
+                    <p class="feature-text">Trusted brands built for heavy-duty performance.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="cta-section">
+    <div class="container">
+        <div class="cta-content">
+            <h2 class="cta-title">Ready to Find the Right Part?</h2>
+            <p class="cta-text">
+                Browse our catalog or connect with the parts desk for quotes, fitment checks, and rush orders.
+            </p>
+            <div class="cta-buttons">
+                <a href="{% url 'accounts:store_product_list' %}" class="btn-cta-light">
+                    <i class="fas fa-store"></i>
+                    Shop Parts
+                </a>
+                <a href="{% url 'accounts:public_contact' %}" class="btn-cta-dark">
+                    <i class="fas fa-headset"></i>
+                    Contact Us
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

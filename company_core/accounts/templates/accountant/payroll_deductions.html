@@ -1,0 +1,99 @@
+{% extends "accountant/portal_base.html" %}
+
+{% block title %}Payroll Deductions{% endblock %}
+
+{% block extra_css %}
+  <style>
+    .accountant-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border-radius: 999px;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(14, 165, 233, 0.12);
+      color: var(--accountant-accent-strong);
+    }
+
+    .accountant-table thead th {
+      background: #f1f5f9;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      color: #475569;
+    }
+
+    .accountant-table td,
+    .accountant-table th {
+      vertical-align: middle;
+    }
+
+    .empty-row {
+      text-align: center;
+      color: var(--accountant-muted);
+      padding: 0.75rem;
+    }
+  </style>
+{% endblock %}
+
+{% block portal_content %}
+  <div class="accountant-card accountant-section">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h2 class="h5 mb-1">Payroll tax deductions</h2>
+        <p class="text-muted small mb-0">Review employee tax profiles and recurring deductions.</p>
+      </div>
+      <span class="status-pill"><i class="fa-solid fa-shield-halved"></i> {{ accountant_access_label|default:"Read only" }}</span>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-3">
+      <a href="{% url 'accounts:accountant_portal_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i> Back to dashboard
+      </a>
+    </div>
+    {% if not accountant_can_edit_payroll %}
+      <p class="text-muted small mt-3 mb-0">Editing payroll deductions requires full access.</p>
+    {% endif %}
+  </div>
+
+  <div class="accountant-card accountant-section">
+    <div class="table-responsive">
+      <table class="table accountant-table mb-0">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th class="text-end">Active deductions</th>
+            <th class="text-end">Total deductions</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for employee in employees %}
+            <tr>
+              <td class="fw-semibold">{{ employee.full_name }}</td>
+              <td>{{ employee.get_role_display }}</td>
+              <td>{{ employee.get_status_display }}</td>
+              <td class="text-end">{{ employee.active_deduction_count }}</td>
+              <td class="text-end">{{ employee.deduction_count }}</td>
+              <td class="text-end">
+                <a href="{% url 'accounts:accountant_portal_payroll_deductions_employee' employee.id %}" class="btn btn-outline-primary btn-sm">
+                  {% if accountant_can_edit_payroll %}Manage{% else %}View{% endif %}
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="empty-row">No employees found for payroll deductions.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

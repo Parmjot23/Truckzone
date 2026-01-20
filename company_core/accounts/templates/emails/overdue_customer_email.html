@@ -1,0 +1,178 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overdue Invoice Reminder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #fff7f5;
+            color: #111827;
+        }
+        .email-card {
+            max-width: 640px;
+            margin: 24px auto;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .header {
+            background-color: #b91c1c;
+            color: #ffffff;
+            padding: 22px 24px;
+            text-align: left;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+        .header p {
+            margin: 6px 0 0;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 24px;
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0 12px;
+            border: 1px solid #e5e7eb;
+        }
+        .summary-table td {
+            padding: 10px 12px;
+            border-right: 1px solid #e5e7eb;
+        }
+        .summary-table td:last-child {
+            border-right: none;
+        }
+        .summary-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #6b7280;
+        }
+        .summary-value {
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .reminder-details {
+            background-color: #fff1f2;
+            border-left: 4px solid #b91c1c;
+            padding: 12px;
+            margin: 16px 0;
+            color: #7f1d1d;
+        }
+        .note {
+            background-color: #f8fafc;
+            border-left: 4px solid #b91c1c;
+            padding: 12px;
+            margin-top: 12px;
+            color: #374151;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            padding: 18px 20px 22px;
+            border-top: 1px solid #e5e7eb;
+            background-color: #f9fafb;
+        }
+        a {
+            color: #b91c1c;
+        }
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+            margin: 12px 0;
+        }
+        ul li {
+            padding-left: 18px;
+            position: relative;
+            margin-bottom: 8px;
+        }
+        ul li::before {
+            content: "-";
+            color: #b91c1c;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-card">
+        <div class="header">
+            <h1>Overdue Invoice Reminder</h1>
+            <p>{{ profile.company_name }}</p>
+        </div>
+        <div class="content">
+            <p>Hi {{ customer.name }},</p>
+
+            {% if reminder_info and reminder_info.current_sequence > 1 %}
+            <div class="reminder-details">
+                <strong>Reminder details</strong>
+                <p>This is reminder number #{{ reminder_info.current_sequence }} regarding your overdue balance.</p>
+                {% if reminder_info.last_sent_on %}
+                <p>We last contacted you on {{ reminder_info.last_sent_on|date:"M d, Y" }}.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <p>Your account with {{ profile.company_name }} has an overdue balance. Please review the summary below. A detailed overdue statement is attached.</p>
+
+            <table class="summary-table" role="presentation">
+                <tr>
+                    <td>
+                        <div class="summary-label">Period</div>
+                        <div class="summary-value">
+                            {% if start_date and end_date %}
+                                {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}
+                            {% else %}
+                                All available invoices
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="summary-label">Total pending</div>
+                        <div class="summary-value">{{ total_pending_balance|currency }}</div>
+                    </td>
+                    <td>
+                        <div class="summary-label">Total overdue</div>
+                        <div class="summary-value">{{ total_overdue_balance|currency }}</div>
+                    </td>
+                </tr>
+            </table>
+
+            <ul>
+                <li>Your current overdue balance is {{ total_overdue_balance|currency }}.</li>
+                <li>An overdue invoice statement is attached for your records.</li>
+                <li>Please remit payment at your earliest convenience.</li>
+            </ul>
+
+            <div class="note">
+                Prompt payment will help avoid late fees or service interruptions as per our terms of service.
+            </div>
+
+            <p>If you have already made this payment, please disregard this notice. If you have questions or believe there is an error, reach out at <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+
+            <p>Sincerely,<br>{{ profile.company_name }} Team</p>
+        </div>
+        <div class="footer">
+            &copy; {{ current_year }} {{ profile.company_name }}. All rights reserved.<br>
+            {% if profile.company_address %}
+                {{ profile.company_address }}<br>
+            {% endif %}
+            If you believe you received this email in error, contact <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.
+        </div>
+    </div>
+</body>
+</html>

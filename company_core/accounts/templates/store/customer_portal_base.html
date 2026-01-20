@@ -1,0 +1,1508 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Customer Portal{% endblock %}</title>
+
+    <link rel="icon" type="image/png" href="{{ default_company_logo_url }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <script>
+        (() => {
+            const theme = localStorage.getItem('portalTheme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+
+    <style>
+        :root {
+            --ui-scale-factor: 1;
+            --app-base-scale: 0.7;
+            --app-scale-factor: var(--app-base-scale);
+            --sidebar-width-collapsed: 74px;
+            --sidebar-width-expanded: 260px;
+            --topbar-height: 68px;
+            --primary: #0f172a;
+            --primary-accent: #2563eb;
+            --muted: #6b7280;
+            --surface: #ffffff;
+            --surface-alt: #f6f8fb;
+            --border: #e5e7eb;
+            --shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
+            --radius-lg: 18px;
+            --radius-md: 12px;
+            --sidebar-surface: #0f172a;
+            --sidebar-border: rgba(255,255,255,0.04);
+            --sidebar-hover: rgba(255,255,255,0.08);
+            --sidebar-active: rgba(37, 99, 235, 0.35);
+            --sidebar-icon-bg: transparent;
+            --sidebar-icon-active: rgba(37,99,235,0.35);
+            --sidebar-text: #e2e8f0;
+            --sidebar-muted: #cbd5e1;
+            --sidebar-shadow: 6px 0 30px rgba(15, 23, 42, 0.35);
+        }
+
+        [data-theme="dark"] {
+            --primary: #e5e7eb;
+            --primary-accent: #60a5fa;
+            --muted: #9ca3af;
+            --surface: #0b1220;
+            --surface-alt: #0f172a;
+            --border: #1f2937;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            --sidebar-surface: #0b1220;
+            --sidebar-border: rgba(255,255,255,0.08);
+            --sidebar-hover: rgba(255,255,255,0.08);
+            --sidebar-active: rgba(37, 99, 235, 0.35);
+            --sidebar-icon-bg: transparent;
+            --sidebar-icon-active: rgba(37,99,235,0.35);
+            --sidebar-text: #e5e7eb;
+            --sidebar-muted: #d7dced;
+            --sidebar-shadow: 6px 0 30px rgba(0, 0, 0, 0.45);
+        }
+
+        * { box-sizing: border-box; }
+
+        html {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar-initializing .app-sidebar,
+        .sidebar-initializing .app-main {
+            transition: none !important;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Manrope', 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--surface-alt);
+            color: var(--primary);
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        body.ui-scale-active {
+            --app-scale-factor: calc(var(--app-base-scale) * var(--ui-scale-factor));
+        }
+
+        .app-shell {
+            display: flex;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-shell.scaled-ui {
+            position: fixed;
+            inset: 0;
+            transform: scale(var(--app-scale-factor));
+            transform-origin: top left;
+            width: calc(100vw / var(--app-scale-factor));
+            height: calc(100vh / var(--app-scale-factor));
+            overflow: hidden;
+        }
+
+        .app-sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: var(--sidebar-width-collapsed);
+            background: var(--sidebar-surface);
+            border-right: 1px solid var(--sidebar-border);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.25s ease;
+            z-index: 1040;
+            box-shadow: var(--sidebar-shadow);
+            color: var(--sidebar-text);
+            overflow: visible;
+            padding: 0;
+        }
+
+        .app-sidebar.expanded { width: var(--sidebar-width-expanded); }
+
+        .sidebar-brand {
+            height: var(--topbar-height);
+            padding: 0 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow: hidden;
+            white-space: nowrap;
+            background: transparent;
+            color: var(--sidebar-text);
+            width: 100%;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-brand img {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+        }
+
+        .sidebar-brand span {
+            flex: 1 1 auto;
+            min-width: 0;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--sidebar-text);
+            letter-spacing: -0.01em;
+            max-width: 100%;
+            line-height: 1.15;
+            max-height: calc(1.15em * 2);
+            overflow: hidden;
+            overflow-wrap: anywhere;
+            white-space: normal;
+            display: block;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .app-sidebar.expanded .sidebar-brand span { opacity: 1; }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1.25rem 0.85rem 1.25rem 0.85rem;
+            overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .sidebar-nav::-webkit-scrollbar { display: none; }
+
+        .sidebar-footer {
+            padding: 1rem 0.85rem 1.25rem 0.85rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.16);
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            align-items: center;
+        }
+
+        .sidebar-footer-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.45rem;
+            border-radius: 12px;
+            font-weight: 600;
+            color: var(--sidebar-muted);
+            text-decoration: none;
+            transition: background 0.2s ease, color 0.2s ease;
+            width: 40px;
+            height: 40px;
+        }
+
+        .sidebar-footer-link i {
+            font-size: 0.85rem;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.62rem 0.9rem;
+            color: var(--sidebar-muted);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.18s ease;
+            white-space: nowrap;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            border: none;
+            background: transparent;
+            position: relative;
+            font-size: 0.95rem;
+            line-height: 1.3;
+        }
+
+        .sidebar-link:hover {
+            color: #fff;
+            background: var(--sidebar-hover);
+        }
+
+        .sidebar-link.active {
+            color: #fff;
+            background: var(--sidebar-active);
+        }
+
+        .sidebar-footer-link:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+
+        .sidebar-link i {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+
+        .sidebar-label {
+            opacity: 0;
+            transition: opacity 0.18s ease;
+            flex: 1;
+        }
+
+        .app-sidebar.expanded .sidebar-label { opacity: 1; }
+        .app-sidebar.expanded .sidebar-footer {
+            flex-direction: row;
+            justify-content: flex-start;
+        }
+        .app-sidebar:not(.expanded) .sidebar-footer-link {
+            justify-content: center;
+        }
+
+        .sidebar-hover-strip {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: -5px;
+            width: 10px;
+            cursor: pointer;
+            background: transparent;
+            z-index: 1500;
+            transition: box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .sidebar-hover-strip:hover {
+            box-shadow: inset -3px 0 0 #2563eb;
+            background: rgba(37,99,235,0.1);
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 50%;
+            right: -14px;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid rgba(37,99,235,0.8);
+            background: var(--sidebar-surface);
+            color: var(--sidebar-text);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 22px rgba(15,23,42,0.25);
+            transition: opacity 0.15s ease, box-shadow 0.2s ease, color 0.2s ease;
+            z-index: 2000;
+            padding: 0;
+            opacity: 0;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-hover-strip:hover ~ .sidebar-toggle,
+        .sidebar-toggle:hover,
+        .sidebar-toggle:focus-visible {
+            opacity: 1;
+            right: -14px;
+        }
+
+        .sidebar-toggle:hover {
+            color: #fff;
+            border-color: #2563eb;
+            box-shadow: 0 10px 26px rgba(37,99,235,0.45);
+        }
+
+        .mobile-sidebar-toggle {
+            position: fixed;
+            top: 12px;
+            left: 14px;
+            z-index: 2001;
+            padding: 0.55rem 0.7rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--primary);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 28px rgba(15,23,42,0.16);
+        }
+
+        .app-main {
+            flex: 1;
+            margin-left: var(--sidebar-width-collapsed);
+            transition: margin-left 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .app-sidebar.expanded ~ .app-main {
+            margin-left: var(--sidebar-width-expanded);
+        }
+
+        .app-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            height: var(--topbar-height);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1.5rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .topbar-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            letter-spacing: -0.01em;
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-left: auto;
+        }
+
+        .ghost-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--primary);
+            padding: 0.45rem 0.9rem;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.18s ease;
+        }
+
+        .ghost-btn:hover {
+            border-color: var(--primary-accent);
+            color: var(--primary-accent);
+            background: rgba(37, 99, 235, 0.08);
+        }
+
+        .theme-toggle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--surface-alt);
+            color: var(--primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover { color: var(--primary-accent); border-color: var(--primary-accent); }
+
+        .app-content {
+            padding: 1rem 1.25rem;
+            flex: 1;
+            width: 100%;
+            margin: 0;
+        }
+
+        .app-content .container,
+        .app-content .container-fluid,
+        .app-content .container-lg,
+        .app-content .container-md,
+        .app-content .container-sm,
+        .app-content .container-xl,
+        .app-content .container-xxl {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding-left: 1.25rem;
+            padding-right: 1.25rem;
+        }
+
+        .app-content .table-responsive { width: 100%; }
+        .app-content table { width: 100%; min-width: 100%; }
+
+        .table thead th {
+            background: #f8fafc;
+            color: #111827;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .table td,
+        .table th { vertical-align: middle; }
+
+        .app-footer {
+            padding: 1.2rem 1.5rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .toast-messages .alert {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        @media (max-width: 991.98px) {
+            .app-sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                width: var(--sidebar-width-expanded);
+                box-shadow: 18px 0 32px rgba(15,23,42,0.18);
+            }
+            .app-sidebar.mobile-open { transform: translateX(0); }
+            .sidebar-toggle { display: none; }
+            .app-main,
+            .app-sidebar.expanded ~ .app-main {
+                margin-left: 0;
+            }
+            .mobile-sidebar-toggle { display: inline-flex; }
+            .sidebar-label {
+                opacity: 1;
+            }
+            .sidebar-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                width: 100%;
+            }
+            .sidebar-footer-link {
+                margin: 0;
+            }
+        }
+
+        /* Portal specific styles retained for the store experience */
+        .customer-portal-main .btn {
+            font-size: 0.82rem;
+            padding: 0.35rem 0.7rem;
+            border-radius: 8px;
+        }
+
+        .customer-portal-main .form-control,
+        .customer-portal-main .form-select {
+            font-size: 0.85rem;
+            padding: 0.35rem 0.55rem;
+            border-radius: 8px;
+        }
+
+        .portal-header-card {
+            background: linear-gradient(135deg, #f8faff 0%, #eef4ff 45%, #f3fff9 100%);
+            border-radius: 16px;
+            padding: 1.6rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 20px rgba(13, 110, 253, 0.08);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(13, 110, 253, 0.1);
+        }
+
+        [data-theme="dark"] .portal-header-card { border-color: var(--border); }
+
+        .portal-summary-card,
+        .card { border-radius: 14px; }
+
+        .portal-footer { font-size: 0.85rem; }
+
+        [data-theme="dark"] .card {
+            background-color: var(--surface);
+            border-color: var(--border);
+            color: var(--primary);
+        }
+
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select,
+        [data-theme="dark"] .input-group-text {
+            background-color: #1a1a1a;
+            border-color: var(--border);
+            color: #ffffff;
+        }
+
+        [data-theme="dark"] .form-control::placeholder { color: #6c757d; }
+
+        [data-theme="dark"] .table {
+            color: var(--primary);
+            --bs-table-bg: transparent;
+            --bs-table-striped-bg: rgba(255, 255, 255, 0.05);
+            --bs-table-hover-bg: rgba(255, 255, 255, 0.075);
+            border-color: var(--border);
+        }
+
+        [data-theme="dark"] .table > :not(caption) > * > * {
+            background-color: transparent;
+            color: inherit;
+        }
+
+        [data-theme="dark"] .table thead th {
+            color: var(--primary);
+            border-color: var(--border);
+            background-color: #1f2933;
+        }
+
+        [data-theme="dark"] .modal-content,
+        [data-theme="dark"] .dropdown-menu,
+        [data-theme="dark"] .list-group-item {
+            background-color: var(--surface);
+            border-color: var(--border);
+            color: var(--primary);
+        }
+
+        [data-theme="dark"] .dropdown-item { color: var(--primary); }
+
+        [data-theme="dark"] .dropdown-item:hover,
+        [data-theme="dark"] .dropdown-item:focus {
+            background-color: var(--surface-alt);
+            color: var(--primary);
+        }
+
+        [data-theme="dark"] .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+
+        /* Customer portal AI assistant */
+        .portal-ai-shell {
+            position: fixed;
+            right: 18px;
+            bottom: 60px;
+            z-index: 2100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .portal-ai-toggle {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--primary);
+            border-radius: 999px;
+            padding: 0.52rem 0.76rem;
+            box-shadow: 0 12px 26px rgba(15,23,42,0.16);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            font-size: 0.76rem;
+        }
+        .portal-ai-toggle i { color: var(--primary-accent); }
+        .portal-ai-toggle:hover {
+            border-color: var(--primary-accent);
+            color: var(--primary-accent);
+            box-shadow: 0 14px 30px rgba(37,99,235,0.18);
+        }
+        .portal-ai-panel {
+            width: min(272px, calc(100vw - 32px));
+            max-width: calc(100vw - 32px);
+            height: min(332px, calc(100vh - 32px));
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 14px 40px rgba(15,23,42,0.22);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            font-family: 'Manrope', 'Inter', system-ui, -apple-system, sans-serif;
+            font-size: 0.6rem;
+            line-height: 1.2;
+        }
+        .portal-ai-panel.open { display: flex; }
+        .portal-ai-header {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--surface-alt);
+        }
+        .portal-ai-title {
+            font-weight: 700;
+            font-size: 0.98rem;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .portal-ai-close {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--primary);
+            border-radius: 10px;
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .portal-ai-body {
+            flex: 1;
+            padding: 0.68rem 0.6rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.48rem;
+            background: var(--surface);
+        }
+        .portal-ai-message {
+            max-width: 90%;
+            padding: 0.52rem 0.64rem;
+            border-radius: 14px;
+            font-size: 0.72rem;
+            line-height: 1.2;
+            box-shadow: 0 6px 16px rgba(15,23,42,0.08);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .portal-ai-message.bot {
+            background: linear-gradient(135deg, #eef2ff, #ecf4ff);
+            border: 1px solid rgba(37,99,235,0.15);
+            align-self: flex-start;
+        }
+        .portal-ai-message.user {
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            align-self: flex-end;
+        }
+        .portal-ai-message.status {
+            background: var(--surface-alt);
+            border: 1px dashed var(--border);
+            color: var(--muted);
+            align-self: center;
+        }
+        .portal-ai-message a,
+        .portal-ai-link {
+            color: var(--primary-accent);
+            font-weight: 700;
+            text-decoration: none;
+        }
+        .portal-ai-message a:hover,
+        .portal-ai-link:hover { text-decoration: underline; }
+        .portal-ai-input {
+            border-top: 1px solid var(--border);
+            padding: 0.6rem;
+            background: var(--surface);
+        }
+        .portal-ai-input form {
+            display: flex;
+            gap: 0.44rem;
+            align-items: center;
+        }
+        .portal-ai-input input {
+            flex: 1;
+            border: 1px solid var(--border);
+            background: var(--surface-alt);
+            color: var(--primary);
+            border-radius: 12px;
+            padding: 0.44rem 0.56rem;
+            font-size: 0.72rem;
+        }
+        .portal-ai-input button {
+            border: none;
+            background: var(--primary-accent);
+            color: #fff;
+            border-radius: 12px;
+            padding: 0.48rem 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.28rem;
+            box-shadow: 0 10px 20px rgba(37,99,235,0.2);
+            font-size: 0.64rem;
+        }
+        .portal-ai-input button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        @media (max-width: 575.98px) {
+            .portal-ai-panel { width: 100%; right: 0; }
+            .portal-ai-shell { right: 12px; bottom: 12px; }
+        }
+
+        .app-loading-indicator {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 160ms ease;
+            z-index: 3000;
+        }
+        .app-loading-indicator.is-visible {
+            opacity: 1;
+        }
+        .app-loading-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+        }
+        .app-loading-ring {
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            border: 2px solid rgba(37, 99, 235, 0.2);
+            border-top-color: var(--primary-accent);
+            animation: app-loading-spin 0.9s linear infinite;
+        }
+        .app-loading-text {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--primary);
+        }
+        @keyframes app-loading-spin {
+            to { transform: rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .app-loading-ring { animation: none; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="sidebar-initializing{% if ui_scale_is_active %} ui-scale-active{% endif %}{% block body_class %}{% endblock %}"{% if ui_scale_is_active %} style="--ui-scale-factor: {{ ui_scale_factor }};"{% endif %}>
+    <div id="appLoadingIndicator" class="app-loading-indicator" aria-live="polite" aria-busy="true">
+        <div class="app-loading-pill" role="status" aria-label="Loading">
+            <span class="app-loading-ring" aria-hidden="true"></span>
+            <span class="app-loading-text">Loading</span>
+        </div>
+    </div>
+    <div class="app-shell ui-scale-target scaled-ui">
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-brand">
+                {% if request.user.is_authenticated and request.user.profile.company_logo and company_logo_url %}
+                    <img src="{{ company_logo_url }}" alt="">
+                {% endif %}
+                <span>{{ business_name|default:default_business_name }}</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                {% if portal_nav_items %}
+                    {% for item in portal_nav_items %}
+                        {% if item.slug != 'shop' %}
+                            <a href="{{ item.url }}" class="sidebar-link{% if item.active %} active{% endif %}" title="{{ item.label }}">
+                                <i class="fa-solid {{ item.icon }}"></i>
+                                <span class="sidebar-label">{{ item.label }}</span>
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </nav>
+            <div class="sidebar-footer">
+                <a href="{% url 'accounts:store_product_list' %}" class="sidebar-footer-link" aria-label="Store" title="Store">
+                    <i class="fa-solid fa-store"></i>
+                </a>
+                <a href="{% url 'accounts:store_product_list' %}?source=customer_portal" class="sidebar-footer-link" aria-label="Shop" title="Shop">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                </a>
+                <a href="{% url 'accounts:customer_profile' %}" class="sidebar-footer-link" aria-label="Settings" title="Settings">
+                    <i class="fa-solid fa-gear"></i>
+                </a>
+                <a href="{% url 'accounts:logout' %}?next={% url 'accounts:customer_dashboard' %}" class="sidebar-footer-link" aria-label="Sign out" title="Sign out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+
+            <div class="sidebar-hover-strip" aria-hidden="true"></div>
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </aside>
+
+        <button class="mobile-sidebar-toggle d-lg-none" id="mobileSidebarToggle" aria-label="Open navigation">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <div class="app-main">
+            <header class="app-topbar">
+                <div class="topbar-title">Customer Portal</div>
+                <div class="topbar-actions">
+                    <a class="ghost-btn" href="{% url 'accounts:contact_support' %}?source=customer_portal">
+                        <i class="fa-solid fa-headset"></i>
+                        Support
+                    </a>
+                </div>
+            </header>
+
+            <main class="app-content customer-portal-main">
+                {% if messages %}
+                <div class="toast-messages mb-3">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">
+                        {{ message|safe }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% block portal_hero %}{% endblock %}
+
+                <div class="customer-portal-body">
+                    {% block portal_content %}{% endblock %}
+                </div>
+            </main>
+
+            {% now "Y" as portal_current_year %}
+            <footer class="app-footer">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span>&copy; {{ portal_current_year }} {{ business_name|default:default_business_name }}</span>
+                    <div class="d-inline-flex gap-3">
+                        <a href="{% url 'accounts:privacy_policy' %}">Privacy</a>
+                        <a href="{% url 'accounts:terms_and_conditions' %}">Terms</a>
+                        <a href="{% url 'accounts:cookies_policy' %}">Cookies</a>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <div class="portal-ai-shell" id="portalAiShell" aria-live="polite">
+        <button class="portal-ai-toggle" id="portalAiToggle" type="button">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            Ask {{ business_name|default:default_business_name }} AI
+        </button>
+        <div class="portal-ai-panel" id="portalAiPanel" aria-hidden="true">
+            <div class="portal-ai-header">
+                <div class="portal-ai-title">
+                    <i class="fa-solid fa-message"></i>
+                    Customer Assistant
+                </div>
+                <button class="portal-ai-close" id="portalAiClose" aria-label="Close assistant" type="button">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="portal-ai-body" id="portalAiMessages"></div>
+            <div class="portal-ai-input">
+                <form id="portalAiForm">
+                    <input
+                        type="text"
+                        id="portalAiInput"
+                        name="message"
+                        placeholder="Ask about invoices, workorders, vehicles, maintenance..."
+                        autocomplete="off"
+                    >
+                    <button type="submit" id="portalAiSend">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        Send
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (() => {
+            const sidebar = document.getElementById('appSidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const mobileToggle = document.getElementById('mobileSidebarToggle');
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = themeToggle ? themeToggle.querySelector('i') : null;
+            const toggleIcon = sidebarToggle ? sidebarToggle.querySelector('i') : null;
+            const storedSidebar = localStorage.getItem('portalSidebarExpanded');
+            const storedTheme = localStorage.getItem('portalTheme') || 'light';
+            const shouldStartExpanded = storedSidebar === null ? window.innerWidth > 991 : storedSidebar === 'true';
+
+            const setToggleIcon = (expanded) => {
+                if (!toggleIcon) return;
+                if (expanded) {
+                    toggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-left');
+                } else {
+                    toggleIcon.classList.replace('fa-chevron-left', 'fa-chevron-right');
+                }
+            };
+
+            const setMobileIcon = (isOpen) => {
+                const icon = mobileToggle ? mobileToggle.querySelector('i') : null;
+                if (!icon) return;
+                icon.classList.toggle('fa-bars', !isOpen);
+                icon.classList.toggle('fa-xmark', isOpen);
+            };
+
+            if (shouldStartExpanded) {
+                sidebar.classList.add('expanded');
+                setToggleIcon(true);
+            } else {
+                setToggleIcon(false);
+            }
+            document.body.classList.remove('sidebar-initializing');
+
+            document.documentElement.setAttribute('data-theme', storedTheme);
+            if (themeIcon && storedTheme === 'dark') {
+                themeIcon.classList.replace('fa-moon', 'fa-sun');
+            }
+
+            sidebarToggle?.addEventListener('click', () => {
+                const expanded = sidebar.classList.toggle('expanded');
+                localStorage.setItem('portalSidebarExpanded', expanded);
+                setToggleIcon(expanded);
+            });
+
+            mobileToggle?.addEventListener('click', () => {
+                const isOpen = sidebar.classList.toggle('mobile-open');
+                setMobileIcon(isOpen);
+            });
+
+            document.addEventListener('click', (evt) => {
+                if (window.innerWidth <= 991 && sidebar.classList.contains('mobile-open')) {
+                    const clickedToggle = mobileToggle && mobileToggle.contains(evt.target);
+                    if (!sidebar.contains(evt.target) && !clickedToggle) {
+                        sidebar.classList.remove('mobile-open');
+                        setMobileIcon(false);
+                    }
+                }
+            });
+
+            themeToggle?.addEventListener('click', () => {
+                const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', current);
+                localStorage.setItem('portalTheme', current);
+                if (themeIcon) {
+                    if (current === 'dark') {
+                        themeIcon.classList.replace('fa-moon', 'fa-sun');
+                    } else {
+                        themeIcon.classList.replace('fa-sun', 'fa-moon');
+                    }
+                }
+            });
+
+            const normalizePath = (value) => {
+                if (!value) {
+                    return '/';
+                }
+                const trimmed = value.replace(/\/+$/, '');
+                return trimmed === '' ? '/' : trimmed;
+            };
+            const currentPath = normalizePath(window.location.pathname);
+            let bestMatch = null;
+            let bestLength = -1;
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                const href = link.getAttribute('href');
+                if (!href) {
+                    return;
+                }
+                let linkPath;
+                try {
+                    linkPath = normalizePath(new URL(href, window.location.origin).pathname);
+                } catch {
+                    linkPath = normalizePath(href);
+                }
+                const matchesExact = currentPath === linkPath;
+                const isChild = currentPath.startsWith(`${linkPath}/`);
+                if (!matchesExact && !isChild) {
+                    return;
+                }
+                const length = linkPath.length;
+                if (length > bestLength) {
+                    bestLength = length;
+                    bestMatch = link;
+                }
+            });
+            document.querySelectorAll('.sidebar-link.active').forEach(link => {
+                link.classList.remove('active');
+            });
+            if (bestMatch) {
+                bestMatch.classList.add('active');
+            }
+            const quickAddToggle = document.getElementById('quickAddToggle');
+            const quickPanel = document.getElementById('quickAddPanel');
+            const quickPanelClose = quickPanel ? quickPanel.querySelectorAll('[data-dismiss="panel"]') : [];
+            const toggleQuickPanel = (open) => {
+                if (!quickPanel) return;
+                quickPanel.classList.toggle('open', open);
+                quickPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
+            };
+            quickAddToggle?.addEventListener('click', () => toggleQuickPanel(true));
+            quickPanelClose.forEach(ctrl => ctrl.addEventListener('click', () => toggleQuickPanel(false)));
+            quickPanel?.querySelector('.store-quick-panel-backdrop')?.addEventListener('click', () => toggleQuickPanel(false));
+            document.addEventListener('keydown', (evt) => {
+                if (evt.key === 'Escape') {
+                    toggleQuickPanel(false);
+                }
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            const loader = document.getElementById('appLoadingIndicator');
+            if (!loader) return;
+
+            const SHOW_DELAY_MS = 180;
+            const MIN_VISIBLE_MS = 250;
+            let activeCount = 0;
+            let showTimer = null;
+            let hideTimer = null;
+            let shownAt = 0;
+
+            const show = () => {
+                if (loader.classList.contains('is-visible')) return;
+                loader.classList.add('is-visible');
+                shownAt = Date.now();
+            };
+
+            const hide = () => {
+                loader.classList.remove('is-visible');
+                shownAt = 0;
+            };
+
+            const scheduleShow = () => {
+                if (showTimer) return;
+                showTimer = setTimeout(() => {
+                    showTimer = null;
+                    if (activeCount > 0) show();
+                }, SHOW_DELAY_MS);
+            };
+
+            const scheduleHide = () => {
+                if (showTimer) {
+                    clearTimeout(showTimer);
+                    showTimer = null;
+                }
+                if (!loader.classList.contains('is-visible')) return;
+                const elapsed = shownAt ? Date.now() - shownAt : 0;
+                const wait = Math.max(MIN_VISIBLE_MS - elapsed, 0);
+                if (hideTimer) clearTimeout(hideTimer);
+                hideTimer = setTimeout(() => {
+                    hideTimer = null;
+                    if (activeCount === 0) hide();
+                }, wait);
+            };
+
+            const begin = () => {
+                if (hideTimer) {
+                    clearTimeout(hideTimer);
+                    hideTimer = null;
+                }
+                activeCount += 1;
+                scheduleShow();
+            };
+
+            const end = () => {
+                activeCount = Math.max(0, activeCount - 1);
+                if (activeCount === 0) scheduleHide();
+            };
+
+            const normalizeHeader = (headers, name) => {
+                if (!headers) return '';
+                const target = name.toLowerCase();
+                if (typeof headers.get === 'function') {
+                    return headers.get(name) || headers.get(target) || '';
+                }
+                if (Array.isArray(headers)) {
+                    for (const pair of headers) {
+                        if (!pair || pair.length < 2) continue;
+                        if (String(pair[0]).toLowerCase() === target) return pair[1];
+                    }
+                    return '';
+                }
+                if (typeof headers === 'object') {
+                    return headers[name] || headers[target] || '';
+                }
+                return '';
+            };
+
+            const extractUrl = (input) => {
+                if (!input) return '';
+                if (typeof input === 'string') return input;
+                if (typeof input.url === 'string') return input.url;
+                return '';
+            };
+
+            const shouldSkip = (input, init) => {
+                const url = extractUrl(input);
+                const headers = (init && init.headers) || (input && input.headers);
+                const skipHeader = normalizeHeader(headers, 'X-App-Loader');
+                if (skipHeader && String(skipHeader).toLowerCase() === 'skip') return true;
+                return false;
+            };
+
+            if (window.fetch) {
+                const originalFetch = window.fetch.bind(window);
+                window.fetch = function (input, init) {
+                    if (shouldSkip(input, init)) {
+                        return originalFetch(input, init);
+                    }
+                    begin();
+                    return originalFetch(input, init)
+                        .then((response) => {
+                            end();
+                            return response;
+                        })
+                        .catch((error) => {
+                            end();
+                            throw error;
+                        });
+                };
+            }
+
+            if (window.XMLHttpRequest) {
+                const originalOpen = XMLHttpRequest.prototype.open;
+                const originalSend = XMLHttpRequest.prototype.send;
+                const originalSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+
+                XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+                    this._appLoaderUrl = url;
+                    return originalOpen.call(this, method, url, async, user, password);
+                };
+
+                XMLHttpRequest.prototype.setRequestHeader = function (name, value) {
+                    if (String(name).toLowerCase() === 'x-app-loader' && String(value).toLowerCase() === 'skip') {
+                        this._appLoaderSkip = true;
+                    }
+                    return originalSetHeader.call(this, name, value);
+                };
+
+                XMLHttpRequest.prototype.send = function (body) {
+                    if (this._appLoaderSkip) {
+                        return originalSend.call(this, body);
+                    }
+                    begin();
+                    this.addEventListener('loadend', () => end(), { once: true });
+                    return originalSend.call(this, body);
+                };
+            }
+
+            window.AppLoading = {
+                start: () => { begin(); show(); },
+                stop: () => { activeCount = 0; hide(); }
+            };
+        })();
+    </script>
+    <script>
+        (() => {
+            const shell = document.getElementById('portalAiShell');
+            if (!shell) return;
+
+            const toggle = document.getElementById('portalAiToggle');
+            const panel = document.getElementById('portalAiPanel');
+            const closeBtn = document.getElementById('portalAiClose');
+            const messages = document.getElementById('portalAiMessages');
+            const form = document.getElementById('portalAiForm');
+            const input = document.getElementById('portalAiInput');
+            const sendBtn = document.getElementById('portalAiSend');
+            const endpoint = "{% url 'accounts:customer_ai_chat' %}";
+
+            if (!panel || !toggle || !messages || !form || !input || !sendBtn) return;
+
+            const historyKey = 'portalAiHistory';
+            const openKey = 'portalAiOpen';
+            const viewportKey = 'portalAiViewport';
+            const scrollKey = 'portalAiMessagesScroll';
+
+            const loadHistory = () => {
+                try {
+                    const saved = sessionStorage.getItem(historyKey);
+                    return saved ? JSON.parse(saved) : [];
+                } catch (err) {
+                    console.error('Failed to load AI history', err);
+                    return [];
+                }
+            };
+
+            let history = loadHistory();
+
+            const saveHistory = () => {
+                try {
+                    sessionStorage.setItem(historyKey, JSON.stringify(history.slice(-8)));
+                } catch (err) {
+                    console.error('Failed to save AI history', err);
+                }
+            };
+
+            const escapeHtml = (value) => value
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+
+            const renderTextWithLinks = (text) => {
+                const pattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+                let result = '';
+                let lastIndex = 0;
+                let match;
+                while ((match = pattern.exec(text)) !== null) {
+                    const [full, label, url] = match;
+                    result += escapeHtml(text.slice(lastIndex, match.index));
+                    const safeUrl = typeof url === 'string' && url.startsWith('/') ? url : null;
+                    if (safeUrl) {
+                        result += `<a class="portal-ai-link" href="${escapeHtml(safeUrl)}">${escapeHtml(label)}</a>`;
+                    } else {
+                        result += escapeHtml(full);
+                    }
+                    lastIndex = pattern.lastIndex;
+                }
+                result += escapeHtml(text.slice(lastIndex));
+                return result;
+            };
+
+            const stripStorePaths = (element) => {
+                if (!element) return;
+                const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+                const regex = /\/?store\/[^\s,)\.]+\/?/g;
+                let node;
+                while ((node = walker.nextNode())) {
+                    if (node.parentElement && node.parentElement.closest('a.portal-ai-link')) {
+                        continue;
+                    }
+                    const cleaned = node.textContent.replace(regex, '').replace(/\s{2,}/g, ' ').trim();
+                    if (cleaned !== node.textContent) {
+                        node.textContent = cleaned;
+                    }
+                }
+            };
+
+            const getCsrfToken = () => {
+                const match = document.cookie.match(/csrftoken=([^;]+)/);
+                return match ? match[1] : '';
+            };
+
+            const scrollMessages = () => {
+                if (messages) {
+                    messages.scrollTop = messages.scrollHeight;
+                }
+            };
+
+            const appendMessage = (role, text) => {
+                if (!messages) return null;
+                const div = document.createElement('div');
+                div.className = `portal-ai-message ${role}`;
+                if (role === 'bot') {
+                    div.innerHTML = renderTextWithLinks(text);
+                } else {
+                    div.textContent = text;
+                }
+                messages.appendChild(div);
+                scrollMessages();
+                return div;
+            };
+
+            const setOpen = (open) => {
+                panel.classList.toggle('open', open);
+                panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+                if (open) {
+                    input?.focus();
+                }
+                if (open) {
+                    toggle.style.display = 'none';
+                } else {
+                    toggle.style.display = '';
+                }
+                try {
+                    localStorage.setItem(openKey, open ? 'true' : 'false');
+                } catch (err) {
+                    console.error('Failed to persist AI open state', err);
+                }
+            };
+
+            const setLoading = (loading) => {
+                if (loading) {
+                    sendBtn?.setAttribute('disabled', 'disabled');
+                    input?.setAttribute('disabled', 'disabled');
+                } else {
+                    sendBtn?.removeAttribute('disabled');
+                    input?.removeAttribute('disabled');
+                }
+            };
+
+            const renderHistory = () => {
+                if (!history.length) {
+                    appendMessage('bot', 'Hi! Ask me about your [Invoices](/store/invoices/), [Workorders](/store/workorders/), [Vehicles](/store/vehicles/), [Maintenance](/store/maintenance/), or [Balances](/store/settlements/).');
+                    return;
+                }
+                history.forEach(turn => {
+                    if (turn.user) {
+                        appendMessage('user', turn.user);
+                    }
+                    if (turn.bot) {
+                        appendMessage('bot', turn.bot);
+                    }
+                });
+            };
+
+            const sendToAssistant = async (promptText) => {
+                if (!promptText) return;
+                const thinking = appendMessage('status', 'Thinking...');
+                setLoading(true);
+                try {
+                    const payload = {
+                        message: promptText,
+                        history: history.slice(-6),
+                    };
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken(),
+                        },
+                        body: JSON.stringify(payload),
+                    });
+                    const data = await response.json();
+                    if (!response.ok || !data.reply) {
+                        if (thinking) thinking.textContent = data.error || 'Sorry, I could not answer right now.';
+                        return;
+                    }
+                    if (thinking) {
+                        thinking.remove();
+                    }
+                    appendMessage('bot', data.reply);
+                    history.push({ user: promptText, bot: data.reply });
+                    saveHistory();
+                } catch (err) {
+                    console.error('AI request failed', err);
+                    if (thinking) thinking.textContent = 'Network issue; please try again.';
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            toggle?.addEventListener('click', () => {
+                const open = !panel.classList.contains('open');
+                setOpen(open);
+            });
+
+            closeBtn?.addEventListener('click', () => setOpen(false));
+
+            form?.addEventListener('submit', (evt) => {
+                evt.preventDefault();
+                const value = (input?.value || '').trim();
+                if (!value) return;
+                appendMessage('user', value);
+                history.push({ user: value });
+                saveHistory();
+                input.value = '';
+                sendToAssistant(value);
+            });
+
+            const rememberViewport = () => {
+                try {
+                    const pos = Math.max(window.scrollY || 0, 0);
+                    sessionStorage.setItem(viewportKey, pos.toString());
+                    if (messages) {
+                        sessionStorage.setItem(scrollKey, messages.scrollTop.toString());
+                    }
+                } catch (err) {
+                    console.error('Failed to save viewport position', err);
+                }
+            };
+
+            messages?.addEventListener('click', (evt) => {
+                const anchor = evt.target.closest('a.portal-ai-link');
+                if (!anchor) return;
+                rememberViewport();
+                try {
+                    localStorage.setItem(openKey, 'true');
+                } catch (err) {
+                    console.error('Failed to persist open state before navigation', err);
+                }
+            });
+
+            const restoreViewport = () => {
+                try {
+                    const stored = sessionStorage.getItem(viewportKey);
+                    const scrollStored = sessionStorage.getItem(scrollKey);
+                    if (stored !== null) {
+                        const value = Number.parseInt(stored, 10);
+                        if (!Number.isNaN(value)) {
+                            window.scrollTo(0, value);
+                        }
+                        sessionStorage.removeItem(viewportKey);
+                    }
+                    if (messages && scrollStored !== null) {
+                        const msgValue = Number.parseInt(scrollStored, 10);
+                        if (!Number.isNaN(msgValue)) {
+                            messages.scrollTop = msgValue;
+                        }
+                        sessionStorage.removeItem(scrollKey);
+                    }
+                } catch (err) {
+                    console.error('Failed to restore viewport position', err);
+                }
+            };
+
+            // Initialize
+            renderHistory();
+            const shouldOpen = (() => {
+                try {
+                    return localStorage.getItem(openKey) === 'true';
+                } catch (err) {
+                    return false;
+                }
+            })();
+            if (shouldOpen) {
+                setOpen(true);
+            }
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'manual';
+            }
+            window.requestAnimationFrame(restoreViewport);
+            window.addEventListener('load', restoreViewport);
+            window.addEventListener('pageshow', restoreViewport);
+        })();
+</script>
+    <script>
+        (function () {
+            const moveModalToBody = (modal) => {
+                if (!modal || modal.parentElement === document.body) {
+                    return;
+                }
+                document.body.appendChild(modal);
+            };
+
+            const checkNodeForModals = (node) => {
+                if (!(node instanceof Element)) {
+                    return;
+                }
+                if (node.classList.contains('modal')) {
+                    moveModalToBody(node);
+                    return;
+                }
+                node.querySelectorAll('.modal').forEach(moveModalToBody);
+            };
+
+            const relocateExistingModals = () => {
+                document.querySelectorAll('.app-shell .modal').forEach(moveModalToBody);
+            };
+
+            const observeShell = () => {
+                const shell = document.querySelector('.app-shell');
+                if (!shell) {
+                    return;
+                }
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        mutation.addedNodes.forEach(checkNodeForModals);
+                    });
+                });
+                observer.observe(shell, { childList: true, subtree: true });
+            };
+
+            relocateExistingModals();
+            observeShell();
+        })();
+    </script>
+    {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/select2_autoinit.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+{% extends 'customer_portal_base.html' %}
+{% block title %}
+    All Notes
+{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>All Notes</h5>
+
+                    <!-- Sorting Options -->
+                    <form method="GET" class="form-inline">
+                        <label for="sort" class="mr-2">Sort by:</label>
+                        <select name="sort" id="sort" class="form-control mr-sm-2" onchange="liveSearch()">
+                            <option value="title" {% if request.GET.sort == 'title' %}selected{% endif %}>Title</option>
+                            <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>Date Created</option>
+                            <option value="pinned" {% if request.GET.sort == 'pinned' %}selected{% endif %}>Pinned</option>
+                        </select>
+
+                        <!-- Ascending/Descending Options -->
+                        <select name="order" id="order" class="form-control mr-sm-2" onchange="liveSearch()">
+                            <option value="asc" {% if request.GET.order == 'asc' %}selected{% endif %}>Ascending</option>
+                            <option value="desc" {% if request.GET.order == 'desc' %}selected{% endif %}>Descending</option>
+                        </select>
+                    </form>
+                </div>
+
+                <div class="card-body">
+                    <!-- Search Box -->
+                    <input type="text" id="search-input" class="form-control mb-4" placeholder="Search notes..." onkeyup="liveSearch()">
+
+                    <!-- Display Notes (This section will be updated by AJAX) -->
+                    <div id="notes-list">
+                        {% include 'notes/note_list.html' with notes=notes %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Live Search -->
+<script>
+    function liveSearch() {
+        const query = document.getElementById('search-input').value;
+        const sort = document.getElementById('sort').value;
+        const order = document.getElementById('order').value;
+
+        // Make an AJAX request to the live_search endpoint
+        fetch(`/live_search/?search=${query}&sort=${sort}&order=${order}`)
+        .then(response => response.json())
+        .then(data => {
+            // Update the notes list with the returned HTML
+            document.getElementById('notes-list').innerHTML = data.html;
+        });
+    }
+</script>
+{% endblock %}

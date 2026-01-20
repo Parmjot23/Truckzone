@@ -1,0 +1,54 @@
+{% extends 'customer_portal_base.html' %}
+{% block title %}
+    Edit Customer - {{ customer.name }}
+{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Edit Customer - {{ customer.name }}</h2>
+    <form id="customer-edit-form" method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="{% url 'accounts:customer_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function setupCustomerPortalFields(form){
+    if(!form || form.dataset.portalReady === '1'){
+        return;
+    }
+    const toggle = form.querySelector('#id_register_portal');
+    if(!toggle){
+        return;
+    }
+    const usernameWrapper = form.querySelector('#div_id_portal_username') || (form.querySelector('#id_portal_username') ? form.querySelector('#id_portal_username').closest('p') : null);
+    const passwordWrapper = form.querySelector('#div_id_portal_password') || (form.querySelector('#id_portal_password') ? form.querySelector('#id_portal_password').closest('p') : null);
+    const passwordInput = form.querySelector('#id_portal_password');
+
+    function toggleVisibility(){
+        const show = toggle.checked;
+        if(usernameWrapper){
+            usernameWrapper.style.display = show ? '' : 'none';
+        }
+        if(passwordWrapper){
+            passwordWrapper.style.display = show ? '' : 'none';
+        }
+        if(!show && passwordInput){
+            passwordInput.value = '';
+        }
+    }
+
+    toggleVisibility();
+    toggle.addEventListener('change', toggleVisibility);
+    form.dataset.portalReady = '1';
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    const form = document.getElementById('customer-edit-form');
+    setupCustomerPortalFields(form);
+});
+</script>
+{% endblock %}

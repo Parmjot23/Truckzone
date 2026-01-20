@@ -1,0 +1,286 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+
+{% block title %}
+    Supplier Entries - {{ supplier_name }}
+{% endblock %}
+
+{% block content %}
+<style>
+    .supplier-shell {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+        padding: 1rem;
+    }
+    .table-modern th {
+        font-weight: 700;
+        color: #64748b;
+        font-size: 0.9rem;
+        border-bottom: 1px solid #e2e8f0 !important;
+        white-space: nowrap;
+    }
+    .table-modern td {
+        vertical-align: middle;
+        border-top: none;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.95rem;
+    }
+    .table-modern tr:nth-child(even) td { background: #f8fafc; }
+    .table-search {
+        max-width: 320px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.35rem 0.65rem;
+        background: #f8fafc;
+    }
+    .table-search input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        outline: none;
+    }
+    .date-range-custom {
+        display: none;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .date-range-custom.show { display: flex; }
+    .sort-link {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .sort-link i {
+        font-size: 0.8rem;
+        color: #94a3b8;
+    }
+    th[aria-sort="ascending"] .sort-link i,
+    th[aria-sort="descending"] .sort-link i {
+        color: #2563eb;
+    }
+</style>
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-start flex-column flex-lg-row mb-4 gap-3">
+        <div>
+            <h1 class="text-primary mb-2"><i class="fas fa-truck-moving"></i> Supplier: {{ supplier_name }}</h1>
+            <div class="text-muted">Line item entries across all receipts for this supplier.</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'accounts:supplier_detail' supplier_name %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Supplier
+            </a>
+            <a href="{% url 'accounts:supplier_list' %}" class="btn btn-outline-secondary">
+                Back to Suppliers
+            </a>
+        </div>
+    </div>
+
+    <div class="supplier-shell">
+        <form method="GET" id="supplier-entry-form" action="{% url 'accounts:supplier_entries' supplier_name %}">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div class="d-flex align-items-center table-search">
+                    <i class="fa fa-search text-muted me-2"></i>
+                    <input type="text" name="q" value="{{ query }}" id="search-input" placeholder="Search entries...">
+                </div>
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <label class="text-muted small mb-0">Period:</label>
+                    <select id="dateRangeFilter" name="date_range" class="form-select form-select-sm" style="max-width: 200px;" data-select2-skip="true">
+                        {% for value,label in date_range_options %}
+                            <option value="{{ value }}"{% if current_date_range == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <div id="custom-date-range" class="date-range-custom{% if current_date_range == 'custom' %} show{% endif %}">
+                        <input type="date" class="form-control form-control-sm" name="start_date" id="start-date" value="{{ selected_start_date|date:'Y-m-d' }}">
+                        <span class="text-muted small">to</span>
+                        <input type="date" class="form-control form-control-sm" name="end_date" id="end-date" value="{{ selected_end_date|date:'Y-m-d' }}">
+                    </div>
+                    <label class="text-muted small mb-0">Category:</label>
+                    <select name="category" id="category-filter" class="form-select form-select-sm" style="max-width: 180px;">
+                        <option value="">All</option>
+                        {% for category in category_options %}
+                            <option value="{{ category }}"{% if selected_category == category %} selected{% endif %}>{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                    <tr>
+                        <th aria-sort="{% if sort == 'receipt' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                            <a class="sort-link" href="?{{ query_prefix }}sort=receipt&direction={% if sort == 'receipt' and direction == 'asc' %}desc{% else %}asc{% endif %}">
+                                Receipt
+                                {% if sort == 'receipt' %}
+                                    {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                                {% else %}
+                                    <i class="fa-solid fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th aria-sort="{% if sort == 'date' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                            <a class="sort-link" href="?{{ query_prefix }}sort=date&direction={% if sort == 'date' and direction == 'asc' %}desc{% else %}asc{% endif %}">
+                                Date
+                                {% if sort == 'date' %}
+                                    {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                                {% else %}
+                                    <i class="fa-solid fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th aria-sort="{% if sort == 'category' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                            <a class="sort-link" href="?{{ query_prefix }}sort=category&direction={% if sort == 'category' and direction == 'asc' %}desc{% else %}asc{% endif %}">
+                                Category
+                                {% if sort == 'category' %}
+                                    {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                                {% else %}
+                                    <i class="fa-solid fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th aria-sort="{% if sort == 'part_no' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                            <a class="sort-link" href="?{{ query_prefix }}sort=part_no&direction={% if sort == 'part_no' and direction == 'asc' %}desc{% else %}asc{% endif %}">
+                                Part No
+                                {% if sort == 'part_no' %}
+                                    {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                                {% else %}
+                                    <i class="fa-solid fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th aria-sort="{% if sort == 'description' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                            <a class="sort-link" href="?{{ query_prefix }}sort=description&direction={% if sort == 'description' and direction == 'asc' %}desc{% else %}asc{% endif %}">
+                                Description
+                                {% if sort == 'description' %}
+                                    {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                                {% else %}
+                                    <i class="fa-solid fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="text-center" aria-sort="{% if sort == 'qty' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                            <a class="sort-link" href="?{{ query_prefix }}sort=qty&direction={% if sort == 'qty' and direction == 'asc' %}desc{% else %}asc{% endif %}">
+                                Qty
+                                {% if sort == 'qty' %}
+                                    {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                                {% else %}
+                                    <i class="fa-solid fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="text-end" aria-sort="{% if sort == 'price' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                            <a class="sort-link" href="?{{ query_prefix }}sort=price&direction={% if sort == 'price' and direction == 'asc' %}desc{% else %}asc{% endif %}">
+                                Price
+                                {% if sort == 'price' %}
+                                    {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                                {% else %}
+                                    <i class="fa-solid fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="text-end" aria-sort="{% if sort == 'amount' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                            <a class="sort-link" href="?{{ query_prefix }}sort=amount&direction={% if sort == 'amount' and direction == 'asc' %}desc{% else %}asc{% endif %}">
+                                Amount
+                                {% if sort == 'amount' %}
+                                    {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                                {% else %}
+                                    <i class="fa-solid fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="text-end" aria-sort="{% if sort == 'tax' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                            <a class="sort-link" href="?{{ query_prefix }}sort=tax&direction={% if sort == 'tax' and direction == 'asc' %}desc{% else %}asc{% endif %}">
+                                Tax Paid
+                                {% if sort == 'tax' %}
+                                    {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                                {% else %}
+                                    <i class="fa-solid fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if entries %}
+                        {% for entry in entries %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'accounts:mechexpense_detail' entry.mech_expense.pk %}">
+                                        {{ entry.mech_expense.receipt_no }}
+                                    </a>
+                                </td>
+                                <td>{{ entry.mech_expense.date|date:"M d, Y" }}</td>
+                                <td>{{ entry.mech_expense.categorie|default:"N/A" }}</td>
+                                <td>{{ entry.part_no|default:"-" }}</td>
+                                <td>{{ entry.description|default:"-" }}</td>
+                                <td class="text-center">{{ entry.qty|floatformat:2 }}</td>
+                                <td class="text-end">{{ entry.price|currency }}</td>
+                                <td class="text-end">{{ entry.amount|currency }}</td>
+                                <td class="text-end">{{ entry.tax_paid|currency }}</td>
+                                <td class="text-center">
+                                    <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:mechexpense_detail' entry.mech_expense.pk %}">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="10" class="text-center">No entries found for this supplier.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('supplier-entry-form');
+    const searchInput = document.getElementById('search-input');
+    const dateRange = document.getElementById('dateRangeFilter');
+    const customRange = document.getElementById('custom-date-range');
+    const startDate = document.getElementById('start-date');
+    const endDate = document.getElementById('end-date');
+    const categoryFilter = document.getElementById('category-filter');
+
+    function toggleCustomRange() {
+        if (!customRange || !dateRange) return;
+        customRange.classList.toggle('show', dateRange.value === 'custom');
+    }
+
+    if (dateRange) {
+        dateRange.addEventListener('change', () => {
+            toggleCustomRange();
+            form.submit();
+        });
+    }
+    if (startDate) {
+        startDate.addEventListener('change', () => form.submit());
+    }
+    if (endDate) {
+        endDate.addEventListener('change', () => form.submit());
+    }
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', () => form.submit());
+    }
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchInput._timer);
+            searchInput._timer = setTimeout(() => form.submit(), 300);
+        });
+    }
+
+    toggleCustomRange();
+});
+</script>
+{% endblock %}

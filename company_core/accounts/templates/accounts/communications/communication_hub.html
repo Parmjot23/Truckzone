@@ -1,0 +1,235 @@
+{% extends 'customer_portal_base.html' %}
+{% load humanize %}
+
+{% block title %}Communication Hub{% endblock %}
+
+{% block extra_css %}
+  {{ block.super }}
+  {% include 'accounts/communications/_comm_styles.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="comm-wrapper container-fluid">
+  <div class="comm-header">
+    <div>
+      <div class="eyebrow">Communication hub</div>
+      <h1>Communication Hub</h1>
+      <p class="comm-subtitle">Track booking requests, contact messages, and outreach in one place.</p>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <span class="hero-chip">
+        {{ booking_stats.new|default:0|intcomma }} new bookings
+      </span>
+      <a href="{% url 'accounts:appointments_list' %}" class="pill pill-primary">
+        <i class="fa-regular fa-calendar-check"></i>
+        Booking controls
+      </a>
+      <a href="{% url 'accounts:contacts_list' %}" class="pill">
+        <i class="fa-regular fa-envelope"></i>
+        Inbox & follow-up
+      </a>
+    </div>
+  </div>
+  <div class="mt-3">
+    {% include 'accounts/communications/_comm_nav.html' %}
+  </div>
+
+  <div class="row g-3 mt-3">
+    <div class="col-md-3 col-sm-6">
+      <div class="comm-metric">
+        <div class="title">Booking Requests</div>
+        <div class="value">{{ booking_stats.total|default:0|intcomma }}</div>
+        <p class="meta">New: {{ booking_stats.new|default:0 }} | Scheduled: {{ booking_stats.scheduled|default:0 }}</p>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="comm-metric">
+        <div class="title">Contact Messages</div>
+        <div class="value">{{ contact_stats.total|default:0|intcomma }}</div>
+        <p class="meta">New today: {{ contact_stats.today|default:0 }} | Unread: {{ contact_stats.new|default:0 }}</p>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="comm-metric">
+        <div class="title">Email Delivery</div>
+        <div class="value">{{ email_status_summary.total|default:0|intcomma }}</div>
+        <p class="meta">Sent: {{ email_status_summary.sent|default:0 }} | Failed: {{ email_status_summary.failed|default:0 }}</p>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="comm-metric">
+        <div class="title">AI Conversations</div>
+        <div class="value">{{ ai_conversations|length }}</div>
+        <p class="meta">Public + portal threads captured</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-2">
+    <div class="col-12">
+      <div class="comm-card h-100">
+        <div class="comm-card-header">
+          <div>
+            <h3>Intake queue</h3>
+            <p>Fresh booking requests and contact messages grouped together.</p>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'accounts:appointments_list' %}" class="pill pill-ghost">
+              <i class="fa-solid fa-sliders"></i>
+              Booking settings
+            </a>
+            <a href="{% url 'accounts:contacts_list' %}" class="pill pill-ghost">
+              <i class="fa-solid fa-inbox"></i>
+              Open inbox
+            </a>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="comm-mini-card">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <h5 class="mb-1">Booking requests</h5>
+                  <p class="mb-0 text-muted small">Showing newest {{ bookings|length }} of {{ booking_stats.total|default:0 }}</p>
+                </div>
+                <span class="badge-soft {% if booking_stats.new %}badge-soft-primary{% else %}badge-soft-green{% endif %}">
+                  {{ booking_stats.new|default:0 }} new
+                </span>
+              </div>
+              {% if bookings %}
+              <div class="table-responsive">
+                <table class="table table-sm align-middle comm-table mb-0">
+                  <thead>
+                    <tr>
+                      <th scope="col">Customer</th>
+                      <th scope="col">Service</th>
+                      <th scope="col">Status</th>
+                      <th scope="col"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for booking in bookings %}
+                    <tr>
+                      <td>
+                        <div class="fw-bold">{{ booking.full_name }}</div>
+                        <div class="text-muted small">{{ booking.created_at|naturaltime }}</div>
+                      </td>
+                      <td>
+                        <span class="badge-soft badge-soft-amber">{{ booking.get_service_type_display }}</span>
+                        {% if booking.preferred_datetime %}
+                        <div class="small text-muted mt-1">{{ booking.preferred_datetime|date:"M j, g:i a" }}</div>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <span class="status-pill {% if booking.status == 'new' %}status-new{% elif booking.status == 'scheduled' %}status-success{% elif booking.status == 'processing' %}status-open{% else %}status-open{% endif %}">
+                          <span class="dot"></span>
+                          {{ booking.get_status_display }}
+                        </span>
+                      </td>
+                      <td class="text-end">
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:appointments_detail' booking.pk %}">Open</a>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% else %}
+              <div class="comm-empty">No booking requests yet.</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="comm-mini-card">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <h5 class="mb-1">Contact messages</h5>
+                  <p class="mb-0 text-muted small">Public + portal forms combined.</p>
+                </div>
+                <span class="badge-soft {% if contact_stats.new %}badge-soft-primary{% else %}badge-soft-green{% endif %}">
+                  {{ contact_stats.new|default:0 }} unread
+                </span>
+              </div>
+              {% if contact_messages %}
+              <div class="comm-list">
+                {% for msg in contact_messages %}
+                <div class="comm-list-item">
+                  <div>
+                    <h6 class="mb-0">{{ msg.full_name }}</h6>
+                    <p class="small mb-1 text-muted">{{ msg.created_at|naturaltime }} | {{ msg.get_message_type_display }}</p>
+                    <p class="mb-0">{{ msg.subject|default:"No subject" }}</p>
+                    <div class="mt-1 d-flex flex-wrap gap-2">
+                      {% if msg.service_type %}
+                        <span class="badge-soft badge-soft-amber">{{ msg.get_service_type_display }}</span>
+                      {% endif %}
+                      <span class="badge-soft badge-soft-primary">{{ msg.get_source_display }}</span>
+                    </div>
+                  </div>
+                  <div class="d-flex flex-column align-items-end gap-2">
+                    <span class="status-pill {% if msg.status == 'new' %}status-new{% else %}status-open{% endif %}">
+                      <span class="dot"></span>{{ msg.get_status_display }}
+                    </span>
+                    <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:contacts_detail' msg.pk %}">Review</a>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="comm-empty">No contact messages yet.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="row g-3 mt-2">
+    <div class="col-12">
+      <div class="comm-card h-100">
+        <div class="comm-card-header">
+          <div>
+            <h3>Booking windows & public forms</h3>
+            <p>Surface current booking hours and public intake entry points.</p>
+          </div>
+          <span class="badge-soft badge-soft-green">Live</span>
+        </div>
+        <div class="comm-list">
+          <div class="comm-list-item">
+            <div>
+              <h6 class="mb-0">Booking hours</h6>
+              <p class="mb-0 text-muted small">
+                {{ booking_settings.start_time|time:"g:i a" }} - {{ booking_settings.end_time|time:"g:i a" }},
+                {{ booking_settings.slot_interval_minutes }} min slots
+              </p>
+            </div>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:appointments_list' %}">Adjust</a>
+          </div>
+          <div class="comm-list-item">
+            <div>
+              <h6 class="mb-0">Upcoming closure</h6>
+              <p class="mb-0 text-muted small">
+                {% if upcoming_holiday %}
+                  {{ upcoming_holiday.date|date:"M j, Y" }} - {{ upcoming_holiday.reason|default:"Holiday" }}
+                {% else %}
+                  None scheduled
+                {% endif %}
+              </p>
+            </div>
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:appointments_list' %}#holidays">Holiday list</a>
+          </div>
+          <div class="comm-list-item">
+            <div>
+              <h6 class="mb-0">Contact form</h6>
+              <p class="mb-0 text-muted small">Public website + customer portal messages feed this hub.</p>
+            </div>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:contacts_list' %}">Open inbox</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

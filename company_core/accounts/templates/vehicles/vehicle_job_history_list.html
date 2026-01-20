@@ -1,0 +1,103 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+{% load custom_filters %} {# For currency formatting #}
+
+{% block title %}
+    Job History for Vehicle {{ vehicle.vin_number }}
+{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    .totals-row td {
+        font-weight: bold;
+        background-color: #f8f9fa; /* Light grey for totals row */
+    }
+    .description-notes {
+        max-width: 300px; /* Adjust as needed */
+        word-wrap: break-word;
+    }
+</style>
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-wrench"></i> Job History for Vehicle</h2>
+            <p class="lead">
+                <strong>VIN:</strong> {{ vehicle.vin_number }} <br>
+                <strong>Unit:</strong> {{ vehicle.unit_number|default:"N/A" }} <br>
+                <strong>Make/Model:</strong> {{ vehicle.make_model|default:"N/A" }} <br>
+                <strong>Customer:</strong> {{ vehicle.customer.name }}
+            </p>
+        </div>
+        <a href="{% url 'accounts:customer_vehicle_list' customer_id=vehicle.customer.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Vehicle List
+        </a>
+    </div>
+
+    {% if job_history_list %}
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Job Date</th>
+                            <th>Description</th>
+                            <th>Invoice</th>
+                            <th class="text-right">Service Cost</th>
+                            <th class="text-right">Tax</th>
+                            <th class="text-right">Total Cost</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in job_history_list %}
+                        <tr>
+                            <td data-label="Job Date">{{ job.job_date|date:"Y-m-d" }}</td>
+                            <td data-label="Description" class="description-notes">{{ job.description|linebreaksbr }}</td>
+                            <td data-label="Invoice">
+                                {% if job.invoice %}
+                                    <a href="{% url 'accounts:groupedinvoice_detail' job.invoice.id %}" target="_blank" title="View Invoice in Admin">
+                                        {{ job.invoice.invoice_number }}
+                                    </a>
+                                {% elif job.source_income_record.grouped_invoice %}
+                                     <a href="{% url 'admin:accounts_groupedinvoice_change' job.source_income_record.grouped_invoice.id %}" target="_blank" title="View Source Invoice in Admin">
+                                        {{ job.source_income_record.grouped_invoice.invoice_number }} (Source)
+                                    </a>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td data-label="Service Cost" class="text-right">{{ job.service_cost|currency }}</td>
+                            <td data-label="Tax" class="text-right">{{ job.tax_amount|currency }}</td>
+                            <td data-label="Total Cost" class="text-right">{{ job.total_job_cost|currency }}</td>
+                            <td data-label="Notes" class="description-notes">{{ job.notes|linebreaksbr|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if totals.job_count > 0 %}
+                    <tfoot>
+                        <tr class="totals-row table-secondary">
+                            <td colspan="3" class="text-right"><strong>Totals ({{ totals.job_count }} Jobs):</strong></td>
+                            <td class="text-right"><strong>{{ totals.total_service_cost|currency }}</strong></td>
+                            <td class="text-right"><strong>{{ totals.total_tax_amount|currency }}</strong></td>
+                            <td class="text-right"><strong>{{ totals.total_overall_cost|currency }}</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center" role="alert">
+        No job history found for this vehicle.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

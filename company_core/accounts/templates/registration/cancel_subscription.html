@@ -1,0 +1,19 @@
+{% extends "customer_portal_base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Cancel Subscription</h2>
+    <form method="post">
+        {% csrf_token %}
+        <p>Are you sure you want to cancel your subscription? This action cannot be undone.</p>
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        <button type="submit" class="btn btn-danger">Cancel Subscription</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,380 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Storefront Flyer</title>
+    <style>
+      @page {
+        size: Letter;
+        margin: 1cm;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Helvetica", "Arial", sans-serif;
+        color: #0f172a;
+        font-size: 11px;
+      }
+
+      img {
+        max-width: 100%;
+      }
+
+      .flyer-sheet {
+        background-color: #f7f6f3;
+        background-image:
+          radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.08) 1px, transparent 0),
+          radial-gradient(circle at 0 0, rgba(15, 23, 42, 0.04) 1px, transparent 0);
+        background-size: 12px 12px, 24px 24px;
+        border: 2px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .flyer-sheet::before {
+        content: '';
+        position: absolute;
+        top: -140px;
+        right: -140px;
+        width: 280px;
+        height: 280px;
+        background: radial-gradient(circle, rgba(250, 204, 21, 0.35), transparent 70%);
+        opacity: 0.8;
+      }
+
+      .flyer-sheet::after {
+        content: '';
+        position: absolute;
+        bottom: -170px;
+        left: -140px;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(30, 58, 138, 0.2), transparent 70%);
+        opacity: 0.75;
+      }
+
+      .flyer-sheet > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .flyer-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-end;
+        margin-bottom: 16px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e2e8f0;
+        position: relative;
+      }
+
+      .flyer-header::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: -2px;
+        width: 110px;
+        height: 3px;
+        border-radius: 999px;
+        background: #facc15;
+      }
+
+      .flyer-title {
+        font-size: 20px;
+        font-weight: 800;
+        margin-bottom: 4px;
+        letter-spacing: -0.02em;
+      }
+
+      .flyer-subtitle {
+        font-size: 11px;
+        color: #475569;
+      }
+
+      .flyer-meta {
+        text-align: right;
+        color: #475569;
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .flyer-business {
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 4px;
+      }
+
+      .flyer-section {
+        margin-bottom: 18px;
+      }
+
+      .flyer-section-title {
+        font-size: 9px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 4px 10px;
+        color: #0f172a;
+      }
+
+      .flyer-section-title::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-radius: 2px;
+        background: #facc15;
+      }
+
+      .flyer-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .flyer-card {
+        flex: 1 1 48%;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 10px;
+        display: flex;
+        gap: 10px;
+        position: relative;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+        min-height: 110px;
+      }
+
+      .flyer-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 3px;
+        height: 100%;
+        background: linear-gradient(180deg, #facc15 0%, #f97316 100%);
+      }
+
+      .flyer-card-media {
+        width: 80px;
+        height: 80px;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        font-size: 18px;
+        flex: 0 0 80px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .flyer-card-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .flyer-card-body {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .flyer-card-brand {
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #dc2626;
+      }
+
+      .flyer-card-title {
+        font-weight: 700;
+        margin-bottom: 2px;
+        line-height: 1.2;
+      }
+
+      .flyer-card-price {
+        font-size: 12px;
+        color: #1e3a8a;
+        font-weight: 700;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-items: baseline;
+      }
+
+      .flyer-card-meta {
+        font-size: 9px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .flyer-price-original {
+        color: #94a3b8;
+        text-decoration: line-through;
+        font-size: 9px;
+        font-weight: 600;
+      }
+
+      .flyer-price-main {
+        display: inline-flex;
+        align-items: flex-start;
+        gap: 2px;
+        color: #1e3a8a;
+        font-weight: 800;
+      }
+
+      .flyer-price-currency {
+        font-size: 9px;
+        margin-top: 4px;
+      }
+
+      .flyer-price-dollars {
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      .flyer-price-cents {
+        font-size: 9px;
+        line-height: 1;
+        margin-top: 3px;
+      }
+
+      .flyer-price-call {
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #475569;
+      }
+
+      .flyer-card-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #facc15;
+        color: #0f172a;
+        font-size: 8px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 3px 7px;
+        border-radius: 999px;
+        border: 1px solid #f59e0b;
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.2);
+      }
+
+      .flyer-package-card {
+        flex: 1 1 100%;
+        border: 2px dashed #e2e8f0;
+        border-radius: 14px;
+        padding: 12px 12px 12px 16px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .flyer-package-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%);
+      }
+
+      .flyer-package-title {
+        font-size: 14px;
+        font-weight: 800;
+        margin-bottom: 4px;
+      }
+
+      .flyer-package-subtitle {
+        color: #64748b;
+        margin-bottom: 10px;
+      }
+
+      .flyer-package-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .flyer-package-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .flyer-package-item img {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        object-fit: cover;
+      }
+
+      .flyer-package-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #0f172a;
+        color: #ffffff;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        border: 1px solid #0f172a;
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.2);
+      }
+
+      .flyer-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        border-top: 1px solid rgba(148, 163, 184, 0.3);
+        padding: 8px 10px;
+        font-size: 9px;
+        color: #64748b;
+        flex-wrap: wrap;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    {% include 'store/partials/_storefront_flyer_content.html' %}
+  </body>
+</html>

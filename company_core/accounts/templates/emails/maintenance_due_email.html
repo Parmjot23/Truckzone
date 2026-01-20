@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+{% load humanize %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upcoming Maintenance Reminder</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        .email-container {
+            max-width: 640px;
+            margin: 24px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e5e9f2;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+        }
+        .header {
+            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+            color: #ffffff;
+            padding: 24px 28px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 28px 32px;
+        }
+        .content p {
+            margin-bottom: 16px;
+        }
+        .highlight {
+            background-color: #e7f1ff;
+            border-left: 4px solid #0d6efd;
+            padding: 16px 20px;
+            border-radius: 6px;
+            margin-bottom: 24px;
+        }
+        .task-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+        .task-table thead {
+            background-color: #f1f5f9;
+        }
+        .task-table th,
+        .task-table td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .task-table th {
+            font-weight: 600;
+            color: #334155;
+        }
+        .task-table td strong {
+            color: #0f172a;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        .badge.upcoming {
+            background-color: #d1fae5;
+            color: #047857;
+        }
+        .badge.overdue {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        .footer {
+            background-color: #f8fafc;
+            padding: 20px 28px;
+            font-size: 13px;
+            color: #64748b;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+        a.button {
+            display: inline-block;
+            margin-top: 12px;
+            background-color: #0d6efd;
+            color: #ffffff !important;
+            padding: 12px 18px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        @media (max-width: 600px) {
+            .content {
+                padding: 24px 20px;
+            }
+            .header {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Upcoming Maintenance Reminder</h1>
+        </div>
+        <div class="content">
+            <p>Dear {{ customer.name }},</p>
+            <p>
+                We hope things are running smoothly with your fleet. This is a friendly reminder from
+                <strong>{{ business_name }}</strong> about upcoming and overdue maintenance items we have scheduled in our system
+                for your vehicles.
+            </p>
+            <div class="highlight">
+                <p style="margin: 0;">
+                    We are watching maintenance items due between <strong>{{ today|date:"F j, Y" }}</strong> and
+                    <strong>{{ window_end|date:"F j, Y" }}</strong>. Completing them promptly helps prevent unexpected downtime
+                    and keeps every unit compliant and road-ready. You can also book a slot online any time.
+                </p>
+            </div>
+
+            {% if overdue_tasks %}
+            <h2 style="font-size: 18px; margin-bottom: 12px;">Overdue maintenance</h2>
+            <table class="task-table" role="presentation">
+                <thead>
+                    <tr>
+                        <th scope="col">Vehicle</th>
+                        <th scope="col">Task</th>
+                        <th scope="col">Due date</th>
+                        <th scope="col">Mileage</th>
+                        <th scope="col">Priority</th>
+                        <th scope="col">Last service</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in overdue_tasks %}
+                    <tr>
+                        <td>
+                            <strong>{{ task.vehicle.make_model|default:task.vehicle.vin_number }}</strong><br>
+                            <small>Unit {{ task.vehicle.unit_number|default:"N/A" }}</small>
+                        </td>
+                        <td>{{ task.title }}</td>
+                        <td><span class="badge overdue">{{ task.due_date|date:"F j, Y" }}</span></td>
+                        <td>
+                            {% if task.due_mileage %}<div>Due at {{ task.due_mileage|intcomma }} km</div>{% endif %}
+                            {% if task.mileage_interval_display %}<div>{{ task.mileage_interval_display }}</div>{% endif %}
+                            {% if task.next_due_mileage %}<div>Next at {{ task.next_due_mileage|intcomma }} km</div>{% endif %}
+                        </td>
+                        <td>{{ task.get_priority_display }}</td>
+                        <td>
+                            {% if task.last_completed %}
+                                {{ task.last_completed|date:"M j, Y" }}
+                            {% else %}
+                                Not recorded
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+
+            {% if upcoming_tasks %}
+            <h2 style="font-size: 18px; margin-bottom: 12px;">Coming due soon</h2>
+            <table class="task-table" role="presentation">
+                <thead>
+                    <tr>
+                        <th scope="col">Vehicle</th>
+                        <th scope="col">Task</th>
+                        <th scope="col">Due date</th>
+                        <th scope="col">Mileage</th>
+                        <th scope="col">Priority</th>
+                        <th scope="col">Last service</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in upcoming_tasks %}
+                    <tr>
+                        <td>
+                            <strong>{{ task.vehicle.make_model|default:task.vehicle.vin_number }}</strong><br>
+                            <small>Unit {{ task.vehicle.unit_number|default:"N/A" }}</small>
+                        </td>
+                        <td>{{ task.title }}</td>
+                        <td><span class="badge upcoming">{{ task.due_date|date:"F j, Y" }}</span></td>
+                        <td>
+                            {% if task.due_mileage %}<div>Due at {{ task.due_mileage|intcomma }} km</div>{% endif %}
+                            {% if task.mileage_interval_display %}<div>{{ task.mileage_interval_display }}</div>{% endif %}
+                            {% if task.next_due_mileage %}<div>Next at {{ task.next_due_mileage|intcomma }} km</div>{% endif %}
+                        </td>
+                        <td>{{ task.get_priority_display }}</td>
+                        <td>
+                            {% if task.last_completed %}
+                                {{ task.last_completed|date:"M j, Y" }}
+                            {% else %}
+                                Not recorded
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+
+            <p>
+                If you have already taken care of these items, thank you! Otherwise, feel free to reply to this message or
+                contact us at <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> so we can help schedule the work.
+                {% if portal_url %}
+                    You can also review every maintenance reminder directly in your customer portal.
+                {% endif %}
+            </p>
+
+            {% if portal_url %}
+            <p style="text-align: center;">
+                <a class="button" href="{{ portal_url }}">Open customer portal</a>
+            </p>
+            {% endif %}
+            {% if booking_url %}
+            <p style="text-align: center;">
+                <a class="button" style="background-color:#10b981;" href="{{ booking_url }}">Book a maintenance slot</a>
+            </p>
+            {% endif %}
+
+            <p>Thank you for trusting {{ business_name }} to keep your equipment in top condition.</p>
+            <p style="margin-bottom: 0;">Warm regards,<br>{{ business_name }} team</p>
+        </div>
+        <div class="footer">
+            &copy; {{ today|date:"Y" }} {{ business_name }}. All rights reserved.<br>
+            This message was sent because you have maintenance reminders enabled with {{ business_name }}.
+        </div>
+    </div>
+</body>
+</html>

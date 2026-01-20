@@ -1,0 +1,12 @@
+{% extends "customer_portal_base.html" %}
+
+{% block title %}New Mechanic Signup Code{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <a href="javascript:history.back()" class="btn btn-secondary mb-3">Back</a>
+    <h3>Your signup code:</h3>
+    <div class="alert alert-info"><strong>{{ code }}</strong></div>
+    <p>Share this code with the mechanic so they can sign up.</p>
+</div>
+{% endblock %}

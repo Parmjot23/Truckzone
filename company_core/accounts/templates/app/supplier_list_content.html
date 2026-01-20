@@ -1,0 +1,91 @@
+{% load custom_filters form_tags %}
+<table id="supplier-table" class="table table-modern align-middle">
+    <thead>
+        <tr>
+            <th scope="col">Rank</th>
+            <th scope="col"><i class="fas fa-warehouse"></i> Supplier</th>
+            <th scope="col" class="text-end">Balance Due</th>
+            <th scope="col" class="text-end">Total Paid</th>
+            <th scope="col" class="text-end">Total Credited</th>
+            <th scope="col" class="text-end">Total Amount</th>
+            <th scope="col" class="text-center"><i class="fas fa-cog"></i> Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if suppliers %}
+            {% for entry in suppliers %}
+                {% with supplier=entry.supplier %}
+                {% with supplier_url=supplier.name|default:entry.lookup_value %}
+                <tr>
+                    <td>{{ entry.rank }}</td>
+                    <td>
+                        <i class="fas fa-truck-loading text-primary me-2"></i>
+                        {% if supplier %}
+                            <a href="{% url 'accounts:supplier_detail' supplier_url %}">{{ entry.supplier_name }}</a>
+                        {% else %}
+                            {{ entry.supplier_name }}
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'accounts:supplier_detail' supplier_url %}?view=receipts&status=open" class="text-decoration-none">
+                            {{ entry.balance_incl_tax|currency }}
+                        </a>
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'accounts:supplier_detail' supplier_url %}?view=receipts&status=paid" class="text-decoration-none">
+                            {{ entry.total_paid|currency }}
+                        </a>
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'accounts:supplier_detail' supplier_url %}?view=credits" class="text-decoration-none">
+                            {{ entry.credit_total_incl_tax|currency }}
+                        </a>
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'accounts:supplier_detail' supplier_url %}?view=receipts" class="text-decoration-none">
+                            {{ entry.total_incl_tax|currency }}
+                        </a>
+                    </td>
+                    <td class="text-center">
+                        <div class="d-flex flex-column flex-lg-row gap-2 justify-content-center">
+                            {% with supplier_label=supplier.name|default:entry.lookup_value %}
+                            {% if entry.balance_incl_tax > 0 %}
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-success"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#supplierPaymentModal"
+                                    data-supplier-id="{{ supplier.id|default:'' }}"
+                                    data-supplier-name="{{ supplier_label }}"
+                                    data-balance="{{ entry.balance_incl_tax }}"
+                                >
+                                    <i class="fas fa-hand-holding-usd"></i> Make Payment
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                                    <i class="fas fa-hand-holding-usd"></i> Make Payment
+                                </button>
+                            {% endif %}
+                            {% endwith %}
+                            <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:supplier_detail' supplier_url %}">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                            <form method="post" action="{% url 'accounts:supplier_delete' entry.lookup_value|urlencode %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete all expenses for {{ entry.supplier_name }}?');">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endwith %}
+                {% endwith %}
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="7" class="text-center">No suppliers found.</td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>

@@ -1,0 +1,39 @@
+<!-- templates/app/invoice_detail.html -->
+
+{% extends 'customer_portal_base.html' %}
+{% block content %}
+<div class="container">
+    <h2>Invoice {{ invoice.invoice_number }}</h2>
+    <p><strong>Date:</strong> {{ invoice.date }}</p>
+    <p><strong>Total Amount:</strong> ${{ invoice.total_amount }}</p>
+    <p><strong>Total Paid:</strong> ${{ invoice.total_paid }}</p>
+    <p><strong>Balance Due:</strong> ${{ invoice.balance_due }}</p>
+    <p><strong>Status:</strong> {{ invoice.payment_status }}</p>
+
+    {% if invoice.balance_due > 0 %}
+    <a href="{% url 'accounts:add_payment' invoice.pk %}" class="btn btn-primary">Add Payment</a>
+    {% endif %}
+
+    <h3>Payments</h3>
+    <table class="table">
+        <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Notes</th>
+        </tr>
+        {% for payment in invoice.payments.all %}
+        <tr>
+            <td>{{ payment.date }}</td>
+            <td>${{ payment.amount }}</td>
+            <td>{{ payment.method }}</td>
+            <td>{{ payment.notes }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No payments made yet.</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

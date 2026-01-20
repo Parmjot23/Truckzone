@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_css %}
+<style>
+    .legal-hero {
+        background: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.8)),
+        url("{% static 'images/hero_legal_new.png' %}");
+        background-size: cover;
+        background-position: center;
+        padding: 5rem 0;
+        color: white;
+    }
+
+    .legal-content {
+        background: white;
+        padding: 3rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        margin-top: -3rem;
+        position: relative;
+        z-index: 10;
+    }
+
+    .legal-content h2 {
+        color: var(--brand-navy);
+        font-weight: bold;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+    }
+
+    .legal-content h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--neutral-700);
+        margin-top: 1.5rem;
+    }
+
+    .legal-content ul {
+        margin-bottom: 1.5rem;
+    }
+
+    .legal-content li {
+        margin-bottom: 0.5rem;
+        color: var(--neutral-600);
+    }
+
+    .legal-content p {
+        color: var(--neutral-600);
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="legal-hero text-center">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto">
+                <div class="d-inline-flex align-items-center bg-white bg-opacity-10 rounded-pill px-3 py-1 mb-3">
+                    <i class="fas fa-file-contract text-brand-orange me-2"></i>
+                    <span class="text-white small fw-bold text-uppercase">Legal Information</span>
+                </div>
+                <h1 class="display-4 fw-bold mb-3 text-white">Terms and Conditions</h1>
+                <p class="lead text-white-50">The rules that govern your use of our website and parts catalog.</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="legal-content">
+                <p class="text-muted small border-bottom pb-3 mb-4"><strong>Last updated:</strong> December 18, 2025</p>
+
+                <h2>1. Acceptance of Terms</h2>
+                <p>
+                    These Terms and Conditions ("Terms") govern your use of the website, online parts catalog/store,
+                    customer portal, and parts inquiry forms (collectively, the "Platform") provided by
+                    <strong>{{ business_name|default:default_business_name }}</strong> ("Company", "we", "us", "our").
+                </p>
+                <p>
+                    By accessing or using the Platform, requesting a quote, or purchasing products, you agree to be
+                    bound by these Terms. If you do not agree, do not use the Platform.
+                </p>
+
+                <h2>2. Orders, Quotes, and Availability</h2>
+                <ul>
+                    <li><strong>Quotes:</strong> Quotes are not guarantees. Availability and pricing may change before an order is confirmed.</li>
+                    <li><strong>Fitment information:</strong> You are responsible for providing accurate vehicle or part details. We use the information you provide to confirm compatibility.</li>
+                    <li><strong>Substitutions:</strong> If an item is unavailable, we may suggest equivalent alternatives for approval.</li>
+                </ul>
+
+                <h2>3. Pricing, Payment, and Taxes</h2>
+                <ul>
+                    <li><strong>Payment timing:</strong> Payment is due at checkout or when invoiced for approved fleet accounts.</li>
+                    <li><strong>Taxes and fees:</strong> Applicable taxes and fees are added at checkout or on invoices.</li>
+                    <li><strong>Online payments:</strong> Payments may be processed by third-party payment processors. Their terms may apply.</li>
+                    <li><strong>Non-payment:</strong> We may suspend account access or order fulfillment for overdue balances.</li>
+                </ul>
+
+                <h2>4. Shipping, Pickup, and Delivery</h2>
+                <ul>
+                    <li><strong>Timing:</strong> Delivery and pickup times are estimates and depend on inventory and carrier schedules.</li>
+                    <li><strong>Inspection:</strong> Please inspect items on pickup or delivery and report issues promptly.</li>
+                    <li><strong>Risk of loss:</strong> Risk of loss transfers upon pickup or carrier delivery, as permitted by law.</li>
+                </ul>
+
+                <h2>5. Returns and Exchanges</h2>
+                <ul>
+                    <li><strong>Authorization:</strong> Returns generally require approval. Contact the parts desk for instructions.</li>
+                    <li><strong>Condition:</strong> Items must be returned in resaleable condition when eligible.</li>
+                    <li><strong>Exceptions:</strong> Some items (for example, electrical components or special orders) may be non-returnable.</li>
+                </ul>
+
+                <h2>6. Warranties</h2>
+                <ul>
+                    <li><strong>Manufacturer warranties:</strong> Products may be covered by manufacturer warranties. Terms vary by supplier.</li>
+                    <li><strong>Exclusions:</strong> Warranty may not apply to misuse, improper installation, modifications, or normal wear and tear.</li>
+                </ul>
+
+                <h2>7. User Accounts (Customer Portal)</h2>
+                <ul>
+                    <li><strong>Registration:</strong> To access portal features, you must register using accurate business information.</li>
+                    <li><strong>Responsibility:</strong> You are responsible for safeguarding your account credentials and for all activity that occurs under your account.</li>
+                    <li><strong>Authorized users:</strong> If you provide access to employees or third parties, you are responsible for their actions and permissions.</li>
+                </ul>
+
+                <h2>8. Acceptable Use</h2>
+                <p>You agree not to misuse the Platform. For example, you will not:</p>
+                <ul>
+                    <li>Attempt to access accounts, data, or systems without authorization.</li>
+                    <li>Upload malware or use the Platform to harm, disrupt, or probe our systems.</li>
+                    <li>Submit unlawful, misleading, or infringing content.</li>
+                    <li>Reverse engineer or scrape the Platform except as permitted by law.</li>
+                </ul>
+
+                <h2>9. Third-Party Services and AI Features</h2>
+                <p>
+                    The Platform may integrate third-party tools (for example, payment processors, mapping, or
+                    accounting/invoicing integrations). Third-party terms and privacy policies may apply.
+                </p>
+                <p>
+                    If an AI chat or automated assistant is available, it is provided for convenience only. AI outputs
+                    may be inaccurate or incomplete. You should confirm critical information (pricing, availability,
+                    compatibility) with Company staff.
+                </p>
+
+                <h2>10. Disclaimers</h2>
+                <p>
+                    The Platform is provided on an "as is" and "as available" basis. To the maximum extent permitted by
+                    law, we disclaim all warranties, express or implied, including implied warranties of
+                    merchantability, fitness for a particular purpose, and non-infringement.
+                </p>
+
+                <h2>11. Limitation of Liability</h2>
+                <p>
+                    To the maximum extent permitted by law, Company will not be liable for any indirect, incidental,
+                    special, consequential, or punitive damages, or any loss of profits, revenue, data, or goodwill,
+                    arising from or related to your use of the Platform or any products provided.
+                </p>
+                <p>
+                    Where liability is required by law, our total liability is limited to the amount paid for the
+                    applicable product.
+                </p>
+
+                <h2>12. No Developer / Contractor Liability</h2>
+                <p>
+                    You acknowledge and agree that the Platform may be designed, developed, hosted, or maintained by
+                    independent software developers, contractors, and/or technology vendors engaged by Company. Any such
+                    third parties provide technology support to Company only and are not a party to these Terms. To the
+                    maximum extent permitted by law, you agree that such developers/contractors/vendors will have no
+                    liability to you for any claims, damages, or losses arising out of or related to the Platform or any
+                    products provided by Company.
+                </p>
+
+                <h2>13. Indemnity</h2>
+                <p>
+                    To the maximum extent permitted by law, you agree to indemnify and hold harmless Company from and
+                    against claims, liabilities, damages, losses, and expenses (including reasonable legal fees) arising
+                    from your misuse of the Platform, violation of these Terms, or violation of any law or third-party
+                    rights.
+                </p>
+
+                <h2>14. Governing Law</h2>
+                <p>
+                    These Terms are governed by and construed in accordance with the laws of the Province of Quebec and
+                    the federal laws of Canada applicable therein, without regard to conflict of law principles.
+                </p>
+
+                <h2>15. Changes to These Terms</h2>
+                <p>
+                    We may update these Terms from time to time. The "Last updated" date above indicates when changes
+                    are effective once posted.
+                </p>
+
+                <h2>16. Contact Information</h2>
+                <p>
+                    If you have any questions about these Terms, please contact us:
+                </p>
+                <ul>
+                    <li><strong>Business:</strong> {{ business_name|default:default_business_name }}</li>
+                    <li><strong>Email:</strong> <a href="mailto:{{ business_contact_email }}">{{ business_contact_email }}</a></li>
+                    <li><strong>Phone:</strong> <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}">{{ business_contact_phone }}</a></li>
+                    <li><strong>Address:</strong> {{ business_contact_address|linebreaksbr }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

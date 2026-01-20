@@ -1,0 +1,1338 @@
+<!-- templates/app/mechexpense_form.html -->
+{% extends 'customer_portal_base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}
+    Edit Purchase Details
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Edit Purchase Details</h2>
+    <style>
+        .expense-item-form.marked-for-deletion {
+            opacity: 0.7;
+        }
+
+        .expense-item-form.marked-for-deletion .form-control,
+        .expense-item-form.marked-for-deletion .form-check-label {
+            text-decoration: line-through;
+        }
+
+        .inventory-dropdown {
+            position: relative;
+        }
+
+        .inventory-dropdown .inventory-product-select {
+            display: none;
+        }
+
+        .inventory-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            background-color: #fff;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #495057;
+        }
+
+        .inventory-dropdown-toggle:focus {
+            outline: none;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            border-color: #80bdff;
+        }
+
+        .inventory-dropdown-toggle::after {
+            content: '\25BC';
+            font-size: 0.65rem;
+            margin-left: 0.75rem;
+            color: #6c757d;
+        }
+
+        .inventory-dropdown-toggle .inventory-selected-text {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .inventory-dropdown-toggle.has-selection {
+            color: #212529;
+        }
+
+        .inventory-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            z-index: 1050;
+            background-color: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            border-radius: 0.25rem;
+            margin-top: 0.125rem;
+            padding: 0;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
+            display: none;
+        }
+
+        .inventory-dropdown-menu.show {
+            display: block;
+        }
+
+        .inventory-dropdown-menu .inventory-search-wrapper {
+            padding: 0.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .inventory-dropdown-menu .inventory-dropdown-options {
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .inventory-dropdown-option {
+            width: 100%;
+            background: transparent;
+            border: none;
+            text-align: left;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.95rem;
+            color: #212529;
+            cursor: pointer;
+        }
+
+        .inventory-dropdown-option:hover,
+        .inventory-dropdown-option:focus {
+            background-color: #f8f9fa;
+            outline: none;
+        }
+
+    </style>
+    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        <datalist id="vendor_list">
+            {% for vendor in distinct_vendors %}
+                <option value="{{ vendor }}">
+            {% endfor %}
+        </datalist>
+
+        {% if messages %}
+            <div>
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="row">
+            <div class="col-md-6">
+                {{ form.date|as_crispy_field }}
+            </div>
+            <div class="col-md-6">
+                {{ form.vendor|as_crispy_field }}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                {{ form.receipt_no|as_crispy_field }}
+            </div>
+            <div class="col-md-6">
+                {{ form.categorie|as_crispy_field }}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                {{ form.tax_included|as_crispy_field }}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    {{ form.province|as_crispy_field }}
+                    <small id="province-tax-rate" class="form-text text-muted mt-1"></small>
+                </div>
+            </div>
+            <div class="col-md-6"></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6" id="custom-tax-container" style="display: none;">
+                {{ form.custom_tax_rate|as_crispy_field }}
+            </div>
+            <div class="col-md-6" id="inventory-section">
+                <div class="border rounded p-3 bg-light">
+                    {{ form.record_in_inventory|as_crispy_field }}
+                    <small class="form-text text-muted">Turn this off for non-inventory expenses like rent, lease, or installments.</small>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                {{ form.is_recurring|as_crispy_field }}
+            </div>
+        </div>
+
+        <div id="odometer-reading-field" style="display: none;">
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.odometer_reading|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+
+        <div id="date-range-field" style="display: none;">
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.start_date|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.end_date|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+
+        <div id="frequency-field" style="display: none;">
+            {{ form.frequency|as_crispy_field }}
+        </div>
+
+        <hr>
+
+        <h4 class="mb-4">Expense Items</h4>
+        <div id="mechexpenseitem_set-forms">
+            {{ mechexpenseitem_formset.management_form }}
+            {% for form in mechexpenseitem_formset %}
+                <div class="form-row mb-3 expense-item-form">
+                    {{ form.id }}
+                    <div class="col-md-3 mb-2 inventory-fields">
+                        <div class="form-group mb-0 inventory-dropdown">
+                            <label for="{{ form.inventory_product.id_for_label }}">{{ form.inventory_product.label }}</label>
+                            {% with selected_product=form.instance.inventory_product %}
+                            <button type="button"
+                                    class="inventory-dropdown-toggle"
+                                    data-target-select="{{ form.inventory_product.auto_id }}"
+                                    data-placeholder="Select inventory product"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="false"
+                                    data-selected-text="{% if selected_product %}{{ selected_product.name }}{% if selected_product.sku %} ({{ selected_product.sku }}){% endif %}{% endif %}">
+                                <span class="inventory-selected-text">
+                                    {% if selected_product %}
+                                        {{ selected_product.name }}{% if selected_product.sku %} ({{ selected_product.sku }}){% endif %}
+                                    {% else %}
+                                        Select inventory product
+                                    {% endif %}
+                                </span>
+                            </button>
+                            {% endwith %}
+                            <div class="inventory-dropdown-menu" role="listbox">
+                                <div class="inventory-search-wrapper">
+                                    <input type="text"
+                                           class="form-control inventory-product-search"
+                                           placeholder="Search inventory products"
+                                           data-target-select="{{ form.inventory_product.auto_id }}"
+                                           aria-label="Search inventory products">
+                                </div>
+                                <div class="inventory-dropdown-options"></div>
+                            </div>
+                            {{ form.inventory_product }}
+                            {% if form.inventory_product.errors %}
+                                {% for error in form.inventory_product.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-2 part-no-field">
+                        {{ form.part_no|as_crispy_field }}
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        {{ form.description|as_crispy_field }}
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        {{ form.qty|as_crispy_field }}
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        {{ form.price|as_crispy_field }}
+                    </div>
+                    <div class="col-md-2 mb-2 d-flex flex-column">
+                        <div class="inventory-fields">
+                            {{ form.create_inventory_product|as_crispy_field }}
+                        </div>
+                        {% if form.DELETE %}
+                            <div class="form-check mt-2 delete-checkbox">
+                                {{ form.DELETE }}
+                                <label class="form-check-label ml-1" for="{{ form.DELETE.id_for_label }}">Delete</label>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn btn-info btn-sm mb-3" id="add-expense-item">Add Expense Item</button>
+
+        <div id="empty-form-template" style="display: none;">
+            <div class="form-row mb-3 expense-item-form">
+                <div class="col-md-3 mb-2 inventory-fields">
+                    <div class="form-group inventory-dropdown">
+                        <label for="id_mechexpenseitem_set-__prefix__-inventory_product">Inventory Product</label>
+                        <button type="button"
+                                class="inventory-dropdown-toggle"
+                                data-target-select="id_mechexpenseitem_set-__prefix__-inventory_product"
+                                data-placeholder="Select inventory product"
+                                aria-haspopup="listbox"
+                                aria-expanded="false">
+                            <span class="inventory-selected-text">Select inventory product</span>
+                        </button>
+                        <div class="inventory-dropdown-menu" role="listbox">
+                            <div class="inventory-search-wrapper">
+                                <input type="text"
+                                       class="form-control inventory-product-search"
+                                       placeholder="Search inventory products"
+                                       data-target-select="id_mechexpenseitem_set-__prefix__-inventory_product"
+                                       aria-label="Search inventory products">
+                            </div>
+                            <div class="inventory-dropdown-options"></div>
+                        </div>
+                        <select name="mechexpenseitem_set-__prefix__-inventory_product" class="form-control inventory-product-select" id="id_mechexpenseitem_set-__prefix__-inventory_product">
+                            <option value="">---------</option>
+                            {% for product in inventory_products %}
+                                <option value="{{ product.id }}">{{ product.name }}{% if product.sku %} ({{ product.sku }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2 mb-2 part-no-field">
+                    <input type="text" name="mechexpenseitem_set-__prefix__-part_no" class="form-control" id="id_mechexpenseitem_set-__prefix__-part_no" placeholder="Enter part number">
+                </div>
+                <div class="col-md-2 mb-2">
+                    <textarea name="mechexpenseitem_set-__prefix__-description" class="form-control" id="id_mechexpenseitem_set-__prefix__-description" placeholder="Enter description" rows="2"></textarea>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <input type="number" name="mechexpenseitem_set-__prefix__-qty" class="form-control" id="id_mechexpenseitem_set-__prefix__-qty" min="0" step="1" placeholder="Quantity">
+                </div>
+                <div class="col-md-2 mb-2">
+                    <input type="number" name="mechexpenseitem_set-__prefix__-price" class="form-control" id="id_mechexpenseitem_set-__prefix__-price" min="0" step="0.01" placeholder="Price">
+                </div>
+                <div class="col-md-2 mb-2 d-flex flex-column">
+                    <div class="form-check inventory-fields">
+                        <input type="checkbox" name="mechexpenseitem_set-__prefix__-create_inventory_product" class="form-check-input create-inventory-checkbox" id="id_mechexpenseitem_set-__prefix__-create_inventory_product" checked>
+                        <label class="form-check-label" for="id_mechexpenseitem_set-__prefix__-create_inventory_product">Create/Update</label>
+                    </div>
+                    <div class="form-check mt-2 delete-checkbox">
+                        <input type="checkbox" name="mechexpenseitem_set-__prefix__-DELETE" class="form-check-input" id="id_mechexpenseitem_set-__prefix__-DELETE">
+                        <label class="form-check-label ml-1" for="id_mechexpenseitem_set-__prefix__-DELETE">Delete</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+        <div class="mb-3">
+            <h5>Total Amount: <span id="total-amount">0.00</span></h5>
+        </div>
+
+        <div id="payment-summary" class="alert alert-info d-none" role="status">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-credit-card mr-2"></i>
+                <div>
+                    <div class="mb-0"><strong>Recording payment:</strong> <span id="payment-summary-amount"></span> via <span id="payment-summary-method"></span></div>
+                    <div id="payment-summary-notes" class="text-muted small"></div>
+                </div>
+            </div>
+        </div>
+
+        <input type="hidden" name="record_payment" id="record-payment-flag" value="false">
+        <input type="hidden" name="payment_amount" id="payment-amount-hidden" value="">
+        <input type="hidden" name="payment_method" id="payment-method-hidden" value="">
+        <input type="hidden" name="payment_notes" id="payment-notes-hidden" value="">
+        <hr>
+
+        <div class="mb-4">
+            {{ form.paid|as_crispy_field }}
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            {% if mechexpense and mechexpense.id %}
+                <a href="{% url 'accounts:mechexpense_detail' mechexpense.id %}" class="btn btn-secondary">Cancel</a>
+            {% else %}
+                <a href="{% url 'accounts:mechexpense_list' %}" class="btn btn-secondary">Cancel</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Inline Record Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" role="dialog" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content shadow-lg">
+            <form id="inline-payment-form">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="paymentModalLabel"><i class="fas fa-credit-card"></i> Record Payment</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">Capture payment details for this expense.</p>
+                    <div class="alert alert-danger d-none" id="payment-error" role="alert"></div>
+                    <div class="form-group">
+                        <label for="payment-amount">Payment Amount</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">$</span>
+                            </div>
+                            <input type="number" step="0.01" min="0" class="form-control" id="payment-amount" required>
+                        </div>
+                        <small class="form-text text-muted">Defaults to the current total for this expense.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-method">Payment Method</label>
+                        <select class="form-control" id="payment-method" required>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Credit Card">Credit Card</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label for="payment-notes">Notes (optional)</label>
+                        <textarea class="form-control" id="payment-notes" rows="3" placeholder="Add a note about this payment..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script>
+const provinceTaxRates = JSON.parse('{{ province_tax_rates|default:"{}"|escapejs }}');
+const inventoryProducts = JSON.parse('{{ inventory_products_data|default:"{}"|escapejs }}');
+const vendorProductMap = JSON.parse('{{ vendor_product_map|default:"{}"|escapejs }}');
+const allInventoryProductIds = JSON.parse('{{ all_inventory_product_ids|default:"[]"|escapejs }}');
+const UNASSIGNED_VENDOR_KEY = '__unassigned__';
+let inventoryToggleTouched = false;
+
+const NON_INVENTORY_CATEGORIES = new Set(['rent', 'lease', 'installment', 'insurance', 'fuel', 'labour']);
+const INVENTORY_CATEGORIES = new Set(['parts', 'supplies', 'tools']);
+
+function getSelectedCategory() {
+    const categoryField = document.getElementById('id_categorie');
+    return categoryField ? categoryField.value : '';
+}
+
+function normalizeCategory(value) {
+    return (value || '').trim().toLowerCase();
+}
+
+function shouldAutoDisableInventory(category) {
+    return NON_INVENTORY_CATEGORIES.has(normalizeCategory(category));
+}
+
+function shouldAutoEnableInventory(category) {
+    return INVENTORY_CATEGORIES.has(normalizeCategory(category));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    toggleFields();
+    toggleFrequencyField();
+    toggleCustomTaxField();
+    updateProvinceTaxRate();
+    calculateTotalAmount();
+    attachAmountListeners();
+    attachInventoryProductListeners();
+    initializeInventoryDropdowns();
+    attachCreateInventoryCheckboxListeners();
+    attachDeleteCheckboxListeners();
+
+    const categoryField = document.getElementById('id_categorie');
+    if (categoryField) {
+        categoryField.addEventListener('change', toggleFields);
+    }
+
+    const provinceField = document.getElementById('id_province');
+    if (provinceField) {
+        provinceField.addEventListener('change', function() {
+            toggleCustomTaxField();
+            updateProvinceTaxRate();
+        });
+    }
+
+    const customTaxField = document.getElementById('id_custom_tax_rate');
+    if (customTaxField) {
+        customTaxField.addEventListener('input', updateProvinceTaxRate);
+    }
+
+    const recordInventoryCheckbox = document.getElementById('id_record_in_inventory');
+    if (recordInventoryCheckbox) {
+        recordInventoryCheckbox.addEventListener('change', function(event) {
+            inventoryToggleTouched = true;
+            if (!event.target.checked) {
+                const confirmed = confirm('Are you sure you want to disable inventory integration for these items?');
+                if (!confirmed) {
+                    event.target.checked = true;
+                }
+            }
+            toggleInventoryFields(getSelectedCategory());
+        });
+    }
+
+    const isRecurringField = document.getElementById('id_is_recurring');
+    if (isRecurringField) {
+        isRecurringField.addEventListener('change', toggleFrequencyField);
+    }
+
+    const addExpenseButton = document.getElementById('add-expense-item');
+    if (addExpenseButton) {
+        addExpenseButton.addEventListener('click', addForm);
+    }
+
+    const vendorField = document.getElementById('id_vendor');
+    const applyVendorFilter = () => filterInventoryProductsByVendor(getCurrentVendorValue());
+    if (vendorField) {
+        vendorField.addEventListener('input', applyVendorFilter);
+        vendorField.addEventListener('change', applyVendorFilter);
+    }
+
+    initializePaymentModal();
+
+    applyVendorFilter();
+});
+
+function addForm() {
+    const totalFormsInput = document.getElementById('id_mechexpenseitem_set-TOTAL_FORMS');
+    const currentFormCount = parseInt(totalFormsInput.value);
+    const emptyFormTemplate = document.getElementById('empty-form-template').innerHTML;
+    const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, currentFormCount);
+    document.getElementById('mechexpenseitem_set-forms').insertAdjacentHTML('beforeend', newFormHtml);
+    totalFormsInput.value = currentFormCount + 1;
+
+    const newFormRow = document.querySelector('#mechexpenseitem_set-forms .expense-item-form:last-child');
+    const selectedCategory = document.getElementById('id_categorie').value;
+    togglePartNoField(selectedCategory);
+    toggleInventoryFields(selectedCategory);
+    attachInventoryProductListeners();
+    filterInventoryProductsByVendor(getCurrentVendorValue(), newFormRow);
+    attachCreateInventoryCheckboxListeners();
+    attachDeleteCheckboxListeners();
+    attachAmountListenersToForm(newFormRow);
+}
+
+function getCurrentVendorValue() {
+    const vendorField = document.getElementById('id_vendor');
+    return vendorField ? vendorField.value : '';
+}
+
+function normalizeVendorName(value) {
+    return (value || '').trim().toLowerCase();
+}
+
+function getAllowedProductIdsForVendor() {
+    return Array.isArray(allInventoryProductIds) ? allInventoryProductIds.slice() : [];
+}
+
+function buildProductLabel(productData) {
+    if (!productData) {
+        return '';
+    }
+    if (productData.sku) {
+        return `${productData.name} (${productData.sku})`;
+    }
+    return productData.name || '';
+}
+
+function rebuildInventorySelectOptions(select, allowedIds) {
+    const previousValue = select.value;
+    const allowedList = Array.isArray(allowedIds) ? allowedIds.slice() : [];
+    const allowedSet = new Set(allowedList.map(String));
+    const fragment = document.createDocumentFragment();
+    const placeholderOption = document.createElement('option');
+    placeholderOption.value = '';
+    placeholderOption.textContent = '---------';
+    fragment.appendChild(placeholderOption);
+
+    allowedList.forEach(id => {
+        const productData = inventoryProducts[String(id)];
+        if (!productData) {
+            return;
+        }
+        const option = document.createElement('option');
+        option.value = String(id);
+        option.textContent = buildProductLabel(productData);
+        fragment.appendChild(option);
+    });
+
+    select.innerHTML = '';
+    select.appendChild(fragment);
+
+    if (previousValue && allowedSet.has(String(previousValue))) {
+        select.value = previousValue;
+    } else {
+        select.value = '';
+    }
+}
+
+function filterInventoryProductsByVendor(vendorValue, rootElement) {
+    const allowedIds = getAllowedProductIdsForVendor(vendorValue);
+    const base = rootElement || document;
+    const selects = base.querySelectorAll('.inventory-product-select');
+    selects.forEach(select => {
+        if (isInEmptyFormTemplate(select)) {
+            return;
+        }
+        const previousValue = select.value;
+        rebuildInventorySelectOptions(select, allowedIds);
+        const currentValue = select.value;
+        if (previousValue !== currentValue) {
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const dropdown = select.closest('.inventory-dropdown');
+        if (dropdown) {
+            initializeInventoryDropdowns(dropdown);
+        }
+    });
+}
+
+function attachAmountListeners() {
+    document.querySelectorAll('#mechexpenseitem_set-forms .expense-item-form').forEach(formRow => {
+        attachAmountListenersToForm(formRow);
+    });
+}
+
+function attachAmountListenersToForm(formRow) {
+    if (!formRow) {
+        return;
+    }
+    const qtyInput = formRow.querySelector('input[name$="-qty"]');
+    const priceInput = formRow.querySelector('input[name$="-price"]');
+    [qtyInput, priceInput].forEach(input => {
+        if (!input || input.dataset.amountListenerAttached === 'true') {
+            return;
+        }
+        input.addEventListener('input', calculateTotalAmount);
+        input.addEventListener('change', calculateTotalAmount);
+        input.dataset.amountListenerAttached = 'true';
+    });
+}
+
+function reindexForms() {
+    const forms = document.querySelectorAll('#mechexpenseitem_set-forms .expense-item-form');
+    forms.forEach((form, index) => {
+        form.querySelectorAll('input, select, label').forEach(element => {
+            const name = element.getAttribute('name');
+            const id = element.getAttribute('id');
+            const forAttr = element.getAttribute('for');
+            if (name) {
+                element.setAttribute('name', name.replace(/mechexpenseitem_set-\d+-/, `mechexpenseitem_set-${index}-`));
+            }
+            if (id) {
+                element.setAttribute('id', id.replace(/id_mechexpenseitem_set-\d+-/, `id_mechexpenseitem_set-${index}-`));
+            }
+            if (forAttr) {
+                element.setAttribute('for', forAttr.replace(/id_mechexpenseitem_set-\d+-/, `id_mechexpenseitem_set-${index}-`));
+            }
+        });
+    });
+    attachInventoryProductListeners();
+    initializeInventoryDropdowns();
+    filterInventoryProductsByVendor(getCurrentVendorValue());
+    attachCreateInventoryCheckboxListeners();
+    attachDeleteCheckboxListeners();
+    attachAmountListeners();
+}
+
+function updateTotalForms() {
+    const totalForms = document.querySelectorAll('#mechexpenseitem_set-forms .expense-item-form').length;
+    document.getElementById('id_mechexpenseitem_set-TOTAL_FORMS').value = totalForms;
+}
+
+function calculateTotalAmount() {
+    let totalAmount = 0;
+    document.querySelectorAll('#mechexpenseitem_set-forms .expense-item-form').forEach(form => {
+        const deleteInput = form.querySelector('input[name$="-DELETE"]');
+        if (form.style.display === 'none' || (deleteInput && deleteInput.checked) || form.classList.contains('marked-for-deletion')) {
+            return;
+        }
+        const qtyInput = form.querySelector('input[name$="-qty"]');
+        const priceInput = form.querySelector('input[name$="-price"]');
+        const qty = parseFloat(qtyInput && qtyInput.value ? qtyInput.value : 0) || 0;
+        const price = parseFloat(priceInput && priceInput.value ? priceInput.value : 0) || 0;
+        totalAmount += qty * price;
+    });
+    document.getElementById('total-amount').innerText = formatCurrency(totalAmount);
+}
+
+function formatCurrency(value) {
+    return "$" + value.toFixed(2);
+}
+
+function toggleFields() {
+    const selectedCategory = getSelectedCategory();
+    togglePartNoField(selectedCategory);
+    toggleOdometerField(selectedCategory);
+    toggleDateRangeField(selectedCategory);
+    toggleInventoryFields(selectedCategory);
+}
+
+function togglePartNoField(selectedCategory) {
+    const partNoFields = document.querySelectorAll('.part-no-field');
+    const showPartNoCategories = ['Parts', 'Supplies', 'Miscellaneous', 'Tools'];
+    if (showPartNoCategories.includes(selectedCategory)) {
+        partNoFields.forEach(field => {
+            field.style.display = 'block';
+            const input = field.querySelector('input');
+            if (input) {
+                input.required = true;
+            }
+        });
+    } else {
+        partNoFields.forEach(field => {
+            field.style.display = 'none';
+            const input = field.querySelector('input');
+            if (input) {
+                input.required = false;
+                input.value = '';
+            }
+        });
+    }
+}
+
+function toggleOdometerField(selectedCategory) {
+    const odometerField = document.getElementById('odometer-reading-field');
+    const odometerInput = document.getElementById('id_odometer_reading');
+    if (selectedCategory === 'Fuel') {
+        odometerField.style.display = 'block';
+        if (odometerInput) {
+            odometerInput.required = true;
+        }
+    } else {
+        odometerField.style.display = 'none';
+        if (odometerInput) {
+            odometerInput.required = false;
+            odometerInput.value = '';
+        }
+    }
+}
+
+function toggleDateRangeField(selectedCategory) {
+    const dateRangeField = document.getElementById('date-range-field');
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    if (['Rent', 'Insurance'].includes(selectedCategory)) {
+        dateRangeField.style.display = 'block';
+        if (startDateInput && endDateInput) {
+            startDateInput.required = true;
+            endDateInput.required = true;
+        }
+    } else {
+        dateRangeField.style.display = 'none';
+        if (startDateInput && endDateInput) {
+            startDateInput.required = false;
+            endDateInput.required = false;
+            startDateInput.value = '';
+            endDateInput.value = '';
+        }
+    }
+}
+
+function toggleFrequencyField() {
+    const isRecurring = document.getElementById('id_is_recurring').checked;
+    const frequencyField = document.getElementById('frequency-field');
+    const frequencyInput = document.getElementById('id_frequency');
+    if (isRecurring) {
+        frequencyField.style.display = 'block';
+        if (frequencyInput) {
+            frequencyInput.required = true;
+        }
+    } else {
+        frequencyField.style.display = 'none';
+        if (frequencyInput) {
+            frequencyInput.required = false;
+            frequencyInput.value = '';
+        }
+    }
+}
+
+function toggleCustomTaxField() {
+    const provinceField = document.getElementById('id_province');
+    const customTaxContainer = document.getElementById('custom-tax-container');
+    const customTaxInput = document.getElementById('id_custom_tax_rate');
+    if (!provinceField || !customTaxContainer) {
+        return;
+    }
+    if (provinceField.value === 'CU') {
+        customTaxContainer.style.display = 'block';
+    } else {
+        customTaxContainer.style.display = 'none';
+        if (customTaxInput) {
+            customTaxInput.value = '';
+        }
+    }
+}
+
+function updateProvinceTaxRate() {
+    const provinceField = document.getElementById('id_province');
+    const taxDisplay = document.getElementById('province-tax-rate');
+    const customTaxInput = document.getElementById('id_custom_tax_rate');
+    if (!provinceField || !taxDisplay) {
+        return;
+    }
+    const selectedProvince = provinceField.value;
+    if (selectedProvince === 'CU') {
+        const customValue = customTaxInput && customTaxInput.value ? customTaxInput.value : '';
+        taxDisplay.textContent = customValue ? `Custom tax rate: ${customValue}%` : 'Custom tax rate selected.';
+    } else {
+        const rate = provinceTaxRates[selectedProvince];
+        if (typeof rate !== 'undefined') {
+            taxDisplay.textContent = `Tax rate: ${(rate * 100).toFixed(2)}%`;
+        } else {
+            taxDisplay.textContent = '';
+        }
+    }
+}
+
+function initializePaymentModal() {
+    const paidCheckbox = document.getElementById('id_paid');
+    const paymentModal = $('#paymentModal');
+    const paymentForm = document.getElementById('inline-payment-form');
+    const paymentAmountInput = document.getElementById('payment-amount');
+    const paymentMethodSelect = document.getElementById('payment-method');
+    const paymentNotesInput = document.getElementById('payment-notes');
+    const recordPaymentFlag = document.getElementById('record-payment-flag');
+    const hiddenAmount = document.getElementById('payment-amount-hidden');
+    const hiddenMethod = document.getElementById('payment-method-hidden');
+    const hiddenNotes = document.getElementById('payment-notes-hidden');
+    const paymentSummary = document.getElementById('payment-summary');
+    const paymentSummaryAmount = document.getElementById('payment-summary-amount');
+    const paymentSummaryMethod = document.getElementById('payment-summary-method');
+    const paymentSummaryNotes = document.getElementById('payment-summary-notes');
+    const paymentError = document.getElementById('payment-error');
+
+    if (!paidCheckbox || !paymentModal || !paymentForm) {
+        return;
+    }
+
+    const resetSummary = () => {
+        if (paymentSummary) {
+            paymentSummary.classList.add('d-none');
+        }
+        if (paymentSummaryAmount) {
+            paymentSummaryAmount.textContent = '';
+        }
+        if (paymentSummaryMethod) {
+            paymentSummaryMethod.textContent = '';
+        }
+        if (paymentSummaryNotes) {
+            paymentSummaryNotes.textContent = '';
+        }
+    };
+
+    function clearPaymentError() {
+        if (!paymentError) {
+            return;
+        }
+        paymentError.classList.add('d-none');
+        paymentError.textContent = '';
+    }
+
+    const clearPaymentData = () => {
+        if (recordPaymentFlag) {
+            recordPaymentFlag.value = 'false';
+        }
+        if (hiddenAmount) {
+            hiddenAmount.value = '';
+        }
+        if (hiddenMethod) {
+            hiddenMethod.value = '';
+        }
+        if (hiddenNotes) {
+            hiddenNotes.value = '';
+        }
+        resetSummary();
+        clearPaymentError();
+    };
+
+    const showPaymentError = (message) => {
+        if (!paymentError) {
+            return;
+        }
+        paymentError.textContent = message || 'Please enter a valid payment amount.';
+        paymentError.classList.remove('d-none');
+    };
+
+    function populateDefaultAmount() {
+        const totalElement = document.getElementById('total-amount');
+        const numericTotal = totalElement ? parseFloat(totalElement.innerText.replace(/[^0-9.]/g, '')) : 0;
+        const defaultAmount = isNaN(numericTotal) ? 0 : numericTotal;
+        if (paymentAmountInput) {
+            paymentAmountInput.value = defaultAmount.toFixed(2);
+        }
+    }
+
+    function updateSummary(amountValue, methodValue, notesValue) {
+        if (!paymentSummary) {
+            return;
+        }
+        if (paymentSummaryAmount) {
+            paymentSummaryAmount.textContent = `$${Number(amountValue).toFixed(2)}`;
+        }
+        if (paymentSummaryMethod) {
+            paymentSummaryMethod.textContent = methodValue || 'Cash';
+        }
+        if (paymentSummaryNotes) {
+            paymentSummaryNotes.textContent = notesValue ? `Note: ${notesValue}` : '';
+        }
+        paymentSummary.classList.remove('d-none');
+    }
+
+    paidCheckbox.addEventListener('change', function(event) {
+        if (event.target.checked) {
+            populateDefaultAmount();
+            if (paymentMethodSelect) {
+                paymentMethodSelect.value = paymentMethodSelect.options[0].value;
+            }
+            if (paymentNotesInput) {
+                paymentNotesInput.value = '';
+            }
+            clearPaymentError();
+            paymentModal.modal('show');
+        } else {
+            clearPaymentData();
+        }
+    });
+
+    paymentForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        clearPaymentError();
+        const amountValue = paymentAmountInput ? parseFloat(paymentAmountInput.value) : 0;
+        if (isNaN(amountValue) || amountValue <= 0) {
+            showPaymentError('Payment amount must be greater than zero.');
+            return;
+        }
+        const methodValue = paymentMethodSelect ? paymentMethodSelect.value : 'Cash';
+        const notesValue = paymentNotesInput ? paymentNotesInput.value.trim() : '';
+
+        if (hiddenAmount) {
+            hiddenAmount.value = amountValue.toFixed(2);
+        }
+        if (hiddenMethod) {
+            hiddenMethod.value = methodValue;
+        }
+        if (hiddenNotes) {
+            hiddenNotes.value = notesValue;
+        }
+        if (recordPaymentFlag) {
+            recordPaymentFlag.value = 'true';
+        }
+        updateSummary(amountValue, methodValue, notesValue);
+        paymentModal.modal('hide');
+    });
+
+    paymentModal.on('hidden.bs.modal', function() {
+        const hasPayment = recordPaymentFlag && recordPaymentFlag.value === 'true';
+        if (paidCheckbox && paidCheckbox.checked && !hasPayment) {
+            paidCheckbox.checked = false;
+        }
+    });
+}
+
+function toggleInventoryFields(selectedCategory) {
+    const inventorySection = document.getElementById('inventory-section');
+    if (inventorySection) {
+        inventorySection.style.display = 'block';
+    }
+    const recordInventoryCheckbox = document.getElementById('id_record_in_inventory');
+    if (!recordInventoryCheckbox) {
+        return;
+    }
+    if (selectedCategory && !inventoryToggleTouched) {
+        if (shouldAutoDisableInventory(selectedCategory) && recordInventoryCheckbox.checked) {
+            recordInventoryCheckbox.checked = false;
+        } else if (shouldAutoEnableInventory(selectedCategory) && !recordInventoryCheckbox.checked) {
+            recordInventoryCheckbox.checked = true;
+        }
+    }
+    const shouldShow = recordInventoryCheckbox.checked;
+    document.querySelectorAll('.inventory-fields').forEach(field => {
+        field.style.display = shouldShow ? 'block' : 'none';
+        if (!shouldShow) {
+            const select = field.querySelector('select');
+            if (select) {
+                select.value = '';
+                filterInventoryOptions(select, '');
+            }
+            const searchInput = field.querySelector('.inventory-product-search');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            const dropdownToggle = field.querySelector('.inventory-dropdown-toggle');
+            if (dropdownToggle) {
+                const placeholder = dropdownToggle.dataset.placeholder || 'Select inventory product';
+                const textElement = dropdownToggle.querySelector('.inventory-selected-text');
+                if (textElement) {
+                    textElement.textContent = placeholder;
+                }
+                dropdownToggle.classList.remove('has-selection');
+            }
+        }
+    });
+}
+
+function isInEmptyFormTemplate(element) {
+    return !!(element && element.closest('#empty-form-template'));
+}
+
+function attachInventoryProductListeners() {
+    document.querySelectorAll('#mechexpenseitem_set-forms .inventory-product-select').forEach(select => {
+        if (isInEmptyFormTemplate(select)) {
+            return;
+        }
+        if (select.dataset.listenerAttached === 'true') {
+            return;
+        }
+        select.addEventListener('change', handleInventorySelection);
+        select.dataset.listenerAttached = 'true';
+    });
+}
+
+function closeAllInventoryDropdowns(exceptMenu = null) {
+    document.querySelectorAll('.inventory-dropdown-menu.show').forEach(menu => {
+        if (menu === exceptMenu) {
+            return;
+        }
+        menu.classList.remove('show');
+        const toggle = menu.parentElement.querySelector('.inventory-dropdown-toggle');
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', 'false');
+        }
+    });
+}
+
+function initializeInventoryDropdowns(root) {
+    const base = root || document;
+    let containers = [];
+    if (base instanceof Element && base.classList && base.classList.contains('inventory-dropdown')) {
+        containers = [base];
+    } else if (
+        base instanceof Element ||
+        base instanceof Document ||
+        (typeof DocumentFragment !== 'undefined' && base instanceof DocumentFragment)
+    ) {
+        containers = Array.from(base.querySelectorAll('.inventory-dropdown'));
+    } else {
+        containers = Array.from(document.querySelectorAll('.inventory-dropdown'));
+    }
+
+    containers.forEach(container => {
+        if (isInEmptyFormTemplate(container)) {
+            return;
+        }
+        const select = container.querySelector('.inventory-product-select');
+        const toggle = container.querySelector('.inventory-dropdown-toggle');
+        const menu = container.querySelector('.inventory-dropdown-menu');
+        const searchInput = container.querySelector('.inventory-product-search');
+        const optionsContainer = container.querySelector('.inventory-dropdown-options');
+
+        if (!select || !toggle || !menu || !searchInput || !optionsContainer) {
+            return;
+        }
+
+        const placeholder = toggle.dataset.placeholder || 'Select inventory product';
+
+        const updateToggleText = () => {
+            const selectedOption = select.options[select.selectedIndex];
+            const textElement = toggle.querySelector('.inventory-selected-text');
+            const selectedText = selectedOption && selectedOption.value ? selectedOption.textContent.trim() : placeholder;
+            if (textElement) {
+                textElement.textContent = selectedText;
+            }
+            toggle.classList.toggle('has-selection', !!(selectedOption && selectedOption.value));
+        };
+
+        const filterAndDisplayOptions = query => {
+            const normalizedQuery = (query || '').trim().toLowerCase();
+            Array.from(optionsContainer.querySelectorAll('.inventory-dropdown-option')).forEach(optionButton => {
+                const matches = !normalizedQuery || optionButton.textContent.toLowerCase().includes(normalizedQuery);
+                optionButton.style.display = matches ? 'block' : 'none';
+                const index = optionButton.dataset.optionIndex;
+                if (typeof index !== 'undefined') {
+                    const linkedOption = select.options[parseInt(index, 10)];
+                    if (linkedOption && linkedOption.value) {
+                        linkedOption.hidden = !matches;
+                    }
+                }
+            });
+        };
+
+        const closeMenu = () => {
+            menu.classList.remove('show');
+            toggle.setAttribute('aria-expanded', 'false');
+        };
+
+        const openMenu = () => {
+            closeAllInventoryDropdowns(menu);
+            if (!menu.classList.contains('show')) {
+                menu.classList.add('show');
+            }
+            toggle.setAttribute('aria-expanded', 'true');
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                searchInput.value = selectedOption.textContent.trim();
+                searchInput.select();
+            } else {
+                searchInput.value = '';
+            }
+            filterAndDisplayOptions(searchInput.value);
+            setTimeout(() => searchInput.focus(), 0);
+        };
+
+        const renderOptions = () => {
+            optionsContainer.innerHTML = '';
+            Array.from(select.options).forEach((option, index) => {
+                if (!option.value) {
+                    option.hidden = false;
+                    return;
+                }
+                const optionButton = document.createElement('button');
+                optionButton.type = 'button';
+                optionButton.className = 'inventory-dropdown-option';
+                optionButton.textContent = option.textContent.trim();
+                optionButton.dataset.optionIndex = index;
+                optionButton.setAttribute('tabindex', '-1');
+                optionButton.addEventListener('click', () => {
+                    select.value = option.value;
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                    closeMenu();
+                });
+                optionsContainer.appendChild(optionButton);
+            });
+        };
+
+        if (container.dataset.dropdownInitialized === 'true') {
+            renderOptions();
+            updateToggleText();
+            filterAndDisplayOptions(searchInput.value || '');
+            return;
+        }
+
+        toggle.addEventListener('click', event => {
+            event.preventDefault();
+            if (menu.classList.contains('show')) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+
+        searchInput.addEventListener('input', () => {
+            filterAndDisplayOptions(searchInput.value);
+        });
+
+        searchInput.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const visibleOptions = Array.from(optionsContainer.querySelectorAll('.inventory-dropdown-option')).filter(option => option.style.display !== 'none');
+                if (visibleOptions.length === 1) {
+                    visibleOptions[0].click();
+                }
+            } else if (event.key === 'Escape') {
+                closeMenu();
+                toggle.focus();
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                const firstVisible = Array.from(optionsContainer.querySelectorAll('.inventory-dropdown-option')).find(option => option.style.display !== 'none');
+                if (firstVisible) {
+                    firstVisible.focus();
+                }
+            }
+        });
+
+        optionsContainer.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                closeMenu();
+                toggle.focus();
+                return;
+            }
+            if (event.target.classList && event.target.classList.contains('inventory-dropdown-option')) {
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    const visibleOptions = Array.from(optionsContainer.querySelectorAll('.inventory-dropdown-option')).filter(option => option.style.display !== 'none');
+                    if (!visibleOptions.length) {
+                        return;
+                    }
+                    const currentIndex = visibleOptions.indexOf(event.target);
+                    const nextIndex = event.key === 'ArrowDown'
+                        ? (currentIndex + 1) % visibleOptions.length
+                        : (currentIndex - 1 + visibleOptions.length) % visibleOptions.length;
+                    visibleOptions[nextIndex].focus();
+                } else if (event.key === 'Enter') {
+                    event.preventDefault();
+                    event.target.click();
+                }
+            }
+        });
+
+        select.addEventListener('change', () => {
+            updateToggleText();
+            filterAndDisplayOptions('');
+            toggle.dataset.selectedText = '';
+        });
+
+        renderOptions();
+        updateToggleText();
+        filterAndDisplayOptions('');
+
+        container.dataset.dropdownInitialized = 'true';
+        toggle.dataset.selectedText = '';
+    });
+}
+
+document.addEventListener('click', event => {
+    if (!event.target.closest('.inventory-dropdown')) {
+        closeAllInventoryDropdowns();
+    }
+});
+
+function filterInventoryOptions(select, query) {
+    const normalizedQuery = (query || '').trim().toLowerCase();
+    Array.from(select.options).forEach(option => {
+        if (!option.value) {
+            option.hidden = false;
+            return;
+        }
+        const text = option.textContent.toLowerCase();
+        const matches = !normalizedQuery || text.includes(normalizedQuery);
+        option.hidden = !matches;
+    });
+
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.hidden) {
+        select.value = '';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    const dropdown = select.closest('.inventory-dropdown');
+    if (dropdown) {
+        const optionsContainer = dropdown.querySelector('.inventory-dropdown-options');
+        if (optionsContainer) {
+            Array.from(optionsContainer.querySelectorAll('.inventory-dropdown-option')).forEach(optionButton => {
+                const matches = !normalizedQuery || optionButton.textContent.toLowerCase().includes(normalizedQuery);
+                optionButton.style.display = matches ? 'block' : 'none';
+            });
+        }
+        const toggle = dropdown.querySelector('.inventory-dropdown-toggle');
+        if (toggle && !select.value) {
+            const placeholder = toggle.dataset.placeholder || 'Select inventory product';
+            const textElement = toggle.querySelector('.inventory-selected-text');
+            if (textElement) {
+                textElement.textContent = placeholder;
+            }
+            toggle.classList.remove('has-selection');
+        }
+    }
+}
+
+function attachDeleteCheckboxListeners() {
+    document.querySelectorAll('#mechexpenseitem_set-forms input[name$="-DELETE"]').forEach(checkbox => {
+        if (checkbox.dataset.listenerAttached === 'true') {
+            if (checkbox.checked) {
+                checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            return;
+        }
+        checkbox.addEventListener('change', function(event) {
+            const formRow = event.target.closest('.expense-item-form');
+            if (!formRow) {
+                return;
+            }
+            if (event.target.checked) {
+                formRow.classList.add('marked-for-deletion');
+            } else {
+                formRow.classList.remove('marked-for-deletion');
+            }
+            formRow.querySelectorAll('input, select, textarea').forEach(field => {
+                if (field === event.target) {
+                    return;
+                }
+                if (event.target.checked) {
+                    if (field.required) {
+                        field.dataset.wasRequired = 'true';
+                        field.required = false;
+                    }
+                } else if (field.dataset.wasRequired === 'true') {
+                    field.required = true;
+                    delete field.dataset.wasRequired;
+                }
+            });
+            calculateTotalAmount();
+        });
+        checkbox.dataset.listenerAttached = 'true';
+        if (checkbox.checked) {
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+}
+
+function handleInventorySelection(event) {
+    const productId = event.target.value;
+    if (!productId || !inventoryProducts[productId]) {
+        return;
+    }
+    const productData = inventoryProducts[productId];
+    const formRow = event.target.closest('.expense-item-form');
+    if (!formRow) {
+        return;
+    }
+    const partNoInput = formRow.querySelector('input[name$="-part_no"]');
+    if (partNoInput) {
+        partNoInput.value = productData.sku || '';
+    }
+    const descriptionField = formRow.querySelector('textarea[name$="-description"]')
+        || formRow.querySelector('input[name$="-description"]');
+    if (descriptionField) {
+        descriptionField.value = productData.description || productData.name || '';
+    }
+    const priceInput = formRow.querySelector('input[name$="-price"]');
+    if (priceInput) {
+        const cost = parseFloat(productData.cost_price || 0);
+        priceInput.value = cost ? cost.toFixed(2) : '';
+    }
+    const searchInput = formRow.querySelector('.inventory-product-search');
+    if (searchInput) {
+        const selectedOption = event.target.options[event.target.selectedIndex];
+        searchInput.value = selectedOption && selectedOption.value ? selectedOption.text.trim() : '';
+    }
+    calculateTotalAmount();
+}
+
+function attachCreateInventoryCheckboxListeners() {
+    document.querySelectorAll('#mechexpenseitem_set-forms .create-inventory-checkbox').forEach(checkbox => {
+        if (isInEmptyFormTemplate(checkbox)) {
+            return;
+        }
+        if (checkbox.dataset.listenerAttached === 'true') {
+            return;
+        }
+        checkbox.addEventListener('change', function(event) {
+            if (!event.target.checked) {
+                const confirmed = confirm('Disabling this option will skip creating or updating the inventory product for this item. Continue?');
+                if (!confirmed) {
+                    event.target.checked = true;
+                }
+            }
+        });
+        checkbox.dataset.listenerAttached = 'true';
+    });
+}
+</script>
+{% endblock %}

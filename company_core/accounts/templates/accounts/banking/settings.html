@@ -1,0 +1,49 @@
+{% extends 'customer_portal_base.html' %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block title %}Banking Integration{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <h4 class="mb-1"><i class="fa-solid fa-building-columns me-2"></i>Banking Integration (Flinks)</h4>
+            <p class="text-muted mb-0">Connect bank accounts and review transactions before creating expenses.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'accounts:banking_transactions' %}" class="pill-secondary btn-sm">
+                Review queue{% if pending_count %} ({{ pending_count }}){% endif %}
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                <div class="col-md-4">
+                    {{ form.enabled|as_crispy_field }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.require_review|as_crispy_field }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.auto_sync_enabled|as_crispy_field }}
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Save settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if banking_settings and banking_settings.last_synced_at %}
+        <div class="text-muted small mt-2">Last synced {{ banking_settings.last_synced_at|naturaltime }}</div>
+    {% endif %}
+
+    <div class="alert alert-info mt-3 mb-0">
+        Use Flinks Connect to link bank accounts, then review incoming transactions in the queue.
+    </div>
+</div>
+{% endblock %}

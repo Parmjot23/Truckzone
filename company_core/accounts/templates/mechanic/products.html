@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <a href="{% url 'accounts:mechanic_portal_dashboard' %}" class="btn btn-secondary mb-3">Back</a>
+        <h2 class="mb-3">Products</h2>
+        <form method="get" class="mb-3">
+            <div class="input-group">
+                <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Search products">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" type="submit">Search</button>
+                </div>
+            </div>
+        </form>
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Image</th>
+                    <th>Quantity</th>
+                    <th>Location</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for product in products %}
+                <tr>
+                    <td>{{ product.name }}</td>
+                    <td>
+                        {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" width="60">
+                        {% endif %}
+                    </td>
+                    <td>{{ product.quantity_in_stock }}</td>
+                    <td>
+                        <input type="text" name="location" value="{{ product.location }}" form="product-form-{{ product.id }}" class="form-control form-control-sm">
+                    </td>
+                    <td>
+                        <form id="product-form-{{ product.id }}" method="post" action="{% url 'accounts:mechanic_product_update' product.id %}" enctype="multipart/form-data" class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
+                            {% csrf_token %}
+                            <input type="file" name="image" class="form-control form-control-sm mb-2 mb-sm-0 me-sm-2">
+                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">No products available.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+    <div class="card mb-3">
+        <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:payroll_settings' %}">Payroll Hub</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:employee_list' %}">Employees</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:timesheet_list' %}">Timesheets</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:payroll_run_list' %}">Payroll Runs</a>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    More tools
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'accounts:timesheet_weekly_grid' %}">Weekly Grid</a></li>
+                    <li><a class="dropdown-item" href="{% url 'accounts:timesheet_bulk_entry' %}">Bulk Entry</a></li>
+                    <li><a class="dropdown-item" href="{% url 'accounts:timesheet_import' %}">Import/Export</a></li>
+                    <li><a class="dropdown-item" href="{% url 'accounts:shift_template_list' %}">Shift Templates</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>

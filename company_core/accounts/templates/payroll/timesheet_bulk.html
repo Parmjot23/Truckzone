@@ -1,0 +1,204 @@
+{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Bulk Time Entry</h2>
+            <div class="text-muted small">Enter time for multiple employees at once.</div>
+        </div>
+    </div>
+
+    {% include 'payroll/_nav.html' %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Period start</label>
+                        <input type="date" name="period_start" class="form-control" value="{{ period_start }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Period end</label>
+                        <input type="date" name="period_end" class="form-control" value="{{ period_end }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-primary" id="bulk-add-row">Add row</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Date</th>
+                                <th>Start</th>
+                                <th>Finish</th>
+                                <th>Hours</th>
+                                <th>Notes</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="bulk-entry-body">
+                            {% for row in rows %}
+                            <tr>
+                                <td>
+                                    <select name="employee_id" class="form-select">
+                                        <option value="">Select employee</option>
+                                        {% for employee in employees %}
+                                        <option value="{{ employee.id }}" {% if row.employee_id|stringformat:"s" == employee.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ employee.full_name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td><input type="date" name="work_date" class="form-control" value="{{ row.work_date }}"></td>
+                                <td><input type="time" name="start_time" class="form-control" value="{{ row.start_time }}"></td>
+                                <td><input type="time" name="end_time" class="form-control" value="{{ row.end_time }}"></td>
+                                <td><input type="number" name="hours_display" class="form-control" readonly></td>
+                                <td><input type="text" name="notes" class="form-control" value="{{ row.notes }}"></td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-danger bulk-remove-row">Remove</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-3 text-muted small" id="bulk-total-hours">Total hours: 0.00</div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Save entries</button>
+            <a href="{% url 'accounts:timesheet_list' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<template id="bulk-entry-template">
+    <tr>
+        <td>
+            <select name="employee_id" class="form-select">
+                <option value="">Select employee</option>
+                {% for employee in employees %}
+                <option value="{{ employee.id }}">{{ employee.full_name }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td><input type="date" name="work_date" class="form-control"></td>
+        <td><input type="time" name="start_time" class="form-control"></td>
+        <td><input type="time" name="end_time" class="form-control"></td>
+        <td><input type="number" name="hours_display" class="form-control" readonly></td>
+        <td><input type="text" name="notes" class="form-control"></td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger bulk-remove-row">Remove</button>
+        </td>
+    </tr>
+</template>
+
+<script>
+    (function () {
+        const addBtn = document.getElementById('bulk-add-row');
+        const tbody = document.getElementById('bulk-entry-body');
+        const template = document.getElementById('bulk-entry-template');
+        const totalLabel = document.getElementById('bulk-total-hours');
+
+        if (!addBtn || !tbody || !template) {
+            return;
+        }
+
+        const parseTime = (value) => {
+            if (!value) return null;
+            const parts = value.split(':');
+            if (parts.length < 2) return null;
+            const hours = parseInt(parts[0], 10);
+            const minutes = parseInt(parts[1], 10);
+            if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+                return null;
+            }
+            return hours * 60 + minutes;
+        };
+
+        const updateRowHours = (row) => {
+            const startInput = row.querySelector('input[name="start_time"]');
+            const endInput = row.querySelector('input[name="end_time"]');
+            const hoursInput = row.querySelector('input[name="hours_display"]');
+            if (!startInput || !endInput || !hoursInput) {
+                return;
+            }
+            const startMinutes = parseTime(startInput.value);
+            const endMinutes = parseTime(endInput.value);
+            if (startMinutes === null || endMinutes === null) {
+                hoursInput.value = '';
+                updateTotalHours();
+                return;
+            }
+            let diff = endMinutes - startMinutes;
+            if (diff < 0) {
+                diff += 24 * 60;
+            }
+            hoursInput.value = (diff / 60).toFixed(2);
+            updateTotalHours();
+        };
+
+        const updateTotalHours = () => {
+            let total = 0;
+            tbody.querySelectorAll('input[name="hours_display"]').forEach((input) => {
+                const value = parseFloat(input.value);
+                if (!Number.isNaN(value)) {
+                    total += value;
+                }
+            });
+            totalLabel.textContent = `Total hours: ${total.toFixed(2)}`;
+        };
+
+        addBtn.addEventListener('click', () => {
+            const html = template.innerHTML.trim();
+            const temp = document.createElement('tbody');
+            temp.innerHTML = html;
+            const row = temp.firstElementChild;
+            if (row) {
+                tbody.appendChild(row);
+            }
+        });
+
+        tbody.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+            if (target.classList.contains('bulk-remove-row')) {
+                const row = target.closest('tr');
+                if (row) {
+                    row.remove();
+                    updateTotalHours();
+                }
+            }
+        });
+
+        tbody.addEventListener('change', (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement)) {
+                return;
+            }
+            if (target.name === 'start_time' || target.name === 'end_time') {
+                const row = target.closest('tr');
+                if (row) {
+                    updateRowHours(row);
+                }
+            }
+        });
+
+        tbody.querySelectorAll('tr').forEach((row) => updateRowHours(row));
+        updateTotalHours();
+    })();
+</script>
+{% endblock %}

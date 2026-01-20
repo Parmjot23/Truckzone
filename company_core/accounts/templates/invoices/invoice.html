@@ -1,0 +1,236 @@
+{% if print_view %}
+    <script type="text/javascript">
+        window.onload = function() { window.print(); }
+    </script>
+{% endif %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice Detail</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: letter;
+            margin: 0.5in;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        .invoice-wrapper {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .invoice-header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid {{ profile.invoice_header_color }};
+        }
+        .invoice-header h1 {
+            margin: 0;
+            font-size: 32px;
+            color: {{ profile.invoice_header_color }};
+            letter-spacing: 1px;
+        }
+        .company-info {
+            font-size: 14px;
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+        .company-info p {
+            margin: 5px 0;
+        }
+        .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .invoice-details div {
+            font-size: {{ profile.invoice_font_size }}px;
+            line-height: 1.5;
+            width: 48%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eaeaea;
+        }
+        table th {
+            background-color: {{ profile.invoice_header_color }};
+            color: white;
+            font-weight: 600;
+        }
+        table td {
+            vertical-align: middle;
+        }
+        .subtotal-container {
+            text-align: right;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .subtotal-container p {
+            margin: 5px 0;
+        }
+        .subtotal-container .total-due {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #007bff;
+            margin-top: 15px;
+        }
+        .invoice-footer {
+            text-align: center;
+            padding-top: 30px;
+            font-size: 13px;
+            color: #888;
+        }
+        .note-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #fef7f7;
+            border-left: 4px solid #d9534f;
+            color: #d9534f;
+            font-size: 13px;
+        }
+        .company-logo {
+            max-width: 120px;
+            margin: 20px auto;
+            display: block;
+        }
+        @media print {
+            body {
+                background-color: #ffffff;
+            }
+            .invoice-wrapper {
+                box-shadow: none;
+                margin: 0;
+                page-break-after: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-wrapper">
+        <!-- Company Logo -->
+        {% if profile.show_logo and company_logo_url %}
+            <div class="text-center">
+                <img src="{{ company_logo_url }}" alt="Company Logo" class="company-logo">
+            </div>
+        {% endif %}
+
+        <!-- Company Information -->
+        {% if profile.show_address %}
+        <div class="company-info">
+            <p><strong>{{ profile.company_name }}</strong></p>
+            <p>{{ profile.company_address }}</p>
+            <p>{{ profile.company_phone }}</p>
+            <p>{{ profile.company_email }}</p>
+            <p>GST/HST No: {{ profile.gst_hst_number }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Invoice Header -->
+        <div class="invoice-header">
+            <h1>INVOICE</h1>
+        </div>
+
+        <!-- Invoice Details -->
+        <div class="invoice-details">
+            <div>
+                <p><strong>Invoice Number:</strong> {{ object.invoice_number }}</p>
+                <p><strong>Date:</strong> {{ object.date }}</p>
+                {% if object.vin_no %}
+                    <p><strong>VIN No:</strong> {{ object.vin_no }}</p>
+                {% endif %}
+                {% if object.unit_no %}
+                    <p><strong>License Plate Number:</strong> {{ object.unit_no }}</p>
+                {% endif %}
+                {% if object.mileage %}
+                    <p><strong>Odometer:</strong> {{ object.mileage }}</p>
+                {% endif %}
+                {% if object.make_model %}
+                    <p><strong>Make/Model:</strong> {{ object.make_model }}</p>
+                {% endif %}
+            </div>
+            <div style="text-align: right;">
+                <p><strong>Bill To:</strong></p>
+                <p>{{ object.bill_to }}</p>
+                {% if object.bill_to_address %}
+                    <p>{{ object.bill_to_address|linebreaksbr }}</p>
+                {% endif %}
+                <p><strong>Email:</strong> {{ object.bill_to_email }}</p>
+                <p><strong>Terms:</strong> {{ profile.get_term_display }}</p>
+            </div>
+        </div>
+
+        <!-- Jobs Table -->
+        <table>
+            <thead>
+            <tr>
+                <th>Job</th>
+                <th style="text-align: right;">Quantity</th>
+                <th style="text-align: right;">Price</th>
+                <th style="text-align: right;">Total</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for job in object.income_records.all %}
+                <tr>
+                    <td>{{ job.job|linebreaksbr }}</td>
+                    <td style="text-align: right;">{{ job.qty }}</td>
+                    <td style="text-align: right;">${{ job.rate|floatformat:2 }}</td>
+                    <td style="text-align: right;">${{ job.amount|floatformat:2 }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Subtotals and Total Amount -->
+        <div class="subtotal-container">
+            {% if show_parts_breakdown %}
+                <p>Labor Subtotal: ${{ labor_subtotal|floatformat:2 }}</p>
+                <p>Parts Subtotal: ${{ parts_subtotal|floatformat:2 }}</p>
+            {% endif %}
+            <p>Subtotal: ${{ subtotal|floatformat:2 }}</p>
+            <p>{{ profile.get_tax_name }}: ${{ tax|floatformat:2 }}</p>
+            <div class="total-due">
+                Total Amount Due: ${{ total_amount|floatformat:2 }}
+            </div>
+        </div>
+
+        <!-- Optional Note -->
+        {% if note %}
+            <div class="note-section">
+                <p><strong>Note:</strong> {{ note }}</p>
+            </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="invoice-footer">
+            <p>Thank you for your business!</p>
+        </div>
+    </div>
+</body>
+</html>

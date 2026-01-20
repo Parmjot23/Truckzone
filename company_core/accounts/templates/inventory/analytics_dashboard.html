@@ -1,0 +1,47 @@
+{% extends 'customer_portal_base.html' %}
+{% block content %}
+{% include 'inventory/partials/_inventory_nav.html' %}
+<div class="container mt-4">
+  <h2>Inventory Analytics</h2>
+
+  <h4>Inventory Value</h4>
+  <p>Cost Value: {{ totals.total_cost|floatformat:2 }}</p>
+  <p>Retail Value: {{ totals.total_retail|floatformat:2 }}</p>
+
+  <h4>Top Sellers (last {{ period_days }} days)</h4>
+  <ul>
+    {% for item in top_sellers %}
+      <li>{{ item.product.name }} - {{ item.qty_sold }} sold</li>
+    {% empty %}
+      <li>No sales data.</li>
+    {% endfor %}
+  </ul>
+
+  <h4>Slow Movers (last {{ period_days }} days)</h4>
+  <ul>
+    {% for item in slow_movers %}
+      <li>{{ item.product.name }} - {{ item.qty_sold }} sold</li>
+    {% empty %}
+      <li>No data.</li>
+    {% endfor %}
+  </ul>
+
+  <h4>Low Stock Products</h4>
+  <ul>
+    {% for product in low_stock_products %}
+      <li>{{ product.name }} - {{ product.quantity_in_stock }} left</li>
+    {% empty %}
+      <li>No low stock items.</li>
+    {% endfor %}
+  </ul>
+
+  <h4>Unsold Products ({{ unsold_days }}+ days)</h4>
+  <ul>
+    {% for product in unsold_products %}
+      <li>{{ product.name }}</li>
+    {% empty %}
+      <li>All products sold recently.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

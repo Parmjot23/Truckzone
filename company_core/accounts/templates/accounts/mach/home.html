@@ -1,0 +1,3142 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+{% load humanize %}
+{% load custom_filters %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    .dashboard-wrap { padding: 0.75rem 0.75rem 1.5rem; }
+    .dashboard-hero { display: flex; align-items: center; justify-content: space-between; gap: 0.85rem; margin-bottom: 0.9rem; }
+    .hero-meta { font-weight: 700; letter-spacing: -0.01em; }
+    .hero-meta .eyebrow { text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 0.2rem; }
+    .hero-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .ghost-btn { border: 1px solid #e2e8f0; background: #fff; padding: 0.55rem 0.9rem; border-radius: 12px; color: #0f172a; font-weight: 600; box-shadow: 0 8px 22px rgba(15,23,42,0.08); }
+    .ghost-btn:hover { border-color: #2563eb; color: #2563eb; }
+    .primary-pill { background: linear-gradient(120deg, #2563eb, #2b7bff); color: #fff; border: none; padding: 0.6rem 1.1rem; border-radius: 12px; box-shadow: 0 12px 30px rgba(37,99,235,0.25); font-weight: 700; }
+    .primary-pill i { margin-right: 0.4rem; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.65rem; margin-bottom: 1rem; }
+    .stat-card { border-radius: 14px; background: #fff; border: 1px solid #e6e9f2; padding: 0.8rem 0.9rem; display: flex; gap: 0.65rem; box-shadow: 0 8px 22px rgba(15,23,42,0.07); transition: transform 0.15s ease, box-shadow 0.15s ease; text-decoration: none; color: inherit; }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 16px 38px rgba(37,99,235,0.12); }
+    .stat-icon { width: 46px; height: 46px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; color: #1d4ed8; background: #e0e9ff; font-size: 1.2rem; }
+    .stat-card:nth-child(2) .stat-icon { color: #1f2937; background: #f2f4f8; }
+    .stat-card:nth-child(3) .stat-icon { color: #0f766e; background: #d1fae5; }
+    .stat-card:nth-child(4) .stat-icon { color: #312e81; background: #e0e7ff; }
+    .stat-meta small { color: #6b7280; font-weight: 700; letter-spacing: 0.02em; }
+    .stat-value { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; }
+    .stat-trend { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem; }
+    .spark { flex: 1; height: 7px; background: linear-gradient(90deg, #dbeafe, #1d4ed8); border-radius: 999px; position: relative; overflow: hidden; }
+    .spark::after { content: ''; position: absolute; inset: 0; width: calc(min(100%, var(--fill, 40%))); background: linear-gradient(90deg, #60a5fa, #2563eb); border-radius: 999px; box-shadow: 0 6px 16px rgba(37,99,235,0.3); }
+    .pill { display: inline-flex; align-items: center; gap: 0.35rem; background: #f8fafc; color: #0f172a; border-radius: 999px; padding: 0.2rem 0.75rem; font-weight: 700; font-size: 0.82rem; border: 1px solid #e5e7eb; }
+    .panel { border-radius: 16px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 10px 28px rgba(15,23,42,0.08); padding: 0.85rem 0.9rem; }
+    .panel h6, .panel h5 { margin: 0; }
+    .analytics-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 0.55fr); gap: 0.75rem; align-items: stretch; margin-bottom: 0.75rem; }
+    .chart-split { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: 0.75rem; }
+    .chart-card { padding: 0; height: 100%; display: flex; flex-direction: column; }
+    .chart-block { padding: 0.3rem 0.6rem 0; border-radius: 14px; background: #f8fafc; border: 1px dashed #e0e7ff; }
+    .chart-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; font-weight: 700; }
+    .chart-meta { color: #6b7280; font-size: 0.85rem; }
+    .chart-area { min-height: 130px; display: flex; align-items: flex-end; }
+    .doughnut-block { display: flex; flex-direction: column; align-items: center; flex: 1; }
+    .doughnut-area { width: min(320px, 100%); height: 100%; min-height: 260px; max-width: 100%; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+    .doughnut-area canvas { width: 100% !important; height: 100% !important; }
+    .stat-card-chart { align-items: center; }
+    .stat-chart { margin-left: auto; width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; }
+    .stat-chart canvas { width: 72px !important; height: 72px !important; }
+    .content-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.85rem; align-items: start; }
+    .quick-card { position: relative; }
+    .quick-card .badge-soft { background: rgba(37,99,235,0.14); color: #1d4ed8; }
+    .quick-card-toggle { border-radius: 999px; border: 1px solid rgba(37,99,235,0.18); background: #fff; color: #1d4ed8; font-weight: 700; padding: 0.35rem 0.8rem; }
+    /* Use more viewport height so users don't scroll as much */
+    .quick-card-body { position: absolute; top: calc(100% + 0.4rem); left: 0; right: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 16px 46px rgba(15,23,42,0.18); padding: 0.75rem; z-index: 50; max-height: min(calc(100vh - 200px), 820px); overflow-y: auto; }
+    .quick-card-body.d-none { display: none !important; }
+    .quick-card.open-overlay { z-index: 60; }
+    .queue-table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+    .queue-table th, .queue-table td { padding: 0.6rem 0.7rem; border-bottom: 1px solid #e5e7eb; vertical-align: middle; background: #fff; }
+    .queue-table th { color: #6b7280; font-weight: 800; font-size: 0.82rem; letter-spacing: 0.01em; }
+    .badge-soft { background: rgba(37, 99, 235, 0.14); color: #1d4ed8; border-radius: 999px; padding: 0.2rem 0.65rem; font-weight: 700; font-size: 0.78rem; }
+    .badge-status-completed { background: #dcfce7; color: #166534; border-radius: 999px; padding: 0.2rem 0.65rem; font-weight: 700; font-size: 0.78rem; }
+    .notes-surface { background: linear-gradient(180deg, #fff8c5 0%, #fff3b0 100%); border: 1px solid #f2d675; }
+    .notes-grid { display: grid; gap: 0.65rem; }
+    .note-card { border-radius: 12px; border: 1px solid rgba(120, 74, 0, 0.18); background: #fffdf0; padding: 0.8rem; box-shadow: 0 10px 22px rgba(120, 74, 0, 0.08); }
+    .note-card.pinned { border-color: rgba(37,99,235,0.35); box-shadow: 0 12px 30px rgba(37,99,235,0.08); }
+    .note-actions { display: flex; gap: 0.35rem; justify-content: flex-end; }
+    .note-quick textarea { background: rgba(255,255,255,0.85); border: 1px solid rgba(120, 74, 0, 0.22); border-radius: 12px; }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.35rem; }
+    .section-heading .muted { color: #6b7280; }
+    .link-inline { color: #2563eb; font-weight: 600; text-decoration: none; }
+    .link-inline:hover { text-decoration: underline; }
+    .tag { display: inline-flex; align-items: center; gap: 0.35rem; background: #eef2ff; color: #312e81; border-radius: 12px; padding: 0.3rem 0.65rem; font-weight: 700; font-size: 0.82rem; }
+    .divider { border-top: 1px solid #e5e7eb; margin: 0.75rem 0; }
+    .help-text { color: #6b7280; font-size: 0.9rem; }
+    .subtle-input { border: 1px solid #e5e7eb; border-radius: 12px; padding: 0.75rem; }
+    .quick-invoice-form { display: flex; flex-direction: column; gap: 0.9rem; }
+    .quick-invoice-section { border: 1px solid #e5e7eb; border-radius: 14px; padding: 0.85rem; background: #f8fafc; }
+    .quick-invoice-section-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.6rem; }
+    .quick-invoice-section-title { font-weight: 800; font-size: 0.95rem; letter-spacing: -0.01em; }
+    .quick-invoice-section-sub { color: #64748b; font-size: 0.85rem; margin-top: 0.15rem; }
+    .quick-invoice-lines { display: flex; flex-direction: column; gap: 0.75rem; }
+    .quick-invoice-lines .invoice-line-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: 0.85rem; background: #fff; }
+    .quick-invoice-actions { border-top: 1px dashed #e2e8f0; padding-top: 0.85rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+    .quick-invoice-help { color: #64748b; font-size: 0.85rem; }
+    @media (max-width: 1200px) {
+        .analytics-grid, .content-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+        .dashboard-hero { flex-direction: column; align-items: flex-start; }
+        .summary-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+        .stat-card { flex-direction: row; }
+    }
+
+    /* Processing overlay (prevents double-submit / accidental cancel) */
+    .processing-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.46);
+        backdrop-filter: blur(2px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 25000;
+    }
+    .processing-overlay .processing-card {
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        border-radius: 16px;
+        padding: 1rem 1.1rem;
+        box-shadow: 0 20px 55px rgba(15, 23, 42, 0.25);
+        min-width: min(420px, calc(100vw - 2rem));
+    }
+    .processing-overlay .processing-title { font-weight: 900; letter-spacing: -0.01em; }
+    .processing-overlay .processing-sub { color: #64748b; font-weight: 700; font-size: 0.92rem; }
+</style>
+
+<div class="page-shell">
+    <div class="dashboard-hero">
+        <div class="hero-meta">
+            <div class="eyebrow">Operations</div>
+            <h2 class="mb-1">Dashboard</h2>
+            <p class="text-muted mb-0">Live look at workorders, billing, and team activity.</p>
+        </div>
+        <div class="hero-actions">
+            <a href="{% url 'accounts:add_records' %}" class="ghost-btn text-decoration-none">
+                <i class="fa-solid fa-file-invoice-dollar me-1"></i> New bill
+            </a>
+            <a href="{% url 'accounts:add_workorder' %}" class="primary-pill text-decoration-none">
+                <i class="fa-solid fa-plus"></i> Workorder
+            </a>
+            <a href="{% url 'accounts:add_dailylog' %}" class="ghost-btn text-decoration-none">
+                <i class="fa-regular fa-clock"></i> Invoice draft
+            </a>
+        </div>
+    </div>
+
+    <div class="dashboard-wrap">
+        <div class="summary-grid">
+            <a class="stat-card" href="{% url 'accounts:workorder_list' %}">
+                <div class="stat-icon"><i class="fa-solid fa-list-check"></i></div>
+                <div class="stat-meta">
+                    <small>Open Workorders</small>
+                    <div class="stat-value">{{ open_workorders_count|default:0 }}</div>
+                    <div class="stat-trend">
+                        <div class="spark" style="--fill: {{ open_workorders_count|default:0 }}%;"></div>
+                        <span class="chart-meta">Live queue</span>
+                    </div>
+                </div>
+            </a>
+            <a class="stat-card" href="{% url 'accounts:overdue_invoice_list' %}">
+                <div class="stat-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                <div class="stat-meta">
+                    <small>Overdue balance</small>
+                    <div class="stat-value">{{ overdue_balance_last_365_days|currency }}</div>
+                    <div class="stat-trend">
+                        <div class="spark" style="--fill: 62%;"></div>
+                        <span class="chart-meta">Last 365 days</span>
+                    </div>
+                </div>
+            </a>
+            <a class="stat-card" href="{% url 'accounts:vehicle_management' %}">
+                <div class="stat-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                <div class="stat-meta">
+                    <small>Active Maintenance</small>
+                    <div class="stat-value">{{ upcoming_maintenance|length|default:0 }}</div>
+                    <div class="stat-trend">
+                        <div class="spark" style="--fill: {{ upcoming_maintenance|length|default:0 }}%;"></div>
+                        <span class="chart-meta">Vehicles flagged</span>
+                    </div>
+                </div>
+            </a>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-regular fa-calendar"></i></div>
+                <div class="stat-meta">
+                    <small>Today's Schedule</small>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="stat-value mb-0">{{ today|date:"M d" }}</div>
+                        <span class="pill">{{ today_tasks_count|default:0 }} Tasks</span>
+                    </div>
+                    <div class="stat-trend">
+                        <div class="spark" style="--fill: 60%;"></div>
+                        <span class="chart-meta">Stay on pace</span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card stat-card-chart">
+                <div class="stat-icon" style="color:#0f766e;background:#d1fae5;">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <div class="stat-meta">
+                    <small>Revenue mix</small>
+                    <div class="chart-meta">Last 30 days</div>
+                </div>
+                <div class="stat-chart">
+                    <canvas id="serviceRevenueChartMini"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="analytics-grid">
+            <div class="quick-stack d-flex flex-column gap-3">
+                <div class="panel quick-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="tag mb-1"><i class="fa-solid fa-file-invoice-dollar"></i><span>Bills</span></div>
+                            <h6 class="mb-1">Quick Stock Entry</h6>
+                            <p class="text-muted small mb-0">Push parts into inventory and expense in one step.</p>
+                        </div>
+                        <button type="button" class="quick-card-toggle btn btn-sm" data-target="#bill-card-body">
+                            <i class="fa-solid fa-eye me-1"></i> Show form
+                        </button>
+                    </div>
+                    <div id="bill-card-body" class="quick-card-body d-none">
+                    <form method="post" action="{% url 'accounts:mechexpense_add' %}" id="quick-bill-form">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label">Supplier</label>
+                                <input type="text" name="vendor" class="form-control" list="supplierList" placeholder="Supplier name" required autocomplete="off">
+                                <datalist id="supplierList">
+                                    {% for name in supplier_names %}
+                                    <option value="{{ name }}"></option>
+                                    {% endfor %}
+                                </datalist>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Date</label>
+                                <input type="date" name="date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Category</label>
+                                <select name="categorie" class="form-select">
+                                    <option value="Parts">Parts</option>
+                                    <option value="Supplies">Supplies</option>
+                                    <option value="Tools">Tools</option>
+                                    <option value="Miscellaneous">Miscellaneous</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Receipt #</label>
+                                <input type="text" name="receipt_no" class="form-control" placeholder="Auto if blank">
+                            </div>
+                            <div class="col-12">
+                                <div id="bill-items">
+                                    <div class="row g-2 align-items-end bill-item-row" data-index="0">
+                                        <div class="col-sm-4">
+                                            <label class="form-label">Part / SKU</label>
+                                            <select class="form-select product-select" name="mechexpenseitem_set-0-part_no">
+                                                <option value="">Type or pick a product</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <label class="form-label">Qty</label>
+                                            <input type="number" name="mechexpenseitem_set-0-qty" class="form-control" value="1" min="0" step="0.01">
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <label class="form-label">Unit cost</label>
+                                            <input type="number" name="mechexpenseitem_set-0-price" class="form-control" placeholder="0.00" min="0" step="0.01">
+                                        </div>
+                                        <div class="col-sm-2 d-flex">
+                                            <button type="button" class="btn btn-outline-secondary w-100 add-row"><i class="fa-solid fa-plus"></i></button>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Description</label>
+                                            <textarea name="mechexpenseitem_set-0-description" rows="2" class="form-control" placeholder="What was purchased?"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-2 align-items-end">
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Apply payment</label>
+                                <select name="record_payment" class="form-select" id="bill-record-payment">
+                                    <option value="false">No, mark unpaid</option>
+                                    <option value="true" selected>Yes, record payment</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Amount</label>
+                                <input type="number" name="payment_amount" class="form-control" placeholder="0.00" min="0" step="0.01">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Method</label>
+                                <select name="payment_method" class="form-select">
+                                    <option value="Cash">Cash</option>
+                                    <option value="Card" selected>Card</option>
+                                    <option value="Cheque">Cheque</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label">Note</label>
+                                <input type="text" name="payment_notes" class="form-control" placeholder="Optional">
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input" type="checkbox" name="tax_included" id="bill-tax-included">
+                                    <label class="form-check-label small" for="bill-tax-included">Prices include tax</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-top pt-3 mt-3">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                                <div class="d-flex gap-4 flex-wrap">
+                                    <div>Subtotal: <strong id="bill-subtotal">.00</strong></div>
+                                    <div>Tax (<span id="bill-tax-label">{{ tax_label }}</span>): <strong id="bill-tax">.00</strong></div>
+                                    <div>Total: <strong id="bill-total">.00</strong></div>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" name="record_in_inventory" id="recordInventory" checked>
+                                    <label class="form-check-label small" for="recordInventory">Update inventory stock (turn off for rent/lease/etc)</label>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fa-solid fa-cloud-arrow-up me-2"></i>Save bill
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="bill-total-forms" name="mechexpenseitem_set-TOTAL_FORMS" value="1">
+                        <input type="hidden" name="mechexpenseitem_set-INITIAL_FORMS" value="0">
+                        <input type="hidden" name="mechexpenseitem_set-MIN_NUM_FORMS" value="0">
+                        <input type="hidden" name="mechexpenseitem_set-MAX_NUM_FORMS" value="1000">
+                        <input type="hidden" name="mechexpenseitem_set-0-id" value="">
+                    </form>
+                    </div>
+                </div>
+
+                <div class="panel quick-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="tag mb-1"><i class="fa-solid fa-briefcase"></i><span>Work</span></div>
+                            <h6 class="mb-1">Quick Workorder</h6>
+                            <p class="text-muted small mb-0">Assign, capture the job ask, and start tracking.</p>
+                        </div>
+                        <button type="button" class="quick-card-toggle btn btn-sm" data-target="#workorder-card-body">
+                            <i class="fa-solid fa-eye me-1"></i> Show form
+                        </button>
+                    </div>
+                    <div id="workorder-card-body" class="quick-card-body d-none">
+                    <form method="post" action="{% url 'accounts:add_workorder' %}" id="quick-workorder-form">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Customer</label>
+                                <select name="customer" class="form-select" required>
+                                    <option value="" selected disabled>Select customer</option>
+                                    {% for customer in quick_customers %}
+                                    <option value="{{ customer.id }}">{{ customer.name|default:customer.email }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Schedule</label>
+                                <input type="date" name="scheduled_date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Vehicle</label>
+                                <select name="vehicle" class="form-select" id="quick-vehicle-select">
+                                    <option value="">Optional</option>
+                                    {% for vehicle in quick_vehicles %}
+                                    <option value="{{ vehicle.id }}" data-customer="{{ vehicle.customer_id }}">{{ vehicle.unit_number }} {{ vehicle.make_model }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label d-flex justify-content-between align-items-center">
+                                    <span>Assign</span>
+                                    <small class="text-muted">Optional</small>
+                                </label>
+                                <select name="mechanics" class="form-select">
+                                    <option value="">Unassigned</option>
+                                    {% for mechanic in quick_mechanics %}
+                                    <option value="{{ mechanic.id }}">{{ mechanic.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Work summary</label>
+                                <textarea name="description" rows="2" class="form-control" placeholder="Describe the job"></textarea>
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary w-50" id="view-vehicle-history" data-history-url="{% url 'accounts:vehicle_history_summary' %}" disabled>
+                                    <i class="fa-regular fa-clock-rotate-left me-1"></i>History
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary w-50" id="view-vehicle-maintenance" data-maint-url="{% url 'accounts:vehicle_maintenance_summary' %}" disabled>
+                                    <i class="fa-solid fa-screwdriver-wrench me-1"></i>Maintenance
+                                </button>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-play me-2"></i>Start workorder</button>
+                        </div>
+                    </form>
+                    </div>
+                </div>
+
+                <div class="panel quick-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="tag mb-1"><i class="fa-solid fa-receipt"></i><span>Invoices</span></div>
+                            <h6 class="mb-1">Quick Invoice</h6>
+                            <p class="text-muted small mb-0">Create an invoice fast, then print/download/email from the detail page.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="quick-invoice-expand">
+                                <i class="fa-solid fa-up-right-and-down-left-from-center me-1"></i>Expand
+                            </button>
+                            <button type="button" class="quick-card-toggle btn btn-sm" data-target="#invoice-card-body">
+                                <i class="fa-solid fa-eye me-1"></i> Show form
+                            </button>
+                        </div>
+                    </div>
+                    <div id="invoice-card-body" class="quick-card-body d-none">
+                        <form method="post" action="{% url 'accounts:quick_invoice_create' %}" id="quick-invoice-form" class="quick-invoice-form">
+                            {% csrf_token %}
+                            <div class="quick-invoice-section">
+                                <div class="quick-invoice-section-header">
+                                    <div>
+                                        <div class="quick-invoice-section-title">Customer & vehicle</div>
+                                        <div class="quick-invoice-section-sub">Select who the invoice is for.</div>
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Customer</label>
+                                        <div class="input-group">
+                                            <div class="dropdown flex-grow-1">
+                                                <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button"
+                                                        id="quick-invoice-customer-picker" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Select customer
+                                                </button>
+                                                <div class="dropdown-menu p-2 w-100" aria-labelledby="quick-invoice-customer-picker" style="max-height: 320px; overflow: auto;">
+                                                    <input type="text" class="form-control form-control-sm mb-2" id="quick-invoice-customer-search" placeholder="Search name or email...">
+                                                    <div id="quick-invoice-customer-list"></div>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-outline-secondary" id="quick-invoice-add-customer" title="Add new customer">
+                                                <i class="fa-solid fa-plus"></i>
+                                            </button>
+                                        </div>
+                                        <input type="hidden" name="customer" id="quick-invoice-customer" value="">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Vehicle</label>
+                                        <div class="input-group">
+                                            <div class="dropdown flex-grow-1">
+                                                <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button"
+                                                        id="quick-invoice-vehicle-picker" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Select vehicle
+                                                </button>
+                                                <div class="dropdown-menu p-2 w-100" aria-labelledby="quick-invoice-vehicle-picker" style="max-height: 320px; overflow: auto;">
+                                                    <input type="text" class="form-control form-control-sm mb-2" id="quick-invoice-vehicle-search" placeholder="Search vehicle...">
+                                                    <div class="small text-muted mb-2" id="quick-invoice-vehicle-hint">Select a customer to see vehicles.</div>
+                                                    <div id="quick-invoice-vehicle-list"></div>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-outline-secondary d-none" id="quick-invoice-add-vehicle" title="Add new vehicle for selected customer">
+                                                <i class="fa-solid fa-plus"></i>
+                                            </button>
+                                        </div>
+                                        <input type="hidden" name="vehicle" id="quick-invoice-vehicle" value="">
+                                        <div class="help-text mt-1">Vehicle details will fill VIN / Unit / Plate / Mileage on the invoice.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="quick-invoice-section">
+                                <div class="quick-invoice-section-header">
+                                    <div>
+                                        <div class="quick-invoice-section-title">Invoice details</div>
+                                        <div class="quick-invoice-section-sub">Date, contact, and tax status.</div>
+                                    </div>
+                                </div>
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Invoice date</label>
+                                        <input type="date" name="date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" name="bill_to_email" class="form-control" id="quick-invoice-email" placeholder="customer@example.com">
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="tax_exempt" id="quick-invoice-tax-exempt">
+                                            <label class="form-check-label small" for="quick-invoice-tax-exempt">Tax exempt</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="quick-invoice-section">
+                                <div class="quick-invoice-section-header">
+                                    <div>
+                                        <div class="quick-invoice-section-title">Job entries</div>
+                                        <div class="quick-invoice-section-sub">Search products/services or type a custom description.</div>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="quick-invoice-add-line">
+                                        <i class="fa-solid fa-plus me-1"></i>Add job entry
+                                    </button>
+                                </div>
+                                <div id="quick-invoice-lines" class="quick-invoice-lines">
+                                    <div class="invoice-line-row" data-index="0">
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-12">
+                                                <div class="dropdown">
+                                                    <button type="button" class="btn btn-outline-secondary dropdown-toggle w-100 text-start quick-invoice-suggestion-btn"
+                                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                                        Select a product/service
+                                                    </button>
+                                                    <div class="dropdown-menu p-2 w-100" style="max-height: 320px; overflow: auto;">
+                                                        <input type="text" class="form-control form-control-sm mb-2 quick-invoice-suggestion-search" placeholder="Search products/services...">
+                                                        <div class="quick-invoice-suggestion-list"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-12">
+                                                <textarea name="job" rows="2" class="form-control quick-invoice-job" placeholder="Or type a custom description..."></textarea>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label">Qty</label>
+                                                <input type="number" name="qty" class="form-control quick-invoice-qty" value="1" min="0" step="0.01">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label">Rate</label>
+                                                <input type="number" name="rate" class="form-control quick-invoice-rate" placeholder="0.00" min="0" step="0.01">
+                                            </div>
+                                            <div class="col-12 d-flex justify-content-end">
+                                                <button type="button" class="btn btn-outline-danger btn-sm quick-invoice-remove-line" disabled>
+                                                    <i class="fa-solid fa-trash-can me-1"></i>Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="line_source" class="quick-invoice-line-source" value="custom">
+                                        <input type="hidden" name="product_id" class="quick-invoice-product-id" value="">
+                                        <input type="hidden" name="service_id" class="quick-invoice-service-id" value="">
+                                    </div>
+                                </div>
+                                <div id="quick-invoice-adjustments" class="border rounded-3 p-2 mt-3 d-none">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div>
+                                            <div class="fw-semibold">Adjustments & Fees</div>
+                                            <div class="small text-muted">Optional shop supplies, discounts, or interest</div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-2 mt-1">
+                                        <div class="col-12 col-lg-4">
+                                            <div class="border rounded-3 p-2 h-100">
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="quick-invoice-toggle-shop-supply">
+                                                    <label class="form-check-label" for="quick-invoice-toggle-shop-supply">Add Shop Supply</label>
+                                                </div>
+                                                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                                    <div class="form-check form-check-inline mb-0">
+                                                        <input class="form-check-input" type="radio" name="quick_invoice_shop_supply_type" id="quick-invoice-shop-supply-fixed" value="fixed">
+                                                        <label class="form-check-label small" for="quick-invoice-shop-supply-fixed">Fixed</label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline mb-0">
+                                                        <input class="form-check-input" type="radio" name="quick_invoice_shop_supply_type" id="quick-invoice-shop-supply-percentage" value="percentage" checked>
+                                                        <label class="form-check-label small" for="quick-invoice-shop-supply-percentage">%</label>
+                                                    </div>
+                                                    <input type="number" id="quick-invoice-shop-supply-value" class="form-control form-control-sm" style="max-width: 120px;" value="3" min="0" step="0.01">
+                                                </div>
+                                                <input type="text" id="quick-invoice-shop-supply-reason" class="form-control form-control-sm" placeholder="Reason (optional)">
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-lg-4">
+                                            <div class="border rounded-3 p-2 h-100">
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="quick-invoice-toggle-discount">
+                                                    <label class="form-check-label" for="quick-invoice-toggle-discount">Apply Discount</label>
+                                                </div>
+                                                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                                    <div class="form-check form-check-inline mb-0">
+                                                        <input class="form-check-input" type="radio" name="quick_invoice_discount_type" id="quick-invoice-discount-fixed" value="fixed" checked>
+                                                        <label class="form-check-label small" for="quick-invoice-discount-fixed">Fixed</label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline mb-0">
+                                                        <input class="form-check-input" type="radio" name="quick_invoice_discount_type" id="quick-invoice-discount-percentage" value="percentage">
+                                                        <label class="form-check-label small" for="quick-invoice-discount-percentage">%</label>
+                                                    </div>
+                                                    <input type="number" id="quick-invoice-discount-value" class="form-control form-control-sm" style="max-width: 120px;" value="0" min="0" step="0.01">
+                                                </div>
+                                                <input type="text" id="quick-invoice-discount-reason" class="form-control form-control-sm" placeholder="Reason (optional)">
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-lg-4">
+                                            <div class="border rounded-3 p-2 h-100">
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="quick-invoice-toggle-interest">
+                                                    <label class="form-check-label" for="quick-invoice-toggle-interest">Add Interest</label>
+                                                </div>
+                                                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                                    <div class="form-check form-check-inline mb-0">
+                                                        <input class="form-check-input" type="radio" name="quick_invoice_interest_type" id="quick-invoice-interest-fixed" value="fixed" checked>
+                                                        <label class="form-check-label small" for="quick-invoice-interest-fixed">Fixed</label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline mb-0">
+                                                        <input class="form-check-input" type="radio" name="quick_invoice_interest_type" id="quick-invoice-interest-percentage" value="percentage">
+                                                        <label class="form-check-label small" for="quick-invoice-interest-percentage">%</label>
+                                                    </div>
+                                                    <input type="number" id="quick-invoice-interest-value" class="form-control form-control-sm" style="max-width: 120px;" value="0" min="0" step="0.01">
+                                                </div>
+                                                <input type="text" id="quick-invoice-interest-reason" class="form-control form-control-sm" placeholder="Reason (optional)">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="post_action" id="quick-invoice-post-action" value="view">
+                            </div>
+                            <div class="quick-invoice-actions">
+                                <button type="submit" class="btn btn-outline-secondary" id="quick-invoice-save-continue">
+                                    <i class="fa-solid fa-floppy-disk me-2"></i>Save & continue
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="quick-invoice-save-view">
+                                    <i class="fa-solid fa-arrow-up-right-from-square me-2"></i>Save & view
+                                </button>
+                            </div>
+                            <div class="quick-invoice-help mt-2">After saving, we will open the invoice detail page to print, download, or email.</div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Quick add modals (Dashboard) -->
+                <div class="modal fade" id="quickInvoiceAddCustomerModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Add customer</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <label class="form-label">Name</label>
+                                        <input type="text" class="form-control" id="quick-add-customer-name" placeholder="Customer name">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="quick-add-customer-email" placeholder="customer@example.com">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">CC emails</label>
+                                        <input type="text" class="form-control" id="quick-add-customer-cc" placeholder="cc1@example.com, cc2@example.com">
+                                        <div class="form-text">Optional: comma-separated billing emails.</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Address</label>
+                                        <textarea class="form-control" id="quick-add-customer-address" rows="2" placeholder="Optional"></textarea>
+                                    </div>
+                                </div>
+                                <div class="alert alert-danger d-none mt-3" id="quick-add-customer-error" role="alert"></div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" id="quick-add-customer-save">
+                                    <i class="fa-solid fa-plus me-1"></i>Save customer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="quickInvoiceAddVehicleModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Add vehicle</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="small text-muted mb-2">This vehicle will be added under the selected customer.</div>
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <label class="form-label">Unit number</label>
+                                        <input type="text" class="form-control" id="quick-add-vehicle-unit" placeholder="Unit #">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Make / Model</label>
+                                        <input type="text" class="form-control" id="quick-add-vehicle-make-model" placeholder="e.g. Freightliner Cascadia">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Year</label>
+                                        <input type="number" class="form-control" id="quick-add-vehicle-year" placeholder="Year" min="0" step="1">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">License plate</label>
+                                        <input type="text" class="form-control" id="quick-add-vehicle-plate" placeholder="Plate">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">VIN</label>
+                                        <input type="text" class="form-control" id="quick-add-vehicle-vin" placeholder="VIN">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Current mileage</label>
+                                        <input type="number" class="form-control" id="quick-add-vehicle-mileage" placeholder="0" min="0" step="1">
+                                    </div>
+                                </div>
+                                <div class="alert alert-danger d-none mt-3" id="quick-add-vehicle-error" role="alert"></div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" id="quick-add-vehicle-save">
+                                    <i class="fa-solid fa-plus me-1"></i>Save vehicle
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="quickInvoiceExpandModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Quick Invoice (expanded)</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="quick-invoice-expand-slot"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="panel notes-surface">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h6 class="mb-0">Team Notes</h6>
+                        <div class="chart-meta">Pin quick reminders or shift briefs</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" id="expandNotesBtn"><i class="fa-solid fa-up-right-and-down-left-from-center me-1"></i>Expand</button>
+                        <button class="btn btn-outline-secondary btn-sm" id="clearNotesBtn"><i class="fa-regular fa-trash-can me-1"></i>Clear all</button>
+                    </div>
+                </div>
+                <div class="note-quick mb-3">
+                    <textarea class="form-control" id="noteQuickInput" rows="2"
+                              placeholder="Type a note and press Enter to save. Use 'Title - details' to set the title."></textarea>
+                    <div class="text-muted small mt-1">Tip: Title is the text before “ - ”. Press Shift+Enter for a new line.</div>
+                </div>
+                <form class="note-form mb-3 d-none" id="noteForm">
+                    <div class="row g-2">
+                        <div class="col-sm-4">
+                            <input type="text" class="form-control" id="noteTitle" placeholder="Title">
+                        </div>
+                        <div class="col-sm-6">
+                            <textarea class="form-control" id="noteBody" rows="2" placeholder="Details, links, numbers..."></textarea>
+                        </div>
+                        <div class="col-sm-2 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary w-100" id="noteSaveBtn"><i class="fa-solid fa-floppy-disk me-1"></i>Save</button>
+                            <button type="button" class="btn btn-outline-secondary" id="noteCancelBtn">Cancel</button>
+                        </div>
+                    </div>
+                    <input type="hidden" id="noteId">
+                </form>
+                <div class="notes-grid" id="notesGrid"></div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="panel h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="mb-1">Queue</h6>
+                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                            <span class="chart-meta">Newest at the top</span>
+                            <div class="d-flex gap-2 ms-0 ms-md-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="queue-tab-workorders">Workorders</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="queue-tab-invoices">Invoices</button>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{% url 'accounts:workorder_list' %}" class="link-inline" id="queue-open-list"
+                       data-workorders-url="{% url 'accounts:workorder_list' %}"
+                       data-invoices-url="{% url 'accounts:groupedinvoice_list' %}">
+                        Open list
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="queue-table" id="queue-table-workorders">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Unit</th>
+                                <th>Assignee</th>
+                                <th>Status</th>
+                                <th class="text-end">Due Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% if recent_workorders %}
+                            {% for wo in recent_workorders %}
+                            <tr>
+                                <td>WO #{{ wo.id }}</td>
+                                <td>{{ wo.display_unit|default:"—" }}</td>
+                                <td>{{ wo.assigned_mechanic|default:"Unassigned" }}</td>
+                                <td><span class="{% if wo.status == 'completed' %}badge-status-completed{% else %}badge-soft{% endif %}">{{ wo.get_status_display }}</span></td>
+                                <td class="text-end">{{ wo.scheduled_date|date:"M d, Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="5" class="text-muted text-center py-3">No workorders yet.</td></tr>
+                        {% endif %}
+                        </tbody>
+                    </table>
+
+                    <table class="queue-table d-none" id="queue-table-invoices">
+                        <thead>
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Bill to</th>
+                                <th>Unit</th>
+                                <th>Status</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% if recent_invoices %}
+                            {% for inv in recent_invoices %}
+                            <tr>
+                                <td>{{ inv.invoice_number|default:inv.id }}</td>
+                                <td>
+                                    {% if inv.bill_to %}
+                                        {{ inv.bill_to }}
+                                    {% elif inv.customer %}
+                                        {{ inv.customer.name }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>{{ inv.unit_no|default:"—" }}</td>
+                                <td>
+                                    <span class="{% if inv.display_status == 'Paid' %}badge-status-completed{% else %}badge-soft{% endif %}">
+                                        {{ inv.display_status }}
+                                    </span>
+                                </td>
+                                <td class="text-end">{{ inv.total_amount|default:0|currency }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="5" class="text-muted text-center py-3">No invoices yet.</td></tr>
+                        {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel h-100" id="overdue-customers-panel" data-reminder-url-template="{% url 'accounts:trigger_overdue_reminder' 0 %}" data-record-payment-url-template="{% url 'accounts:record_customer_payment' 0 %}" data-followup-url-template="{% url 'accounts:update_overdue_followup' 0 %}" data-invoice-detail-url-template="{% url 'accounts:groupedinvoice_detail' 0 %}">
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                    <div>
+                        <h6 class="mb-0">Overdue Customers</h6>
+                        <div class="chart-meta">
+                            <strong>{{ overdue_customers_count|default:0 }}</strong> customers •
+                            Total overdue: <strong>{{ overdue_customers_total|default:0|currency }}</strong>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <input type="text" class="form-control form-control-sm" id="overdue-search" placeholder="Search customer…" style="min-width: 180px;">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="overdue-expand-btn">
+                            <i class="fa-solid fa-up-right-and-down-left-from-center me-1"></i>Expand
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="queue-table" id="overdue-table">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Phone</th>
+                                <th>Last statement</th>
+                                <th class="text-end">Balance Due</th>
+                                <th class="text-end">Payment</th>
+                                <th class="text-end">Reminder</th>
+                            </tr>
+                        </thead>
+                        <tbody id="overdue-tbody">
+                            <tr><td colspan="6" class="text-muted text-center py-3">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2 gap-2 flex-wrap">
+                    <div class="small text-muted" id="overdue-page-info"></div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" id="overdue-first">First</button>
+                        <button class="btn btn-outline-secondary btn-sm" id="overdue-prev">Previous</button>
+                        <button class="btn btn-outline-secondary btn-sm" id="overdue-next">Next</button>
+                        <button class="btn btn-outline-secondary btn-sm" id="overdue-last">Last</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="alert d-none" id="form-status" role="alert"></div>
+</div>
+
+<!-- Customer Payment Modal (Overdue Customers grid) -->
+<div class="modal fade" id="customerPaymentModal" tabindex="-1" aria-labelledby="customerPaymentModalLabel" aria-hidden="true" data-today="{% now 'Y-m-d' %}">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="customerPaymentModalLabel">Record Customer Payment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="customer-payment-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="customer_id" id="customer-payment-customer-id" value="">
+        <div class="modal-body">
+          <div class="alert alert-info mb-3">
+            Record a payment and automatically apply it to invoices from oldest to newest.
+          </div>
+          <div class="mb-2">
+            <div class="fw-semibold" id="customer-payment-customer-name"></div>
+            <div class="text-muted small">Outstanding balance: <span id="customer-payment-outstanding"></span></div>
+          </div>
+          <div class="mb-3">
+            <label for="customer-payment-amount" class="form-label">Amount</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="customer-payment-amount" name="amount" required>
+          </div>
+          <div class="mb-3">
+            <label for="customer-payment-date" class="form-label">Payment Date</label>
+            <input type="date" class="form-control" id="customer-payment-date" name="payment_date">
+          </div>
+          <div class="mb-3">
+            <label for="customer-payment-method" class="form-label">Payment Method</label>
+            <select class="form-select" id="customer-payment-method" name="method">
+              {% for method in payment_methods %}
+                <option value="{{ method }}">{{ method }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-0">
+            <label for="customer-payment-notes" class="form-label">Notes</label>
+            <textarea class="form-control" id="customer-payment-notes" name="notes" rows="2" placeholder="Optional notes"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="customer-payment-submit">Record Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Customer Payment Success Modal -->
+<div class="modal fade" id="customerPaymentSuccessModal" tabindex="-1" aria-labelledby="customerPaymentSuccessModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="customerPaymentSuccessModalLabel">Payment recorded</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-success" id="customer-payment-success-message"></div>
+        <div class="mb-3">
+          <div class="small text-muted mb-2">Allocation (oldest → newest)</div>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Invoice #</th>
+                  <th class="text-end">Applied</th>
+                  <th>Status</th>
+                  <th class="text-end">Remaining</th>
+                </tr>
+              </thead>
+              <tbody id="customer-payment-success-rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mb-2 fw-semibold">Statements</div>
+        <div class="d-flex flex-wrap gap-2" id="customer-payment-statement-buttons"></div>
+        <div class="small text-muted mt-2">Download/print/email statements for paid, pending, all, or overdue invoices.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Notes expand modal -->
+<div class="modal fade" id="notesExpandModal" tabindex="-1" aria-labelledby="notesExpandModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="notesExpandModalLabel">Team Notes</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
+          <input type="text" class="form-control" id="notesExpandSearch" placeholder="Search notes…"
+                 style="max-width: 420px;">
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" id="addNoteBtnModal"><i class="fa-solid fa-plus me-1"></i>New note</button>
+          </div>
+        </div>
+        <div class="note-quick mb-3">
+          <textarea class="form-control" id="noteQuickInputModal" rows="2"
+                    placeholder="Type a note and press Enter to save. Use 'Title - details' to set the title."></textarea>
+          <div class="text-muted small mt-1">Tip: Title is the text before “ - ”. Press Shift+Enter for a new line.</div>
+        </div>
+        <div class="notes-grid" id="notesExpandGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Global processing overlay -->
+<div id="processing-overlay" class="processing-overlay d-none" aria-hidden="true">
+  <div class="processing-card">
+    <div class="d-flex align-items-center gap-3">
+      <div class="spinner-border text-primary" role="status" aria-label="Processing"></div>
+      <div>
+        <div class="processing-title" id="processing-overlay-title">Processing…</div>
+        <div class="processing-sub">Please wait—don’t refresh or click back.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Processing overlay helpers
+    const processingOverlayEl = document.getElementById('processing-overlay');
+    const processingOverlayTitleEl = document.getElementById('processing-overlay-title');
+    let processingOverlayCount = 0;
+
+    function showProcessingOverlay(title) {
+        if (!processingOverlayEl) return () => {};
+        processingOverlayCount += 1;
+        if (processingOverlayTitleEl) processingOverlayTitleEl.textContent = title || 'Processing…';
+        processingOverlayEl.classList.remove('d-none');
+        return () => hideProcessingOverlay();
+    }
+    function hideProcessingOverlay() {
+        if (!processingOverlayEl) return;
+        processingOverlayCount = Math.max(0, processingOverlayCount - 1);
+        if (processingOverlayCount === 0) processingOverlayEl.classList.add('d-none');
+    }
+    function lockFormSubmits(form) {
+        if (!form) return () => {};
+        if (form.dataset.processingLocked === 'true') return () => {};
+        form.dataset.processingLocked = 'true';
+        const submits = Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"]'));
+        const prev = submits.map((el) => ({ el, disabled: el.disabled }));
+        submits.forEach((el) => { el.disabled = true; });
+        return () => {
+            prev.forEach((p) => { p.el.disabled = p.disabled; });
+            delete form.dataset.processingLocked;
+        };
+    }
+
+    const serviceRevenueData = JSON.parse('{{ service_revenue_chart|default:"[]"|escapejs }}' || '[]');
+
+    function renderRevenueChart() {
+        if (typeof Chart === 'undefined') return;
+        const revenueCtxMini = document.getElementById('serviceRevenueChartMini');
+        if (!revenueCtxMini) return;
+        const palette = ['#2563eb', '#60a5fa', '#22c55e', '#f59e0b', '#f97316', '#94a3b8'];
+        const labels = serviceRevenueData.length ? serviceRevenueData.map(d => d.label) : ['No revenue yet'];
+        const values = serviceRevenueData.length ? serviceRevenueData.map(d => d.value) : [1];
+        const colors = labels.map((_, idx) => palette[idx % palette.length]);
+        new Chart(revenueCtxMini, {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }],
+            },
+            options: {
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false },
+                },
+                cutout: '68%',
+                maintainAspectRatio: false,
+            },
+        });
+    }
+
+    /* Notes board (local, lightweight) */
+    const notesGrid = document.getElementById('notesGrid');
+    const notesExpandGrid = document.getElementById('notesExpandGrid');
+    const notesExpandSearch = document.getElementById('notesExpandSearch');
+    const expandNotesBtn = document.getElementById('expandNotesBtn');
+    const addNoteBtnModal = document.getElementById('addNoteBtnModal');
+    const noteQuickInput = document.getElementById('noteQuickInput');
+    const noteQuickInputModal = document.getElementById('noteQuickInputModal');
+
+    const notesExpandModalEl = document.getElementById('notesExpandModal');
+    const notesExpandModal = notesExpandModalEl && window.bootstrap ? new bootstrap.Modal(notesExpandModalEl) : null;
+    const noteForm = document.getElementById('noteForm');
+    const noteTitle = document.getElementById('noteTitle');
+    const noteBody = document.getElementById('noteBody');
+    const noteId = document.getElementById('noteId');
+    const addNoteBtn = document.getElementById('addNoteBtn');
+    const clearNotesBtn = document.getElementById('clearNotesBtn');
+    const noteCancelBtn = document.getElementById('noteCancelBtn');
+    const notesStoreKey = 'dashboardNotes';
+    const serverNotes = JSON.parse('{{ dashboard_notes_json|default:"[]"|escapejs }}' || '[]');
+    let notes = [];
+
+    const loadNotes = () => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(notesStoreKey) || '[]');
+            notes = saved.length ? saved : serverNotes;
+        } catch (e) {
+            notes = serverNotes;
+        }
+    };
+
+    const persistNotes = () => {
+        localStorage.setItem(notesStoreKey, JSON.stringify(notes));
+    };
+
+    function buildNoteCard(note) {
+        const card = document.createElement('div');
+        card.className = 'note-card' + (note.pinned ? ' pinned' : '');
+        const safeTitle = note.title || 'Untitled';
+        const safeUpdated = note.updated || '';
+        const safeBody = note.body || '';
+        card.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <div class="fw-semibold">${safeTitle}</div>
+                    <div class="text-muted small">${safeUpdated}</div>
+                </div>
+                <div class="note-actions">
+                    <button class="btn btn-outline-info btn-sm" data-action="pin">${note.pinned ? '<i class="fa-solid fa-thumbtack"></i>' : '<i class="fa-regular fa-thumbtack"></i>'}</button>
+                    <button class="btn btn-outline-secondary btn-sm" data-action="edit"><i class="fa-regular fa-pen-to-square"></i></button>
+                    <button class="btn btn-outline-danger btn-sm" data-action="delete"><i class="fa-regular fa-trash-can"></i></button>
+                </div>
+            </div>
+            <div class="small" style="white-space: pre-wrap;">${safeBody}</div>
+        `;
+        card.querySelectorAll('[data-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.dataset.action;
+                if (action === 'pin') {
+                    note.pinned = !note.pinned;
+                    persistNotes();
+                    renderNotes();
+                } else if (action === 'edit') {
+                    noteId.value = note.id;
+                    noteTitle.value = note.title || '';
+                    noteBody.value = note.body || '';
+                    noteForm.classList.remove('d-none');
+                    noteTitle.focus();
+                    notesExpandModal?.hide();
+                } else if (action === 'delete') {
+                    notes = notes.filter(n => n.id !== note.id);
+                    persistNotes();
+                    renderNotes();
+                }
+            });
+        });
+        return card;
+    }
+
+    function renderNotesInto(target, query) {
+        if (!target) return;
+        target.innerHTML = '';
+        const q = (query || '').trim().toLowerCase();
+        let list = [...notes];
+        if (q) {
+            list = list.filter(n => ((n.title || '') + ' ' + (n.body || '')).toLowerCase().includes(q));
+        }
+        if (!list.length) {
+            target.innerHTML = '<div class="note-card text-muted small">No notes found.</div>';
+            return;
+        }
+        const sorted = list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)).reverse();
+        sorted.forEach(note => target.appendChild(buildNoteCard(note)));
+    }
+
+    const renderNotes = () => {
+        renderNotesInto(notesGrid, '');
+        renderNotesInto(notesExpandGrid, notesExpandSearch?.value || '');
+    };
+
+    const resetForm = () => {
+        if (!noteForm) return;
+        noteId.value = '';
+        noteTitle.value = '';
+        noteBody.value = '';
+        noteForm.classList.add('d-none');
+    };
+
+    if (addNoteBtn) {
+        addNoteBtn.addEventListener('click', () => {
+            resetForm();
+            noteForm.classList.remove('d-none');
+            noteTitle.focus();
+        });
+    }
+    if (addNoteBtnModal) {
+        addNoteBtnModal.addEventListener('click', () => {
+            resetForm();
+            noteForm.classList.remove('d-none');
+            noteTitle.focus();
+        });
+    }
+    if (noteCancelBtn) {
+        noteCancelBtn.addEventListener('click', resetForm);
+    }
+    if (clearNotesBtn) {
+        clearNotesBtn.addEventListener('click', () => {
+            if (confirm('Remove all notes from this dashboard?')) {
+                notes = [];
+                persistNotes();
+                renderNotes();
+            }
+        });
+    }
+    if (noteForm) {
+        noteForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = noteId.value || String(Date.now());
+            const existing = notes.find(n => n.id === id);
+            const payload = {
+                id,
+                title: noteTitle.value.trim(),
+                body: noteBody.value.trim(),
+                pinned: existing ? existing.pinned : false,
+                updated: new Date().toLocaleString(),
+            };
+            if (existing) {
+                Object.assign(existing, payload);
+            } else {
+                notes.unshift(payload);
+            }
+            persistNotes();
+            renderNotes();
+            resetForm();
+        });
+    }
+
+    notesExpandSearch?.addEventListener('input', () => {
+        renderNotes();
+    });
+
+    expandNotesBtn?.addEventListener('click', () => {
+        renderNotes();
+        notesExpandModal?.show();
+        setTimeout(() => notesExpandSearch?.focus(), 150);
+    });
+
+    function parseQuickNote(raw) {
+        const text = String(raw || '').trim();
+        if (!text) return null;
+        const delimiter = ' - ';
+        if (text.includes(delimiter)) {
+            const [left, ...rest] = text.split(delimiter);
+            const title = (left || '').trim();
+            const body = rest.join(delimiter).trim();
+            if (title && body) return { title, body };
+        }
+        // Fallback: title = first 6 words
+        const words = text.split(/\s+/).filter(Boolean);
+        const title = words.slice(0, 6).join(' ');
+        return { title: title || 'Note', body: text };
+    }
+
+    function addQuickNoteFrom(textarea) {
+        if (!textarea) return;
+        const parsed = parseQuickNote(textarea.value);
+        if (!parsed) return;
+        const id = String(Date.now()) + String(Math.random()).slice(2, 6);
+        notes.unshift({
+            id,
+            title: parsed.title.slice(0, 80),
+            body: parsed.body,
+            pinned: false,
+            updated: new Date().toLocaleString(),
+        });
+        persistNotes();
+        renderNotes();
+        textarea.value = '';
+    }
+
+    function wireQuickInput(textarea) {
+        if (!textarea) return;
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            if (e.shiftKey) return; // allow newline
+            e.preventDefault();
+            addQuickNoteFrom(textarea);
+        });
+    }
+
+    wireQuickInput(noteQuickInput);
+    wireQuickInput(noteQuickInputModal);
+
+    loadNotes();
+    renderNotes();
+
+    /* Toggle quick cards */
+    document.querySelectorAll('.quick-card-toggle').forEach(btn => {
+        const target = document.querySelector(btn.dataset.target);
+        const card = btn.closest('.quick-card');
+        if (!target) return;
+        const updateLabel = () => {
+            const hidden = target.classList.contains('d-none');
+            btn.innerHTML = `<i class="fa-solid ${hidden ? 'fa-chevron-down' : 'fa-chevron-up'} me-1"></i> ${hidden ? 'Show' : 'Hide'} form`;
+            card?.classList.toggle('collapsed', hidden);
+            card?.classList.toggle('open-overlay', !hidden);
+        };
+        btn.addEventListener('click', () => {
+            target.classList.toggle('d-none');
+            updateLabel();
+            // When opening, bring the card into view so the form fits the viewport better.
+            if (!target.classList.contains('d-none')) {
+                setTimeout(() => {
+                    try {
+                        card?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } catch (e) {
+                        card?.scrollIntoView(true);
+                    }
+                }, 50);
+            }
+        });
+        updateLabel();
+    });
+
+    /* Queue toggle: workorders vs invoices */
+    const queueTabWorkorders = document.getElementById('queue-tab-workorders');
+    const queueTabInvoices = document.getElementById('queue-tab-invoices');
+    const queueTableWorkorders = document.getElementById('queue-table-workorders');
+    const queueTableInvoices = document.getElementById('queue-table-invoices');
+    const queueOpenList = document.getElementById('queue-open-list');
+
+    function setQueueMode(mode) {
+        const isInvoices = mode === 'invoices';
+        queueTableWorkorders?.classList.toggle('d-none', isInvoices);
+        queueTableInvoices?.classList.toggle('d-none', !isInvoices);
+        queueTabWorkorders?.classList.toggle('btn-secondary', !isInvoices);
+        queueTabWorkorders?.classList.toggle('btn-outline-secondary', isInvoices);
+        queueTabInvoices?.classList.toggle('btn-secondary', isInvoices);
+        queueTabInvoices?.classList.toggle('btn-outline-secondary', !isInvoices);
+        if (queueOpenList) {
+            const url = isInvoices ? queueOpenList.dataset.invoicesUrl : queueOpenList.dataset.workordersUrl;
+            queueOpenList.setAttribute('href', url || '#');
+        }
+    }
+
+    queueTabWorkorders?.addEventListener('click', () => setQueueMode('workorders'));
+    queueTabInvoices?.addEventListener('click', () => setQueueMode('invoices'));
+    setQueueMode('workorders');
+
+    /* Quick bill dynamic items */
+    const products = {{ inventory_products_data|safe }};
+
+    // Normalize Django-injected JSON-ish values into arrays (defensive:
+    // sometimes a dict/JSON-string sneaks in and breaks .filter/.forEach).
+    function normalizeToArray(value) {
+        if (Array.isArray(value)) return value;
+        if (value == null) return [];
+        if (typeof value === 'string') {
+            const s = value.trim();
+            if (!s) return [];
+            try {
+                return normalizeToArray(JSON.parse(s));
+            } catch (e) {
+                return [];
+            }
+        }
+        if (typeof value === 'object') {
+            // Common shapes: {results: [...]}, {customers: [...]}, {data: [...]}
+            if (Array.isArray(value.results)) return value.results;
+            if (Array.isArray(value.customers)) return value.customers;
+            if (Array.isArray(value.data)) return value.data;
+            // Fall back to object values; keep only plausible customer/vehicle rows.
+            const vals = Object.values(value);
+            return vals.filter(v => v && typeof v === 'object');
+        }
+        return [];
+    }
+
+    const allProducts = normalizeToArray(products);
+    const quickVehicles = normalizeToArray({{ quick_vehicles_json|safe }});
+    const quickCustomers = normalizeToArray({{ quick_customers_json|default:"[]"|safe }});
+    const quickServiceCatalog = normalizeToArray({{ quick_service_catalog_json|default:"[]"|safe }});
+    const overdueCustomersRaw = normalizeToArray({{ overdue_customers_json|default:"[]"|safe }});
+
+    const billForm = document.getElementById('quick-bill-form');
+    const billItems = document.getElementById('bill-items');
+    const totalForms = document.getElementById('bill-total-forms');
+    let resetBillForm = null;
+    if (billForm && billItems && totalForms) {
+        billForm.dataset.taxRate = "{{ default_tax_rate }}";
+        function buildProductOptions() {
+            const list = allProducts || [];
+            return ['<option value="">Select product</option>'].concat(
+                list.map(p => `<option value="${p.sku || p.name}"
+                    data-id="${p.id}"
+                    data-name="${p.name}"
+                    data-sku="${p.sku || ''}"
+                    data-price="${p.cost_price}"
+                    data-description="${p.description || ''}">
+                    ${p.name}
+                </option>`)
+            ).join('');
+        }
+
+        function wireSelect(row) {
+            const select = row.querySelector('.product-select');
+            const desc = row.querySelector('textarea[name$="-description"]');
+            const price = row.querySelector('input[name$="-price"]');
+            const part = row.querySelector('select[name$="-part_no"]');
+            select.addEventListener('change', () => {
+                const opt = select.options[select.selectedIndex];
+                if (!opt) return;
+                part.value = opt.value;
+                price.value = opt.getAttribute('data-price') || '';
+                if (!desc.value) desc.value = opt.getAttribute('data-description') || '';
+                computeTotals();
+            });
+        }
+
+        function addRow() {
+            const index = parseInt(totalForms.value, 10);
+            const template = billItems.querySelector('.bill-item-row');
+            const clone = template.cloneNode(true);
+            clone.dataset.index = index;
+            clone.querySelectorAll('input, select, textarea').forEach(el => {
+                el.name = el.name.replace(/mechexpenseitem_set-\d+-/, `mechexpenseitem_set-${index}-`);
+                if (el.tagName === 'SELECT') { el.value = ''; }
+                if (el.type === 'number') { el.value = el.name.includes('-qty') ? '1' : ''; }
+                if (el.tagName === 'TEXTAREA') { el.value = ''; }
+            });
+            const btn = clone.querySelector('.add-row');
+            btn.classList.replace('btn-outline-secondary', 'btn-outline-danger');
+            btn.innerHTML = '<i class="fa-solid fa-minus"></i>';
+            btn.onclick = () => {
+                clone.remove();
+                totalForms.value = document.querySelectorAll('.bill-item-row').length;
+                computeTotals();
+            };
+            clone.querySelector('.product-select').innerHTML = buildProductOptions();
+            billItems.appendChild(clone);
+            wireSelect(clone);
+            totalForms.value = document.querySelectorAll('.bill-item-row').length;
+            computeTotals();
+        }
+
+        billForm.addEventListener('submit', (e) => {
+            const recordPayment = billForm.querySelector('#bill-record-payment').value === 'true';
+            if (recordPayment) {
+                const amountField = billForm.querySelector('input[name="payment_amount"]');
+                if (!amountField.value) {
+                    let total = 0;
+                    billItems.querySelectorAll('.bill-item-row').forEach(row => {
+                        const qty = parseFloat(row.querySelector('input[name$="-qty"]').value) || 0;
+                        const price = parseFloat(row.querySelector('input[name$="-price"]').value) || 0;
+                        total += qty * price;
+                    });
+                    amountField.value = total.toFixed(2);
+                }
+            }
+        });
+
+        const firstRow = billItems.querySelector('.bill-item-row');
+        firstRow.querySelector('.product-select').innerHTML = buildProductOptions();
+        wireSelect(firstRow);
+        firstRow.querySelector('.add-row').addEventListener('click', () => addRow());
+
+        function computeTotals() {
+            let subtotal = 0;
+            billItems.querySelectorAll('.bill-item-row').forEach(row => {
+                const qty = parseFloat(row.querySelector('input[name$="-qty"]').value) || 0;
+                const price = parseFloat(row.querySelector('input[name$="-price"]').value) || 0;
+                subtotal += qty * price;
+            });
+            const taxIncluded = billForm.querySelector('#bill-tax-included').checked;
+            const taxRate = parseFloat(billForm.dataset.taxRate || 0);
+            let taxableBase = subtotal;
+            let tax = 0;
+            if (taxRate > 0) {
+                if (taxIncluded) {
+                    taxableBase = subtotal / (1 + taxRate);
+                    tax = subtotal - taxableBase;
+                } else {
+                    tax = subtotal * taxRate;
+                }
+            }
+            const total = taxableBase + tax;
+            document.getElementById('bill-subtotal').textContent = `$${taxableBase.toFixed(2)}`;
+            document.getElementById('bill-tax').textContent = `$${tax.toFixed(2)}`;
+            document.getElementById('bill-total').textContent = `$${total.toFixed(2)}`;
+
+            const recordPayment = billForm.querySelector('#bill-record-payment').value === 'true';
+            if (recordPayment) {
+                const amountField = billForm.querySelector('input[name="payment_amount"]');
+                amountField.value = total.toFixed(2);
+            }
+        }
+
+        billItems.addEventListener('input', computeTotals);
+        billForm.querySelector('#bill-tax-included').addEventListener('change', computeTotals);
+        billForm.querySelector('#bill-record-payment').addEventListener('change', computeTotals);
+        computeTotals();
+
+        resetBillForm = () => {
+            billForm.reset();
+            totalForms.value = 1;
+            billItems.innerHTML = '';
+            billItems.appendChild(firstRow);
+            firstRow.querySelector('.product-select').innerHTML = buildProductOptions();
+            firstRow.querySelectorAll('input[type="number"]').forEach((el) => {
+                el.value = el.name.includes('-qty') ? '1' : '';
+            });
+            firstRow.querySelector('textarea').value = '';
+            computeTotals();
+        };
+    }
+
+    function showStatus(type, message) {
+        const status = document.getElementById('form-status');
+        if (!status) return;
+        status.className = `alert alert-${type}`;
+        status.textContent = message;
+        status.classList.remove('d-none');
+        setTimeout(() => status.classList.add('d-none'), 4000);
+    }
+
+    function extractFirstError(errors) {
+        if (!errors || typeof errors !== 'object') return null;
+        if (errors.form) {
+            const firstField = Object.keys(errors.form)[0];
+            const firstError = errors.form[firstField]?.[0]?.message || errors.form[firstField]?.[0];
+            if (firstError) return firstError;
+        }
+        if (Array.isArray(errors.items) && errors.items.length) {
+            const itemErrs = errors.items[0].errors || {};
+            const firstItemField = Object.keys(itemErrs)[0];
+            const firstItemError = itemErrs[firstItemField]?.[0]?.message || itemErrs[firstItemField]?.[0];
+            if (firstItemError) return firstItemError;
+        }
+        if (Array.isArray(errors.formset) && errors.formset.length) {
+            return errors.formset[0];
+        }
+        // Django form errors: { field: [{message: "..."}] }
+        const keys = Object.keys(errors);
+        for (const key of keys) {
+            const val = errors[key];
+            if (Array.isArray(val) && val.length) {
+                const first = val[0];
+                if (first && typeof first === 'object' && 'message' in first) return first.message;
+                if (typeof first === 'string') return first;
+            }
+            if (typeof val === 'string') return val;
+        }
+        return null;
+    }
+
+    function handleAsyncForm(formId, successMessage, resetCallback) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            // Prevent double-submits
+            if (form.dataset.processingLocked === 'true') return;
+
+            const unlock = lockFormSubmits(form);
+            const hideOverlay = showProcessingOverlay('Processing…');
+            let navigatingAway = false;
+
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 15000);
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                redirect: 'follow',
+                signal: controller.signal,
+            })
+            .then(async (resp) => {
+                const contentType = resp.headers.get('content-type') || '';
+                let payload = null;
+                if (contentType.includes('application/json')) {
+                    payload = await resp.json();
+                } else {
+                    await resp.text();
+                }
+
+                if (!resp.ok || (payload && payload.success === false)) {
+                    const errMessage = payload && payload.errors ? extractFirstError(payload.errors) : null;
+                    throw new Error(errMessage || 'Unable to save right now. Please try again.');
+                }
+                return payload || { success: true };
+            })
+            .then((payload) => {
+                if (payload && payload.redirect_url) {
+                    showStatus('success', successMessage || 'Saved. Opening…');
+                    window.location.assign(payload.redirect_url);
+                    navigatingAway = true;
+                    return;
+                }
+                if (successMessage) showStatus('success', successMessage);
+                if (typeof resetCallback === 'function') resetCallback();
+            })
+            .catch((err) => {
+                const aborted = err.name === 'AbortError';
+                const message = err.message || (aborted ? 'Request timed out. Please try again.' : 'Unable to save right now. Please try again.');
+                showStatus('danger', aborted ? 'Request timed out. Please try again.' : message);
+            })
+            .finally(() => {
+                clearTimeout(timeout);
+                if (!navigatingAway) {
+                    unlock();
+                    hideOverlay();
+                }
+            });
+        });
+    }
+
+    handleAsyncForm('quick-bill-form', 'Bill created successfully.', resetBillForm);
+
+    handleAsyncForm('quick-workorder-form', 'Workorder created successfully.', () => {
+        const form = document.getElementById('quick-workorder-form');
+        if (form) form.reset();
+        populateVehicles();
+    });
+
+    const invoiceForm = document.getElementById('quick-invoice-form');
+    const invoiceCardBody = document.getElementById('invoice-card-body');
+    const quickInvoiceExpandBtn = document.getElementById('quick-invoice-expand');
+    const quickInvoiceExpandModalEl = document.getElementById('quickInvoiceExpandModal');
+    const quickInvoiceExpandSlot = document.getElementById('quick-invoice-expand-slot');
+    const invoicePostAction = document.getElementById('quick-invoice-post-action');
+    const invoiceSaveContinueBtn = document.getElementById('quick-invoice-save-continue');
+    const invoiceSaveViewBtn = document.getElementById('quick-invoice-save-view');
+    const invoiceLinesWrap = document.getElementById('quick-invoice-lines');
+    const invoiceAddLineBtn = document.getElementById('quick-invoice-add-line');
+    const invoiceAdjustments = document.getElementById('quick-invoice-adjustments');
+    const toggleShopSupply = document.getElementById('quick-invoice-toggle-shop-supply');
+    const shopSupplyValue = document.getElementById('quick-invoice-shop-supply-value');
+    const shopSupplyReason = document.getElementById('quick-invoice-shop-supply-reason');
+    const toggleDiscount = document.getElementById('quick-invoice-toggle-discount');
+    const discountValue = document.getElementById('quick-invoice-discount-value');
+    const discountReason = document.getElementById('quick-invoice-discount-reason');
+    const toggleInterest = document.getElementById('quick-invoice-toggle-interest');
+    const interestValue = document.getElementById('quick-invoice-interest-value');
+    const interestReason = document.getElementById('quick-invoice-interest-reason');
+    const resetQuickInvoiceForm = () => {
+        if (!invoiceForm) return;
+        invoiceForm.reset();
+        if (invoicePostAction) invoicePostAction.value = 'view';
+        if (invoiceCustomerIdInput) invoiceCustomerIdInput.value = '';
+        if (invoiceVehicleIdInput) invoiceVehicleIdInput.value = '';
+        if (invoiceCustomerSearch) invoiceCustomerSearch.value = '';
+        if (invoiceVehicleSearch) invoiceVehicleSearch.value = '';
+        setPickerLabel(invoiceCustomerPickerBtn, 'Select customer');
+        setPickerLabel(invoiceVehiclePickerBtn, 'Select vehicle');
+        updateInvoiceVehicleAddVisibility();
+        renderCustomerList();
+        renderVehicleList();
+        resetInvoiceLines();
+        // reset adjustment toggles/inputs
+        if (toggleShopSupply) toggleShopSupply.checked = false;
+        const shopSupplyPctRadio = document.getElementById('quick-invoice-shop-supply-percentage');
+        if (shopSupplyPctRadio) shopSupplyPctRadio.checked = true;
+        if (shopSupplyValue) shopSupplyValue.value = '3';
+        if (shopSupplyReason) shopSupplyReason.value = '';
+        if (toggleDiscount) toggleDiscount.checked = false;
+        if (discountValue) discountValue.value = '0';
+        if (discountReason) discountReason.value = '';
+        if (toggleInterest) toggleInterest.checked = false;
+        if (interestValue) interestValue.value = '0';
+        if (interestReason) interestReason.value = '';
+    };
+
+    invoiceSaveContinueBtn?.addEventListener('click', () => {
+        if (invoicePostAction) invoicePostAction.value = 'continue';
+    });
+    invoiceSaveViewBtn?.addEventListener('click', () => {
+        if (invoicePostAction) invoicePostAction.value = 'view';
+    });
+
+    handleAsyncForm('quick-invoice-form', 'Invoice saved.', resetQuickInvoiceForm);
+
+    // Expand view: move the existing form into a large modal (no duplicate logic).
+    const quickInvoiceExpandModal = quickInvoiceExpandModalEl && window.bootstrap
+        ? new bootstrap.Modal(quickInvoiceExpandModalEl)
+        : null;
+    const originalInvoiceParent = invoiceForm ? invoiceForm.parentElement : null;
+    const originalInvoiceNextSibling = invoiceForm ? invoiceForm.nextSibling : null;
+
+    function moveInvoiceFormTo(slotEl) {
+        if (!invoiceForm || !slotEl) return;
+        slotEl.appendChild(invoiceForm);
+    }
+
+    function restoreInvoiceForm() {
+        if (!invoiceForm || !originalInvoiceParent) return;
+        if (originalInvoiceNextSibling) {
+            originalInvoiceParent.insertBefore(invoiceForm, originalInvoiceNextSibling);
+        } else {
+            originalInvoiceParent.appendChild(invoiceForm);
+        }
+    }
+
+    quickInvoiceExpandBtn?.addEventListener('click', () => {
+        if (!quickInvoiceExpandModal || !invoiceForm || !quickInvoiceExpandSlot) return;
+        // Ensure the card body exists (form must be in DOM before moving)
+        invoiceCardBody?.classList.remove('d-none');
+        moveInvoiceFormTo(quickInvoiceExpandSlot);
+        if (invoiceAdjustments) invoiceAdjustments.classList.remove('d-none');
+        quickInvoiceExpandModal.show();
+        // Focus the first customer picker for faster entry.
+        setTimeout(() => invoiceCustomerPickerBtn?.focus(), 100);
+    });
+
+    quickInvoiceExpandModalEl?.addEventListener('hidden.bs.modal', () => {
+        restoreInvoiceForm();
+        if (invoiceAdjustments) invoiceAdjustments.classList.add('d-none');
+    });
+
+    /* Overdue customers grid */
+    const overduePanel = document.getElementById('overdue-customers-panel');
+    const overdueTbody = document.getElementById('overdue-tbody');
+    const overdueSearch = document.getElementById('overdue-search');
+    const overdueFirst = document.getElementById('overdue-first');
+    const overduePrev = document.getElementById('overdue-prev');
+    const overdueNext = document.getElementById('overdue-next');
+    const overdueLast = document.getElementById('overdue-last');
+    const overduePageInfo = document.getElementById('overdue-page-info');
+    const overdueExpandBtn = document.getElementById('overdue-expand-btn');
+
+    const overdueCustomers = (overdueCustomersRaw || []).slice().sort((a, b) => (b.balance_due || 0) - (a.balance_due || 0));
+    let overduePage = 1;
+    const overduePageSize = 10;
+    let overdueQuery = '';
+
+      function currencyFmt(amount) {
+          const num = Number(amount || 0);
+          return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+      }
+
+      function escapeHtml(value) {
+          return String(value || '')
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#39;');
+      }
+
+      function formatLastSent(rawIso) {
+          if (!rawIso) return '—';
+        try {
+            const dt = new Date(rawIso);
+            if (Number.isNaN(dt.getTime())) return '—';
+            const today = new Date();
+            if (
+                dt.getFullYear() === today.getFullYear() &&
+                dt.getMonth() === today.getMonth() &&
+                dt.getDate() === today.getDate()
+            ) {
+                return 'Today';
+            }
+            return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: '2-digit' }).format(dt);
+        } catch (e) {
+            return '—';
+        }
+    }
+
+    function getCsrfToken() {
+        const tokenField = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        return tokenField ? tokenField.value : '';
+    }
+
+    function reminderUrlFor(customerId) {
+        const template = overduePanel?.dataset.reminderUrlTemplate || '';
+        return template.replace('/0/', `/${customerId}/`);
+    }
+
+      function recordPaymentUrlFor(customerId) {
+          const template = overduePanel?.dataset.recordPaymentUrlTemplate || '';
+          return template.replace('/0/', `/${customerId}/`);
+      }
+
+      function followupUrlFor(customerId) {
+          const template = overduePanel?.dataset.followupUrlTemplate || '';
+          return template.replace('/0/', `/${customerId}/`);
+      }
+
+      function invoiceDetailUrlFor(invoiceId) {
+          const template = overduePanel?.dataset.invoiceDetailUrlTemplate || '';
+          return template.replace('/0/', `/${invoiceId}/`);
+      }
+
+      function filteredOverdue() {
+          const q = (overdueQuery || '').trim().toLowerCase();
+          if (!q) return overdueCustomers;
+          return overdueCustomers.filter((r) => {
+              const haystack = `${r.customer_name || ''} ${r.customer_phone || ''}`.toLowerCase();
+              return haystack.includes(q);
+          });
+      }
+
+    function renderOverdueTable() {
+        if (!overdueTbody) return;
+        const items = filteredOverdue();
+        const totalPages = Math.max(1, Math.ceil(items.length / overduePageSize));
+        overduePage = Math.max(1, Math.min(overduePage, totalPages));
+        const start = (overduePage - 1) * overduePageSize;
+        const pageItems = items.slice(start, start + overduePageSize);
+
+        if (!pageItems.length) {
+            overdueTbody.innerHTML = '<tr><td colspan="6" class="text-muted text-center py-3">No overdue customers.</td></tr>';
+        } else {
+            overdueTbody.innerHTML = pageItems.map(row => {
+                const sent = !!row.sent_today;
+                const btnClass = sent ? 'btn-success' : 'btn-primary';
+                const btnLabel = sent ? 'Sent' : 'Send';
+                const disabledAttr = sent ? 'disabled' : '';
+                const customerName = row.customer_name || '';
+                const customerNameSafe = escapeHtml(customerName);
+                const customerPhoneSafe = escapeHtml(row.customer_phone || '');
+                return `
+                    <tr>
+                        <td>${customerNameSafe}</td>
+                        <td>${customerPhoneSafe}</td>
+                        <td>${formatLastSent(row.last_sent)}</td>
+                        <td class="text-end">${currencyFmt(row.balance_due)}</td>
+                        <td class="text-end">
+                            <button class="btn btn-outline-primary btn-sm overdue-payment-btn"
+                                data-customer-id="${row.customer_id}"
+                                data-customer-name="${customerName.replace(/"/g, '&quot;')}"
+                                data-outstanding="${row.outstanding_due || row.balance_due || 0}">
+                                Record
+                            </button>
+                        </td>
+                        <td class="text-end">
+                            <button class="btn ${btnClass} btn-sm overdue-reminder-btn"
+                                data-customer-id="${row.customer_id}"
+                                ${disabledAttr}>
+                                ${btnLabel}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        const displayStart = items.length ? start + 1 : 0;
+        const displayEnd = Math.min(start + overduePageSize, items.length);
+        if (overduePageInfo) overduePageInfo.textContent = `${displayStart}-${displayEnd} of ${items.length}`;
+    overdueFirst && (overdueFirst.disabled = overduePage <= 1);
+    overduePrev && (overduePrev.disabled = overduePage <= 1);
+    overdueNext && (overdueNext.disabled = overduePage >= totalPages);
+    overdueLast && (overdueLast.disabled = overduePage >= totalPages);
+}
+
+    const overdueFollowupTimers = new Map();
+    const overdueFollowupPending = new Map();
+
+    function queueOverdueFollowupSave(customerId, updates) {
+        if (!customerId || !updates) return;
+        const pending = overdueFollowupPending.get(customerId) || {};
+        Object.assign(pending, updates);
+        overdueFollowupPending.set(customerId, pending);
+        if (overdueFollowupTimers.has(customerId)) {
+            clearTimeout(overdueFollowupTimers.get(customerId));
+        }
+        overdueFollowupTimers.set(
+            customerId,
+            setTimeout(() => {
+                const payload = overdueFollowupPending.get(customerId) || {};
+                overdueFollowupPending.delete(customerId);
+                overdueFollowupTimers.delete(customerId);
+                saveOverdueFollowup(customerId, payload);
+            }, 600)
+        );
+    }
+
+    async function saveOverdueFollowup(customerId, updates) {
+        const url = followupUrlFor(customerId);
+        if (!url || !updates) return;
+        const formData = new FormData();
+        if (Object.prototype.hasOwnProperty.call(updates, 'next_followup')) {
+            formData.append('next_followup', updates.next_followup || '');
+        }
+        if (Object.prototype.hasOwnProperty.call(updates, 'collection_notes')) {
+            formData.append('notes', updates.collection_notes || '');
+        }
+        try {
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: formData,
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || data.status !== 'success') {
+                throw new Error(data.message || 'Unable to save follow-up.');
+            }
+            const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+            if (idx >= 0) {
+                if (Object.prototype.hasOwnProperty.call(updates, 'next_followup')) {
+                    overdueCustomers[idx].next_followup = data.next_followup || '';
+                }
+                if (Object.prototype.hasOwnProperty.call(updates, 'collection_notes')) {
+                    overdueCustomers[idx].collection_notes = data.collection_notes || '';
+                }
+            }
+        } catch (err) {
+            showStatus('danger', err.message || 'Unable to save follow-up.');
+        }
+    }
+
+    /* Customer payment modal helpers */
+    const customerPaymentModalEl = document.getElementById('customerPaymentModal');
+    const customerPaymentSuccessModalEl = document.getElementById('customerPaymentSuccessModal');
+    const customerPaymentModal = customerPaymentModalEl && window.bootstrap ? new bootstrap.Modal(customerPaymentModalEl) : null;
+    const customerPaymentSuccessModal = customerPaymentSuccessModalEl && window.bootstrap ? new bootstrap.Modal(customerPaymentSuccessModalEl) : null;
+
+    const customerPaymentForm = document.getElementById('customer-payment-form');
+    const customerPaymentCustomerId = document.getElementById('customer-payment-customer-id');
+    const customerPaymentCustomerName = document.getElementById('customer-payment-customer-name');
+    const customerPaymentOutstanding = document.getElementById('customer-payment-outstanding');
+    const customerPaymentAmount = document.getElementById('customer-payment-amount');
+    const customerPaymentDate = document.getElementById('customer-payment-date');
+    const customerPaymentMethod = document.getElementById('customer-payment-method');
+    const customerPaymentNotes = document.getElementById('customer-payment-notes');
+    const customerPaymentSubmit = document.getElementById('customer-payment-submit');
+
+    const customerPaymentSuccessMsg = document.getElementById('customer-payment-success-message');
+    const customerPaymentSuccessRows = document.getElementById('customer-payment-success-rows');
+    const customerPaymentStatementButtons = document.getElementById('customer-payment-statement-buttons');
+
+    function openCustomerPaymentModal({ customerId, customerName, outstanding }) {
+        if (!customerPaymentModal || !customerPaymentModalEl) return;
+        const today = customerPaymentModalEl.getAttribute('data-today') || '';
+        const outNum = Number(outstanding || 0);
+        if (customerPaymentCustomerId) customerPaymentCustomerId.value = customerId || '';
+        if (customerPaymentCustomerName) customerPaymentCustomerName.textContent = customerName || 'Customer';
+        if (customerPaymentOutstanding) customerPaymentOutstanding.textContent = currencyFmt(outNum);
+        if (customerPaymentAmount) {
+            customerPaymentAmount.value = outNum ? outNum.toFixed(2) : '';
+            customerPaymentAmount.readOnly = false;
+        }
+        if (customerPaymentDate) customerPaymentDate.value = today;
+        if (customerPaymentMethod) customerPaymentMethod.selectedIndex = 0;
+        if (customerPaymentNotes) customerPaymentNotes.value = '';
+        customerPaymentModal.show();
+    }
+
+    overdueSearch?.addEventListener('input', () => {
+        overdueQuery = overdueSearch.value || '';
+        overduePage = 1;
+        renderOverdueTable();
+    });
+    overdueFirst?.addEventListener('click', () => {
+        overduePage = 1;
+        renderOverdueTable();
+    });
+    overduePrev?.addEventListener('click', () => {
+        overduePage = Math.max(1, overduePage - 1);
+        renderOverdueTable();
+    });
+    overdueNext?.addEventListener('click', () => {
+        overduePage = overduePage + 1;
+        renderOverdueTable();
+    });
+    overdueLast?.addEventListener('click', () => {
+        const totalPages = Math.max(1, Math.ceil(filteredOverdue().length / overduePageSize));
+        overduePage = totalPages;
+        renderOverdueTable();
+    });
+
+    overdueTbody?.addEventListener('click', async (e) => {
+        const payBtn = e.target.closest('.overdue-payment-btn');
+        if (payBtn) {
+            const customerId = payBtn.dataset.customerId;
+            const customerName = payBtn.dataset.customerName || '';
+            const outstanding = payBtn.dataset.outstanding;
+            if (customerId) {
+                openCustomerPaymentModal({
+                    customerId,
+                    customerName,
+                    outstanding,
+                });
+            }
+            return;
+        }
+
+        const btn = e.target.closest('.overdue-reminder-btn');
+        if (!btn) return;
+        const customerId = btn.dataset.customerId;
+        if (!customerId) return;
+        btn.disabled = true;
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-secondary');
+        btn.textContent = 'Sending…';
+        try {
+            const resp = await fetch(reminderUrlFor(customerId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                const msg = data.error || 'Unable to send reminder.';
+                throw new Error(msg);
+            }
+            const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+            if (idx >= 0) overdueCustomers[idx].sent_today = true;
+            showStatus('success', data.message || 'Reminder sent.');
+        } catch (err) {
+            // If server says already sent today, reflect as Sent.
+            const msg = err.message || 'Unable to send reminder.';
+            if ((msg || '').toLowerCase().includes('already sent')) {
+                const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+                if (idx >= 0) overdueCustomers[idx].sent_today = true;
+            }
+            showStatus('danger', msg);
+        } finally {
+            renderOverdueTable();
+        }
+    });
+
+    /* Expand modal (simple) */
+    function openOverdueModal() {
+        const items = filteredOverdue();
+        const modalHtml = `
+              <div class="modal fade" id="overdueCustomersModal" tabindex="-1">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down"><div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Overdue Customers</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
+                    <div class="small text-muted">
+                      Showing <strong>${items.length}</strong> customers
+                    </div>
+                    <input type="text" class="form-control form-control-sm" id="overdue-modal-search" placeholder="Search customer…" value="${(overdueQuery || '').replace(/"/g, '&quot;')}" style="min-width: 220px;">
+                  </div>
+                  <div class="table-responsive">
+                      <table class="table table-sm">
+                        <thead><tr><th>Customer</th><th>Phone</th><th>Last statement</th><th class="text-end">Balance Due</th><th>Next followup</th><th>Notes</th><th class="text-end">Payment</th><th class="text-end">Reminder</th></tr></thead>
+                        <tbody id="overdue-modal-tbody"></tbody>
+                      </table>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center mt-2">
+                    <div class="small text-muted" id="overdue-modal-page-info"></div>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-outline-secondary btn-sm" id="overdue-modal-first">First</button>
+                      <button class="btn btn-outline-secondary btn-sm" id="overdue-modal-prev">Previous</button>
+                      <button class="btn btn-outline-secondary btn-sm" id="overdue-modal-next">Next</button>
+                      <button class="btn btn-outline-secondary btn-sm" id="overdue-modal-last">Last</button>
+                    </div>
+                  </div>
+                </div>
+              </div></div>
+            </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modalEl = document.getElementById('overdueCustomersModal');
+        const modal = new bootstrap.Modal(modalEl);
+        modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
+
+        let page = 1;
+        const pageSize = 10;
+        const modalSearch = modalEl.querySelector('#overdue-modal-search');
+        const modalTbody = modalEl.querySelector('#overdue-modal-tbody');
+        const modalFirst = modalEl.querySelector('#overdue-modal-first');
+        const modalPrev = modalEl.querySelector('#overdue-modal-prev');
+        const modalNext = modalEl.querySelector('#overdue-modal-next');
+        const modalLast = modalEl.querySelector('#overdue-modal-last');
+        const modalInfo = modalEl.querySelector('#overdue-modal-page-info');
+
+        function modalFiltered() {
+            const q = (modalSearch.value || '').trim().toLowerCase();
+            overdueQuery = modalSearch.value || '';
+            if (!q) return overdueCustomers;
+            return overdueCustomers.filter((r) => {
+                const haystack = `${r.customer_name || ''} ${r.customer_phone || ''}`.toLowerCase();
+                return haystack.includes(q);
+            });
+        }
+
+        function renderModal() {
+            const list = modalFiltered().slice().sort((a, b) => (b.balance_due || 0) - (a.balance_due || 0));
+            const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+            page = Math.max(1, Math.min(page, totalPages));
+            const start = (page - 1) * pageSize;
+            const slice = list.slice(start, start + pageSize);
+            modalTbody.innerHTML = slice.map(row => {
+                const sent = !!row.sent_today;
+                const btnClass = sent ? 'btn-success' : 'btn-primary';
+                const btnLabel = sent ? 'Sent' : 'Send';
+                const disabledAttr = sent ? 'disabled' : '';
+                const customerName = row.customer_name || '';
+                const customerNameSafe = escapeHtml(customerName);
+                const customerPhoneSafe = escapeHtml(row.customer_phone || '');
+                const nextFollowupValue = row.next_followup || '';
+                const notesValue = row.collection_notes || '';
+                const notesSafe = escapeHtml(notesValue);
+                return `
+                    <tr>
+                      <td>${customerNameSafe}</td>
+                      <td>${customerPhoneSafe}</td>
+                      <td>${formatLastSent(row.last_sent)}</td>
+                      <td class="text-end">${currencyFmt(row.balance_due)}</td>
+                      <td>
+                        <input type="date" class="form-control form-control-sm overdue-next-followup"
+                          data-customer-id="${row.customer_id}"
+                          value="${escapeHtml(nextFollowupValue)}">
+                      </td>
+                      <td>
+                        <textarea class="form-control form-control-sm overdue-collection-notes"
+                          data-customer-id="${row.customer_id}"
+                          rows="2" placeholder="Add note...">${notesSafe}</textarea>
+                      </td>
+                      <td class="text-end">
+                        <button class="btn btn-outline-primary btn-sm overdue-payment-btn"
+                          data-customer-id="${row.customer_id}"
+                          data-customer-name="${customerName.replace(/"/g, '&quot;')}"
+                          data-outstanding="${row.outstanding_due || row.balance_due || 0}">Record</button>
+                      </td>
+                      <td class="text-end">
+                        <button class="btn ${btnClass} btn-sm overdue-reminder-btn" data-customer-id="${row.customer_id}" ${disabledAttr}>${btnLabel}</button>
+                      </td>
+                    </tr>`;
+            }).join('') || '<tr><td colspan="8" class="text-muted text-center py-3">No overdue customers.</td></tr>';
+            const displayStart = list.length ? start + 1 : 0;
+            const displayEnd = Math.min(start + pageSize, list.length);
+            modalInfo.textContent = `${displayStart}-${displayEnd} of ${list.length}`;
+            modalFirst.disabled = page <= 1;
+            modalPrev.disabled = page <= 1;
+            modalNext.disabled = page >= totalPages;
+            modalLast.disabled = page >= totalPages;
+        }
+
+        modalSearch.addEventListener('input', () => { page = 1; renderModal(); });
+        modalFirst.addEventListener('click', () => { page = 1; renderModal(); });
+        modalPrev.addEventListener('click', () => { page = Math.max(1, page - 1); renderModal(); });
+        modalNext.addEventListener('click', () => { page = page + 1; renderModal(); });
+        modalLast.addEventListener('click', () => {
+            page = Math.max(1, Math.ceil(modalFiltered().length / pageSize));
+            renderModal();
+        });
+        modalTbody.addEventListener('click', async (e) => {
+            const payBtn = e.target.closest('.overdue-payment-btn');
+            if (payBtn) {
+                const customerId = payBtn.dataset.customerId;
+                const customerName = payBtn.dataset.customerName || '';
+                const outstanding = payBtn.dataset.outstanding;
+                if (customerId) {
+                    modal.hide();
+                    openCustomerPaymentModal({ customerId, customerName, outstanding });
+                }
+                return;
+            }
+
+            const btn = e.target.closest('.overdue-reminder-btn');
+            if (!btn) return;
+            const customerId = btn.dataset.customerId;
+            if (!customerId) return;
+            btn.disabled = true;
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline-secondary');
+            btn.textContent = 'Sending…';
+            try {
+                const resp = await fetch(reminderUrlFor(customerId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok) throw new Error(data.error || 'Unable to send reminder.');
+                const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+                if (idx >= 0) overdueCustomers[idx].sent_today = true;
+                showStatus('success', data.message || 'Reminder sent.');
+            } catch (err) {
+                const msg = err.message || 'Unable to send reminder.';
+                if ((msg || '').toLowerCase().includes('already sent')) {
+                    const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+                    if (idx >= 0) overdueCustomers[idx].sent_today = true;
+                }
+                showStatus('danger', msg);
+            } finally {
+                renderModal();
+                renderOverdueTable();
+            }
+        });
+
+        modalTbody.addEventListener('input', (e) => {
+            const target = e.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (target.classList.contains('overdue-next-followup')) {
+                const customerId = target.dataset.customerId;
+                if (!customerId) return;
+                queueOverdueFollowupSave(customerId, { next_followup: target.value || '' });
+            }
+            if (target.classList.contains('overdue-collection-notes')) {
+                const customerId = target.dataset.customerId;
+                if (!customerId) return;
+                queueOverdueFollowupSave(customerId, { collection_notes: target.value || '' });
+            }
+        });
+
+        renderModal();
+        modal.show();
+    }
+
+    overdueExpandBtn?.addEventListener('click', openOverdueModal);
+    renderOverdueTable();
+
+    // Submit customer payment form (AJAX)
+    if (customerPaymentForm) {
+        customerPaymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const customerId = customerPaymentCustomerId?.value;
+            if (!customerId) return;
+
+            const url = recordPaymentUrlFor(customerId);
+            if (!url) return;
+
+            if (customerPaymentForm.dataset.processingLocked === 'true') return;
+            const unlock = lockFormSubmits(customerPaymentForm);
+            const hideOverlay = showProcessingOverlay('Recording payment…');
+
+            if (customerPaymentSubmit) {
+                customerPaymentSubmit.disabled = true;
+                customerPaymentSubmit.textContent = 'Recording…';
+            }
+
+            try {
+                const formData = new FormData(customerPaymentForm);
+
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: formData,
+                });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok || data.status !== 'success') {
+                    throw new Error(data.message || 'Unable to record payment.');
+                }
+
+                customerPaymentModal?.hide();
+
+                // Update dashboard overdue row amount quickly (remove if resolved).
+                const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+                if (idx >= 0) {
+                    overdueCustomers[idx].balance_due = Number(data.outstanding_after || 0);
+                    overdueCustomers[idx].outstanding_due = Number(data.outstanding_after || 0);
+                    if (Number(data.overdue_after || 0) <= 0.009) {
+                        overdueCustomers.splice(idx, 1);
+                    }
+                }
+                renderOverdueTable();
+
+                // Populate success modal
+                if (customerPaymentSuccessMsg) {
+                    customerPaymentSuccessMsg.textContent = data.message || 'Payment recorded.';
+                }
+                if (customerPaymentSuccessRows) {
+                    const rows = (data.allocations || []).map(a => {
+                        const statusLabel = (a.status === 'paid') ? 'Paid' : (a.status === 'partial' ? 'Partially paid' : 'Pending');
+                        const invoiceUrl = a.invoice_id ? invoiceDetailUrlFor(a.invoice_id) : '';
+                        const invoiceLabel = a.invoice_number || '';
+                        const invoiceCell = invoiceUrl
+                            ? `<a href="${invoiceUrl}" target="_blank" rel="noopener" class="text-decoration-none">${invoiceLabel}</a>`
+                            : `${invoiceLabel}`;
+                        return `
+                          <tr>
+                            <td>${invoiceCell}</td>
+                            <td class="text-end">${currencyFmt(a.applied)}</td>
+                            <td>${statusLabel}</td>
+                            <td class="text-end">${currencyFmt(a.balance_remaining)}</td>
+                          </tr>`;
+                    }).join('') || '<tr><td colspan="4" class="text-muted text-center py-3">No allocations.</td></tr>';
+                    customerPaymentSuccessRows.innerHTML = rows;
+                }
+
+                if (customerPaymentStatementButtons) {
+                    const links = data.statement_links || {};
+                    const emailUrl = data.statement_email_url || '';
+                    const mkBtnGroup = (key, label) => {
+                        const group = links[key] || {};
+                        return `
+                          <div class="border rounded p-2">
+                            <div class="fw-semibold mb-2">${label}</div>
+                            <div class="d-flex gap-2 flex-wrap">
+                              <a class="btn btn-sm btn-outline-primary" href="${group.download || '#'}">Download</a>
+                              <a class="btn btn-sm btn-outline-secondary" href="${group.print || '#'}" target="_blank" rel="noopener">Print</a>
+                              <button type="button" class="btn btn-sm btn-outline-success js-statement-email" data-email-url="${emailUrl}" data-invoice-type="${key}">Email</button>
+                            </div>
+                          </div>`;
+                    };
+                    customerPaymentStatementButtons.innerHTML = [
+                        mkBtnGroup('paid', 'Paid'),
+                        mkBtnGroup('pending', 'Pending'),
+                        mkBtnGroup('all', 'All'),
+                        mkBtnGroup('overdue', 'Overdue'),
+                    ].join('');
+                }
+
+                customerPaymentSuccessModal?.show();
+            } catch (err) {
+                showStatus('danger', err.message || 'Unable to record payment.');
+            } finally {
+                if (customerPaymentSubmit) {
+                    customerPaymentSubmit.disabled = false;
+                    customerPaymentSubmit.textContent = 'Record Payment';
+                }
+                unlock();
+                hideOverlay();
+            }
+        });
+    }
+
+    // Email statement buttons inside success modal
+    customerPaymentSuccessModalEl?.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.js-statement-email');
+        if (!btn) return;
+        const emailUrl = btn.getAttribute('data-email-url') || '';
+        const invoiceType = btn.getAttribute('data-invoice-type') || 'pending';
+        if (!emailUrl) return;
+        btn.disabled = true;
+        const original = btn.textContent;
+        btn.textContent = 'Sending…';
+        try {
+            const resp = await fetch(emailUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ invoice_type: invoiceType }),
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(data.error || data.message || 'Unable to send statement email.');
+            showStatus('success', data.message || 'Statement email sent.');
+        } catch (err) {
+            showStatus('danger', err.message || 'Unable to send statement email.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = original;
+        }
+    });
+
+    renderRevenueChart();
+
+    /* Filter vehicles by customer and enable history/maintenance actions */
+    const customerSelect = document.querySelector('select[name="customer"]');
+    const vehicleSelect = document.getElementById('quick-vehicle-select');
+    const historyBtn = document.getElementById('view-vehicle-history');
+    const maintBtn = document.getElementById('view-vehicle-maintenance');
+
+    function populateVehicles() {
+        if (!customerSelect || !vehicleSelect) return;
+        const custId = customerSelect.value || '';
+        vehicleSelect.innerHTML = '<option value="">Optional</option>';
+        (quickVehicles || []).forEach(v => {
+            if (!custId || String(v.customer_id) === custId) {
+                const opt = document.createElement('option');
+                opt.value = v.id;
+                opt.dataset.customer = v.customer_id;
+                opt.textContent = `${v.unit_number || 'Unit'} ${v.make_model || v.vin || ''}`.trim();
+                vehicleSelect.appendChild(opt);
+            }
+        });
+        updateVehicleActions();
+    }
+
+    function updateVehicleActions() {
+        const hasVehicle = !!(vehicleSelect && vehicleSelect.value);
+        if (historyBtn) historyBtn.disabled = !hasVehicle;
+        if (maintBtn) maintBtn.disabled = !hasVehicle;
+    }
+
+    if (customerSelect) customerSelect.addEventListener('change', populateVehicles);
+    if (vehicleSelect) vehicleSelect.addEventListener('change', updateVehicleActions);
+    populateVehicles();
+
+    /* Quick invoice: prefill email from customer */
+    const invoiceCustomerIdInput = document.getElementById('quick-invoice-customer');
+    const invoiceEmailInput = document.getElementById('quick-invoice-email');
+    const invoiceVehicleIdInput = document.getElementById('quick-invoice-vehicle');
+
+    const invoiceCustomerPickerBtn = document.getElementById('quick-invoice-customer-picker');
+    const invoiceCustomerSearch = document.getElementById('quick-invoice-customer-search');
+    const invoiceCustomerList = document.getElementById('quick-invoice-customer-list');
+
+    const invoiceVehiclePickerBtn = document.getElementById('quick-invoice-vehicle-picker');
+    const invoiceVehicleSearch = document.getElementById('quick-invoice-vehicle-search');
+    const invoiceVehicleList = document.getElementById('quick-invoice-vehicle-list');
+    const invoiceVehicleHint = document.getElementById('quick-invoice-vehicle-hint');
+
+    const invoiceAddCustomerBtn = document.getElementById('quick-invoice-add-customer');
+    const invoiceAddVehicleBtn = document.getElementById('quick-invoice-add-vehicle');
+
+    const quickAddCustomerUrl = "{% url 'accounts:add_customer' %}";
+    const quickAddVehicleUrl = "{% url 'accounts:add_vehicle' %}";
+
+    function updateInvoiceVehicleAddVisibility() {
+        if (!invoiceAddVehicleBtn || !invoiceCustomerIdInput) return;
+        const hasCustomer = !!invoiceCustomerIdInput.value;
+        invoiceAddVehicleBtn.classList.toggle('d-none', !hasCustomer);
+    }
+
+    function setPickerLabel(btn, text) {
+        if (!btn) return;
+        btn.textContent = text || 'Select';
+    }
+
+    function customerDisplay(c) {
+        if (!c) return 'Select customer';
+        const name = c.name || c.email || 'Customer';
+        return c.email ? `${name} (${c.email})` : name;
+    }
+
+    function vehicleDisplay(v) {
+        if (!v) return 'Select vehicle';
+        const unit = v.unit_number ? `Unit ${v.unit_number}` : '';
+        const makeModel = v.make_model || '';
+        const plate = v.license_plate ? `(${v.license_plate})` : '';
+        const vin = (v.vin || v.vin_number) ? `VIN ${v.vin || v.vin_number}` : '';
+        return [unit, makeModel, plate, vin].filter(Boolean).join(' ').trim() || 'Vehicle';
+    }
+
+    function renderCustomerList() {
+        if (!invoiceCustomerList) return;
+        const q = (invoiceCustomerSearch?.value || '').trim().toLowerCase();
+        const items = (quickCustomers || []).filter(c => {
+            const name = (c.name || '').toLowerCase();
+            const email = (c.email || '').toLowerCase();
+            return !q || name.includes(q) || email.includes(q);
+        }).sort((a, b) => (a.name || a.email || '').localeCompare((b.name || b.email || ''), undefined, { sensitivity: 'base' }));
+
+        const currentId = invoiceCustomerIdInput?.value || '';
+        const html = [
+            `<button type="button" class="dropdown-item" data-customer-id="">(Clear)</button>`,
+            `<div class="dropdown-divider"></div>`,
+            ...(items.length
+                ? items.map(c => {
+                    const active = String(c.id) === String(currentId) ? ' active' : '';
+                    return `<button type="button" class="dropdown-item${active}" data-customer-id="${c.id}">${customerDisplay(c)}</button>`;
+                })
+                : [`<div class="text-muted small px-2 py-1">No customers found.</div>`]
+            )
+        ].join('');
+        invoiceCustomerList.innerHTML = html;
+    }
+
+    function selectCustomer(customerId) {
+        const id = (customerId || '').toString();
+        if (invoiceCustomerIdInput) invoiceCustomerIdInput.value = id;
+
+        const match = (quickCustomers || []).find(c => String(c.id) === String(id));
+        setPickerLabel(invoiceCustomerPickerBtn, match ? customerDisplay(match) : 'Select customer');
+        if (invoiceEmailInput) invoiceEmailInput.value = (match && match.email) ? match.email : (invoiceEmailInput.value || '');
+
+        // Clear vehicle selection whenever customer changes.
+        if (invoiceVehicleIdInput) invoiceVehicleIdInput.value = '';
+        setPickerLabel(invoiceVehiclePickerBtn, 'Select vehicle');
+        if (invoiceVehicleSearch) invoiceVehicleSearch.value = '';
+
+        updateInvoiceVehicleAddVisibility();
+        renderCustomerList();
+        renderVehicleList();
+    }
+
+    function renderVehicleList() {
+        if (!invoiceVehicleList) return;
+        const custId = invoiceCustomerIdInput?.value || '';
+        const q = (invoiceVehicleSearch?.value || '').trim().toLowerCase();
+        const currentId = invoiceVehicleIdInput?.value || '';
+
+        if (invoiceVehicleHint) {
+            invoiceVehicleHint.classList.toggle('d-none', !!custId);
+        }
+
+        const items = (quickVehicles || [])
+            .filter(v => custId && String(v.customer_id) === String(custId))
+            .filter(v => {
+                if (!q) return true;
+                const hay = [
+                    v.unit_number,
+                    v.make_model,
+                    v.license_plate,
+                    v.vin,
+                    v.vin_number,
+                ].map(x => (x || '').toString().toLowerCase()).join(' ');
+                return hay.includes(q);
+            })
+            .sort((a, b) => (vehicleDisplay(a)).localeCompare(vehicleDisplay(b), undefined, { sensitivity: 'base' }));
+
+        const html = [
+            `<button type="button" class="dropdown-item" data-vehicle-id="">(Clear)</button>`,
+            `<div class="dropdown-divider"></div>`,
+            ...(custId
+                ? (items.length
+                    ? items.map(v => {
+                        const active = String(v.id) === String(currentId) ? ' active' : '';
+                        return `<button type="button" class="dropdown-item${active}" data-vehicle-id="${v.id}">${vehicleDisplay(v)}</button>`;
+                    })
+                    : [`<div class="text-muted small px-2 py-1">No vehicles found for this customer.</div>`]
+                )
+                : [`<div class="text-muted small px-2 py-1">Select a customer first.</div>`]
+            )
+        ].join('');
+        invoiceVehicleList.innerHTML = html;
+    }
+
+    function selectVehicle(vehicleId) {
+        const id = (vehicleId || '').toString();
+        if (invoiceVehicleIdInput) invoiceVehicleIdInput.value = id;
+        const match = (quickVehicles || []).find(v => String(v.id) === String(id));
+        setPickerLabel(invoiceVehiclePickerBtn, match ? vehicleDisplay(match) : 'Select vehicle');
+        renderVehicleList();
+    }
+    function buildInvoiceSuggestions() {
+        const suggestions = [];
+        // Products
+        (products || []).forEach(p => {
+            const label = `${p.name}${p.sku ? ` (${p.sku})` : ''}`;
+            const rate = (p.sale_price !== null && p.sale_price !== undefined) ? p.sale_price : '';
+            suggestions.push({
+                type: 'product',
+                id: p.id,
+                label,
+                text: p.name,
+                rate,
+                notes: p.description || '',
+            });
+        });
+        // Services (flatten job_name groups)
+        (quickServiceCatalog || []).forEach(group => {
+            const jobName = group?.name || 'Service';
+            (group?.descriptions || []).forEach(desc => {
+                const label = `${jobName}: ${desc.text || ''}`.trim();
+                suggestions.push({
+                    type: 'service',
+                    id: desc.id,
+                    label,
+                    text: desc.text || '',
+                    fixed_hours: desc.fixed_hours || '',
+                    fixed_rate: desc.fixed_rate || '',
+                    notes: desc.notes || '',
+                });
+            });
+        });
+        return suggestions;
+    }
+
+    const invoiceSuggestions = buildInvoiceSuggestions();
+
+    function allowedTypesForRow() {
+        return ['product', 'service'];
+    }
+
+    function renderInvoiceSuggestionMenuForRow(row) {
+        const searchEl = row.querySelector('.quick-invoice-suggestion-search');
+        const listEl = row.querySelector('.quick-invoice-suggestion-list');
+        if (!listEl) return;
+        const q = (searchEl?.value || '').trim().toLowerCase();
+        const allowed = new Set(allowedTypesForRow(row));
+        const items = (invoiceSuggestions || [])
+            .filter(s => allowed.has(s.type))
+            .filter(s => !q || (s.label || '').toLowerCase().includes(q) || (s.text || '').toLowerCase().includes(q))
+            .sort((a, b) => (a.label || '').localeCompare((b.label || ''), undefined, { sensitivity: 'base' }));
+
+        const html = [
+            `<button type="button" class="dropdown-item" data-suggestion="">(Clear)</button>`,
+            `<div class="dropdown-divider"></div>`,
+            ...(items.length
+                ? items.map(s => {
+                    const payload = encodeURIComponent(JSON.stringify(s));
+                    return `<button type="button" class="dropdown-item" data-suggestion="${payload}">${s.label}</button>`;
+                })
+                : [`<div class="text-muted small px-2 py-1">No matches.</div>`]
+            )
+        ].join('');
+        listEl.innerHTML = html;
+    }
+
+    function getInvoiceLineRows() {
+        if (!invoiceLinesWrap) return [];
+        return Array.from(invoiceLinesWrap.querySelectorAll('.invoice-line-row'));
+    }
+
+    function syncInvoiceRemoveButtons() {
+        const rows = getInvoiceLineRows();
+        const disableAll = rows.length <= 1;
+        rows.forEach((row) => {
+            const btn = row.querySelector('.quick-invoice-remove-line');
+            if (!btn) return;
+            btn.disabled = disableAll;
+        });
+    }
+
+    function setRowHiddenFields(row, { lineSource = 'custom', productId = '', serviceId = '' } = {}) {
+        const lineSourceEl = row.querySelector('.quick-invoice-line-source');
+        const productEl = row.querySelector('.quick-invoice-product-id');
+        const serviceEl = row.querySelector('.quick-invoice-service-id');
+        if (lineSourceEl) lineSourceEl.value = lineSource;
+        if (productEl) productEl.value = productId || '';
+        if (serviceEl) serviceEl.value = serviceId || '';
+    }
+
+    function applyInvoiceSuggestionToRow(row, selected) {
+        const jobEl = row.querySelector('.quick-invoice-job');
+        const qtyEl = row.querySelector('.quick-invoice-qty');
+        const rateEl = row.querySelector('.quick-invoice-rate');
+        const btn = row.querySelector('.quick-invoice-suggestion-btn');
+
+        if (!selected) {
+            setRowHiddenFields(row, { lineSource: 'custom', productId: '', serviceId: '' });
+            if (btn) btn.textContent = 'Select a product/service';
+            return;
+        }
+
+        if (selected.type === 'product') {
+            setRowHiddenFields(row, { lineSource: 'product', productId: selected.id, serviceId: '' });
+            if (btn) btn.textContent = selected.label || 'Product';
+            if (jobEl) jobEl.value = `part - ${selected.text || ''}`.trim();
+            if (qtyEl && (!qtyEl.value || Number(qtyEl.value) === 0)) qtyEl.value = '1';
+            if (rateEl && selected.rate !== '' && selected.rate !== null && selected.rate !== undefined) {
+                rateEl.value = String(selected.rate);
+            }
+        } else if (selected.type === 'service') {
+            setRowHiddenFields(row, { lineSource: 'service', productId: '', serviceId: selected.id });
+            if (btn) btn.textContent = selected.label || 'Service';
+            if (jobEl) jobEl.value = `service - ${selected.text || ''}`.trim();
+            if (qtyEl) {
+                const hasFixedHours = selected.fixed_hours !== undefined && selected.fixed_hours !== null && String(selected.fixed_hours) !== '';
+                const hasFixedRate = selected.fixed_rate !== undefined && selected.fixed_rate !== null && String(selected.fixed_rate) !== '';
+                if (hasFixedHours) {
+                    qtyEl.value = String(selected.fixed_hours);
+                } else if (hasFixedRate) {
+                    qtyEl.value = '1';
+                }
+            }
+            if (rateEl && selected.fixed_rate !== undefined && selected.fixed_rate !== null && String(selected.fixed_rate) !== '') {
+                rateEl.value = String(selected.fixed_rate);
+            }
+        } else {
+            setRowHiddenFields(row, { lineSource: 'custom', productId: '', serviceId: '' });
+            if (btn) btn.textContent = 'Select a product/service';
+        }
+    }
+
+    function wireInvoiceLineRow(row) {
+        const jobEl = row.querySelector('.quick-invoice-job');
+        const removeBtn = row.querySelector('.quick-invoice-remove-line');
+        const suggestionBtn = row.querySelector('.quick-invoice-suggestion-btn');
+        const suggestionSearch = row.querySelector('.quick-invoice-suggestion-search');
+        const suggestionList = row.querySelector('.quick-invoice-suggestion-list');
+
+        // Render menu when dropdown opens, and on search input.
+        suggestionBtn?.addEventListener('click', () => {
+            renderInvoiceSuggestionMenuForRow(row);
+            setTimeout(() => suggestionSearch?.focus(), 50);
+        });
+        suggestionSearch?.addEventListener('input', () => renderInvoiceSuggestionMenuForRow(row));
+        suggestionList?.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-suggestion]');
+            if (!btn) return;
+            const raw = btn.dataset.suggestion || '';
+            if (!raw) {
+                applyInvoiceSuggestionToRow(row, null);
+                return;
+            }
+            try {
+                const parsed = JSON.parse(decodeURIComponent(raw));
+                applyInvoiceSuggestionToRow(row, parsed);
+            } catch (e2) {
+                applyInvoiceSuggestionToRow(row, null);
+            }
+        });
+
+        jobEl?.addEventListener('input', () => {
+            // user is typing custom text; detach product/service selection
+            setRowHiddenFields(row, { lineSource: 'custom', productId: '', serviceId: '' });
+            if (suggestionBtn) suggestionBtn.textContent = 'Select a product/service';
+        });
+
+        removeBtn?.addEventListener('click', () => {
+            row.remove();
+            syncInvoiceRemoveButtons();
+        });
+    }
+
+    function resetInvoiceLines() {
+        if (!invoiceLinesWrap) return;
+        const template = invoiceLinesWrap.querySelector('.invoice-line-row');
+        if (!template) return;
+        // Recreate the first row fresh to avoid duplicated event handlers on reset.
+        const first = template.cloneNode(true);
+        invoiceLinesWrap.innerHTML = '';
+        invoiceLinesWrap.appendChild(first);
+
+        // Clear values
+        const suggestionBtn = first.querySelector('.quick-invoice-suggestion-btn');
+        const suggestionSearch = first.querySelector('.quick-invoice-suggestion-search');
+        const jobEl = first.querySelector('.quick-invoice-job');
+        const qtyEl = first.querySelector('.quick-invoice-qty');
+        const rateEl = first.querySelector('.quick-invoice-rate');
+        if (suggestionBtn) suggestionBtn.textContent = 'Select a product/service';
+        if (suggestionSearch) suggestionSearch.value = '';
+        if (jobEl) jobEl.value = '';
+        if (qtyEl) qtyEl.value = '1';
+        if (rateEl) rateEl.value = '';
+        setRowHiddenFields(first, { lineSource: 'custom', productId: '', serviceId: '' });
+
+        wireInvoiceLineRow(first);
+        syncInvoiceRemoveButtons();
+    }
+
+    // Customer/Vehicle searchable dropdown wiring
+    renderCustomerList();
+    renderVehicleList();
+    updateInvoiceVehicleAddVisibility();
+
+    invoiceCustomerSearch?.addEventListener('input', renderCustomerList);
+    invoiceCustomerList?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-customer-id]');
+        if (!btn) return;
+        selectCustomer(btn.dataset.customerId || '');
+    });
+
+    invoiceVehicleSearch?.addEventListener('input', renderVehicleList);
+    invoiceVehicleList?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-vehicle-id]');
+        if (!btn) return;
+        selectVehicle(btn.dataset.vehicleId || '');
+    });
+
+    // Quick add customer / vehicle (modals -> AJAX)
+    const addCustomerModalEl = document.getElementById('quickInvoiceAddCustomerModal');
+    const addCustomerModal = addCustomerModalEl && window.bootstrap ? new bootstrap.Modal(addCustomerModalEl) : null;
+    const addCustomerName = document.getElementById('quick-add-customer-name');
+    const addCustomerEmail = document.getElementById('quick-add-customer-email');
+    const addCustomerCc = document.getElementById('quick-add-customer-cc');
+    const addCustomerAddress = document.getElementById('quick-add-customer-address');
+    const addCustomerSave = document.getElementById('quick-add-customer-save');
+    const addCustomerError = document.getElementById('quick-add-customer-error');
+
+    const addVehicleModalEl = document.getElementById('quickInvoiceAddVehicleModal');
+    const addVehicleModal = addVehicleModalEl && window.bootstrap ? new bootstrap.Modal(addVehicleModalEl) : null;
+    const addVehicleUnit = document.getElementById('quick-add-vehicle-unit');
+    const addVehicleMakeModel = document.getElementById('quick-add-vehicle-make-model');
+    const addVehicleYear = document.getElementById('quick-add-vehicle-year');
+    const addVehiclePlate = document.getElementById('quick-add-vehicle-plate');
+    const addVehicleVin = document.getElementById('quick-add-vehicle-vin');
+    const addVehicleMileage = document.getElementById('quick-add-vehicle-mileage');
+    const addVehicleSave = document.getElementById('quick-add-vehicle-save');
+    const addVehicleError = document.getElementById('quick-add-vehicle-error');
+
+    // Ensure nested modals (add customer/vehicle) appear above the expanded invoice modal.
+    document.addEventListener('show.bs.modal', (event) => {
+        const modalEl = event.target;
+        const openModals = document.querySelectorAll('.modal.show').length;
+        const zIndex = 1050 + (openModals * 20);
+        modalEl.style.zIndex = zIndex;
+        setTimeout(() => {
+            const backdrops = document.querySelectorAll('.modal-backdrop:not(.modal-stack)');
+            backdrops.forEach((backdrop) => {
+                backdrop.classList.add('modal-stack');
+                backdrop.style.zIndex = zIndex - 10;
+            });
+        }, 0);
+    });
+
+    function showInlineError(el, message) {
+        if (!el) return;
+        el.textContent = message || 'Unable to save.';
+        el.classList.remove('d-none');
+    }
+    function clearInlineError(el) {
+        if (!el) return;
+        el.textContent = '';
+        el.classList.add('d-none');
+    }
+
+    invoiceAddCustomerBtn?.addEventListener('click', () => {
+        clearInlineError(addCustomerError);
+        if (addCustomerName) addCustomerName.value = '';
+        if (addCustomerEmail) addCustomerEmail.value = '';
+        if (addCustomerCc) addCustomerCc.value = '';
+        if (addCustomerAddress) addCustomerAddress.value = '';
+        addCustomerModal?.show();
+        setTimeout(() => addCustomerName?.focus(), 150);
+    });
+
+    addCustomerSave?.addEventListener('click', async () => {
+        clearInlineError(addCustomerError);
+        if (!invoiceCustomerIdInput) return;
+        addCustomerSave.disabled = true;
+        try {
+            const payload = new FormData();
+            payload.append('name', (addCustomerName?.value || '').trim());
+            payload.append('email', (addCustomerEmail?.value || '').trim());
+            payload.append('cc_emails', (addCustomerCc?.value || '').trim());
+            payload.append('address', (addCustomerAddress?.value || '').trim());
+            // Some provinces require this field in CustomerForm; default to "No".
+            payload.append('collect_gst_hst_choice', 'False');
+            payload.append('csrfmiddlewaretoken', getCsrfToken());
+
+            const resp = await fetch(quickAddCustomerUrl, {
+                method: 'POST',
+                body: payload,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.success) {
+                const msg = (data && data.errors) ? extractFirstError(data.errors) : null;
+                throw new Error(msg || 'Unable to save customer.');
+            }
+            const c = data.customer || {};
+            try { quickCustomers.push({ id: c.id, name: c.name, email: c.email }); } catch (e) { /* ignore */ }
+            renderCustomerList();
+            selectCustomer(String(c.id));
+
+            const workorderCustomerSelect = document.querySelector('#quick-workorder-form select[name="customer"]');
+            if (workorderCustomerSelect) {
+                const opt2 = document.createElement('option');
+                opt2.value = c.id;
+                opt2.textContent = c.name || c.email || 'Customer';
+                workorderCustomerSelect.appendChild(opt2);
+            }
+
+            addCustomerModal?.hide();
+            showStatus('success', 'Customer added.');
+        } catch (err) {
+            showInlineError(addCustomerError, err.message || 'Unable to save customer.');
+        } finally {
+            addCustomerSave.disabled = false;
+        }
+    });
+
+    invoiceAddVehicleBtn?.addEventListener('click', () => {
+        clearInlineError(addVehicleError);
+        if (!invoiceCustomerIdInput?.value) return;
+        if (addVehicleUnit) addVehicleUnit.value = '';
+        if (addVehicleMakeModel) addVehicleMakeModel.value = '';
+        if (addVehicleYear) addVehicleYear.value = '';
+        if (addVehiclePlate) addVehiclePlate.value = '';
+        if (addVehicleVin) addVehicleVin.value = '';
+        if (addVehicleMileage) addVehicleMileage.value = '';
+        addVehicleModal?.show();
+        setTimeout(() => addVehicleUnit?.focus(), 150);
+    });
+
+    addVehicleSave?.addEventListener('click', async () => {
+        clearInlineError(addVehicleError);
+        const customerId = invoiceCustomerIdInput?.value;
+        if (!customerId) return;
+        addVehicleSave.disabled = true;
+        try {
+            const payload = new FormData();
+            payload.append('customer', customerId);
+            payload.append('unit_number', (addVehicleUnit?.value || '').trim());
+            payload.append('make_model', (addVehicleMakeModel?.value || '').trim());
+            payload.append('year', (addVehicleYear?.value || '').trim());
+            payload.append('license_plate', (addVehiclePlate?.value || '').trim());
+            payload.append('vin_number', (addVehicleVin?.value || '').trim());
+            payload.append('current_mileage', (addVehicleMileage?.value || '').trim());
+            payload.append('csrfmiddlewaretoken', getCsrfToken());
+
+            const resp = await fetch(quickAddVehicleUrl, {
+                method: 'POST',
+                body: payload,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.success) {
+                const msg = (data && data.errors) ? extractFirstError(data.errors) : null;
+                throw new Error(msg || 'Unable to save vehicle.');
+            }
+            const v = data.vehicle || {};
+            const newVehicle = {
+                id: v.id,
+                customer_id: Number(customerId),
+                unit_number: v.unit_no || '',
+                make_model: v.make_model || '',
+                year: v.year || '',
+                license_plate: v.license_plate || '',
+                vin: v.vin_no || '',
+                current_mileage: v.current_mileage || '',
+            };
+            try { quickVehicles.push(newVehicle); } catch (e) { /* ignore */ }
+            renderVehicleList();
+            selectVehicle(String(v.id));
+            addVehicleModal?.hide();
+            showStatus('success', 'Vehicle added.');
+        } catch (err) {
+            showInlineError(addVehicleError, err.message || 'Unable to save vehicle.');
+        } finally {
+            addVehicleSave.disabled = false;
+        }
+    });
+
+    function rerenderInvoiceSuggestionsForAllRows() {
+        getInvoiceLineRows().forEach((row) => {
+            const searchEl = row.querySelector('.quick-invoice-suggestion-search');
+            if (searchEl) searchEl.value = '';
+            renderInvoiceSuggestionMenuForRow(row);
+        });
+    }
+
+    // Line row add/remove
+    function addInvoiceLineRow({ job = '', qty = '1', rate = '', special = '' } = {}) {
+        if (!invoiceLinesWrap) return null;
+        const template = invoiceLinesWrap.querySelector('.invoice-line-row');
+        if (!template) return null;
+        const clone = template.cloneNode(true);
+        clone.dataset.index = String(Date.now());
+        if (special) {
+            clone.dataset.special = special;
+            clone.classList.add('special-entry');
+        } else {
+            delete clone.dataset.special;
+            clone.classList.remove('special-entry');
+        }
+
+        // Reset row values
+        const suggestionBtn = clone.querySelector('.quick-invoice-suggestion-btn');
+        const suggestionSearch = clone.querySelector('.quick-invoice-suggestion-search');
+        const jobEl = clone.querySelector('.quick-invoice-job');
+        const qtyEl = clone.querySelector('.quick-invoice-qty');
+        const rateEl = clone.querySelector('.quick-invoice-rate');
+        if (suggestionBtn) {
+            suggestionBtn.textContent = 'Select a product/service';
+            suggestionBtn.disabled = !!special;
+            suggestionBtn.classList.toggle('disabled', !!special);
+        }
+        if (suggestionSearch) suggestionSearch.value = '';
+        if (jobEl) {
+            jobEl.value = job || '';
+            jobEl.readOnly = !!special;
+        }
+        if (qtyEl) {
+            qtyEl.value = qty;
+            qtyEl.readOnly = !!special;
+        }
+        if (rateEl) {
+            rateEl.value = rate;
+            rateEl.readOnly = !!special;
+        }
+        setRowHiddenFields(clone, { lineSource: 'custom', productId: '', serviceId: '' });
+
+        invoiceLinesWrap.appendChild(clone);
+        wireInvoiceLineRow(clone);
+        rerenderInvoiceSuggestionsForAllRows();
+        syncInvoiceRemoveButtons();
+        return clone;
+    }
+
+    function findSpecialRow(type) {
+        return getInvoiceLineRows().find(r => (r.dataset.special || '') === type) || null;
+    }
+
+    function parseNum(val) {
+        const n = Number(val);
+        return Number.isFinite(n) ? n : 0;
+    }
+
+    function baseSubtotal() {
+        let total = 0;
+        getInvoiceLineRows().forEach((row) => {
+            if (row.dataset.special) return;
+            const qtyEl = row.querySelector('.quick-invoice-qty');
+            const rateEl = row.querySelector('.quick-invoice-rate');
+            total += parseNum(qtyEl?.value) * parseNum(rateEl?.value);
+        });
+        return total;
+    }
+
+    function ensureSpecialRow(type) {
+        const existing = findSpecialRow(type);
+        if (existing) return existing;
+        if (type === 'shop-supply') return addInvoiceLineRow({ job: 'Shop Supply', qty: '1', rate: '0.00', special: type });
+        if (type === 'discount') return addInvoiceLineRow({ job: 'Discount', qty: '1', rate: '0.00', special: type });
+        if (type === 'interest') return addInvoiceLineRow({ job: 'Interest', qty: '1', rate: '0.00', special: type });
+        return null;
+    }
+
+    function removeSpecialRow(type) {
+        const row = findSpecialRow(type);
+        if (row) row.remove();
+        syncInvoiceRemoveButtons();
+    }
+
+    function formatCurrency(amount) {
+        const num = Number(amount || 0);
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+    }
+
+    function updateAdjustments() {
+        // only apply when adjustments are visible (expanded view)
+        if (invoiceAdjustments?.classList.contains('d-none')) return;
+
+        const base = baseSubtotal();
+
+        // Shop supply
+        let shopSupplyAmt = 0;
+        if (toggleShopSupply?.checked) {
+            const type = document.querySelector('input[name="quick_invoice_shop_supply_type"]:checked')?.value || 'percentage';
+            const val = Math.max(0, parseNum(shopSupplyValue?.value));
+            shopSupplyAmt = (type === 'percentage') ? ((base * Math.min(100, val)) / 100) : val;
+            const row = ensureSpecialRow('shop-supply');
+            if (row) {
+                let desc = 'Shop Supply';
+                desc += type === 'percentage' ? ` (${Math.min(100, val)}%)` : ` (${formatCurrency(val)})`;
+                const reason = (shopSupplyReason?.value || '').trim();
+                if (reason) desc += ` - ${reason}`;
+                row.querySelector('.quick-invoice-job').value = desc;
+                row.querySelector('.quick-invoice-qty').value = '1';
+                row.querySelector('.quick-invoice-rate').value = shopSupplyAmt.toFixed(2);
+            }
+        } else {
+            removeSpecialRow('shop-supply');
+        }
+
+        // Discount (negative)
+        let discountAmt = 0;
+        if (toggleDiscount?.checked) {
+            const type = document.querySelector('input[name="quick_invoice_discount_type"]:checked')?.value || 'fixed';
+            const val = Math.max(0, parseNum(discountValue?.value));
+            const baseForDiscount = base + (toggleShopSupply?.checked ? shopSupplyAmt : 0);
+            const calc = (type === 'percentage') ? (baseForDiscount * val / 100) : val;
+            discountAmt = -Math.abs(calc);
+            const row = ensureSpecialRow('discount');
+            if (row) {
+                let desc = 'Discount';
+                desc += type === 'percentage' ? ` (${val}%)` : ` (${formatCurrency(val)})`;
+                const reason = (discountReason?.value || '').trim();
+                if (reason) desc += ` - ${reason}`;
+                row.querySelector('.quick-invoice-job').value = desc;
+                row.querySelector('.quick-invoice-qty').value = '1';
+                row.querySelector('.quick-invoice-rate').value = discountAmt.toFixed(2);
+            }
+        } else {
+            removeSpecialRow('discount');
+        }
+
+        // Interest (not taxable in backend if job starts with "Interest")
+        let interestAmt = 0;
+        if (toggleInterest?.checked) {
+            const type = document.querySelector('input[name="quick_invoice_interest_type"]:checked')?.value || 'fixed';
+            const val = Math.max(0, parseNum(interestValue?.value));
+            const preTaxSubtotal = base + shopSupplyAmt + discountAmt;
+            const calc = (type === 'percentage') ? (preTaxSubtotal * val / 100) : val;
+            interestAmt = Math.max(0, calc);
+            const row = ensureSpecialRow('interest');
+            if (row) {
+                let desc = 'Interest';
+                desc += type === 'percentage' ? ` (${val}%)` : ` (${formatCurrency(val)})`;
+                const reason = (interestReason?.value || '').trim();
+                if (reason) desc += ` - ${reason}`;
+                row.querySelector('.quick-invoice-job').value = desc;
+                row.querySelector('.quick-invoice-qty').value = '1';
+                row.querySelector('.quick-invoice-rate').value = interestAmt.toFixed(2);
+            }
+        } else {
+            removeSpecialRow('interest');
+        }
+    }
+
+    invoiceAddLineBtn?.addEventListener('click', () => {
+        const row = addInvoiceLineRow();
+        row?.querySelector('.quick-invoice-job')?.focus();
+    });
+
+    // Initial wiring
+    resetInvoiceLines();
+    // Adjustment wiring (expanded view)
+    [toggleShopSupply, shopSupplyValue, shopSupplyReason, toggleDiscount, discountValue, discountReason, toggleInterest, interestValue, interestReason].forEach((el) => {
+        el?.addEventListener('input', updateAdjustments);
+        el?.addEventListener('change', updateAdjustments);
+    });
+    document.querySelectorAll('input[name="quick_invoice_shop_supply_type"]').forEach((el) => {
+        el.addEventListener('change', updateAdjustments);
+    });
+    invoiceLinesWrap?.addEventListener('input', updateAdjustments);
+
+    function openInfoModal(title, contentHtml) {
+        const modalHtml = `
+            <div class="modal fade" id="vehicleInfoModal" tabindex="-1">
+              <div class="modal-dialog modal-lg"><div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">${title}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">${contentHtml}</div>
+              </div></div>
+            </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modalEl = document.getElementById('vehicleInfoModal');
+        const modal = new bootstrap.Modal(modalEl);
+        modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
+        modal.show();
+    }
+
+    function fetchVehicleData(url, vehicleId, formatter) {
+        const params = new URLSearchParams({ vehicle_id: vehicleId });
+        const separator = url.includes('?') ? '&' : '?';
+        fetch(`${url}${separator}${params.toString()}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                openInfoModal('Vehicle details', formatter(data));
+            })
+            .catch(() => openInfoModal('Error', '<p class="text-danger">Unable to load vehicle data.</p>'));
+    }
+
+    historyBtn?.addEventListener('click', () => {
+        if (!vehicleSelect?.value) return;
+        fetchVehicleData(historyBtn.dataset.historyUrl, vehicleSelect.value, (data) => {
+            const jobs = (data.jobs || []).map(j => `<li><strong>${j.date || ''}</strong> ${j.description || ''}</li>`).join('') || '<li>No history found.</li>';
+            return `<h6 class="mb-2">Recent history</h6><ul>${jobs}</ul>`;
+        });
+    });
+
+    maintBtn?.addEventListener('click', () => {
+        if (!vehicleSelect?.value) return;
+        fetchVehicleData(maintBtn.dataset.maintUrl, vehicleSelect.value, (data) => {
+            const tasks = (data.tasks || []).map(t => `<li><strong>${t.title}</strong> - ${t.due_display || ''} (${t.status_label || ''})</li>`).join('') || '<li>No active maintenance reminders.</li>';
+            return `<h6 class="mb-2">Maintenance reminders</h6><ul>${tasks}</ul>`;
+        });
+    });
+
+});
+</script>
+{% endblock %}

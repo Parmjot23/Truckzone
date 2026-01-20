@@ -1,0 +1,58 @@
+{% extends "customer_portal_base.html" %}
+
+{% block content %}
+    <h2>Upload Receipt</h2>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Upload Receipt</button>
+    </form>
+
+    <!-- If there's an error, display it -->
+    {% if error %}
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <!-- If receipt_data exists, display the result below the form -->
+    {% if receipt_data %}
+        <h3>Receipt Processing Result</h3>
+
+        <!-- Display vendor information -->
+        <h4>Supplier: {{ receipt_data.vendor }}</h4>
+
+        <!-- Display receipt date -->
+        <p>Date: {{ receipt_data.date }}</p>
+
+        <!-- Display receipt number -->
+        <p>Receipt Number: {{ receipt_data.receipt_no }}</p>
+
+        <!-- Display line items (if available) -->
+        {% if receipt_data.items %}
+            <h5>Items:</h5>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Part No</th>
+                        <th>Description</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in receipt_data.items %}
+                    <tr>
+                        <td>{{ item.part_no }}</td>
+                        <td>{{ item.description }}</td>
+                        <td>{{ item.qty }}</td>
+                        <td>{{ item.price }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No items found in the receipt.</p>
+        {% endif %}
+    {% endif %}
+{% endblock %}

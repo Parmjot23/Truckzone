@@ -1,0 +1,1026 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+{% load static %}
+{% block title %}
+    Manage Invoices
+{% endblock %}
+{% block content %}
+<style>
+    .status-bar-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    .status-bar-card {
+        position: relative;
+        appearance: none;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        padding: 1rem 1.1rem;
+        text-align: left;
+        width: 100%;
+        font: inherit;
+        box-shadow: 0 10px 22px rgba(15,23,42,0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+    }
+    .status-bar-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 16px;
+        box-shadow: 0 16px 30px rgba(15,23,42,0.16);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+    }
+    .status-bar-card:hover {
+        transform: translateY(-3px);
+    }
+    .status-bar-card:hover::after {
+        opacity: 1;
+    }
+    .status-bar-card.is-active {
+        border-color: var(--bar-accent);
+        box-shadow: 0 12px 28px rgba(15,23,42,0.16);
+    }
+    .status-bar-card:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.25);
+    }
+    .status-bar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.85rem;
+    }
+    .status-bar-heading {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .status-bar-title {
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #64748b;
+    }
+    .status-bar-amount {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .status-bar-meta {
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 600;
+        color: #94a3b8;
+    }
+    .status-bar-split {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    .status-bar-side {
+        min-width: 140px;
+    }
+    .status-bar-side--end {
+        text-align: right;
+    }
+    .status-bar-detail-label {
+        display: block;
+        font-size: 0.72rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        margin-bottom: 0.2rem;
+    }
+    .status-bar-detail-value {
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: #0f172a;
+    }
+    .status-bar-track {
+        height: 14px;
+        border-radius: 999px;
+        background: var(--bar-track, #e2e8f0);
+        overflow: hidden;
+        box-shadow: inset 0 2px 4px rgba(15,23,42,0.15);
+    }
+    .status-bar-fill {
+        height: 100%;
+        width: var(--fill, 0%);
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--bar-accent), var(--bar-accent-strong));
+        box-shadow: inset 0 -1px 0 rgba(255,255,255,0.35);
+        transition: width 0.4s ease;
+    }
+    .status-bar-card--pending {
+        --bar-accent: #f97316;
+        --bar-accent-strong: #fb923c;
+        --bar-track: #fde7cf;
+    }
+    .status-bar-card--paid {
+        --bar-accent: #22c55e;
+        --bar-accent-strong: #16a34a;
+        --bar-track: #dcfce7;
+    }
+
+    .invoice-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+        padding: 1rem;
+    }
+    .invoice-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .invoice-toolbar .search-box {
+        flex: 1;
+        min-width: 240px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.4rem 0.6rem;
+        background: #f8fafc;
+    }
+    .invoice-toolbar .search-box input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        outline: none;
+    }
+    .invoice-table-wrapper { overflow-x: auto; }
+    .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+    }
+    .invoice-table th {
+        text-align: left;
+        padding: 0.75rem;
+        color: #64748b;
+        background: #f1f5f9;
+        font-weight: 700;
+        border-bottom: 1px solid #e2e8f0;
+        white-space: nowrap;
+    }
+    .table-sort-link {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .table-sort-link:hover {
+        color: #1d4ed8;
+        text-decoration: none;
+    }
+    .sort-indicator {
+        font-size: 0.7rem;
+        color: #94a3b8;
+    }
+    .invoice-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .invoice-table tr:nth-child(even) td { background: #f8fafc; }
+    .invoice-table .dropdown-toggle {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 10px;
+        padding: 0.3rem 0.55rem;
+        color: #0f172a;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+    .empty-state .icon {
+        font-size: 3rem;
+        color: #2563eb;
+        margin-bottom: 0.5rem;
+    }
+    .pill-primary {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        border: none;
+        color: #fff;
+        border-radius: 12px;
+        padding: 0.45rem 0.95rem;
+        font-weight: 700;
+        font-size: 0.92rem;
+        box-shadow: 0 12px 24px rgba(37,99,235,0.18);
+    }
+    .invoice-status-pill { cursor: pointer; }
+    .date-range-custom {
+        display: none;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .date-range-custom.show { display: flex; }
+    .tooltip-inner { white-space: pre-line; }
+</style>
+
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Manage Invoices</h2>
+            <div class="text-muted">Create, search, and manage invoices and estimates.</div>
+        </div>
+        <div class="page-toolbar">
+            <div class="page-tabs" role="group">
+                <a href="{% url 'accounts:groupedinvoice_list' %}" class="btn {% if documentType == 'invoice' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Invoices
+                </a>
+                <a href="{% url 'accounts:estimate_list' %}" class="btn {% if documentType == 'estimate' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Estimates
+                </a>
+            </div>
+            <a href="{% url 'accounts:add_dailylog' %}" class="pill-primary" id="btn-add-invoice">
+                <i class="fa-solid fa-plus me-2"></i>Add New Invoice
+            </a>
+        </div>
+    </div>
+
+    <div class="status-bar-grid">
+        <button type="button" class="status-bar-card status-bar-card--pending js-status-bar" data-status="pending" aria-pressed="false">
+            <div class="status-bar-header">
+                <div class="status-bar-heading">
+                    <span class="status-bar-amount" id="total-pending-amount">{{ pending_unpaid_amount|default:0|currency }}</span>
+                    <span class="status-bar-title">Unpaid</span>
+                </div>
+                <div class="status-bar-meta">Last 365 days</div>
+            </div>
+            <div class="status-bar-split">
+                <div class="status-bar-side">
+                    <span class="status-bar-detail-value">{{ pending_overdue_amount|default:0|currency }}</span>
+                    <span class="status-bar-detail-label">Overdue</span>
+                </div>
+                <div class="status-bar-side status-bar-side--end">
+                    <span class="status-bar-detail-value">{{ pending_not_due_amount|default:0|currency }}</span>
+                    <span class="status-bar-detail-label">Not due yet</span>
+                </div>
+            </div>
+            <div class="status-bar-track">
+                <div class="status-bar-fill" style="--fill: {{ pending_overdue_percent|default:0 }}%;"></div>
+            </div>
+        </button>
+        <button type="button" class="status-bar-card status-bar-card--paid js-status-bar" data-status="paid" aria-pressed="false">
+            <div class="status-bar-header">
+                <div class="status-bar-heading">
+                    <span class="status-bar-title">Paid performance</span>
+                </div>
+                <div class="status-bar-meta">Last 30 days</div>
+            </div>
+            <div class="status-bar-split">
+                <div class="status-bar-side">
+                    <span class="status-bar-detail-value">{{ avg_days_to_pay|default:0|floatformat:1 }} days</span>
+                    <span class="status-bar-detail-label">Avg days to pay</span>
+                </div>
+                <div class="status-bar-side status-bar-side--end">
+                    <span class="status-bar-detail-value">{{ on_time_percent|default:0|floatformat:1 }}%</span>
+                    <span class="status-bar-detail-label">Paid within 30 days</span>
+                </div>
+            </div>
+            <div class="status-bar-track">
+                <div class="status-bar-fill" style="--fill: {{ paid_fill_percent|default:0 }}%;"></div>
+            </div>
+        </button>
+    </div>
+
+    <div class="invoice-card">
+        <div class="invoice-toolbar">
+            <form method="GET" id="search-form" action="." class="flex-grow-1">
+                <div class="search-box">
+                    <i class="fa fa-search text-muted"></i>
+                    <input type="text" name="search" value="{{ search_query }}" id="search-input" placeholder="Search invoices..." aria-label="Search invoices">
+                </div>
+                <input type="hidden" name="sort_by" id="sort-by-input" value="{{ sort_by }}">
+                <input type="hidden" name="order" id="order-input" value="{{ order }}">
+                <div class="d-flex gap-2 mt-2 flex-wrap align-items-center">
+                    <label class="text-muted small mb-0">Status:</label>
+                    <select class="form-select form-select-sm" name="status" id="status-filter" style="max-width: 220px;" data-select2-skip="true">
+                        <option value="" {% if not status_filter %}selected{% endif %}>All</option>
+                        <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial</option>
+                    </select>
+                    <label class="text-muted small mb-0 ms-2">Period:</label>
+                    <select class="form-select form-select-sm" name="date_range" id="date-range-filter" style="max-width: 220px;" data-select2-skip="true">
+                        {% for value,label in date_range_options %}
+                            <option value="{{ value }}"{% if current_date_range == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <div id="custom-date-range" class="date-range-custom{% if current_date_range == 'custom' %} show{% endif %}">
+                        <input type="date" class="form-control form-control-sm" name="start_date" id="start-date" value="{{ selected_start_date|date:'Y-m-d' }}">
+                        <span class="text-muted small">to</span>
+                        <input type="date" class="form-control form-control-sm" name="end_date" id="end-date" value="{{ selected_end_date|date:'Y-m-d' }}">
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div id="invoice-list">
+            {% include 'app/groupedinvoice_list_content.html' %}
+        </div>
+    </div>
+</div>
+
+<!-- Record Payment Modal (from status pills) -->
+<div class="modal fade" id="invoicePaymentModal" tabindex="-1" aria-labelledby="invoicePaymentModalLabel" aria-hidden="true" data-today="{% now 'Y-m-d' %}">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="invoicePaymentModalLabel">Record Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="invoice-payment-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="grouped_invoice_id" id="invoice-payment-invoice-id" value="">
+                <div class="modal-body">
+                    <div class="alert alert-info mb-3">Record a full or partial payment for this invoice.</div>
+                    <div class="mb-3">
+                        <label for="invoice-payment-amount" class="form-label">Amount</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="invoice-payment-amount" name="amount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="invoice-payment-date" class="form-label">Payment Date</label>
+                        <input type="date" class="form-control" id="invoice-payment-date" name="payment_date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="invoice-payment-method" class="form-label">Payment Method</label>
+                        <select class="form-select" id="invoice-payment-method" name="method">
+                            {% for method in payment_methods %}
+                            <option value="{{ method }}">{{ method }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="invoice-payment-notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="invoice-payment-notes" name="notes" rows="2" placeholder="Optional notes"></textarea>
+                    </div>
+                    <div class="text-muted small">Balance due: <span id="invoice-payment-balance"></span></div>
+                    <div class="alert alert-danger mt-3 d-none" id="invoice-payment-error"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Payments Modal (for Partial) -->
+<div class="modal fade" id="managePaymentsModal" tabindex="-1" aria-labelledby="managePaymentsModalLabel" aria-hidden="true" data-today="{% now 'Y-m-d' %}">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="managePaymentsModalLabel">Manage Payments</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <div class="text-muted small">
+                        Invoice: <strong id="manage-payments-invoice-number"></strong>
+                        &nbsp;|&nbsp; Balance due: <strong id="manage-payments-balance"></strong>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="manage-payments-reverse-btn">
+                        Reverse to Unpaid (delete history)
+                    </button>
+                </div>
+
+                <div class="mb-3" id="manage-payment-history">
+                    <div class="text-muted small">Loading payment history…</div>
+                </div>
+
+                <hr class="my-3">
+
+                <h6 class="mb-2">Add payment / Mark remaining as paid</h6>
+                <form method="POST" id="manage-add-payment-form" class="row g-2 align-items-end">
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <input type="hidden" name="grouped_invoice_id" id="manage-payment-invoice-id" value="">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="manage-payment-amount">Amount</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="manage-payment-amount" name="amount" required>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="manage-payment-date">Payment Date</label>
+                        <input type="date" class="form-control" id="manage-payment-date" name="payment_date">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="manage-payment-method">Method</label>
+                        <select class="form-select" id="manage-payment-method" name="method">
+                            {% for method in payment_methods %}
+                            <option value="{{ method }}">{{ method }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="manage-payment-notes">Notes</label>
+                        <input type="text" class="form-control" id="manage-payment-notes" name="notes" placeholder="Optional">
+                    </div>
+                    <div class="col-12 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save Payment</button>
+                        <button type="button" class="btn btn-success" id="manage-mark-remaining-btn">Mark remaining as paid</button>
+                    </div>
+                    <div class="col-12">
+                        <div class="alert alert-danger mt-2 d-none" id="manage-payment-error"></div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Payment Modal -->
+<div class="modal fade" id="editPaymentModal" tabindex="-1" aria-labelledby="editPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editPaymentModalLabel">Edit Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="edit-payment-form">
+                <div class="modal-body">
+                    <input type="hidden" id="edit-payment-id" value="">
+                    <div class="mb-3">
+                        <label class="form-label" for="edit-payment-amount">Amount</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="edit-payment-amount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="edit-payment-date">Payment Date</label>
+                        <input type="date" class="form-control" id="edit-payment-date">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="edit-payment-method">Method</label>
+                        <select class="form-select" id="edit-payment-method">
+                            {% for method in payment_methods %}
+                            <option value="{{ method }}">{{ method }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="edit-payment-notes">Notes</label>
+                        <textarea class="form-control" id="edit-payment-notes" rows="2"></textarea>
+                    </div>
+                    <div class="alert alert-danger d-none" id="edit-payment-error"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search-input');
+        const statusFilter = document.getElementById('status-filter');
+        const dateRangeFilter = document.getElementById('date-range-filter');
+        const customDateRange = document.getElementById('custom-date-range');
+        const startDateInput = document.getElementById('start-date');
+        const endDateInput = document.getElementById('end-date');
+        const form = document.getElementById('search-form');
+        const invoiceList = document.getElementById('invoice-list');
+        const sortByInput = document.getElementById('sort-by-input');
+        const orderInput = document.getElementById('order-input');
+        const DATE_RANGE_COOKIE_NAME = 'invoice_date_range';
+        const statusBarButtons = document.querySelectorAll('.js-status-bar');
+
+        // Debounce function to limit the rate of AJAX requests
+        function debounce(func, delay) {
+            let debounceTimer;
+            return function() {
+                const context = this;
+                const args = arguments;
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => func.apply(context, args), delay);
+            }
+        }
+        function toggleCustomRange() {
+            if (!customDateRange || !dateRangeFilter) return;
+            const isCustom = dateRangeFilter.value === 'custom';
+            customDateRange.classList.toggle('show', isCustom);
+        }
+        function setDateRangePreference(value) {
+            if (!DATE_RANGE_COOKIE_NAME) return;
+            const maxAge = 60 * 60 * 24 * 365;
+            if (!value || value === 'custom') {
+                document.cookie = `${DATE_RANGE_COOKIE_NAME}=; max-age=0; path=/`;
+                return;
+            }
+            document.cookie = `${DATE_RANGE_COOKIE_NAME}=${encodeURIComponent(value)}; max-age=${maxAge}; path=/`;
+        }
+        function syncStatusBars() {
+            if (!statusBarButtons.length) return;
+            const current = statusFilter?.value || '';
+            statusBarButtons.forEach((button) => {
+                const matches = button.dataset.status === current;
+                button.classList.toggle('is-active', matches);
+                button.setAttribute('aria-pressed', matches ? 'true' : 'false');
+            });
+        }
+
+        const markPaidUrlTemplate = "{% url 'accounts:mark_invoice_paid' 0 %}";
+        const markUnpaidUrlTemplate = "{% url 'accounts:mark_invoice_unpaid' 0 %}";
+        const paymentHistoryManageUrlTemplate = "{% url 'accounts:invoice_payment_history_manage' 0 %}";
+        const paymentDeleteUrlTemplate = "{% url 'accounts:invoice_payment_delete' 0 %}";
+        const paymentUpdateUrlTemplate = "{% url 'accounts:invoice_payment_update' 0 %}";
+
+        const invoicePaymentModal = document.getElementById('invoicePaymentModal');
+        const invoicePaymentForm = document.getElementById('invoice-payment-form');
+        const invoicePaymentAmount = document.getElementById('invoice-payment-amount');
+        const invoicePaymentDate = document.getElementById('invoice-payment-date');
+        const invoicePaymentMethod = document.getElementById('invoice-payment-method');
+        const invoicePaymentNotes = document.getElementById('invoice-payment-notes');
+        const invoicePaymentBalance = document.getElementById('invoice-payment-balance');
+        const invoicePaymentError = document.getElementById('invoice-payment-error');
+        const invoicePaymentInvoiceId = document.getElementById('invoice-payment-invoice-id');
+
+        const managePaymentsModal = document.getElementById('managePaymentsModal');
+        const managePaymentsInvoiceNumber = document.getElementById('manage-payments-invoice-number');
+        const managePaymentsBalance = document.getElementById('manage-payments-balance');
+        const managePaymentsReverseBtn = document.getElementById('manage-payments-reverse-btn');
+        const managePaymentHistory = document.getElementById('manage-payment-history');
+        const manageAddPaymentForm = document.getElementById('manage-add-payment-form');
+        const managePaymentAmount = document.getElementById('manage-payment-amount');
+        const managePaymentDate = document.getElementById('manage-payment-date');
+        const managePaymentMethod = document.getElementById('manage-payment-method');
+        const managePaymentNotes = document.getElementById('manage-payment-notes');
+        const manageMarkRemainingBtn = document.getElementById('manage-mark-remaining-btn');
+        const managePaymentError = document.getElementById('manage-payment-error');
+        const managePaymentInvoiceId = document.getElementById('manage-payment-invoice-id');
+
+        const editPaymentModal = document.getElementById('editPaymentModal');
+        const editPaymentForm = document.getElementById('edit-payment-form');
+        const editPaymentId = document.getElementById('edit-payment-id');
+        const editPaymentAmount = document.getElementById('edit-payment-amount');
+        const editPaymentDate = document.getElementById('edit-payment-date');
+        const editPaymentMethod = document.getElementById('edit-payment-method');
+        const editPaymentNotes = document.getElementById('edit-payment-notes');
+        const editPaymentError = document.getElementById('edit-payment-error');
+
+        let activeManageInvoiceId = null;
+
+        function csrfToken() {
+            // Reuse token from the record-payment form
+            return invoicePaymentForm?.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+
+        function showError(el, msg) {
+            if (!el) return;
+            el.textContent = msg || 'Something went wrong.';
+            el.classList.remove('d-none');
+        }
+        function hideError(el) {
+            if (!el) return;
+            el.classList.add('d-none');
+            el.textContent = '';
+        }
+
+        function initTooltips(scope) {
+            if (!window.bootstrap || !bootstrap.Tooltip) return;
+            const root = scope || document;
+            const tooltipTriggers = Array.from(root.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggers.forEach((el) => {
+                const existing = bootstrap.Tooltip.getInstance(el);
+                if (existing) existing.dispose();
+                new bootstrap.Tooltip(el);
+            });
+        }
+
+        // Function to fetch and update invoice list
+        function fetchInvoices() {
+            const formData = new FormData(form);
+            const searchParams = new URLSearchParams(formData).toString();
+            fetch(`${form.action}?${searchParams}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                invoiceList.innerHTML = data.html;
+                initTooltips(invoiceList);
+            })
+            .catch(error => console.error('Error fetching the data:', error));
+        }
+
+        // Attach debounced input event listener
+        searchInput.addEventListener('input', debounce(fetchInvoices, 300));
+        statusFilter?.addEventListener('change', () => {
+            syncStatusBars();
+            fetchInvoices();
+        });
+        dateRangeFilter?.addEventListener('change', () => {
+            setDateRangePreference(dateRangeFilter.value);
+            toggleCustomRange();
+            fetchInvoices();
+        });
+        if (form) {
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                fetchInvoices();
+            });
+        }
+        startDateInput?.addEventListener('change', () => {
+            if (dateRangeFilter?.value === 'custom') fetchInvoices();
+        });
+        endDateInput?.addEventListener('change', () => {
+            if (dateRangeFilter?.value === 'custom') fetchInvoices();
+        });
+        statusBarButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                if (!statusFilter) return;
+                statusFilter.value = button.dataset.status || '';
+                syncStatusBars();
+                fetchInvoices();
+            });
+        });
+        syncStatusBars();
+        initTooltips(invoiceList);
+
+        invoiceList.addEventListener('click', function (event) {
+          const sendBtn = event.target.closest('.js-send-invoice-email');
+          if (sendBtn) {
+            event.preventDefault();
+            const emailUrl = sendBtn.getAttribute('data-email-url');
+            if (!emailUrl) return;
+
+            const originalLabel = sendBtn.textContent;
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+
+            let iframe = document.getElementById('invoice-email-target');
+            if (!iframe) {
+              iframe = document.createElement('iframe');
+              iframe.id = 'invoice-email-target';
+              iframe.name = 'invoice-email-target';
+              iframe.style.display = 'none';
+              document.body.appendChild(iframe);
+            }
+
+            const formEl = document.createElement('form');
+            formEl.method = 'POST';
+            formEl.action = emailUrl;
+            formEl.target = 'invoice-email-target';
+            formEl.style.display = 'none';
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken();
+            formEl.appendChild(csrfInput);
+
+            const includeInput = document.createElement('input');
+            includeInput.type = 'hidden';
+            includeInput.name = 'include_workorder';
+            includeInput.value = '0';
+            formEl.appendChild(includeInput);
+
+            document.body.appendChild(formEl);
+            formEl.submit();
+            formEl.remove();
+
+            setTimeout(() => {
+              sendBtn.disabled = false;
+              sendBtn.textContent = originalLabel;
+            }, 1200);
+            return;
+          }
+
+          const sortLink = event.target.closest('.js-sort-link');
+          if (sortLink) {
+            event.preventDefault();
+            const url = new URL(sortLink.href, window.location.origin);
+            const sortBy = url.searchParams.get('sort_by') || '';
+            const order = url.searchParams.get('order') || 'asc';
+            if (sortByInput) sortByInput.value = sortBy;
+            if (orderInput) orderInput.value = order;
+            fetchInvoices();
+            return;
+          }
+
+          const statusBtn = event.target.closest('.js-invoice-status');
+          if (statusBtn) {
+            const action = statusBtn.getAttribute('data-action');
+            const invoiceId = statusBtn.getAttribute('data-invoice-id');
+            const invoiceNumber = statusBtn.getAttribute('data-invoice-number') || '';
+            const balance = statusBtn.getAttribute('data-balance') || '';
+
+            if (action === 'reverse') {
+              event.preventDefault();
+              const ok = window.confirm(`Reverse ${invoiceNumber || 'this invoice'} to unpaid?\n\nThis will delete ALL payment history.`);
+              if (!ok) return;
+
+              const url = markUnpaidUrlTemplate.replace('/0/', `/${invoiceId}/`);
+              const body = new URLSearchParams();
+              body.set('next', window.location.pathname + window.location.search);
+
+              fetch(url, {
+                method: 'POST',
+                headers: {
+                  'X-CSRFToken': csrfToken(),
+                  'X-Requested-With': 'XMLHttpRequest',
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body,
+                credentials: 'same-origin',
+              })
+              .then(r => r.json())
+              .then(data => {
+                if (data.status !== 'success') throw new Error(data.message || 'Unable to reverse invoice.');
+                fetchInvoices();
+              })
+              .catch(err => window.alert(err.message || 'Unable to reverse invoice.'));
+              return;
+            }
+
+            // For record/manage actions, bootstrap handles the modal opening via data-bs-*
+            // We only need to set modal state when it opens.
+          }
+
+          const paginationLink = event.target.closest('.pagination a');
+          if (!paginationLink) return;
+          event.preventDefault();
+
+          fetch(paginationLink.href, {
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json();
+            })
+            .then(data => {
+              invoiceList.innerHTML = data.html;
+            })
+            .catch(error => console.error('Error fetching the data:', error));
+        });
+
+        toggleCustomRange();
+
+        // Record Payment Modal wiring
+        if (invoicePaymentModal && invoicePaymentForm) {
+          invoicePaymentModal.addEventListener('show.bs.modal', (event) => {
+            hideError(invoicePaymentError);
+            const trigger = event.relatedTarget;
+            const invoiceId = trigger?.getAttribute('data-invoice-id');
+            const invoiceNumber = trigger?.getAttribute('data-invoice-number') || '';
+            const balance = trigger?.getAttribute('data-balance') || '';
+            const today = invoicePaymentModal.getAttribute('data-today');
+
+            invoicePaymentForm.action = markPaidUrlTemplate.replace('/0/', `/${invoiceId}/`);
+            if (invoicePaymentInvoiceId) invoicePaymentInvoiceId.value = invoiceId || '';
+            if (invoicePaymentAmount) invoicePaymentAmount.value = balance;
+            if (invoicePaymentBalance) invoicePaymentBalance.textContent = balance ? `$${parseFloat(balance).toFixed(2)}` : '';
+            if (invoicePaymentDate) invoicePaymentDate.value = invoicePaymentDate.value || today;
+            if (invoicePaymentMethod) invoicePaymentMethod.selectedIndex = 0;
+            if (invoicePaymentNotes) invoicePaymentNotes.value = '';
+
+            const title = document.getElementById('invoicePaymentModalLabel');
+            if (title) title.textContent = invoiceNumber ? `Record Payment for ${invoiceNumber}` : 'Record Payment';
+          });
+
+          invoicePaymentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            hideError(invoicePaymentError);
+            const fd = new FormData(invoicePaymentForm);
+
+            fetch(invoicePaymentForm.action, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+              },
+              body: fd,
+              credentials: 'same-origin',
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (data.status !== 'success') throw new Error(data.message || 'Unable to save payment.');
+              const modalInstance = bootstrap.Modal.getInstance(invoicePaymentModal);
+              modalInstance?.hide();
+              fetchInvoices();
+            })
+            .catch(err => showError(invoicePaymentError, err.message));
+          });
+        }
+
+        // Manage Payments (Partial)
+        function loadManagePaymentsHistory(invoiceId) {
+          if (!managePaymentHistory) return Promise.resolve();
+          managePaymentHistory.innerHTML = '<div class="text-muted small">Loading payment history…</div>';
+          const url = paymentHistoryManageUrlTemplate.replace('/0/', `/${invoiceId}/`);
+          return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+              if (data.status !== 'success') throw new Error(data.message || 'Unable to load payment history.');
+              managePaymentHistory.innerHTML = data.html;
+            });
+        }
+
+        if (managePaymentsModal) {
+          managePaymentsModal.addEventListener('show.bs.modal', (event) => {
+            hideError(managePaymentError);
+            const trigger = event.relatedTarget;
+            const invoiceId = trigger?.getAttribute('data-invoice-id');
+            const invoiceNumber = trigger?.getAttribute('data-invoice-number') || '';
+            const balance = trigger?.getAttribute('data-balance') || '';
+            const today = managePaymentsModal.getAttribute('data-today');
+
+            activeManageInvoiceId = invoiceId;
+            if (managePaymentInvoiceId) managePaymentInvoiceId.value = invoiceId || '';
+            if (managePaymentsInvoiceNumber) managePaymentsInvoiceNumber.textContent = invoiceNumber;
+            if (managePaymentsBalance) managePaymentsBalance.textContent = balance ? `$${parseFloat(balance).toFixed(2)}` : '';
+            if (managePaymentAmount) managePaymentAmount.value = balance;
+            if (managePaymentDate) managePaymentDate.value = managePaymentDate.value || today;
+            if (managePaymentMethod) managePaymentMethod.selectedIndex = 0;
+            if (managePaymentNotes) managePaymentNotes.value = '';
+
+            if (manageAddPaymentForm) {
+              manageAddPaymentForm.action = markPaidUrlTemplate.replace('/0/', `/${invoiceId}/`);
+            }
+
+            loadManagePaymentsHistory(invoiceId).catch(err => showError(managePaymentError, err.message));
+          });
+        }
+
+        if (manageMarkRemainingBtn) {
+          manageMarkRemainingBtn.addEventListener('click', () => {
+            if (!managePaymentAmount) return;
+            // Amount already prefilled to balance due; this button is just a quick action.
+            managePaymentNotes && (managePaymentNotes.value = managePaymentNotes.value || 'Marked as paid via MarkInvoicePaidView');
+            manageAddPaymentForm?.requestSubmit();
+          });
+        }
+
+        if (manageAddPaymentForm) {
+          manageAddPaymentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            hideError(managePaymentError);
+            const fd = new FormData(manageAddPaymentForm);
+
+            fetch(manageAddPaymentForm.action, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+              },
+              body: fd,
+              credentials: 'same-origin',
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (data.status !== 'success') throw new Error(data.message || 'Unable to save payment.');
+              return loadManagePaymentsHistory(activeManageInvoiceId).then(() => fetchInvoices());
+            })
+            .catch(err => showError(managePaymentError, err.message));
+          });
+        }
+
+        if (managePaymentsReverseBtn) {
+          managePaymentsReverseBtn.addEventListener('click', () => {
+            if (!activeManageInvoiceId) return;
+            const ok = window.confirm('Reverse to unpaid?\n\nThis will delete ALL payment history.');
+            if (!ok) return;
+
+            const url = markUnpaidUrlTemplate.replace('/0/', `/${activeManageInvoiceId}/`);
+            const body = new URLSearchParams();
+            body.set('next', window.location.pathname + window.location.search);
+
+            fetch(url, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body,
+              credentials: 'same-origin',
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (data.status !== 'success') throw new Error(data.message || 'Unable to reverse invoice.');
+              const modalInstance = bootstrap.Modal.getInstance(managePaymentsModal);
+              modalInstance?.hide();
+              fetchInvoices();
+            })
+            .catch(err => window.alert(err.message || 'Unable to reverse invoice.'));
+          });
+        }
+
+        // Delegate edit/delete payment actions inside manage modal
+        managePaymentHistory?.addEventListener('click', (event) => {
+          const delBtn = event.target.closest('.js-payment-delete');
+          if (delBtn) {
+            const paymentId = delBtn.getAttribute('data-payment-id');
+            const ok = window.confirm('Delete this payment entry?');
+            if (!ok) return;
+            const url = paymentDeleteUrlTemplate.replace('/0/', `/${paymentId}/`);
+            fetch(url, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+              },
+              credentials: 'same-origin',
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (data.status !== 'success') throw new Error(data.message || 'Unable to delete payment.');
+              return loadManagePaymentsHistory(activeManageInvoiceId).then(() => fetchInvoices());
+            })
+            .catch(err => window.alert(err.message || 'Unable to delete payment.'));
+            return;
+          }
+
+          const editBtn = event.target.closest('.js-payment-edit');
+          if (editBtn) {
+            const paymentId = editBtn.getAttribute('data-payment-id');
+            editPaymentId.value = paymentId;
+            editPaymentAmount.value = editBtn.getAttribute('data-amount') || '';
+            editPaymentDate.value = editBtn.getAttribute('data-date') || '';
+            const method = editBtn.getAttribute('data-method') || '';
+            if (editPaymentMethod) editPaymentMethod.value = method || editPaymentMethod.value;
+            editPaymentNotes.value = editBtn.getAttribute('data-notes') || '';
+            hideError(editPaymentError);
+            const modal = new bootstrap.Modal(editPaymentModal);
+            modal.show();
+          }
+        });
+
+        if (editPaymentForm) {
+          editPaymentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            hideError(editPaymentError);
+            const paymentId = editPaymentId.value;
+            const url = paymentUpdateUrlTemplate.replace('/0/', `/${paymentId}/`);
+            const body = new URLSearchParams();
+            body.set('amount', editPaymentAmount.value);
+            body.set('payment_date', editPaymentDate.value);
+            body.set('method', editPaymentMethod.value);
+            body.set('notes', editPaymentNotes.value);
+
+            fetch(url, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body,
+              credentials: 'same-origin',
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (data.status !== 'success') throw new Error(data.message || 'Unable to update payment.');
+              const modalInstance = bootstrap.Modal.getInstance(editPaymentModal);
+              modalInstance?.hide();
+              return loadManagePaymentsHistory(activeManageInvoiceId).then(() => fetchInvoices());
+            })
+            .catch(err => showError(editPaymentError, err.message));
+          });
+        }
+
+        // Inline tour when ?tour=1
+        try {
+          const params = new URLSearchParams(window.location.search);
+          if (params.has('tour')) {
+            const tour = new Shepherd.Tour({ defaultStepOptions: { cancelIcon: { enabled: true }, scrollTo: true } });
+            tour.addStep({ title: 'Invoice Summary', text: 'Total invoices and total value snapshot.', attachTo: { element: '#summary-invoices', on: 'bottom' }, buttons: [{ text: 'Next', action: tour.next }] });
+            tour.addStep({ title: 'Create Invoice', text: 'Create a new invoice directly.', attachTo: { element: '#btn-add-invoice', on: 'bottom' }, buttons: [{ text: 'Back', action: tour.back }, { text: 'Done', action: tour.complete }] });
+            tour.start();
+          }
+        } catch (e) {}
+    });
+</script>
+{% endblock %}

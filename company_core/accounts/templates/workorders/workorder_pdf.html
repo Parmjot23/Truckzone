@@ -1,0 +1,315 @@
+{% load custom_filters static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Work Order #{{ workorder.id }}</title>
+  <style>
+    @page {
+      size: Letter;
+      margin: 18mm;
+    }
+    body {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      color: #2b2b2b;
+      font-size: 11px;
+      background: #fff;
+      margin: 0;
+    }
+    .wo-wrapper {
+      border: 1px solid #d7d7d7;
+      border-radius: 6px;
+      padding: 20px 22px;
+    }
+    .letterhead {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 3px solid #4a4a4a;
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+    .brand {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      flex: 1;
+    }
+    .brand-logo {
+      width: 88px;
+      max-height: 75px;
+    }
+    .brand-logo img {
+      width: 100%;
+      height: auto;
+    }
+    .brand-info h1 {
+      font-size: 18px;
+      margin: 0 0 3px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .brand-info p {
+      margin: 1px 0;
+      font-size: 10px;
+    }
+    .document-meta {
+      min-width: 170px;
+      font-size: 10px;
+    }
+    .document-meta table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .document-meta th {
+      text-align: left;
+      padding: 2px 6px 2px 0;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+    .document-meta td {
+      padding: 2px 0;
+      font-size: 11px;
+    }
+    .document-title {
+      text-align: center;
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: 2.4px;
+      text-transform: uppercase;
+      margin: 12px 0 10px;
+    }
+    .detail-grid {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 14px;
+      font-size: 11px;
+    }
+    .detail-grid th {
+      background: #f1f1f1;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-size: 9px;
+      text-align: left;
+      padding: 6px 8px;
+      border: 1px solid #c7c7c7;
+    }
+    .detail-grid td {
+      border: 1px solid #c7c7c7;
+      padding: 6px 8px;
+      min-height: 20px;
+    }
+    .section-heading {
+      background: #f1f1f1;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+      padding: 5px 8px;
+      border: 1px solid #c7c7c7;
+      border-bottom: none;
+      font-size: 10px;
+    }
+    .note-box {
+      border: 1px solid #c7c7c7;
+      border-top: none;
+      padding: 9px 10px;
+      min-height: 42px;
+      margin-bottom: 12px;
+      font-size: 11px;
+    }
+    .signature-row {
+      display: flex;
+      gap: 18px;
+      margin-top: 20px;
+      font-size: 10px;
+      align-items: stretch;
+    }
+    .signature-cell {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 85px;
+      padding-bottom: 6px;
+    }
+    .signature-label {
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 5px;
+      font-weight: 700;
+    }
+    .signature-line {
+      margin-top: auto;
+      border-bottom: 1px solid #000;
+      min-height: 48px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wo-wrapper">
+    <div class="letterhead">
+      <div class="brand">
+        <div class="brand-logo">
+          {% if company_logo_url %}
+            <img src="{{ company_logo_url }}" alt="{{ business_name|default:default_business_name }} logo">
+          {% else %}
+            <img src="{{ company_logo_url }}" alt="{{ business_name|default:default_business_name }} logo">
+          {% endif %}
+        </div>
+        <div class="brand-info">
+          <h1>{{ profile.company_name|default:business_name|default:default_business_name }}</h1>
+          {% if profile.company_address %}<p>{{ profile.company_address }}</p>{% endif %}
+          {% if profile.city or profile.province or profile.postal_code %}
+            <p>
+              {% if profile.city %}{{ profile.city }}{% endif %}
+              {% if profile.province %}{% if profile.city %}, {% endif %}{{ profile.province }}{% endif %}
+              {% if profile.postal_code %}{% if profile.city or profile.province %} {% endif %}{{ profile.postal_code }}{% endif %}
+            </p>
+          {% endif %}
+          {% if profile.company_phone %}<p>Phone: {{ profile.company_phone }}</p>{% endif %}
+          {% if profile.company_fax %}<p>Fax: {{ profile.company_fax }}</p>{% endif %}
+          {% if profile.company_email %}<p>Email: {{ profile.company_email }}</p>{% endif %}
+        </div>
+      </div>
+      <div class="document-meta">
+        <table>
+          <tr>
+            <th>Date</th>
+            <td>{{ workorder.date_created|date:"Y-m-d" }}</td>
+          </tr>
+          <tr>
+            <th>Scheduled</th>
+            <td>{{ workorder.scheduled_date|date:"Y-m-d" }}</td>
+          </tr>
+          <tr>
+            <th>Status</th>
+            <td>{{ workorder.get_status_display }}</td>
+          </tr>
+          <tr>
+            <th>Invoice #</th>
+            <td>{% if workorder.invoice %}{{ workorder.invoice.invoice_number }}{% endif %}</td>
+          </tr>
+          <tr>
+            <th>Work Order #</th>
+            <td>{{ workorder.id }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="document-title">Work Order</div>
+
+    <table class="detail-grid">
+      <tr>
+        <th>Company Name</th>
+        <td colspan="3">{{ workorder.bill_to|default:workorder.customer.name|default:"" }}</td>
+      </tr>
+      <tr>
+        <th>Phone</th>
+        <td>{{ workorder.customer.phone_number|default:"" }}</td>
+        <th>Email</th>
+        <td>{{ workorder.bill_to_email|default:workorder.customer.email|default:"" }}</td>
+      </tr>
+      <tr>
+        <th>Address</th>
+        <td colspan="3">
+          {% if workorder.bill_to_address %}
+            {{ workorder.bill_to_address|linebreaksbr }}
+          {% elif workorder.customer.address %}
+            {{ workorder.customer.address|linebreaksbr }}
+          {% endif %}
+        </td>
+      </tr>
+    </table>
+
+    <table class="detail-grid">
+      <tr>
+        <th>Unit #</th>
+        <td>{{ workorder.unit_no|default:workorder.vehicle.unit_number|default:"" }}</td>
+        <th>Lic. Plate #</th>
+        <td>{{ workorder.license_plate|default:workorder.vehicle.license_plate|default:"" }}</td>
+      </tr>
+      <tr>
+        <th>VIN</th>
+        <td>{{ workorder.vehicle_vin|default:workorder.vehicle.vin_number|default:"" }}</td>
+        <th>KM / Mile</th>
+        <td>
+          {% if workorder.mileage %}
+            {{ workorder.mileage|floatformat:0 }}
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>Engine Hours</th>
+        <td></td>
+        <th>Make / Year - Model</th>
+        <td>
+          {% if workorder.make_model %}
+            {{ workorder.make_model }}
+          {% elif workorder.vehicle %}
+            {{ workorder.vehicle }}
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>Name on Door</th>
+        <td>{{ workorder.vehicle.unit_number|default:"" }}</td>
+        <th>Assigned Mechanics</th>
+        <td>
+          {% with assignments=workorder.assignments.all %}
+            {% if assignments %}
+              {% for assignment in assignments %}
+                {{ assignment.mechanic.name }}{% if not forloop.last %}, {% endif %}
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+        </td>
+      </tr>
+    </table>
+
+    <div class="section-heading">Complaint / Description</div>
+    <div class="note-box">
+      {% if workorder.description %}
+        {{ workorder.description|linebreaksbr }}
+      {% else %}
+        &nbsp;
+      {% endif %}
+    </div>
+
+    <div class="section-heading">Cause</div>
+    <div class="note-box">
+      {% if workorder.cause %}
+        {{ workorder.cause|linebreaksbr }}
+      {% else %}
+        &nbsp;
+      {% endif %}
+    </div>
+
+    <div class="section-heading">Correction</div>
+    <div class="note-box">
+      {% if workorder.correction %}
+        {{ workorder.correction|linebreaksbr }}
+      {% else %}
+        &nbsp;
+      {% endif %}
+    </div>
+
+    <div class="signature-row">
+      <div class="signature-cell">
+        <div class="signature-label">Owner / Authorized Agent Name</div>
+        <div class="signature-line"></div>
+      </div>
+      <div class="signature-cell">
+        <div class="signature-label">Signature</div>
+        <div class="signature-line"></div>
+      </div>
+      <div class="signature-cell">
+        <div class="signature-label">Purchase Order</div>
+        <div class="signature-line"></div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

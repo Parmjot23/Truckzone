@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Order Complete{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1>Thank You</h1>
+  <p>Your order has been placed successfully. An invoice has been emailed to you.</p>
+  <p>Your invoice number is <strong>{{ invoice_number }}</strong>.</p>
+  <p><a href="{% url 'accounts:store_product_list' %}">Continue Shopping</a></p>
+</div>
+{% endblock %}

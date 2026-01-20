@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ subject }}</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: {{ theme.background|default:"#fff7ed" }};
+      font-family: Arial, sans-serif;
+      color: #111827;
+    }
+    .card {
+      max-width: 640px;
+      margin: 24px auto;
+      background-color: {{ theme.surface|default:"#ffffff" }};
+      border: 1px solid #fde68a;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .hero {
+      background-color: {{ theme.primary|default:"#111827" }};
+      color: #ffffff;
+      padding: 24px 26px 18px;
+    }
+    .promo-pill {
+      display: inline-block;
+      padding: 6px 12px;
+      background-color: {{ theme.accent|default:"#ea580c" }};
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .headline {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 12px 0 6px;
+    }
+    .subheadline {
+      font-size: 14px;
+      margin: 0;
+      opacity: 0.9;
+    }
+    .body {
+      padding: 22px 26px 6px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .promo-box {
+      margin: 14px 0;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid #fed7aa;
+      background: #fff7ed;
+      color: #9a3412;
+      font-weight: 700;
+      text-align: center;
+    }
+    .cta {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      background-color: {{ theme.accent|default:"#ea580c" }};
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .footer {
+      padding: 16px 26px 20px;
+      font-size: 12px;
+      color: #6b7280;
+      background: #fff7ed;
+      border-top: 1px solid #fde68a;
+      text-align: center;
+    }
+    .logo {
+      max-height: 36px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  {% if preheader %}
+  <span style="display:none;visibility:hidden;opacity:0;max-height:0;overflow:hidden;">{{ preheader }}</span>
+  {% endif %}
+  <div class="card">
+    <div class="hero">
+      {% if company_logo_url %}
+      <img src="{{ company_logo_url }}" alt="{{ company_name }}" class="logo">
+      {% endif %}
+      <div class="promo-pill">{{ promo_badge|default:"Limited time" }}</div>
+      <div class="headline">{{ headline }}</div>
+      {% if subheadline %}
+      <p class="subheadline">{{ subheadline }}</p>
+      {% endif %}
+    </div>
+    <div class="body">
+      <p>Hi {{ recipient_name }},</p>
+      <p>{{ message|linebreaksbr }}</p>
+      {% if promo_detail %}
+      <div class="promo-box">{{ promo_detail }}</div>
+      {% endif %}
+      {% if highlights %}
+      <ul>
+        {% for item in highlights %}
+        <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if cta_text and cta_url %}
+      <a class="cta" href="{{ cta_url }}">{{ cta_text }}</a>
+      {% endif %}
+      {% if footer_note %}
+      <p><strong>{{ footer_note }}</strong></p>
+      {% endif %}
+      <p>Call us at {{ business_phone }} or email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+    </div>
+    <div class="footer">
+      <div>{{ company_name }} | {{ business_address|linebreaksbr }}</div>
+      <div>&copy; {{ current_year }} {{ company_name }}. All rights reserved.</div>
+    </div>
+  </div>
+</body>
+</html>

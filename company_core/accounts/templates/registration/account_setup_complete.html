@@ -1,0 +1,20 @@
+{% extends "customer_portal_base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h4 class="card-title">Account Setup Complete</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="lead">Your account has been successfully set up.</p>
+                    <p>You can now access all the features available to your plan.</p>
+                    <a href="{% url 'accounts:home' %}" class="btn btn-primary mt-4">Go to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

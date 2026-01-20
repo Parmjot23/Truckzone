@@ -1,0 +1,46 @@
+<!-- templates/registration/resend_activation.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Resend Activation Email</title>
+    <style>
+        /* Add your CSS styling here */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333333;
+            line-height: 1.6;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 5px;
+            max-width: 600px;
+            margin: auto;
+        }
+        .button {
+            background-color: #007bff;
+            color: #ffffff !important;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Resend Activation Email</h2>
+        <p>Didn't receive the activation email? Click the button below to resend it.</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="button">Resend Activation Email</button>
+        </form>
+    </div>
+</body>
+</html>

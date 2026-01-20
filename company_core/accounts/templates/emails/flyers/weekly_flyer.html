@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ subject }}</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: {{ theme.background|default:"#f1f5f9" }};
+      font-family: Arial, sans-serif;
+      color: #0f172a;
+    }
+    .card {
+      max-width: 640px;
+      margin: 24px auto;
+      background-color: {{ theme.surface|default:"#ffffff" }};
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .hero {
+      padding: 22px 26px;
+      background-color: {{ theme.primary|default:"#1d4ed8" }};
+      color: #ffffff;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.18);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+    }
+    .headline {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 10px 0 4px;
+    }
+    .subheadline {
+      font-size: 14px;
+      margin: 0;
+      opacity: 0.9;
+    }
+    .body {
+      padding: 22px 26px 6px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .stats {
+      margin: 16px 0 10px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .stat {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #f8fafc;
+    }
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin: 0 0 4px;
+    }
+    .stat-value {
+      font-weight: 700;
+      color: {{ theme.primary|default:"#1d4ed8" }};
+      margin: 0;
+    }
+    .highlight {
+      margin: 14px 0 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px dashed #cbd5f5;
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-weight: 600;
+    }
+    .cta {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      background-color: {{ theme.accent|default:"#22c55e" }};
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .footer {
+      padding: 16px 26px 20px;
+      font-size: 12px;
+      color: #64748b;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+    }
+    .logo {
+      max-height: 36px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  {% if preheader %}
+  <span style="display:none;visibility:hidden;opacity:0;max-height:0;overflow:hidden;">{{ preheader }}</span>
+  {% endif %}
+  <div class="card">
+    <div class="hero">
+      {% if company_logo_url %}
+      <img src="{{ company_logo_url }}" alt="{{ company_name }}" class="logo">
+      {% endif %}
+      <span class="badge">{{ eyebrow|default:"Weekly spotlight" }}</span>
+      <div class="headline">{{ headline }}</div>
+      {% if subheadline %}
+      <p class="subheadline">{{ subheadline }}</p>
+      {% endif %}
+    </div>
+    <div class="body">
+      <p>Hi {{ recipient_name }},</p>
+      <p>{{ message|linebreaksbr }}</p>
+      <table class="stats" role="presentation">
+        <tr>
+          <td style="width:50%; padding-right:8px;">
+            <div class="stat">
+              <p class="stat-label">Turnaround</p>
+              <p class="stat-value">{{ stats_left|default:"Fast scheduling" }}</p>
+            </div>
+          </td>
+          <td style="width:50%; padding-left:8px;">
+            <div class="stat">
+              <p class="stat-label">Focus</p>
+              <p class="stat-value">{{ stats_right|default:"Fleet-ready service" }}</p>
+            </div>
+          </td>
+        </tr>
+      </table>
+      {% if highlights %}
+      {% for item in highlights %}
+      <div class="highlight">{{ item }}</div>
+      {% endfor %}
+      {% endif %}
+      {% if cta_text and cta_url %}
+      <a class="cta" href="{{ cta_url }}">{{ cta_text }}</a>
+      {% endif %}
+      {% if footer_note %}
+      <p><strong>{{ footer_note }}</strong></p>
+      {% endif %}
+      <p>Questions? Reply to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+    </div>
+    <div class="footer">
+      <div>{{ company_name }} | {{ business_phone }}</div>
+      <div>{{ business_address|linebreaksbr }}</div>
+      <div>&copy; {{ current_year }} {{ company_name }}. All rights reserved.</div>
+    </div>
+  </div>
+</body>
+</html>

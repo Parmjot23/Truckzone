@@ -1,0 +1,288 @@
+{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Payroll Hub</h2>
+            <div class="text-muted small">Simple view of setup, time, and pay.</div>
+        </div>
+        <div class="page-toolbar d-flex flex-wrap gap-2">
+            <a href="{% url 'accounts:employee_create' %}" class="btn btn-outline-primary btn-sm">Add employee</a>
+            <a href="{% url 'accounts:timesheet_create' %}" class="btn btn-outline-primary btn-sm">Add timesheet</a>
+            <a href="{% url 'accounts:payroll_run_create' %}" class="btn btn-primary btn-sm">Run payroll</a>
+        </div>
+    </div>
+
+    {% include 'payroll/_nav.html' %}
+
+    {% if attention_items %}
+    <div class="alert alert-warning">
+        <div class="fw-semibold mb-1">Needs attention</div>
+        <ul class="mb-0 small">
+            {% for item in attention_items %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="fw-semibold">Simple steps</div>
+            <ol class="small text-muted mb-0 ps-3">
+                <li>Set payroll rules and pay period.</li>
+                <li>Add employees and approve timesheets.</li>
+                <li>Create a payroll run and send paystubs.</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-6 col-lg-3">
+                    <div class="text-muted small">Employees</div>
+                    <div class="h5 mb-0">{{ employee_count|default:0 }}</div>
+                    <div class="small text-muted">Active {{ active_employee_count|default:0 }}</div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="text-muted small">Timesheets</div>
+                    <div class="h5 mb-0">{{ timesheet_counts.approved|default:0 }}</div>
+                    <div class="small text-muted">Approved ({{ timesheet_counts.submitted|default:0 }} submitted)</div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="text-muted small">Payroll runs</div>
+                    <div class="h5 mb-0">{{ run_counts.draft|default:0 }}</div>
+                    <div class="small text-muted">Draft ({{ run_counts.approved|default:0 }} approved, {{ run_counts.paid|default:0 }} paid)</div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="text-muted small">Paystubs</div>
+                    <div class="h5 mb-0">{{ paystub_count|default:0 }}</div>
+                    <div class="small text-muted">
+                        {% if last_run %}
+                        Last run {{ last_run.paystub_count|default:0 }}
+                        {% else %}
+                        No runs yet
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% if last_run %}
+            <div class="border-top mt-3 pt-3 small text-muted">
+                Last run {{ last_run.period_start }} - {{ last_run.period_end }}.
+                Gross ${{ last_run_totals.total_gross|default:"0.00" }},
+                Net ${{ last_run_totals.total_net|default:"0.00" }},
+                Employer ${{ last_run_totals.total_employer|default:"0.00" }}.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body p-0">
+            <div class="d-flex flex-wrap align-items-center justify-content-between p-3 border-bottom gap-2">
+                <div>
+                    <h5 class="mb-0">Recent activity</h5>
+                    <div class="text-muted small">Review the latest timesheets, runs, and paystubs.</div>
+                </div>
+                <ul class="nav nav-pills" id="payroll-recent-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="recent-timesheets-tab" data-bs-toggle="pill" data-bs-target="#recent-timesheets" type="button" role="tab" aria-controls="recent-timesheets" aria-selected="true">Timesheets</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="recent-runs-tab" data-bs-toggle="pill" data-bs-target="#recent-runs" type="button" role="tab" aria-controls="recent-runs" aria-selected="false">Payroll runs</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="recent-paystubs-tab" data-bs-toggle="pill" data-bs-target="#recent-paystubs" type="button" role="tab" aria-controls="recent-paystubs" aria-selected="false">Paystubs</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="recent-timesheets" role="tabpanel" aria-labelledby="recent-timesheets-tab">
+                    <div class="d-flex justify-content-end p-3 pb-0">
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:timesheet_list' %}">View all</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Period</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sheet in recent_timesheets %}
+                                <tr>
+                                    <td>{{ sheet.employee.full_name }}</td>
+                                    <td>{{ sheet.period_start }} - {{ sheet.period_end }}</td>
+                                    <td>{{ sheet.get_status_display }}</td>
+                                    <td class="text-end">
+                                        <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:timesheet_detail' sheet.id %}">View</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">No timesheets yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="recent-runs" role="tabpanel" aria-labelledby="recent-runs-tab">
+                    <div class="d-flex justify-content-end p-3 pb-0">
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:payroll_run_list' %}">View all</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Status</th>
+                                    <th>Paystubs</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for run in recent_runs %}
+                                <tr>
+                                    <td>{{ run.period_start }} - {{ run.period_end }}</td>
+                                    <td>{{ run.get_status_display }}</td>
+                                    <td>{{ run.paystub_count|default:0 }}</td>
+                                    <td class="text-end">
+                                        <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:payroll_run_detail' run.id %}">View</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">No payroll runs yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="recent-paystubs" role="tabpanel" aria-labelledby="recent-paystubs-tab">
+                    <div class="d-flex justify-content-end p-3 pb-0">
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:payroll_run_list' %}">View all</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Period end</th>
+                                    <th>Net</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stub in recent_paystubs %}
+                                <tr>
+                                    <td>{{ stub.employee.full_name }}</td>
+                                    <td>{{ stub.payroll_run.period_end }}</td>
+                                    <td>${{ stub.net_pay }}</td>
+                                    <td class="text-end">
+                                        <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:payroll_run_detail' stub.payroll_run.id %}">Run</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">No paystubs yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div>
+                    <h5 class="mb-0">Payroll settings</h5>
+                    <div class="text-muted small">Update pay periods and optional overtime rules.</div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#payrollSettingsPanel" aria-expanded="{% if form.errors %}true{% else %}false{% endif %}" aria-controls="payrollSettingsPanel">
+                    Edit settings
+                </button>
+            </div>
+            <div class="collapse {% if form.errors %}show{% endif %}" id="payrollSettingsPanel">
+                <form method="post" class="mt-3">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Pay period frequency</label>
+                            {{ form.pay_period_frequency }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Period anchor date</label>
+                            {{ form.period_anchor_date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Pay date offset (days)</label>
+                            {{ form.default_pay_date_offset_days }}
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check">
+                                {{ form.auto_approve_timesheets }}
+                                <label class="form-check-label">Auto-approve timesheets</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-top mt-4 pt-3">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#overtimeRules" aria-expanded="false" aria-controls="overtimeRules">
+                            Overtime rules (optional)
+                        </button>
+                        <div class="collapse mt-3" id="overtimeRules">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        {{ form.overtime_enabled }}
+                                        <label class="form-check-label">Enable overtime</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        {{ form.overtime_daily_enabled }}
+                                        <label class="form-check-label">Daily overtime</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        {{ form.overtime_weekly_enabled }}
+                                        <label class="form-check-label">Weekly overtime</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Daily threshold (hours)</label>
+                                    {{ form.overtime_daily_threshold }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Weekly threshold (hours)</label>
+                                    {{ form.overtime_weekly_threshold }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Overtime multiplier</label>
+                                    {{ form.overtime_multiplier }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">Save settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,5 @@
+<!-- inventory/partials/_category_form.html -->
+{% load static %}
+<input type="hidden" name="category_id" value="{{ form.instance.id }}">
+{{ form.non_field_errors }}
+{{ form.as_p }}

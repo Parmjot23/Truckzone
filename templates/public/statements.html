@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-5">
+  <!-- Hero Section -->
+  <section class="hero-section text-center mb-5">
+    <h1 class="display-4">Customer Statements &amp; Reporting</h1>
+    <p class="lead">
+      Easily track customer performance and send beautifully designed invoice statements with just one click.
+    </p>
+  </section>
+
+  <!-- Overview Section -->
+  <section class="overview-section mb-4">
+    <h2 class="mb-3">Overview</h2>
+    <p>
+      Our Customer Statements feature gives you a comprehensive view of your business interactions.
+      Customers are automatically ranked based on transaction volume, so you know who your top clients are.
+      View metrics such as outstanding balances, payments received, and overall business done.
+      With customizable date ranges, you can generate statements for pending balances, paid invoices, or a complete business summary—all sent via email with professional PDF attachments.
+    </p>
+  </section>
+
+  <!-- Key Features Section -->
+  <section class="features-section mb-4">
+    <h2 class="mb-3">Key Features</h2>
+    <ul>
+      <li><strong>Customer Ranking:</strong> Automatically rank customers by total business volume to focus on your most valuable clients.</li>
+      <li><strong>Detailed Metrics:</strong> Quickly see outstanding balances, payments, and overall transaction volumes.</li>
+      <li><strong>Custom Date Ranges:</strong> Generate statements for any period: pending balances, paid invoices, or a full business report.</li>
+      <li><strong>One-Click Email:</strong> Instantly send polished email statements with professional PDF attachments.</li>
+    </ul>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="how-it-works-section mb-4">
+    <h2 class="mb-3">How It Works</h2>
+    <ol>
+      <li><strong>Access Your Dashboard:</strong> View customer rankings and detailed transaction records.</li>
+      <li><strong>Select Statement Type:</strong> Choose a statement for pending balances, paid invoices, or the overall summary, then set the date range.</li>
+      <li><strong>Generate the Statement:</strong> The system compiles the necessary data into a formatted statement.</li>
+      <li><strong>Send with One Click:</strong> Email the statement directly to your customers with a beautifully designed PDF.</li>
+    </ol>
+  </section>
+
+  <!-- Benefits Section -->
+  <section class="benefits-section mb-5">
+    <h2 class="mb-3">Benefits</h2>
+    <ul>
+      <li><strong>Actionable Insights:</strong> Easily identify your top-performing customers.</li>
+      <li><strong>Cash Flow Management:</strong> Monitor outstanding balances for efficient budgeting.</li>
+      <li><strong>Professional Presentation:</strong> Enhance your brand with sleek email statements and PDFs.</li>
+      <li><strong>Time Saving:</strong> Automate the statement process with one click.</li>
+    </ul>
+  </section>
+
+  <!-- Call to Action Section -->
+  <section class="cta-section text-center">
+    <h2 class="mb-3">Elevate Your Customer Management</h2>
+    <p>Experience hassle-free, insightful, and professional statement management. Start sending your polished customer statements today.</p>
+                    <a href="{% url 'accounts:login' %}" class="btn btn-primary btn-lg">Get Started</a>
+  </section>
+</div>
+{% endblock %}

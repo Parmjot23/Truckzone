@@ -1,0 +1,907 @@
+{% extends 'customer_portal_base.html' %}
+{% block title %}Supplier Directory{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+    {% include 'inventory/partials/_inventory_nav.html' %}
+    <div class="page-header">
+        <div>
+            <h2 class="mb-1">Supplier Directory</h2>
+            <p class="text-muted mb-0">Keep supplier contacts and purchasing details up to date.</p>
+        </div>
+        <div class="page-toolbar">
+            <a href="{% url 'accounts:inventory_suppliers_template' %}" class="btn btn-outline-primary btn-sm">
+                <i class="fa-solid fa-file-arrow-down me-1"></i> Download Excel
+            </a>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#importSuppliersModal">
+                <i class="fa-solid fa-file-import me-1"></i> Import Excel
+            </button>
+            <a href="#addSupplierCard" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-plus me-1"></i> Add supplier
+            </a>
+        </div>
+    </div>
+
+    <div class="surface-card p-4" id="addSupplierCard">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+            <div>
+                <h2 class="h5 mb-1">Add a new supplier</h2>
+                <p class="text-muted mb-0">Capture supplier details for faster purchasing.</p>
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-lg-3">
+                <label for="newSupplierName" class="form-label">Supplier name</label>
+                <input type="text" class="form-control" id="newSupplierName" placeholder="e.g. Auto Parts Co.">
+            </div>
+            <div class="col-lg-3">
+                <label for="newSupplierContact" class="form-label">Contact person</label>
+                <input type="text" class="form-control" id="newSupplierContact" placeholder="Optional">
+            </div>
+            <div class="col-lg-3">
+                <label for="newSupplierEmail" class="form-label">Email</label>
+                <input type="email" class="form-control" id="newSupplierEmail" placeholder="name@supplier.com">
+            </div>
+            <div class="col-lg-3">
+                <label for="newSupplierPhone" class="form-label">Phone</label>
+                <input type="text" class="form-control" id="newSupplierPhone" placeholder="Optional">
+            </div>
+            <div class="col-lg-8">
+                <label for="newSupplierAddress" class="form-label">Address</label>
+                <textarea class="form-control" id="newSupplierAddress" rows="2" placeholder="Street, city, region"></textarea>
+            </div>
+        </div>
+        <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mt-3">
+            <button type="button" class="btn btn-primary" id="addSupplierButton">Add to library</button>
+            <div id="newSupplierStatus" class="text-muted small">New entries save automatically when you add them.</div>
+        </div>
+    </div>
+
+    <div class="surface-card p-4">
+        <div class="row align-items-end gy-3 mb-2">
+            <div class="col-md-7 col-lg-6">
+                <label for="supplierSearchInput" class="form-label fw-semibold">Search suppliers</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="search" class="form-control" id="supplierSearchInput" placeholder="Search name, contact, email, phone, address" value="{{ search_query }}">
+                </div>
+            </div>
+            <div class="col-md-5 col-lg-4 ms-lg-auto">
+                <div class="d-flex flex-column align-items-md-end gap-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="bulkDeleteButton" disabled>
+                        <i class="fa-regular fa-trash-can me-1"></i> Delete selected
+                    </button>
+                    <div id="bulkDeleteStatus" class="small text-muted"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="suppliersEmptyState" class="alert alert-info mt-4{% if suppliers_count %} d-none{% endif %}">
+            No suppliers yet. Add one to keep purchasing details in one place.
+        </div>
+
+        <div class="table-responsive mt-3{% if not suppliers_count %} d-none{% endif %}" id="suppliersTableWrapper">
+            <table class="table table-striped align-middle" id="suppliersTable"
+                   data-save-url="{% url 'accounts:inventory_supplier_inline_save' %}"
+                   data-delete-url-template="{% url 'accounts:inventory_supplier_delete' 0 %}">
+                <thead>
+                    <tr>
+                        <th scope="col" class="text-center" style="width: 4%;">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="selectAllSuppliers" aria-label="Select all suppliers">
+                            </div>
+                        </th>
+                        <th scope="col" style="width: 18%;">Supplier</th>
+                        <th scope="col" style="width: 16%;">Contact</th>
+                        <th scope="col" style="width: 16%;">Email</th>
+                        <th scope="col" style="width: 14%;">Phone</th>
+                        <th scope="col">Address</th>
+                        <th scope="col" class="text-end" style="width: 8%;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="suppliersTableBody">
+                    {% for supplier in suppliers %}
+                    <tr class="supplier-row"
+                        data-supplier-id="{{ supplier.id }}"
+                        data-supplier-name="{{ supplier.name|default_if_none:''|escape }}"
+                        data-supplier-contact="{{ supplier.contact_person|default_if_none:''|escape }}"
+                        data-supplier-email="{{ supplier.email|default_if_none:''|escape }}"
+                        data-supplier-phone="{{ supplier.phone_number|default_if_none:''|escape }}"
+                        data-supplier-address="{{ supplier.address|default_if_none:''|escape }}">
+                        <td class="text-center align-top">
+                            <div class="form-check mb-0">
+                                <input type="checkbox" class="form-check-input supplier-select-checkbox" aria-label="Select supplier {{ supplier.name|default:'row' }}">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="supplier-display supplier-name-display fw-semibold"></div>
+                            <div class="supplier-edit d-none">
+                                <input type="text" class="form-control form-control-sm supplier-name-input" placeholder="Supplier name">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="supplier-display supplier-contact-display text-muted small"></div>
+                            <div class="supplier-edit d-none">
+                                <input type="text" class="form-control form-control-sm supplier-contact-input" placeholder="Contact person">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="supplier-display supplier-email-display text-muted small"></div>
+                            <div class="supplier-edit d-none">
+                                <input type="email" class="form-control form-control-sm supplier-email-input" placeholder="Email">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="supplier-display supplier-phone-display text-muted small"></div>
+                            <div class="supplier-edit d-none">
+                                <input type="text" class="form-control form-control-sm supplier-phone-input" placeholder="Phone">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="supplier-display supplier-address-display text-muted small"></div>
+                            <div class="supplier-edit d-none">
+                                <textarea class="form-control form-control-sm supplier-address-input" rows="2" placeholder="Address"></textarea>
+                            </div>
+                        </td>
+                        <td class="text-end align-top">
+                            <div class="btn-group btn-group-sm supplier-view-actions" role="group" aria-label="Supplier actions">
+                                <button type="button" class="btn btn-outline-secondary supplier-edit-btn">Edit</button>
+                                <button type="button" class="btn btn-outline-danger supplier-delete-btn">Delete</button>
+                            </div>
+                            <div class="btn-group btn-group-sm supplier-edit-actions d-none" role="group" aria-label="Edit actions">
+                                <button type="button" class="btn btn-primary supplier-save-btn">Save</button>
+                                <button type="button" class="btn btn-outline-secondary supplier-cancel-btn">Cancel</button>
+                            </div>
+                            <div class="row-status text-muted small mt-2" aria-live="polite"></div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="suppliersNoResults" class="alert alert-secondary d-none mt-4 mb-0">
+            No suppliers match your search. Try a different term.
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="inlineCsrfToken" value="{{ csrf_token }}">
+
+<template id="supplierRowTemplate">
+    <tr class="supplier-row"
+        data-supplier-id=""
+        data-supplier-name=""
+        data-supplier-contact=""
+        data-supplier-email=""
+        data-supplier-phone=""
+        data-supplier-address="">
+        <td class="text-center align-top">
+            <div class="form-check mb-0">
+                <input type="checkbox" class="form-check-input supplier-select-checkbox" aria-label="Select supplier">
+            </div>
+        </td>
+        <td>
+            <div class="supplier-display supplier-name-display fw-semibold"></div>
+            <div class="supplier-edit d-none">
+                <input type="text" class="form-control form-control-sm supplier-name-input" placeholder="Supplier name">
+            </div>
+        </td>
+        <td>
+            <div class="supplier-display supplier-contact-display text-muted small"></div>
+            <div class="supplier-edit d-none">
+                <input type="text" class="form-control form-control-sm supplier-contact-input" placeholder="Contact person">
+            </div>
+        </td>
+        <td>
+            <div class="supplier-display supplier-email-display text-muted small"></div>
+            <div class="supplier-edit d-none">
+                <input type="email" class="form-control form-control-sm supplier-email-input" placeholder="Email">
+            </div>
+        </td>
+        <td>
+            <div class="supplier-display supplier-phone-display text-muted small"></div>
+            <div class="supplier-edit d-none">
+                <input type="text" class="form-control form-control-sm supplier-phone-input" placeholder="Phone">
+            </div>
+        </td>
+        <td>
+            <div class="supplier-display supplier-address-display text-muted small"></div>
+            <div class="supplier-edit d-none">
+                <textarea class="form-control form-control-sm supplier-address-input" rows="2" placeholder="Address"></textarea>
+            </div>
+        </td>
+        <td class="text-end align-top">
+            <div class="btn-group btn-group-sm supplier-view-actions" role="group" aria-label="Supplier actions">
+                <button type="button" class="btn btn-outline-secondary supplier-edit-btn">Edit</button>
+                <button type="button" class="btn btn-outline-danger supplier-delete-btn">Delete</button>
+            </div>
+            <div class="btn-group btn-group-sm supplier-edit-actions d-none" role="group" aria-label="Edit actions">
+                <button type="button" class="btn btn-primary supplier-save-btn">Save</button>
+                <button type="button" class="btn btn-outline-secondary supplier-cancel-btn">Cancel</button>
+            </div>
+            <div class="row-status text-muted small mt-2" aria-live="polite"></div>
+        </td>
+    </tr>
+</template>
+
+<div class="modal fade" id="importSuppliersModal" tabindex="-1" aria-labelledby="importSuppliersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importSuppliersModalLabel">Import suppliers from Excel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'accounts:inventory_suppliers_import' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'accounts:inventory_suppliers' %}">
+                <div class="modal-body">
+                    <p class="small text-muted">Upload the Excel template exported from this page. We'll create new suppliers and update matches automatically.</p>
+                    <div class="mb-3">
+                        <label for="id_supplier_import_file" class="form-label fw-semibold">Excel file</label>
+                        <input type="file" class="form-control" id="id_supplier_import_file" name="file" accept=".xlsx,.xls">
+                        <small class="form-text text-muted">Supported format: .xlsx (Microsoft Excel).</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link text-decoration-none" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-file-import me-1"></i> Import suppliers
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    #suppliersTable {
+        min-width: 980px;
+    }
+
+    #suppliersTable td {
+        vertical-align: top;
+    }
+
+    #suppliersTable .supplier-display {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    #suppliersTable .supplier-edit textarea,
+    #suppliersTable .supplier-edit input {
+        font-size: 0.95rem;
+    }
+
+    .status-saving {
+        color: var(--bs-primary, #0d6efd) !important;
+    }
+
+    .status-error {
+        color: var(--bs-danger, #dc3545) !important;
+    }
+
+    .status-success {
+        color: var(--bs-success, #198754) !important;
+    }
+
+    .supplier-select-checkbox {
+        cursor: pointer;
+    }
+
+    @media (max-width: 991.98px) {
+        #suppliersTable {
+            min-width: 100%;
+        }
+    }
+</style>
+
+<script>
+(function () {
+    let selectAllCheckbox = null;
+    let bulkDeleteButton = null;
+    let bulkDeleteStatus = null;
+    let currentSearchQuery = '';
+
+    function getTable() {
+        return document.getElementById('suppliersTable');
+    }
+
+    function getCsrfToken() {
+        const inlineTokenInput = document.getElementById('inlineCsrfToken');
+        if (inlineTokenInput && inlineTokenInput.value && inlineTokenInput.value !== 'NOTPROVIDED') {
+            return inlineTokenInput.value;
+        }
+        const name = 'csrftoken';
+        const cookies = document.cookie ? document.cookie.split('; ') : [];
+        for (let i = 0; i < cookies.length; i += 1) {
+            const parts = cookies[i].split('=');
+            const key = decodeURIComponent(parts[0]);
+            if (key === name) {
+                return decodeURIComponent(parts[1] || '');
+            }
+        }
+        return '';
+    }
+
+    function buildUrl(template, id) {
+        return template.replace(/\/0\//, '/' + id + '/');
+    }
+
+    function valueOrEmpty(value) {
+        if (value === null || value === undefined) {
+            return '';
+        }
+        return String(value);
+    }
+
+    function showStatus(target, message, state) {
+        if (!target) {
+            return;
+        }
+        target.textContent = message || '';
+        target.classList.remove('status-saving', 'status-error', 'status-success');
+        if (state) {
+            target.classList.add('status-' + state);
+        }
+    }
+
+    function normalizeSupplier(raw) {
+        return {
+            id: valueOrEmpty(raw.id),
+            name: valueOrEmpty(raw.name),
+            contact_person: valueOrEmpty(raw.contact_person),
+            email: valueOrEmpty(raw.email),
+            phone_number: valueOrEmpty(raw.phone_number),
+            address: valueOrEmpty(raw.address),
+        };
+    }
+
+    function getSupplierFromRow(row) {
+        return normalizeSupplier({
+            id: row.dataset.supplierId,
+            name: row.dataset.supplierName,
+            contact_person: row.dataset.supplierContact,
+            email: row.dataset.supplierEmail,
+            phone_number: row.dataset.supplierPhone,
+            address: row.dataset.supplierAddress,
+        });
+    }
+
+    function applySupplierToRow(row, rawSupplier) {
+        if (!row) {
+            return;
+        }
+        const supplier = normalizeSupplier(rawSupplier || {});
+        row.dataset.supplierId = supplier.id || '';
+        row.dataset.supplierName = supplier.name || '';
+        row.dataset.supplierContact = supplier.contact_person || '';
+        row.dataset.supplierEmail = supplier.email || '';
+        row.dataset.supplierPhone = supplier.phone_number || '';
+        row.dataset.supplierAddress = supplier.address || '';
+
+        const nameDisplay = row.querySelector('.supplier-name-display');
+        const contactDisplay = row.querySelector('.supplier-contact-display');
+        const emailDisplay = row.querySelector('.supplier-email-display');
+        const phoneDisplay = row.querySelector('.supplier-phone-display');
+        const addressDisplay = row.querySelector('.supplier-address-display');
+
+        if (nameDisplay) {
+            nameDisplay.textContent = supplier.name || 'Untitled supplier';
+        }
+        if (contactDisplay) {
+            contactDisplay.textContent = supplier.contact_person || 'No contact';
+        }
+        if (emailDisplay) {
+            emailDisplay.textContent = supplier.email || 'No email';
+        }
+        if (phoneDisplay) {
+            phoneDisplay.textContent = supplier.phone_number || 'No phone';
+        }
+        if (addressDisplay) {
+            addressDisplay.textContent = supplier.address || 'No address';
+        }
+
+        const nameInput = row.querySelector('.supplier-name-input');
+        const contactInput = row.querySelector('.supplier-contact-input');
+        const emailInput = row.querySelector('.supplier-email-input');
+        const phoneInput = row.querySelector('.supplier-phone-input');
+        const addressInput = row.querySelector('.supplier-address-input');
+        if (nameInput) {
+            nameInput.value = supplier.name || '';
+        }
+        if (contactInput) {
+            contactInput.value = supplier.contact_person || '';
+        }
+        if (emailInput) {
+            emailInput.value = supplier.email || '';
+        }
+        if (phoneInput) {
+            phoneInput.value = supplier.phone_number || '';
+        }
+        if (addressInput) {
+            addressInput.value = supplier.address || '';
+        }
+
+        const searchText = [
+            supplier.name,
+            supplier.contact_person,
+            supplier.email,
+            supplier.phone_number,
+            supplier.address,
+        ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+        row.dataset.searchText = searchText;
+    }
+
+    function toggleRowMode(row, isEditing) {
+        row.querySelectorAll('.supplier-display').forEach(function (el) {
+            el.classList.toggle('d-none', isEditing);
+        });
+        row.querySelectorAll('.supplier-edit').forEach(function (el) {
+            el.classList.toggle('d-none', !isEditing);
+        });
+        const viewActions = row.querySelector('.supplier-view-actions');
+        const editActions = row.querySelector('.supplier-edit-actions');
+        if (viewActions) {
+            viewActions.classList.toggle('d-none', isEditing);
+        }
+        if (editActions) {
+            editActions.classList.toggle('d-none', !isEditing);
+        }
+    }
+
+    function enterEditMode(row) {
+        toggleRowMode(row, true);
+    }
+
+    function exitEditMode(row, revertChanges) {
+        if (revertChanges) {
+            applySupplierToRow(row, getSupplierFromRow(row));
+        }
+        toggleRowMode(row, false);
+    }
+
+    function getVisibleRowCheckboxes() {
+        return Array.from(document.querySelectorAll('.supplier-row:not(.d-none) .supplier-select-checkbox'));
+    }
+
+    function updateBulkSelectionUi() {
+        const visibleCheckboxes = getVisibleRowCheckboxes();
+        const selectedCheckboxes = visibleCheckboxes.filter(function (checkbox) {
+            return checkbox.checked;
+        });
+        if (selectAllCheckbox) {
+            if (!visibleCheckboxes.length) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (selectedCheckboxes.length === visibleCheckboxes.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else if (selectedCheckboxes.length > 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+        }
+        if (bulkDeleteButton) {
+            bulkDeleteButton.disabled = selectedCheckboxes.length === 0;
+        }
+    }
+
+    function toggleEmptyState() {
+        const rows = document.querySelectorAll('.supplier-row');
+        const emptyState = document.getElementById('suppliersEmptyState');
+        const tableWrapper = document.getElementById('suppliersTableWrapper');
+        const hasRows = rows.length > 0;
+        if (emptyState) {
+            emptyState.classList.toggle('d-none', hasRows);
+        }
+        if (tableWrapper) {
+            tableWrapper.classList.toggle('d-none', !hasRows);
+        }
+        if (!hasRows) {
+            const noResults = document.getElementById('suppliersNoResults');
+            if (noResults) {
+                noResults.classList.add('d-none');
+            }
+        }
+    }
+
+    function filterSuppliers(query) {
+        const normalized = (query || '').trim().toLowerCase();
+        const rows = document.querySelectorAll('.supplier-row');
+        let visibleCount = 0;
+        rows.forEach(function (row) {
+            const searchText = row.dataset.searchText || '';
+            const matchesText = !normalized || searchText.includes(normalized);
+            if (matchesText) {
+                row.classList.remove('d-none');
+                visibleCount += 1;
+            } else {
+                row.classList.add('d-none');
+            }
+        });
+        const noResults = document.getElementById('suppliersNoResults');
+        if (noResults) {
+            if (normalized && visibleCount === 0 && rows.length > 0) {
+                noResults.classList.remove('d-none');
+            } else {
+                noResults.classList.add('d-none');
+            }
+        }
+        updateBulkSelectionUi();
+    }
+
+    function createRowElement(supplier) {
+        const template = document.getElementById('supplierRowTemplate');
+        if (!template || !template.content || !template.content.firstElementChild) {
+            return null;
+        }
+        const row = template.content.firstElementChild.cloneNode(true);
+        attachRowEvents(row);
+        applySupplierToRow(row, supplier);
+        return row;
+    }
+
+    function insertSupplierRow(supplier) {
+        const tbody = document.getElementById('suppliersTableBody');
+        if (!tbody) {
+            return;
+        }
+        const row = createRowElement(supplier);
+        if (!row) {
+            return;
+        }
+        tbody.insertBefore(row, tbody.firstChild);
+        toggleEmptyState();
+        filterSuppliers(currentSearchQuery);
+        updateBulkSelectionUi();
+    }
+
+    function deleteRow(row, opts) {
+        const table = getTable();
+        if (!table) {
+            return;
+        }
+        const statusTarget = row.querySelector('.row-status');
+        const supplierId = row.dataset.supplierId;
+        const shouldConfirm = opts && opts.confirm === false ? false : true;
+        const onSuccess = opts && typeof opts.onSuccess === 'function' ? opts.onSuccess : null;
+        const onError = opts && typeof opts.onError === 'function' ? opts.onError : null;
+
+        if (!supplierId) {
+            row.remove();
+            toggleEmptyState();
+            filterSuppliers(currentSearchQuery);
+            updateBulkSelectionUi();
+            if (onSuccess) {
+                onSuccess();
+            }
+            return;
+        }
+        if (shouldConfirm && !confirm('Remove this supplier?')) {
+            return;
+        }
+        showStatus(statusTarget, 'Deleting...', 'saving');
+        fetch(buildUrl(table.dataset.deleteUrlTemplate, supplierId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Failed to delete supplier.');
+                }
+                row.remove();
+                toggleEmptyState();
+                filterSuppliers(currentSearchQuery);
+                updateBulkSelectionUi();
+                if (onSuccess) {
+                    onSuccess();
+                }
+            })
+            .catch(function () {
+                showStatus(statusTarget, 'Could not delete this supplier. Try again.', 'error');
+                updateBulkSelectionUi();
+                if (onError) {
+                    onError();
+                }
+            });
+    }
+
+    function getSelectedRows() {
+        return Array.from(document.querySelectorAll('.supplier-row')).filter(function (row) {
+            const checkbox = row.querySelector('.supplier-select-checkbox');
+            return checkbox && checkbox.checked;
+        });
+    }
+
+    function bulkDeleteSelectedRows() {
+        const selectedRows = getSelectedRows();
+        if (!selectedRows.length) {
+            return;
+        }
+        const message = selectedRows.length === 1
+            ? 'Remove the selected supplier?'
+            : 'Remove the ' + selectedRows.length + ' selected suppliers?';
+        if (!confirm(message)) {
+            return;
+        }
+        if (bulkDeleteStatus) {
+            showStatus(bulkDeleteStatus, 'Deleting...', 'saving');
+        }
+        let remaining = selectedRows.length;
+        let errorCount = 0;
+
+        function finalize(success) {
+            remaining -= 1;
+            if (!success) {
+                errorCount += 1;
+            }
+            if (remaining === 0) {
+                if (bulkDeleteStatus) {
+                    if (errorCount === 0) {
+                        showStatus(bulkDeleteStatus, 'Selected suppliers deleted.', 'success');
+                    } else if (errorCount === selectedRows.length) {
+                        showStatus(bulkDeleteStatus, 'Could not delete the selected suppliers. Try again.', 'error');
+                    } else {
+                        showStatus(bulkDeleteStatus, 'Some suppliers could not be deleted. Try again.', 'error');
+                    }
+                }
+                updateBulkSelectionUi();
+            }
+        }
+
+        selectedRows.forEach(function (row) {
+            deleteRow(row, {
+                confirm: false,
+                onSuccess: function () {
+                    finalize(true);
+                },
+                onError: function () {
+                    finalize(false);
+                },
+            });
+        });
+    }
+
+    function collectRowPayload(row) {
+        return {
+            id: row.dataset.supplierId || null,
+            name: (row.querySelector('.supplier-name-input')?.value || '').trim(),
+            contact_person: (row.querySelector('.supplier-contact-input')?.value || '').trim(),
+            email: (row.querySelector('.supplier-email-input')?.value || '').trim(),
+            phone_number: (row.querySelector('.supplier-phone-input')?.value || '').trim(),
+            address: (row.querySelector('.supplier-address-input')?.value || '').trim(),
+        };
+    }
+
+    function validatePayload(payload, statusTarget) {
+        if (!payload.name) {
+            showStatus(statusTarget, 'Supplier name is required.', 'error');
+            return false;
+        }
+        return true;
+    }
+
+    function saveRow(row) {
+        const table = getTable();
+        if (!table) {
+            return;
+        }
+        const statusTarget = row.querySelector('.row-status');
+        const payload = collectRowPayload(row);
+        if (!validatePayload(payload, statusTarget)) {
+            return;
+        }
+        showStatus(statusTarget, 'Saving...', 'saving');
+        fetch(table.dataset.saveUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(payload),
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().then(function (data) {
+                        throw data;
+                    });
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                applySupplierToRow(row, data.supplier);
+                exitEditMode(row, false);
+                showStatus(statusTarget, 'Saved.', 'success');
+                filterSuppliers(currentSearchQuery);
+            })
+            .catch(function (errorData) {
+                const message = errorData && errorData.errors
+                    ? Object.values(errorData.errors).flat().join(' ')
+                    : 'Could not save this supplier.';
+                showStatus(statusTarget, message, 'error');
+            });
+    }
+
+    function attachRowEvents(row) {
+        if (!row || row.dataset.initialized === 'true') {
+            return;
+        }
+        row.dataset.initialized = 'true';
+        const editButton = row.querySelector('.supplier-edit-btn');
+        const cancelButton = row.querySelector('.supplier-cancel-btn');
+        const saveButton = row.querySelector('.supplier-save-btn');
+        const deleteButton = row.querySelector('.supplier-delete-btn');
+        const selectCheckbox = row.querySelector('.supplier-select-checkbox');
+        if (editButton) {
+            editButton.addEventListener('click', function () {
+                enterEditMode(row);
+            });
+        }
+        if (cancelButton) {
+            cancelButton.addEventListener('click', function () {
+                exitEditMode(row, true);
+                showStatus(row.querySelector('.row-status'), '', null);
+            });
+        }
+        if (saveButton) {
+            saveButton.addEventListener('click', function () {
+                saveRow(row);
+            });
+        }
+        if (deleteButton) {
+            deleteButton.addEventListener('click', function () {
+                deleteRow(row);
+            });
+        }
+        if (selectCheckbox) {
+            selectCheckbox.addEventListener('change', function () {
+                updateBulkSelectionUi();
+            });
+        }
+    }
+
+    function handleNewSupplier() {
+        const nameInput = document.getElementById('newSupplierName');
+        const contactInput = document.getElementById('newSupplierContact');
+        const emailInput = document.getElementById('newSupplierEmail');
+        const phoneInput = document.getElementById('newSupplierPhone');
+        const addressInput = document.getElementById('newSupplierAddress');
+        const statusTarget = document.getElementById('newSupplierStatus');
+        const table = getTable();
+        if (!nameInput || !statusTarget || !table) {
+            return;
+        }
+        const payload = {
+            name: (nameInput.value || '').trim(),
+            contact_person: (contactInput?.value || '').trim(),
+            email: (emailInput?.value || '').trim(),
+            phone_number: (phoneInput?.value || '').trim(),
+            address: (addressInput?.value || '').trim(),
+        };
+        if (!validatePayload(payload, statusTarget)) {
+            return;
+        }
+        showStatus(statusTarget, 'Saving...', 'saving');
+        fetch(table.dataset.saveUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(payload),
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().then(function (data) {
+                        throw data;
+                    });
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                insertSupplierRow(data.supplier);
+                nameInput.value = '';
+                if (contactInput) {
+                    contactInput.value = '';
+                }
+                if (emailInput) {
+                    emailInput.value = '';
+                }
+                if (phoneInput) {
+                    phoneInput.value = '';
+                }
+                if (addressInput) {
+                    addressInput.value = '';
+                }
+                nameInput.focus();
+                showStatus(statusTarget, 'Saved. Add another supplier when you are ready.', 'success');
+            })
+            .catch(function (errorData) {
+                const message = errorData && errorData.errors
+                    ? Object.values(errorData.errors).flat().join(' ')
+                    : 'Could not save this supplier.';
+                showStatus(statusTarget, message, 'error');
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        selectAllCheckbox = document.getElementById('selectAllSuppliers');
+        bulkDeleteButton = document.getElementById('bulkDeleteButton');
+        bulkDeleteStatus = document.getElementById('bulkDeleteStatus');
+
+        const rows = document.querySelectorAll('.supplier-row');
+        rows.forEach(function (row) {
+            attachRowEvents(row);
+            applySupplierToRow(row, getSupplierFromRow(row));
+        });
+        toggleEmptyState();
+
+        const searchInput = document.getElementById('supplierSearchInput');
+        if (searchInput) {
+            currentSearchQuery = searchInput.value || '';
+            searchInput.addEventListener('input', function () {
+                currentSearchQuery = searchInput.value || '';
+                filterSuppliers(currentSearchQuery);
+            });
+        }
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                const visibleCheckboxes = getVisibleRowCheckboxes();
+                visibleCheckboxes.forEach(function (checkbox) {
+                    checkbox.checked = selectAllCheckbox.checked;
+                });
+                updateBulkSelectionUi();
+            });
+        }
+
+        if (bulkDeleteButton) {
+            bulkDeleteButton.addEventListener('click', function () {
+                bulkDeleteSelectedRows();
+            });
+        }
+
+        const addButton = document.getElementById('addSupplierButton');
+        if (addButton) {
+            addButton.addEventListener('click', function () {
+                handleNewSupplier();
+            });
+        }
+
+        [
+            'newSupplierName',
+            'newSupplierContact',
+            'newSupplierEmail',
+            'newSupplierPhone',
+            'newSupplierAddress',
+        ].forEach(function (id) {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        handleNewSupplier();
+                    }
+                });
+            }
+        });
+
+        filterSuppliers(currentSearchQuery);
+        updateBulkSelectionUi();
+    });
+})();
+</script>
+
+{% endblock %}

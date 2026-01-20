@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create an Account{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2 class="text-center mb-4">Create an Account</h2>
+            <form id="signup-form" method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+                
+                {{ form|crispy }}
+
+                <!-- Hidden Consent Field -->
+                <input type="hidden" name="consent" value="true">
+
+                <!-- Subtle Consent Text -->
+                <small>
+                    By proceeding, you confirm that you have read and agree to our
+                    <a href="{% url 'accounts:terms_and_conditions' %}" target="_blank">Terms and Conditions</a>,
+                    <a href="{% url 'accounts:privacy_policy' %}" target="_blank">Privacy Policy</a>, and
+                    <a href="{% url 'accounts:cookies_policy' %}" target="_blank">Cookies Policy</a>.
+                </small>
+
+                <div id="password-match-feedback" class="mt-2"></div>
+                
+                <button 
+                    type="submit" 
+                    class="btn btn-primary btn-block mt-3" 
+                    id="submit-btn" 
+                    disabled
+                >
+                    Proceed
+                </button>
+            </form>
+            <p class="mt-4 text-center">
+                Already have an account? <a href="{% url 'accounts:login' %}">Log in here</a>.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Form Validation -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const password1 = document.getElementById('id_password1');
+        const password2 = document.getElementById('id_password2');
+        const feedback = document.getElementById('password-match-feedback');
+        const submitButton = document.getElementById('submit-btn');
+
+        function updatePasswordFeedback() {
+            if (password1.value && password2.value) {
+                if (password1.value === password2.value) {
+                    feedback.innerHTML = '<span class="text-success">&#10004; Passwords match</span>';
+                } else {
+                    feedback.innerHTML = '<span class="text-danger">&#10008; Passwords do not match</span>';
+                }
+            } else {
+                feedback.innerHTML = '';
+            }
+        }
+
+        function toggleSubmitButton() {
+            const passwordsMatch = password1.value === password2.value && password1.value !== '';
+            submitButton.disabled = !passwordsMatch;
+        }
+
+        // Event Listeners
+        password1.addEventListener('input', () => {
+            updatePasswordFeedback();
+            toggleSubmitButton();
+        });
+
+        password2.addEventListener('input', () => {
+            updatePasswordFeedback();
+            toggleSubmitButton();
+        });
+    });
+</script>
+{% endblock %}

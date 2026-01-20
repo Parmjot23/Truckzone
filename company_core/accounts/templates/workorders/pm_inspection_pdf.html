@@ -1,0 +1,555 @@
+{% load static custom_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>PM Inspection Sheet – Work Order {% if workorder %}#{{ workorder.id }}{% endif %}</title>
+    <style>
+        :root {
+            --font-primary: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            --text-dark: #111827;
+            --text-light: #6b7280;
+            --border-color: #d1d5db;
+            --bg-header: #f3f4f6;
+            --primary-blue: #2563eb;
+            --success-bg: #dcfce7;
+            --success-text: #166534;
+            --fail-bg: #fee2e2;
+            --fail-text: #991b1b;
+        }
+
+        @page {
+            size: Letter;
+            margin: 10mm 12mm; /* Reduced margins slightly for more space */
+        }
+
+        body {
+            font-family: var(--font-primary);
+            font-size: 9pt; /* Standardized compact font size */
+            color: var(--text-dark);
+            margin: 0;
+            background: #ffffff;
+            line-height: 1.3;
+        }
+
+        /* --- Header Section --- */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid var(--text-dark);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .brand-logo img {
+            max-width: 100px;
+            max-height: 60px;
+            object-fit: contain;
+        }
+
+        .brand-info h1 {
+            font-size: 14pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin: 0 0 2px 0;
+            color: var(--text-dark);
+        }
+
+        .brand-info p {
+            margin: 0;
+            font-size: 8pt;
+            color: var(--text-light);
+        }
+
+        .meta-table {
+            border-collapse: collapse;
+            font-size: 8pt;
+        }
+
+        .meta-table th {
+            text-align: right;
+            padding-right: 8px;
+            color: var(--text-light);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .meta-table td {
+            text-align: right;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        /* --- Title Section --- */
+        .doc-title-block {
+            text-align: center;
+            margin-bottom: 15px;
+            background: var(--bg-header);
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .doc-title {
+            font-size: 12pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .doc-subtitle {
+            font-size: 8pt;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-top: 2px;
+        }
+
+        /* --- Top Info Grid (Compact) --- */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .info-box {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .info-box-header {
+            background: var(--bg-header);
+            padding: 4px 8px;
+            font-size: 8pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .compact-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8.5pt;
+        }
+
+        .compact-table th, .compact-table td {
+            padding: 3px 8px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .compact-table th {
+            text-align: left;
+            width: 35%;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .compact-table tr:last-child td, 
+        .compact-table tr:last-child th {
+            border-bottom: none;
+        }
+
+        /* --- Overall Status --- */
+        .status-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--text-dark);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-weight: 700;
+            font-size: 9pt;
+            text-transform: uppercase;
+        }
+
+        .status-pill {
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 8pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            border: 1px solid transparent;
+        }
+        .status-pill.pass { background: var(--success-bg); color: var(--success-text); border-color: var(--success-text); }
+        .status-pill.fail { background: var(--fail-bg); color: var(--fail-text); border-color: var(--fail-text); }
+        .status-pill.na { background: #f3f4f6; color: #6b7280; border-color: #d1d5db; }
+        .status-pill.inverse-pass { background: white; color: var(--success-text); }
+        .status-pill.inverse-fail { background: white; color: var(--fail-text); }
+
+        /* --- Main Inspection Table --- */
+        .checklist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .checklist-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            margin: 0;
+            border: 1px solid var(--border-color);
+            background: #fff;
+        }
+
+        .checklist-table thead th {
+            background: #e5e7eb;
+            color: var(--text-dark);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 7.5pt;
+            padding: 6px 8px;
+            border-bottom: 2px solid var(--border-color);
+            text-align: left;
+        }
+
+        .checklist-table td {
+            padding: 4px 8px;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        .checklist-table tr:nth-child(even) { background-color: #f9fafb; }
+
+        .col-index { width: 30px; text-align: center; font-weight: bold; color: var(--text-light); }
+        .col-item { width: 40%; }
+        .col-status { width: 60px; text-align: center; }
+        .col-notes { width: auto; font-style: italic; color: #4b5563; font-size: 8.5pt; }
+
+        /* Section Breaks in Table */
+        .section-row td,
+        .section-heading-row td {
+            background: var(--text-dark) !important;
+            color: white;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+        }
+
+        /* --- Measurements Section (Horizontal Layout) --- */
+        .measurements-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .measurement-block {
+            flex: 1;
+            min-width: 300px; /* Allows wrapping on very small screens, aligns usually */
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .measurement-block.full-width {
+            flex-basis: 100%;
+        }
+
+        .measurement-header {
+            background: var(--bg-header);
+            padding: 5px 10px;
+            font-size: 8pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--primary-blue);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8pt;
+            text-align: center;
+        }
+
+        .data-table th {
+            background: #f9fafb;
+            padding: 4px;
+            border: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        .data-table td {
+            padding: 4px;
+            border: 1px solid var(--border-color);
+            font-family: monospace; /* Helps align numbers */
+            font-size: 9pt;
+        }
+
+        /* --- Footer / Notes --- */
+        .comments-section {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            min-height: 60px;
+            margin-bottom: 15px;
+            background: #f9fafb;
+        }
+        
+        .comments-title {
+            font-size: 8pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            color: var(--text-light);
+        }
+
+        .signature-row {
+            border-top: 1px solid var(--text-dark);
+            margin-top: 25px;
+            padding-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-light);
+        }
+
+        .signature-row span {
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        .signature-line {
+            flex: 1;
+            border-bottom: 1px solid var(--text-dark);
+            margin: 0 12px;
+        }
+        
+        /* Helper for blank PDFs */
+        body.blank-pdf .checklist-table td { height: 20px; }
+        body.blank-pdf .data-table td { height: 18px; color: transparent; }
+    </style>
+</head>
+<body{% if is_blank %} class="blank-pdf"{% endif %}>
+
+    <!-- Header -->
+    <div class="header-container">
+        <div class="brand-section">
+            <div class="brand-logo">
+                {% if company_logo_url %}
+                <img src="{{ company_logo_url }}" alt="Logo">
+                {% else %}
+                <img src="{{ company_logo_url }}" alt="Logo">
+                {% endif %}
+            </div>
+            <div class="brand-info">
+                <h1>{{ business_info.name|default:business_name|default:default_business_name }}</h1>
+                <p>
+                    {% if business_info.address %}{{ business_info.address|linebreaksbr }} &bull; {% endif %}
+                    {% if business_info.phone %}{{ business_info.phone }} &bull; {% endif %}
+                    {% if business_info.email %}{{ business_info.email }}{% endif %}
+                </p>
+            </div>
+        </div>
+        <table class="meta-table">
+            <tr><th>Work Order</th><td>{% if is_blank %}&nbsp;{% elif workorder %}#{{ workorder.id }}{% else %}—{% endif %}</td></tr>
+            <tr><th>Date</th><td>{% if is_blank %}&nbsp;{% else %}{{ inspection_date|default:"—" }}{% endif %}</td></tr>
+            <tr><th>Inspector</th><td>{% if is_blank %}&nbsp;{% else %}{{ inspector_name|default:"—" }}{% endif %}</td></tr>
+        </table>
+    </div>
+
+    <!-- Document Title -->
+    <div class="doc-title-block">
+        <div class="doc-title">PM Inspection Sheet</div>
+        <div class="doc-subtitle">45,000 KM / 120 Day Owner Operator – Truck &amp; Tractor (Air Brakes)</div>
+    </div>
+
+    <!-- Info Grid (Details & Vehicle Combined) -->
+    <div class="info-grid">
+        <div class="info-box">
+            <div class="info-box-header">Inspection Details</div>
+            <table class="compact-table">
+                <tr><th>Schedule Due</th><td>{{ scheduled_date|default:"—" }}</td></tr>
+                <tr><th>Customer</th><td>{{ customer_name|default:"—" }}</td></tr>
+                <tr><th>Location</th><td>{{ location|default:"—" }}</td></tr>
+                <tr><th>Inspected By</th><td>{{ inspector_name|default:"—" }}</td></tr>
+            </table>
+        </div>
+        <div class="info-box">
+            <div class="info-box-header">Vehicle Information</div>
+            <table class="compact-table">
+                <tr><th>Unit #</th><td>{{ vehicle_info.unit_number|default:"—" }}</td></tr>
+                <tr><th>VIN</th><td>{{ vehicle_info.vin|default:"—" }}</td></tr>
+                <tr><th>Make/Model</th><td>{{ vehicle_info.make_model|default:"—" }}</td></tr>
+                <tr><th>Odometer</th><td>{{ vehicle_info.mileage|default:"—" }}</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Overall Status Banner -->
+    <div class="status-banner">
+        <span>Overall Inspection Result</span>
+        {% if overall_status == 'fail' %}
+            <span class="status-pill inverse-fail">FAIL</span>
+        {% elif overall_status == 'pass' %}
+            <span class="status-pill inverse-pass">PASS</span>
+        {% else %}
+            <span style="font-weight: 400; opacity: 0.7;">(Pending)</span>
+        {% endif %}
+    </div>
+
+    <!-- Inspection Items -->
+    <div class="checklist-grid">
+        {% for section in checklist_sections %}
+        <table class="checklist-table">
+            <thead>
+                <tr class="section-heading-row">
+                    <td colspan="4">{{ forloop.counter }}. {{ section.title }}</td>
+                </tr>
+                <tr>
+                    <th class="col-index">#</th>
+                    <th class="col-item">Inspection Point</th>
+                    <th class="col-status">Result</th>
+                    <th class="col-notes">Notes / Observations</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in section.items %}
+                {% with entry=checklist_map|get_item:item.id %}
+                <tr>
+                    <td class="col-index">{{ item.code }}</td>
+                    <td class="col-item">{{ item.label }}</td>
+                    <td class="col-status">
+                        {% if entry.status == 'fail' %}<span class="status-pill fail">Fail</span>
+                        {% elif entry.status == 'pass' %}<span class="status-pill pass">Pass</span>
+                        {% elif entry.status == 'na' %}<span class="status-pill na">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td class="col-notes">{% if entry.notes %}{{ entry.notes|linebreaksbr }}{% endif %}</td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endfor %}
+    </div>
+
+    <!-- Measurements (Compact Grid) -->
+    <div class="measurements-container">
+        <!-- Tire Depth / Pressure (Full Width) -->
+        <div class="measurement-block full-width">
+            <div class="measurement-header">Tire Depth &amp; Pressure</div>
+            {% with tread_values=measurement_map|get_item:'tread_depth' pressure_values=measurement_map|get_item:'tire_pressure' %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">Type</th>
+                        <th colspan="5">Left Side</th>
+                        <th colspan="5">Right Side</th>
+                    </tr>
+                    <tr>
+                        <th>Front</th><th>Mid Out</th><th>Mid In</th><th>Rear Out</th><th>Rear In</th>
+                        <th>Front</th><th>Mid Out</th><th>Mid In</th><th>Rear Out</th><th>Rear In</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th style="text-align: left;">Depth (/32)</th>
+                        <td>{{ tread_values|get_item:'tire-depth-lf'|default:"-" }}</td>
+                        <td>{{ tread_values|get_item:'tire-depth-lmo'|default:"-" }}</td>
+                        <td>{{ tread_values|get_item:'tire-depth-lmi'|default:"-" }}</td>
+                        <td>{{ tread_values|get_item:'tire-depth-lro'|default:"-" }}</td>
+                        <td>{{ tread_values|get_item:'tire-depth-lri'|default:"-" }}</td>
+                        <td>{{ tread_values|get_item:'tire-depth-rf'|default:"-" }}</td>
+                        <td>{{ tread_values|get_item:'tire-depth-rmo'|default:"-" }}</td>
+                        <td>{{ tread_values|get_item:'tire-depth-rmi'|default:"-" }}</td>
+                        <td>{{ tread_values|get_item:'tire-depth-rro'|default:"-" }}</td>
+                        <td>{{ tread_values|get_item:'tire-depth-rri'|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th style="text-align: left;">PSI</th>
+                        <td>{{ pressure_values|get_item:'tire-pressure-lf'|default:"-" }}</td>
+                        <td>{{ pressure_values|get_item:'tire-pressure-lmo'|default:"-" }}</td>
+                        <td>{{ pressure_values|get_item:'tire-pressure-lmi'|default:"-" }}</td>
+                        <td>{{ pressure_values|get_item:'tire-pressure-lro'|default:"-" }}</td>
+                        <td>{{ pressure_values|get_item:'tire-pressure-lri'|default:"-" }}</td>
+                        <td>{{ pressure_values|get_item:'tire-pressure-rf'|default:"-" }}</td>
+                        <td>{{ pressure_values|get_item:'tire-pressure-rmo'|default:"-" }}</td>
+                        <td>{{ pressure_values|get_item:'tire-pressure-rmi'|default:"-" }}</td>
+                        <td>{{ pressure_values|get_item:'tire-pressure-rro'|default:"-" }}</td>
+                        <td>{{ pressure_values|get_item:'tire-pressure-rri'|default:"-" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            {% endwith %}
+        </div>
+
+        <!-- Pushrod (Half Width) -->
+        <div class="measurement-block">
+            <div class="measurement-header">Pushrod Stroke (in./16)</div>
+            {% with pushrod_values=measurement_map|get_item:'pushrod_stroke' %}
+            <table class="data-table">
+                <thead>
+                    <tr><th colspan="2">Left</th><th colspan="2">Right</th></tr>
+                    <tr><th>Mid</th><th>Rear</th><th>Mid</th><th>Rear</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ pushrod_values|get_item:'pushrod-lc'|default:"-" }}</td>
+                        <td>{{ pushrod_values|get_item:'pushrod-lr'|default:"-" }}</td>
+                        <td>{{ pushrod_values|get_item:'pushrod-rc'|default:"-" }}</td>
+                        <td>{{ pushrod_values|get_item:'pushrod-rr'|default:"-" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            {% endwith %}
+        </div>
+
+        <!-- Chamber (Half Width) -->
+        <div class="measurement-block">
+            <div class="measurement-header">Chamber Size</div>
+            {% with chamber_values=measurement_map|get_item:'chamber_size' %}
+            <table class="data-table">
+                <thead>
+                    <tr><th colspan="3">Left</th><th colspan="3">Right</th></tr>
+                    <tr><th>Front</th><th>Mid</th><th>Rear</th><th>Front</th><th>Mid</th><th>Rear</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ chamber_values|get_item:'chamber-front-left'|default:"-" }}</td>
+                        <td>{{ chamber_values|get_item:'chamber-middle-left'|default:"-" }}</td>
+                        <td>{{ chamber_values|get_item:'chamber-rear-left'|default:"-" }}</td>
+                        <td>{{ chamber_values|get_item:'chamber-front-right'|default:"-" }}</td>
+                        <td>{{ chamber_values|get_item:'chamber-middle-right'|default:"-" }}</td>
+                        <td>{{ chamber_values|get_item:'chamber-rear-right'|default:"-" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            {% endwith %}
+        </div>
+    </div>
+
+    <!-- Comments & Footer -->
+    <div class="comments-section">
+        <div class="comments-title">Comments / Repairs Needed</div>
+        <div style="font-size: 9pt;">
+            {% if additional_notes %}{{ additional_notes|linebreaksbr }}{% else %}&nbsp;{% endif %}
+        </div>
+    </div>
+
+    <div class="signature-row">
+        <span>Technician Signature</span>
+        <div class="signature-line">{% if inspector_name %}{{ inspector_name }}{% else %}&nbsp;{% endif %}</div>
+        <span>Date: {{ inspection_date|default:"" }}</span>
+    </div>
+
+</body>
+</html>

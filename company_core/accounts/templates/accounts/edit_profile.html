@@ -1,0 +1,84 @@
+{% extends 'accounts/mach/mach_portal_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Edit Profile</h2>
+    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate id="profile-form">
+        {% csrf_token %}
+        {% crispy form %}
+    </form>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Function to toggle interact_email field based on checkbox
+        function toggleInteractEmail() {
+            const checkbox = document.getElementById('id_use_company_email_as_interact_email');
+            const interactEmailField = document.getElementById('id_interact_email');
+            const companyEmailField = document.getElementById('id_company_email');
+
+            if (checkbox && interactEmailField && companyEmailField) {
+                if (checkbox.checked) {
+                    interactEmailField.value = companyEmailField.value;
+                    interactEmailField.disabled = true;
+                } else {
+                    interactEmailField.disabled = false;
+                    // If interact_email was previously set to company_email, clear it
+                    if (interactEmailField.value === companyEmailField.value) {
+                        interactEmailField.value = '';
+                    }
+                }
+            }
+        }
+
+        // Function to update interact_email when company_email changes and checkbox is checked
+        function updateInteractEmailOnCompanyEmailChange() {
+            const checkbox = document.getElementById('id_use_company_email_as_interact_email');
+            const interactEmailField = document.getElementById('id_interact_email');
+            const companyEmailField = document.getElementById('id_company_email');
+
+            if (checkbox.checked) {
+                interactEmailField.value = companyEmailField.value;
+            }
+        }
+
+        // Initialize the state on page load
+        toggleInteractEmail();
+
+        // Add event listener to the checkbox
+        const checkbox = document.getElementById('id_use_company_email_as_interact_email');
+        if (checkbox) {
+            checkbox.addEventListener('change', toggleInteractEmail);
+        }
+
+        // Add event listener to company_email field
+        const companyEmailField = document.getElementById('id_company_email');
+        if (companyEmailField) {
+            companyEmailField.addEventListener('input', updateInteractEmailOnCompanyEmailChange);
+        }
+
+        // Toggle QST field based on province selection
+        const provinceField = document.getElementById('id_province');
+        const qstField = document.getElementById('qst-field');
+        const qstInput = qstField ? qstField.querySelector('input') : null;
+
+        function toggleQstField() {
+            if (!provinceField || !qstField) {
+                return;
+            }
+            const isQc = provinceField.value === 'QC';
+            qstField.classList.toggle('d-none', !isQc);
+            if (!isQc && qstInput) {
+                qstInput.value = '';
+            }
+        }
+
+        if (provinceField && qstField) {
+            provinceField.addEventListener('change', toggleQstField);
+            toggleQstField();
+        }
+    });
+</script>
+{% endblock %}

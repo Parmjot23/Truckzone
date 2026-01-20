@@ -1,0 +1,214 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %} {# Assuming 'currency' filter is here #}
+{% load static %} {# For static files like jQuery if not using CDN directly in customer_portal_base.html #}
+
+{% block title %}Overdue Customers{% endblock %}
+
+{% block content %}
+<style>
+    /* Totals Section Styles */
+    .totals-section {
+        margin-bottom: 30px;
+    }
+    .totals-card {
+        border-radius: 10px;
+        background-color: #0d6efd;
+        color: #fff;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px; /* Ensure consistent margin for cards */
+    }
+    .totals-card h5 {
+        font-size: 18px;
+        margin-bottom: 10px;
+    }
+    .totals-card p {
+        font-size: 24px;
+        font-weight: bold;
+        margin: 0;
+    }
+    /* Table and Search Form Styles */
+    .table-responsive {
+        margin-top: 20px;
+    }
+    .search-form input {
+        max-width: 300px;
+        display: inline-block;
+        margin-right: 0.5rem; /* Added margin for spacing */
+    }
+    /* Loading Modal Customization */
+    .modal-loading .modal-dialog {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 200px; /* Or adjust as needed */
+    }
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+</style>
+
+<div class="container mt-5">
+    <h2 class="mb-4 text-center">Overdue Customers</h2>
+
+    <div class="row totals-section">
+        <div class="col-md-6">
+            <div class="totals-card">
+                <h5>Total Overdue Amount</h5>
+                <p>{{ overdue_total_balance|currency }}</p>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="totals-card">
+                <h5>Number of Overdue Customers</h5>
+                <p>{{ overdue_customers|length }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3 text-center">
+        <form method="GET" action="{% url 'accounts:customer_overdue_list' %}" id="search-form" class="search-form">
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Search by customer name" class="form-control d-inline-block">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>Overdue Amount</th>
+                            <th>Reminders Sent</th>      {# New Column #}
+                            <th>Last Reminder Sent</th>  {# New Column #}
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in overdue_customers %}
+                        <tr id="customer-row-{{ data.customer.id }}"> {# Changed ID for clarity #}
+                            <td>{{ data.customer.name }}</td>
+                            <td>{{ data.overdue_total|currency }}</td>
+                            <td class="reminder-count-cell">{{ data.reminder_count }}</td> {# New Cell #}
+                            <td class="last-reminder-date-cell"> {# New Cell #}
+                                {% if data.last_reminder_sent_on %}
+                                    {% if data.last_reminder_sent_on.date == today_date %}
+                                        Today
+                                    {% else %}
+                                        {{ data.last_reminder_sent_on|date:"Y-m-d" }} {# Or your preferred format e.g., "M d, Y" #}
+                                    {% endif %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button
+                                    type="button"
+                                    class="btn btn-danger btn-sm send-overdue-btn"
+                                    data-customer-id="{{ data.customer.id }}"
+                                    data-customer-name="{{ data.customer.name }}"> {# Optional: for confirm message #}
+                                    <i class="fas fa-envelope"></i> Send Reminder
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No overdue customers found.</td> {# Adjusted colspan to 5 #}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="loadingModal" tabindex="-1" role="dialog" aria-labelledby="loadingModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-loading" role="document"> {# Added modal-dialog-centered #}
+    <div class="modal-content">
+      <div class="modal-body text-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span> {# Changed sr-only to visually-hidden for Bootstrap 5+ #}
+        </div>
+        <p class="mt-3 mb-0">Sending reminder...</p> {# Removed extra margin from p if modal-body has padding #}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Ensure jQuery is loaded, ideally in your customer_portal_base.html template #}
+{# <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> #}
+{# Ensure Bootstrap JS is loaded for modal functionality #}
+{# <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.x.x/dist/js/bootstrap.bundle.min.js"></script> #}
+
+<script>
+$(document).ready(function() {
+    $('.send-overdue-btn').on('click', function(e) {
+        e.preventDefault();
+        var btn = $(this);
+        var customerId = btn.data('customer-id');
+        var customerName = btn.data('customer-name') || "this customer"; // Fallback for customer name
+
+        if (!confirm("Are you sure you want to send an overdue reminder email for " + customerName + "?")) {
+            return;
+        }
+
+        // Show the loading modal
+        var loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        loadingModal.show();
+
+        // Make sure this URL is correctly resolved by Django's `url` template tag if possible,
+        // or construct it carefully. For '/customers/.../overdue/reminder/', it's often manually constructed.
+        var url = '/customers/' + customerId + '/overdue/reminder/'; 
+
+        $.ajax({
+            url: url,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response) { // Renamed 'data' to 'response' for clarity
+                loadingModal.hide();
+                if (response.error) {
+                    alert("Error: " + response.error);
+                } else if (response.message) {
+                    alert(response.message);
+                    // OPTIONAL: Update the row data dynamically if your endpoint returns new values
+                    // For example, if your 'trigger_overdue_reminder' returns:
+                    // { message: "...", new_reminder_count: 3, new_last_reminder_display: "Today" }
+                    if (response.new_reminder_count !== undefined && response.new_last_reminder_display !== undefined) {
+                        var row = $('#customer-row-' + customerId);
+                        row.find('.reminder-count-cell').text(response.new_reminder_count);
+                        row.find('.last-reminder-date-cell').text(response.new_last_reminder_display);
+                    } else {
+                        // Simple reload if dynamic update is too complex or not implemented
+                        // window.location.reload(); 
+                    }
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                loadingModal.hide();
+                var errorMessage = "An unexpected error occurred. Please try again later.";
+                if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
+                    errorMessage = "Error: " + jqXHR.responseJSON.error;
+                } else if (jqXHR.responseText) {
+                    // Try to parse if it's a plain text error from server
+                    try {
+                        var response = JSON.parse(jqXHR.responseText);
+                        if(response.error) errorMessage = "Error: " + response.error;
+                    } catch(e) { /* Ignore parsing error, use generic message */ }
+                }
+                alert(errorMessage);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

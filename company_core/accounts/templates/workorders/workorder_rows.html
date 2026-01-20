@@ -1,0 +1,64 @@
+﻿{% for order in workorders %}
+<tr data-workorder-id="{{ order.id }}">
+  <td>WO #{{ order.id }}</td>
+  <td>
+    {% if order.unit_no %}
+      {{ order.unit_no }}
+    {% elif order.vehicle and order.vehicle.unit_number %}
+      {{ order.vehicle.unit_number }}
+    {% else %}
+      &mdash;
+    {% endif %}
+  </td>
+  <td><a href="{% url 'accounts:workorder_detail' order.id %}" class="text-primary text-decoration-none">{{ order.customer }}</a></td>
+  <td>{{ order.scheduled_date|date:"M d, Y" }}</td>
+  <td><span class="badge-soft {% if order.status == 'completed' %}badge-status-completed{% else %}badge-status{% endif %}">{{ order.get_status_display }}</span></td>
+  <td>
+    {% if order.prepared_assignments %}
+      <div class="mechanic-summary">
+        <div class="mechanic-names">
+          {% for assignment in order.prepared_assignments %}
+            <span class="mech-name">{{ assignment.mechanic.name }}</span>{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <span class="text-muted">No mechanics assigned.</span>
+    {% endif %}
+  </td>
+  <td>
+    {% if order.prepared_assignments %}
+      <div class="portal-action-list">
+        {% for assignment in order.prepared_assignments %}
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="{{ assignment.portal_url }}" target="_blank" class="btn btn-outline-primary btn-sm">Open</a>
+            <button type="button" class="btn btn-outline-secondary btn-sm copy-assignment-link" data-link="{{ assignment.portal_url }}"><i class="fa-regular fa-copy"></i></button>
+            <span class="badge-soft {% if assignment.submitted %}badge-submitted{% else %}badge-pending{% endif %}">{% if assignment.submitted %}Submitted{% else %}Pending{% endif %}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <span class="text-muted">No mechanics assigned.</span>
+    {% endif %}
+  </td>
+  <td class="text-center">
+    <div class="dropdown">
+      <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </button>
+      <div class="dropdown-menu dropdown-menu-end">
+        <a class="dropdown-item" href="{% url 'accounts:workorder_detail' order.id %}">View</a>
+        <a class="dropdown-item" href="{% url 'accounts:workorder_update' order.id %}">Edit</a>
+        <a class="dropdown-item text-danger" href="{% url 'accounts:workorder_delete' order.id %}">Delete</a>
+        {% if order.status == 'completed' %}
+          <a class="dropdown-item" href="{% url 'accounts:workorder_download' order.id %}">PDF</a>
+        {% endif %}
+      </div>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="7" class="text-center text-muted py-4">No work orders found.</td>
+</tr>
+{% endfor %}

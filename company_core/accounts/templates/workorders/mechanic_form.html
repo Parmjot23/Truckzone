@@ -1,0 +1,40 @@
+{% extends 'customer_portal_base.html' %}
+{% load crispy_forms_tags %}
+{% block content %}
+  <h1>{% if form.instance.pk %}Edit{% else %}Add{% endif %} Mechanic</h1>
+  <form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-primary">Save Mechanic</button>
+  </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const registerCheckbox = document.getElementById('id_register_portal');
+    const usernameInput = document.getElementById('id_portal_username');
+    const passwordInput = document.getElementById('id_portal_password');
+
+    if (!registerCheckbox || !usernameInput || !passwordInput) {
+        return; // Form does not include portal fields
+    }
+
+    const usernameField = usernameInput.closest('.form-group');
+    const passwordField = passwordInput.closest('.form-group');
+
+    function togglePortalFields() {
+        if (registerCheckbox.checked) {
+            usernameField.style.display = '';
+            passwordField.style.display = '';
+        } else {
+            usernameField.style.display = 'none';
+            passwordField.style.display = 'none';
+        }
+    }
+
+    togglePortalFields();
+    registerCheckbox.addEventListener('change', togglePortalFields);
+});
+</script>
+{% endblock %}

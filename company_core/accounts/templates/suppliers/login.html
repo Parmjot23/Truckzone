@@ -1,0 +1,49 @@
+{% extends "suppliers/portal_auth_base.html" %}
+{% load crispy_forms_tags %}
+{% block auth_page_title %}Supplier Portal Login{% endblock %}
+{% block auth_content %}
+  <div class="supplier-auth-hero">
+    <span class="badge"><i class="fas fa-truck-loading me-2"></i>Supplier partners</span>
+    <h1>Sign in to stay in sync with {{ business_name|default:default_business_name }}</h1>
+    <p>Access live inventory activity, purchase history, and a direct line back to the {{ business_name|default:default_business_name }} team.</p>
+  </div>
+  <div class="row justify-content-center">
+    <div class="col-lg-5 col-md-7">
+      <div class="supplier-auth-card p-4 p-lg-5">
+        {% if portal_switch_options %}
+          <div class="mb-4">
+            <div class="btn-group w-100" role="group" aria-label="Select a portal">
+              {% for option in portal_switch_options %}
+                <a href="{{ option.url }}" class="btn {% if option.slug == active_portal %}btn-info text-white{% else %}btn-outline-info{% endif %}">{{ option.label }} Portal</a>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+        <h2 class="h4 text-center mb-4">Supplier login</h2>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form|crispy }}
+          <input type="hidden" name="next" value="{{ next|default:'' }}">
+          <div class="d-grid">
+            <button type="submit" class="btn btn-info text-white">Sign in</button>
+          </div>
+        </form>
+        {% if form.errors %}
+          <div class="alert alert-danger mt-3 mb-0">
+            {% if form.non_field_errors %}
+              {% for error in form.non_field_errors %}
+                <div>{{ error|safe }}</div>
+              {% endfor %}
+            {% else %}
+              Your username and password didn't match. Please try again.
+            {% endif %}
+          </div>
+        {% endif %}
+        <div class="mt-4 small text-center">
+          <p class="mb-2">Need help with access? <a href="{% url 'accounts:contact_support' %}?source=supplier_portal">Contact {{ business_name|default:default_business_name }}</a>.</p>
+          <p class="mb-0"><a href="{% url 'accounts:password_reset' %}">Forgot your password?</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

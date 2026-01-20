@@ -1,0 +1,1139 @@
+{% extends 'customer_portal_base.html' %}
+{% load humanize form_tags %}
+
+{% block title %}My Accountant{% endblock %}
+
+{% block extra_css %}
+<style>
+  .accountant-surface {
+    background: radial-gradient(circle at 18% 12%, rgba(37, 99, 235, 0.08), transparent 45%),
+                radial-gradient(circle at 82% 0%, rgba(14, 116, 144, 0.06), transparent 40%),
+                var(--surface-alt);
+    border-radius: 18px;
+    padding: 0.5rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  .accountant-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* Override app-content padding for full width */
+  .app-content {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Ensure page-shell uses full width */
+  .page-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* Force full width for all major containers */
+  .accountant-surface,
+  .accountant-shell,
+  .page-shell,
+  .page-card,
+  .page-header,
+  .page-toolbar {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Ensure flex children use full width */
+  .accountant-shell > *,
+  .page-shell > * {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Ultimate full-width enforcement */
+  .accountant-shell * {
+    box-sizing: border-box !important;
+  }
+
+  .accountant-shell .page-card,
+  .accountant-shell .filter-grid,
+  .accountant-shell .accountant-metrics,
+  .accountant-shell .profile-summary,
+  .accountant-shell table,
+  .accountant-shell .data-table {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .accountant-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    width: 100%;
+  }
+
+  .metric-card .label {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .metric-card .value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary);
+    margin-top: 0.35rem;
+  }
+
+  .metric-card .muted {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 0.35rem;
+  }
+
+  .accountant-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+  }
+
+  .accountant-split {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: #eef2ff;
+    color: #1d4ed8;
+  }
+
+  .status-pill.success { background: #dcfce7; color: #166534; }
+  .status-pill.warning { background: #fff7ed; color: #c2410c; }
+  .status-pill.danger { background: #fee2e2; color: #b91c1c; }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .filter-grid label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .filter-grid .form-control,
+  .filter-grid .form-select {
+    border-radius: 12px;
+  }
+
+  .profile-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    width: 100%;
+  }
+
+  .profile-summary .item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.7rem;
+    width: 100%;
+  }
+
+  .profile-summary .item .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .profile-summary .item .value {
+    font-weight: 700;
+    margin-top: 0.35rem;
+  }
+
+  /* Ensure all sections use full available width */
+  .page-card {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .page-header {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .page-toolbar {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .quick-range {
+    border-radius: 999px;
+    padding: 0.35rem 0.8rem;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--primary);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .quick-range.is-active {
+    background: #e0e7ff;
+    color: #1d4ed8;
+    border-color: transparent;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.15);
+  }
+
+  .empty-row {
+    text-align: center;
+    color: var(--muted);
+    padding: 0.75rem;
+  }
+
+  .table-footer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .pagination-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pagination-controls .btn {
+    padding: 0.25rem 0.6rem;
+    font-weight: 700;
+  }
+
+  .pagination-controls .page-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .report-checklist {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .report-checklist .form-check {
+    margin-bottom: 0;
+  }
+
+  .report-checklist .form-check-label {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: inherit;
+  }
+
+  .recipient-fields {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .accountant-surface {
+      padding: 0.25rem;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    .accountant-shell {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    .accountant-metrics {
+      width: 100% !important;
+    }
+
+    .filter-grid {
+      width: 100% !important;
+    }
+
+    .profile-summary {
+      width: 100% !important;
+    }
+
+    .page-shell {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    .app-content {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="accountant-surface">
+  <div class="accountant-shell page-shell">
+    <div class="page-header">
+      <div>
+        <h2 class="mb-0">My Accountant</h2>
+        <p class="text-muted mb-0">Reports, exports, and previews built from your books.</p>
+      </div>
+      <div class="page-toolbar d-flex flex-wrap gap-2 accountant-toolbar">
+        <button type="button" class="pill-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#accountantProfileModal">
+          <i class="fa-solid fa-user-gear"></i> Accountant profile
+        </button>
+        {% if filters_querystring %}
+          {% with "?"|add:filters_querystring|add:"&" as export_query %}
+            <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=income_expense&format=pdf" class="pill-primary btn-sm">
+              <i class="fa-solid fa-file-pdf"></i> Profit and loss PDF
+            </a>
+            <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=tax_report&format=excel" class="pill-secondary btn-sm">
+              <i class="fa-solid fa-file-excel"></i> Tax summary Excel
+            </a>
+          {% endwith %}
+        {% else %}
+          <a href="{% url 'accounts:download_report' %}?report_type=income_expense&format=pdf" class="pill-primary btn-sm">
+            <i class="fa-solid fa-file-pdf"></i> Profit and loss PDF
+          </a>
+          <a href="{% url 'accounts:download_report' %}?report_type=tax_report&format=excel" class="pill-secondary btn-sm">
+            <i class="fa-solid fa-file-excel"></i> Tax summary Excel
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="page-card">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <h5 class="mb-1">Report filters</h5>
+          <p class="text-muted small mb-0">Apply filters to preview and export.</p>
+        </div>
+        <span class="status-pill"><i class="fa-solid fa-filter"></i> Live</span>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        <a class="quick-range {% if active_range == 'today' %}is-active{% endif %}" href="{% url 'accounts:accountant_hub' %}?range=today">
+          <i class="fa-solid fa-calendar-day"></i> Today
+        </a>
+        <a class="quick-range {% if active_range == 'yesterday' %}is-active{% endif %}" href="{% url 'accounts:accountant_hub' %}?range=yesterday">
+          <i class="fa-solid fa-calendar-minus"></i> Yesterday
+        </a>
+        <a class="quick-range {% if active_range == 'this_week' %}is-active{% endif %}" href="{% url 'accounts:accountant_hub' %}?range=this_week">
+          <i class="fa-solid fa-calendar-week"></i> This week
+        </a>
+        <a class="quick-range {% if active_range == 'last_week' %}is-active{% endif %}" href="{% url 'accounts:accountant_hub' %}?range=last_week">
+          <i class="fa-solid fa-calendar-week"></i> Last week
+        </a>
+        <a class="quick-range {% if active_range == 'this_month' %}is-active{% endif %}" href="{% url 'accounts:accountant_hub' %}?range=this_month">
+          <i class="fa-solid fa-calendar"></i> This month
+        </a>
+        <a class="quick-range {% if active_range == 'last_month' %}is-active{% endif %}" href="{% url 'accounts:accountant_hub' %}?range=last_month">
+          <i class="fa-solid fa-calendar"></i> Last month
+        </a>
+        <a class="quick-range {% if active_range == 'this_year' %}is-active{% endif %}" href="{% url 'accounts:accountant_hub' %}?range=this_year">
+          <i class="fa-solid fa-calendar-days"></i> This year
+        </a>
+        <a class="quick-range {% if active_range == 'last_year' %}is-active{% endif %}" href="{% url 'accounts:accountant_hub' %}?range=last_year">
+          <i class="fa-solid fa-calendar-days"></i> Last year
+        </a>
+      </div>
+
+      <form method="get" class="mt-3">
+        <div class="filter-grid">
+          <div>
+            <label for="startDate">Start date</label>
+            <input id="startDate" type="date" name="start_date" class="form-control form-control-sm" value="{{ selected_start_date }}">
+          </div>
+          <div>
+            <label for="endDate">End date</label>
+            <input id="endDate" type="date" name="end_date" class="form-control form-control-sm" value="{{ selected_end_date }}">
+          </div>
+          <div>
+            <label for="reportYear">Year</label>
+            <select id="reportYear" name="year" class="form-select form-select-sm" data-select2-skip="true">
+              <option value="">All years</option>
+              {% for year in years %}
+                {% with year_label=year|date:"Y" %}
+                  <option value="{{ year_label }}" {% if selected_year == year_label %}selected{% endif %}>{{ year_label }}</option>
+                {% endwith %}
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="startMonth">Start month</label>
+            <input id="startMonth" type="month" name="start_month" class="form-control form-control-sm" value="{{ selected_start_month }}">
+          </div>
+          <div>
+            <label for="endMonth">End month</label>
+            <input id="endMonth" type="month" name="end_month" class="form-control form-control-sm" value="{{ selected_end_month }}">
+          </div>
+          <div>
+            <label for="singleMonth">Single month</label>
+            <input id="singleMonth" type="month" name="month" class="form-control form-control-sm" value="{{ month_selected }}">
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="pill-primary btn-sm"><i class="fa-solid fa-filter"></i> Apply filters</button>
+          <a href="{% url 'accounts:accountant_hub' %}" class="pill-secondary btn-sm">Clear</a>
+        </div>
+      </form>
+    </div>
+    <div class="accountant-metrics">
+      <div class="metric-card">
+        <div class="label">Reporting period</div>
+        <div class="value">{{ formatted_month }}</div>
+        <div class="muted">Filters applied to this preview.</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Total income</div>
+        <div class="value">{{ total_mach_income }}</div>
+        <div class="muted">Paid invoices.</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Total expenses</div>
+        <div class="value">{{ total_mach_expenses }}</div>
+        <div class="muted">Purchases and bills.</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Net margin</div>
+        <div class="value">{{ total_mac_margin }}</div>
+        <div class="muted">Income minus expenses.</div>
+      </div>
+    </div>
+
+    <div class="page-card">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h5 class="mb-1">Accountant portal access</h5>
+          <p class="text-muted small mb-0">Create a read-only login so your accountant can download reports directly.</p>
+        </div>
+        {% if accountant_portal_enabled %}
+          <span class="status-pill success"><i class="fa-solid fa-circle-check"></i> Enabled</span>
+        {% else %}
+          <span class="status-pill warning"><i class="fa-solid fa-circle-info"></i> Not active</span>
+        {% endif %}
+      </div>
+      <form method="post" class="mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="accountant_portal">
+        {% if accountant_portal_form.non_field_errors %}
+          <div class="alert alert-danger small mb-3">
+            {{ accountant_portal_form.non_field_errors }}
+          </div>
+        {% endif %}
+        <div class="filter-grid">
+          <div class="form-check form-switch">
+            {{ accountant_portal_form.register_portal|add_class:'form-check-input' }}
+            <label class="form-check-label" for="{{ accountant_portal_form.register_portal.id_for_label }}">{{ accountant_portal_form.register_portal.label }}</label>
+            {% if accountant_portal_form.register_portal.help_text %}
+              <div class="form-text">{{ accountant_portal_form.register_portal.help_text }}</div>
+            {% endif %}
+          </div>
+          <div>
+            <label for="{{ accountant_portal_form.portal_username.id_for_label }}">Portal username</label>
+            {{ accountant_portal_form.portal_username|add_class:'form-control form-control-sm' }}
+            {% if accountant_portal_form.portal_username.errors %}
+              <div class="text-danger small mt-1">{{ accountant_portal_form.portal_username.errors|striptags }}</div>
+            {% endif %}
+          </div>
+          <div>
+            <label for="{{ accountant_portal_form.portal_password.id_for_label }}">Temporary password</label>
+            {{ accountant_portal_form.portal_password|add_class:'form-control form-control-sm' }}
+            {% if accountant_portal_form.portal_password.help_text %}
+              <div class="form-text">{{ accountant_portal_form.portal_password.help_text }}</div>
+            {% endif %}
+            {% if accountant_portal_form.portal_password.errors %}
+              <div class="text-danger small mt-1">{{ accountant_portal_form.portal_password.errors|striptags }}</div>
+            {% endif %}
+          </div>
+          <div>
+            <label>Portal login link</label>
+            <input type="text" class="form-control form-control-sm" value="{{ accountant_portal_login_url }}" readonly>
+            <div class="form-text">Share this link with your accountant.</div>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="pill-primary btn-sm"><i class="fa-solid fa-user-shield"></i> Save portal access</button>
+          {% if accountant_portal_user %}
+            <span class="text-muted small align-self-center">Current login: {{ accountant_portal_user.username }}</span>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    <div class="page-card">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h5 class="mb-1">Report preview</h5>
+          <p class="text-muted small mb-0">Monthly summary for the selected period.</p>
+        </div>
+        <span class="status-pill"><i class="fa-solid fa-table"></i> Rows {{ monthly_data|length }}</span>
+      </div>
+      <div class="table-responsive mt-3">
+        <table id="monthly-report-table" class="table data-table mb-0 js-paginate" data-page-size="10">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th class="text-end">Income</th>
+              <th class="text-end">Expenses</th>
+              <th class="text-end">Margin</th>
+              <th class="text-end">Tax collected</th>
+              <th class="text-end">Tax paid</th>
+              <th class="text-end">Tax difference</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if monthly_data %}
+              {% for row in monthly_data %}
+                <tr>
+                  <td>{{ row.month }}</td>
+                  <td class="text-end">{{ row.total_mach_income }}</td>
+                  <td class="text-end">{{ row.total_mach_expense }}</td>
+                  <td class="text-end">{{ row.margin_mach }}</td>
+                  <td class="text-end">{{ row.total_tax_collected_mach }}</td>
+                  <td class="text-end">{{ row.total_tax_paid_mach }}</td>
+                  <td class="text-end">{{ row.tax_difference_mach }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="7" class="empty-row">No report data available for the selected filters.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+      <div class="table-footer-actions">
+        <div class="table-actions">
+          {% if filters_querystring %}
+            {% with "?"|add:filters_querystring|add:"&" as export_query %}
+              <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=income_expense&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Profit and loss PDF</a>
+              <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=income_expense&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Profit and loss Excel</a>
+              <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=tax_report&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Tax summary PDF</a>
+              <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=tax_report&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Tax summary Excel</a>
+            {% endwith %}
+          {% else %}
+            <a href="{% url 'accounts:download_report' %}?report_type=income_expense&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Profit and loss PDF</a>
+            <a href="{% url 'accounts:download_report' %}?report_type=income_expense&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Profit and loss Excel</a>
+            <a href="{% url 'accounts:download_report' %}?report_type=tax_report&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Tax summary PDF</a>
+            <a href="{% url 'accounts:download_report' %}?report_type=tax_report&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Tax summary Excel</a>
+          {% endif %}
+        </div>
+        <div class="pagination-controls" data-pagination-for="monthly-report-table"></div>
+      </div>
+    </div>
+    <div class="accountant-split">
+      <div class="page-card">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h5 class="mb-1">Income summary</h5>
+            <p class="text-muted small mb-0">Paid invoices by date.</p>
+          </div>
+          <span class="status-pill"><i class="fa-solid fa-receipt"></i> {{ grouped_incomes|length }}</span>
+        </div>
+        <div class="table-responsive mt-3">
+          <table id="income-summary-table" class="table data-table mb-0 js-paginate" data-page-size="10">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th class="text-end">Invoices</th>
+                <th class="text-end">Total</th>
+                <th class="text-end">Tax</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if grouped_incomes %}
+                {% for row in grouped_incomes %}
+                  <tr>
+                    <td>
+                      <a href="{% url 'accounts:income_details_by_date' %}?date={{ row.date_fully_paid|date:'Y-m-d' }}{% if month_selected %}&month={{ month_selected }}{% endif %}">
+                        {{ row.date_fully_paid|date:"M j, Y" }}
+                      </a>
+                    </td>
+                    <td class="text-end">{{ row.total_invoices }}</td>
+                    <td class="text-end">${{ row.total_amount|floatformat:2|intcomma }}</td>
+                    <td class="text-end">${{ row.total_tax_collected|floatformat:2|intcomma }}</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="4" class="empty-row">No income data for the selected period.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer-actions">
+          <div class="table-actions">
+            {% if filters_querystring %}
+              {% with "?"|add:filters_querystring|add:"&" as export_query %}
+                <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=detailed_income&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Income journal PDF</a>
+                <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=detailed_income&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Income journal Excel</a>
+              {% endwith %}
+            {% else %}
+              <a href="{% url 'accounts:download_report' %}?report_type=detailed_income&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Income journal PDF</a>
+              <a href="{% url 'accounts:download_report' %}?report_type=detailed_income&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Income journal Excel</a>
+            {% endif %}
+          </div>
+          <div class="pagination-controls" data-pagination-for="income-summary-table"></div>
+        </div>
+      </div>
+
+      <div class="page-card">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h5 class="mb-1">Expense summary</h5>
+            <p class="text-muted small mb-0">Purchases and bills by date.</p>
+          </div>
+          <span class="status-pill"><i class="fa-solid fa-file-invoice-dollar"></i> {{ grouped_expenses|length }}</span>
+        </div>
+        <div class="table-responsive mt-3">
+          <table id="expense-summary-table" class="table data-table mb-0 js-paginate" data-page-size="10">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th class="text-end">Entries</th>
+                <th class="text-end">Total</th>
+                <th class="text-end">Tax</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if grouped_expenses %}
+                {% for row in grouped_expenses %}
+                  <tr>
+                    <td>
+                      <a href="{% url 'accounts:expense_details_by_date' %}?date={{ row.mech_expense__date|date:'Y-m-d' }}{% if month_selected %}&month={{ month_selected }}{% endif %}">
+                        {{ row.mech_expense__date|date:"M j, Y" }}
+                      </a>
+                    </td>
+                    <td class="text-end">{{ row.total_entries }}</td>
+                    <td class="text-end">${{ row.total_amount|floatformat:2|intcomma }}</td>
+                    <td class="text-end">${{ row.total_tax_paid|floatformat:2|intcomma }}</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="4" class="empty-row">No expense data for the selected period.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer-actions">
+          <div class="table-actions">
+            {% if filters_querystring %}
+              {% with "?"|add:filters_querystring|add:"&" as export_query %}
+                <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=detailed_expense&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Expense journal PDF</a>
+                <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=detailed_expense&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Expense journal Excel</a>
+              {% endwith %}
+            {% else %}
+              <a href="{% url 'accounts:download_report' %}?report_type=detailed_expense&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Expense journal PDF</a>
+              <a href="{% url 'accounts:download_report' %}?report_type=detailed_expense&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Expense journal Excel</a>
+            {% endif %}
+          </div>
+          <div class="pagination-controls" data-pagination-for="expense-summary-table"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-card">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h5 class="mb-1">Report exports</h5>
+          <p class="text-muted small mb-0">Download official reports using your current filters.</p>
+        </div>
+        <span class="status-pill"><i class="fa-solid fa-download"></i> Ready</span>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        {% if filters_querystring %}
+          {% with "?"|add:filters_querystring|add:"&" as export_query %}
+            <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=income_expense&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Profit and loss (PDF)</a>
+            <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=income_expense&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Profit and loss (Excel)</a>
+            <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=tax_report&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Tax summary (PDF)</a>
+            <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=detailed_income&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Income journal (Excel)</a>
+            <a href="{% url 'accounts:download_report' %}{{ export_query }}report_type=detailed_expense&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Expense journal (Excel)</a>
+          {% endwith %}
+        {% else %}
+          <a href="{% url 'accounts:download_report' %}?report_type=income_expense&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Profit and loss (PDF)</a>
+          <a href="{% url 'accounts:download_report' %}?report_type=income_expense&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Profit and loss (Excel)</a>
+          <a href="{% url 'accounts:download_report' %}?report_type=tax_report&format=pdf" class="pill-secondary btn-sm"><i class="fa-solid fa-file-pdf"></i> Tax summary (PDF)</a>
+          <a href="{% url 'accounts:download_report' %}?report_type=detailed_income&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Income journal (Excel)</a>
+          <a href="{% url 'accounts:download_report' %}?report_type=detailed_expense&format=excel" class="pill-secondary btn-sm"><i class="fa-solid fa-file-excel"></i> Expense journal (Excel)</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="page-card">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h5 class="mb-1">Send reports</h5>
+          <p class="text-muted small mb-0">Pick the reports, period, and recipient for sharing.</p>
+        </div>
+        <span class="status-pill"><i class="fa-solid fa-paper-plane"></i> Ready</span>
+      </div>
+      <form id="send-reports-form" class="mt-3" method="get" action="{% url 'accounts:download_report' %}" data-period-label="{{ formatted_month|default:'Current period' }}">
+        <div class="filter-grid">
+          <div>
+            <label>Reports to include</label>
+            <div class="report-checklist">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="sendReportIncomeExpense" name="report_type" value="income_expense" data-report-label="Profit and loss" checked>
+                <label class="form-check-label" for="sendReportIncomeExpense">Profit and loss</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="sendReportTax" name="report_type" value="tax_report" data-report-label="Tax summary" checked>
+                <label class="form-check-label" for="sendReportTax">Tax summary</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="sendReportIncomeDetail" name="report_type" value="detailed_income" data-report-label="Income journal" checked>
+                <label class="form-check-label" for="sendReportIncomeDetail">Income journal</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="sendReportExpenseDetail" name="report_type" value="detailed_expense" data-report-label="Expense journal" checked>
+                <label class="form-check-label" for="sendReportExpenseDetail">Expense journal</label>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="sendReportFormat">Format</label>
+            <select id="sendReportFormat" name="format" class="form-select form-select-sm">
+              <option value="pdf">PDF pack</option>
+              <option value="excel">Excel workbook</option>
+            </select>
+          </div>
+          <div class="recipient-fields">
+            <label for="sendRecipient">Send to</label>
+            <select id="sendRecipient" class="form-select form-select-sm">
+              {% if profile.accountant_email %}
+                <option value="accountant" data-email="{{ profile.accountant_email }}" selected>Accountant ({{ profile.accountant_email }})</option>
+              {% else %}
+                <option value="accountant" disabled>Accountant email not set</option>
+              {% endif %}
+              {% if user.email %}
+                <option value="self" data-email="{{ user.email }}" {% if not profile.accountant_email %}selected{% endif %}>My email ({{ user.email }})</option>
+              {% else %}
+                <option value="self" disabled>My email not set</option>
+              {% endif %}
+              <option value="custom" {% if not profile.accountant_email and not user.email %}selected{% endif %}>Custom email</option>
+            </select>
+            <input type="email" class="form-control form-control-sm d-none" id="customRecipientEmail" placeholder="Recipient email">
+          </div>
+        </div>
+
+        <div class="filter-grid mt-3">
+          <div>
+            <label for="sendStartDate">Start date</label>
+            <input id="sendStartDate" type="date" name="start_date" class="form-control form-control-sm" value="{{ selected_start_date }}">
+          </div>
+          <div>
+            <label for="sendEndDate">End date</label>
+            <input id="sendEndDate" type="date" name="end_date" class="form-control form-control-sm" value="{{ selected_end_date }}">
+          </div>
+          <div>
+            <label for="sendReportYear">Year</label>
+            <select id="sendReportYear" name="year" class="form-select form-select-sm" data-select2-skip="true">
+              <option value="">All years</option>
+              {% for year in years %}
+                {% with year_label=year|date:"Y" %}
+                  <option value="{{ year_label }}" {% if not selected_start_date and not selected_end_date and selected_year == year_label %}selected{% endif %}>{{ year_label }}</option>
+                {% endwith %}
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="sendStartMonth">Start month</label>
+            <input id="sendStartMonth" type="month" name="start_month" class="form-control form-control-sm" value="{% if not selected_start_date and not selected_end_date %}{{ selected_start_month }}{% endif %}">
+          </div>
+          <div>
+            <label for="sendEndMonth">End month</label>
+            <input id="sendEndMonth" type="month" name="end_month" class="form-control form-control-sm" value="{% if not selected_start_date and not selected_end_date %}{{ selected_end_month }}{% endif %}">
+          </div>
+          <div>
+            <label for="sendSingleMonth">Single month</label>
+            <input id="sendSingleMonth" type="month" name="month" class="form-control form-control-sm" value="{% if not selected_start_date and not selected_end_date %}{{ month_selected }}{% endif %}">
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="pill-primary btn-sm"><i class="fa-solid fa-download"></i> Download selected reports</button>
+          <button type="button" class="pill-secondary btn-sm js-email-report"><i class="fa-solid fa-paper-plane"></i> Open email draft</button>
+        </div>
+        <p class="text-muted small mt-2 mb-0">Download the report pack first, then attach it to your email draft.</p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="accountantProfileModal" tabindex="-1" aria-labelledby="accountantProfileModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="accountantProfileModalLabel">Accountant profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div>
+            <p class="text-muted small mb-0">Saved contact used for report delivery.</p>
+          </div>
+          {% if profile.accountant_email %}
+            <span class="status-pill success"><i class="fa-solid fa-circle-check"></i> Saved</span>
+          {% else %}
+            <span class="status-pill warning"><i class="fa-solid fa-circle-info"></i> Not set</span>
+          {% endif %}
+        </div>
+
+        <div class="profile-summary">
+          <div class="item">
+            <div class="label">Name</div>
+            <div class="value">
+              {% if profile.accountant_name %}
+                {{ profile.accountant_name }}
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="item">
+            <div class="label">Firm</div>
+            <div class="value">
+              {% if profile.accountant_firm %}
+                {{ profile.accountant_firm }}
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="item">
+            <div class="label">Email</div>
+            <div class="value">
+              {% if profile.accountant_email %}
+                {{ profile.accountant_email }}
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="item">
+            <div class="label">Phone</div>
+            <div class="value">
+              {% if profile.accountant_phone %}
+                {{ profile.accountant_phone }}
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <form method="post" class="mt-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="accountant_profile">
+          <div class="filter-grid">
+            <div>
+              <label for="accountantName">Name</label>
+              <input id="accountantName" type="text" name="accountant_name" class="form-control form-control-sm" value="{{ profile.accountant_name|default_if_none:'' }}">
+            </div>
+            <div>
+              <label for="accountantFirm">Firm</label>
+              <input id="accountantFirm" type="text" name="accountant_firm" class="form-control form-control-sm" value="{{ profile.accountant_firm|default_if_none:'' }}">
+            </div>
+            <div>
+              <label for="accountantEmail">Email</label>
+              <input id="accountantEmail" type="email" name="accountant_email" class="form-control form-control-sm" value="{{ profile.accountant_email|default_if_none:'' }}">
+            </div>
+            <div>
+              <label for="accountantPhone">Phone</label>
+              <input id="accountantPhone" type="text" name="accountant_phone" class="form-control form-control-sm" value="{{ profile.accountant_phone|default_if_none:'' }}">
+            </div>
+            <div>
+              <label for="accountantAccess">Access level</label>
+              <select id="accountantAccess" name="accountant_access_level" class="form-select form-select-sm">
+                {% for value, label in accountant_access_choices %}
+                  <option value="{{ value }}" {% if profile.accountant_access_level == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="accountantTimezone">Timezone</label>
+              <input id="accountantTimezone" type="text" name="accountant_timezone" class="form-control form-control-sm" value="{{ profile.accountant_timezone|default_if_none:'' }}">
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2 mt-3">
+            <button type="submit" class="pill-primary btn-sm"><i class="fa-solid fa-save"></i> Save profile</button>
+            <a href="{% url 'accounts:accountant_hub' %}" class="pill-secondary btn-sm">Reset</a>
+          </div>
+        </form>
+
+        <div class="mt-4 pt-3 border-top">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+              <h6 class="mb-1">Portal login</h6>
+              <p class="text-muted small mb-0">Set credentials for the accountant portal.</p>
+            </div>
+            {% if accountant_portal_enabled %}
+              <span class="status-pill success"><i class="fa-solid fa-circle-check"></i> Enabled</span>
+            {% else %}
+              <span class="status-pill warning"><i class="fa-solid fa-circle-info"></i> Not active</span>
+            {% endif %}
+          </div>
+          <form method="post" class="mt-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="accountant_portal">
+            {% if accountant_portal_form.non_field_errors %}
+              <div class="alert alert-danger small mb-3">
+                {{ accountant_portal_form.non_field_errors }}
+              </div>
+            {% endif %}
+            <div class="filter-grid">
+              <div class="form-check form-switch">
+                {{ accountant_portal_form.register_portal|add_class:'form-check-input' }}
+                <label class="form-check-label" for="{{ accountant_portal_form.register_portal.id_for_label }}">{{ accountant_portal_form.register_portal.label }}</label>
+                {% if accountant_portal_form.register_portal.help_text %}
+                  <div class="form-text">{{ accountant_portal_form.register_portal.help_text }}</div>
+                {% endif %}
+              </div>
+              <div>
+                <label for="{{ accountant_portal_form.portal_username.id_for_label }}">Portal username</label>
+                {{ accountant_portal_form.portal_username|add_class:'form-control form-control-sm' }}
+                {% if accountant_portal_form.portal_username.errors %}
+                  <div class="text-danger small mt-1">{{ accountant_portal_form.portal_username.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div>
+                <label for="{{ accountant_portal_form.portal_password.id_for_label }}">Temporary password</label>
+                {{ accountant_portal_form.portal_password|add_class:'form-control form-control-sm' }}
+                {% if accountant_portal_form.portal_password.help_text %}
+                  <div class="form-text">{{ accountant_portal_form.portal_password.help_text }}</div>
+                {% endif %}
+                {% if accountant_portal_form.portal_password.errors %}
+                  <div class="text-danger small mt-1">{{ accountant_portal_form.portal_password.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div>
+                <label>Portal login link</label>
+                <input type="text" class="form-control form-control-sm" value="{{ accountant_portal_login_url }}" readonly>
+                <div class="form-text">Share this link with your accountant.</div>
+              </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+              <button type="submit" class="pill-primary btn-sm"><i class="fa-solid fa-user-shield"></i> Save login</button>
+              {% if accountant_portal_user %}
+                <span class="text-muted small align-self-center">Current login: {{ accountant_portal_user.username }}</span>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    function setupPagination(table) {
+      const tbody = table.tBodies[0];
+      if (!tbody) return;
+      const rows = Array.from(tbody.rows);
+      const pageSize = parseInt(table.dataset.pageSize, 10) || 10;
+      const controls = document.querySelector(`[data-pagination-for="${table.id}"]`);
+      if (!controls) return;
+      if (rows.length <= pageSize) {
+        controls.classList.add('d-none');
+        return;
+      }
+
+      let currentPage = 1;
+      const totalPages = Math.ceil(rows.length / pageSize);
+
+      controls.innerHTML = [
+        '<button type="button" class="btn btn-outline-secondary btn-sm js-first">First</button>',
+        '<button type="button" class="btn btn-outline-secondary btn-sm js-prev">Previous</button>',
+        '<span class="page-label"></span>',
+        '<button type="button" class="btn btn-outline-secondary btn-sm js-next">Next</button>',
+        '<button type="button" class="btn btn-outline-secondary btn-sm js-last">Last</button>'
+      ].join('');
+
+      const firstBtn = controls.querySelector('.js-first');
+      const prevBtn = controls.querySelector('.js-prev');
+      const nextBtn = controls.querySelector('.js-next');
+      const lastBtn = controls.querySelector('.js-last');
+      const label = controls.querySelector('.page-label');
+
+      const render = () => {
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        rows.forEach((row, index) => {
+          row.style.display = (index >= start && index < end) ? '' : 'none';
+        });
+        const displayStart = rows.length ? start + 1 : 0;
+        const displayEnd = Math.min(end, rows.length);
+        label.textContent = `${displayStart}-${displayEnd} of ${rows.length}`;
+        firstBtn.disabled = currentPage === 1;
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = currentPage === totalPages;
+        lastBtn.disabled = currentPage === totalPages;
+      };
+
+      firstBtn.addEventListener('click', () => {
+        if (currentPage !== 1) {
+          currentPage = 1;
+          render();
+        }
+      });
+
+      prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage -= 1;
+          render();
+        }
+      });
+
+      nextBtn.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+          currentPage += 1;
+          render();
+        }
+      });
+
+      lastBtn.addEventListener('click', () => {
+        if (currentPage !== totalPages) {
+          currentPage = totalPages;
+          render();
+        }
+      });
+
+      render();
+    }
+
+    document.querySelectorAll('table.js-paginate').forEach(setupPagination);
+
+    const sendForm = document.getElementById('send-reports-form');
+    if (!sendForm) return;
+
+    const recipientSelect = sendForm.querySelector('#sendRecipient');
+    const customEmailInput = sendForm.querySelector('#customRecipientEmail');
+
+    const updateRecipientInput = () => {
+      if (!recipientSelect || !customEmailInput) return;
+      const isCustom = recipientSelect.value === 'custom';
+      customEmailInput.classList.toggle('d-none', !isCustom);
+      customEmailInput.required = isCustom;
+    };
+
+    recipientSelect?.addEventListener('change', updateRecipientInput);
+    updateRecipientInput();
+
+    const emailButton = sendForm.querySelector('.js-email-report');
+    emailButton?.addEventListener('click', () => {
+      const checkedReports = Array.from(sendForm.querySelectorAll('input[name="report_type"]:checked'));
+      if (!checkedReports.length) {
+        window.alert('Select at least one report to send.');
+        return;
+      }
+
+      let recipientEmail = '';
+      if (recipientSelect?.value === 'custom') {
+        recipientEmail = customEmailInput?.value?.trim() || '';
+      } else {
+        const selectedOption = recipientSelect?.selectedOptions?.[0];
+        recipientEmail = selectedOption?.dataset?.email || '';
+      }
+
+      if (!recipientEmail) {
+        window.alert('Add a recipient email address before sending.');
+        return;
+      }
+
+      const reportList = checkedReports.map((input) => input.dataset.reportLabel || input.value).join(', ');
+      const startDate = sendForm.querySelector('input[name="start_date"]')?.value;
+      const endDate = sendForm.querySelector('input[name="end_date"]')?.value;
+      const month = sendForm.querySelector('input[name="month"]')?.value;
+      const year = sendForm.querySelector('select[name="year"]')?.value;
+      const startMonth = sendForm.querySelector('input[name="start_month"]')?.value;
+      const endMonth = sendForm.querySelector('input[name="end_month"]')?.value;
+      const periodFallback = sendForm.dataset.periodLabel || 'Current period';
+
+      let periodLabel = periodFallback;
+      if (startDate || endDate) {
+        periodLabel = `${startDate || 'Start'} to ${endDate || 'End'}`;
+      } else if (month) {
+        periodLabel = `Month ${month}`;
+      } else if (startMonth || endMonth) {
+        periodLabel = `${startMonth || 'Start month'} to ${endMonth || 'End month'}`;
+      } else if (year) {
+        periodLabel = `Year ${year}`;
+      }
+
+      const formData = new FormData(sendForm);
+      const params = new URLSearchParams(formData).toString();
+      const baseUrl = new URL(sendForm.getAttribute('action'), window.location.origin);
+      const downloadUrl = params ? `${baseUrl.href}?${params}` : baseUrl.href;
+
+      const subject = encodeURIComponent(`Accounting reports: ${periodLabel}`);
+      const body = encodeURIComponent([
+        `Reports: ${reportList}`,
+        `Period: ${periodLabel}`,
+        '',
+        'Download the report pack from:',
+        downloadUrl,
+        '',
+        'Attach the downloaded file to this email before sending.'
+      ].join('\n'));
+
+      window.location.href = `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
+    });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,977 @@
+{% extends portal_base_template|default:"store/customer_portal_base.html" %}
+{% load humanize %}
+{% block title %}Customer Portal{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <style>
+    body[data-theme="light"] {
+      background: #e9edf8;
+    }
+
+    .store-simple {
+      padding: 0 0 2.5rem;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 68px); /* Account for topbar height */
+    }
+
+    .store-top-grid {
+      margin-top: 1rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1rem;
+      align-items: stretch;
+      flex: 1;
+    }
+
+    .store-hero-panel {
+      border-radius: 24px;
+      background: linear-gradient(135deg, #0061ff, #1b7ef6 45%, #5fb3ff 110%);
+      color: #fff;
+      padding: 2rem 2.25rem;
+      box-shadow: 0 20px 60px rgba(13, 110, 253, 0.3);
+      margin-bottom: 1.5rem;
+    }
+
+    .store-hero-panel h1 {
+      font-size: 2.05rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .store-hero-panel p {
+      margin-bottom: 0.25rem;
+      color: rgba(255, 255, 255, 0.85);
+      max-width: 860px;
+    }
+
+    .store-hero-panel .store-hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+
+    .store-hero-panel .store-hero-actions p {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .store-hero-panel .store-quick-toggle {
+      min-width: 170px;
+      background: #fff;
+      color: #0c1463;
+      border: none;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+    }
+
+    .store-top-grid {
+      margin-top: 1rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1rem;
+      align-items: stretch;
+    }
+
+    .store-card {
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid rgba(226, 232, 240, 0.6);
+      padding: 1.4rem;
+      box-shadow: 0 18px 35px rgba(15, 23, 42, 0.12);
+      position: relative;
+    }
+
+    .store-workorder-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      height: 100%;
+    }
+
+    .store-maintenance-card {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .store-card-header {
+      margin-bottom: 0.7rem;
+    }
+
+    .store-card-header h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 0;
+      color: #0f172a;
+    }
+
+    .store-card-subtitle {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .store-communication-banner {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      padding: 1rem 1.25rem;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+      text-decoration: none;
+      color: #0f172a;
+    }
+
+    .store-communication-banner:hover {
+      border-color: rgba(37, 99, 235, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .store-communication-info {
+      max-width: 580px;
+    }
+
+    .store-communication-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .store-communication-stats {
+      display: flex;
+      gap: 1.25rem;
+      margin-top: 0.5rem;
+    }
+
+    .store-communication-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .store-communication-value {
+      font-size: 1.4rem;
+      font-weight: 800;
+    }
+
+    .store-communication-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #64748b;
+    }
+
+    .store-communication-chip {
+      border-radius: 999px;
+      padding: 0.3rem 0.75rem;
+      background: rgba(37, 99, 235, 0.1);
+      color: #1d4ed8;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+
+    .store-card {
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff 0%, #f5f7fb 80%);
+      border: 1px solid rgba(226, 232, 240, 0.7);
+      padding: 1.35rem;
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+      position: relative;
+      backdrop-filter: blur(8px);
+    }
+
+    .store-card-header h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .store-card-subtitle {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .store-maintenance-list {
+      list-style: none;
+      margin: 1rem 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.95rem;
+    }
+
+    .store-maintenance-item {
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .store-maintenance-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .store-maintenance-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 0.25rem;
+    }
+
+    .store-maintenance-meta {
+      font-size: 0.85rem;
+      color: #475569;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .store-maintenance-priority {
+      font-weight: 600;
+      color: #b45309;
+    }
+
+    .store-maintenance-due {
+      font-size: 0.87rem;
+      color: #475569;
+      margin-top: 0.35rem;
+    }
+
+    .store-empty {
+      font-size: 0.95rem;
+      color: #64748b;
+      margin: 1rem 0 0;
+    }
+
+    .store-workorder-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.65rem;
+    }
+
+    .store-workorder-table th,
+    .store-workorder-table td {
+      padding: 0.55rem 0.45rem;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 0.92rem;
+      vertical-align: middle;
+    }
+
+    .store-workorder-table th {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.78rem;
+      color: #64748b;
+      font-weight: 800;
+    }
+
+    .store-workorder-table td:last-child,
+    .store-workorder-table th:last-child {
+      text-align: right;
+    }
+
+    .store-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      border-radius: 999px;
+      padding: 0.2rem 0.65rem;
+      background: rgba(37, 99, 235, 0.14);
+      color: #1d4ed8;
+      font-weight: 700;
+    }
+
+    .store-status-pill.completed {
+      background: #dcfce7;
+      color: #166534;
+      font-size: 0.8rem;
+    }
+
+    .store-link-inline {
+      color: #2563eb;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .store-link-inline:hover {
+      text-decoration: underline;
+    }
+
+    .store-spending-chart {
+      position: relative;
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 260px;
+    }
+
+    .store-spending-chart canvas {
+      width: min(280px, 100%);
+      max-width: 320px;
+      max-height: 320px;
+      height: min(280px, 100%);
+    }
+
+    .store-chart-block {
+      padding: 0.3rem 0.75rem 0.75rem;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px dashed #e0e7ff;
+      width: 100%;
+    }
+
+    .store-chart-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.65rem;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .store-chart-meta {
+      color: #6b7280;
+      font-size: 0.8rem;
+    }
+
+    .store-chart-area {
+      width: 220px;
+      max-width: 100%;
+      height: 220px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .store-chart-area canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .store-chart-area-wide {
+      width: 100%;
+      height: 220px;
+    }
+
+    .store-chart-area-wide canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .store-chart-area-small {
+      width: 150px;
+      height: 150px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .store-chart-area-small canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .store-chart-area-mini-wide {
+      width: 100%;
+      height: 150px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .store-chart-area-mini-wide canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .store-performance-display-small {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .store-performance-chart-small {
+      width: 110px;
+      height: 110px;
+    }
+
+    .store-performance-chart-small canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .store-visuals-grid {
+      margin-top: 1rem;
+      display: grid;
+      gap: 0.85rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .store-mini-chart {
+      background: #f9fbff;
+      border-radius: 18px;
+      padding: 0.95rem 1rem;
+      border: 1px solid rgba(226, 232, 240, 0.6);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .store-mini-note {
+      margin: 0;
+      color: #6b7280;
+      font-size: 0.78rem;
+    }
+
+    .store-visuals-card .store-card-header {
+      margin-bottom: 0.75rem;
+    }
+
+    .store-mini-chart {
+      padding: 0.75rem;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 1px solid rgba(226, 232, 240, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .store-mini-note {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .store-performance-display {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .store-performance-chart {
+      width: 140px;
+      height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .store-performance-chart canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .store-performance-rate {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .store-performance-meta {
+      font-size: 0.85rem;
+      color: #5b6275;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .store-stats-grid {
+      margin-top: 1rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .store-stat-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .store-stat-label {
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
+    .store-form {
+      margin-top: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .store-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .store-form .form-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #475569;
+    }
+
+    .store-form .form-control,
+    .store-form .form-select,
+    .store-form textarea {
+      font-size: 0.9rem;
+      border-radius: 10px;
+      border: 1px solid #d0d7df;
+      padding: 0.55rem 0.7rem;
+      background: #fdfdfd;
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .store-form .form-control:focus,
+    .store-form .form-select:focus,
+    .store-form textarea:focus {
+      border-color: #2563eb;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .store-help-text {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    .store-form .text-danger {
+      font-size: 0.8rem;
+    }
+
+    .store-form button {
+      width: 100%;
+      margin-top: 0.15rem;
+      border-radius: 999px;
+      font-weight: 600;
+      padding: 0.65rem 0.9rem;
+    }
+
+    .store-quick-panel {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.7);
+      z-index: 1100;
+      padding: 1rem;
+    }
+
+    .store-quick-panel.open {
+      display: flex;
+    }
+
+    .store-quick-panel-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+    }
+
+    .store-quick-panel-body {
+      position: relative;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 1.75rem;
+      width: min(540px, calc(100% - 2rem));
+      box-shadow: 0 25px 45px rgba(15, 23, 42, 0.25);
+      z-index: 1;
+    }
+
+    .store-quick-panel-subtitle {
+      color: #64748b;
+      margin: 0 0 1rem;
+      font-size: 0.9rem;
+    }
+
+    .store-quick-panel .btn-link {
+      color: #64748b;
+    }
+
+    @media (max-width: 768px) {
+      .store-hero-card {
+        padding: 1.3rem 1.25rem;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    (function () {
+      const palette = ['#2563eb', '#6366f1', '#0ea5e9', '#10b981', '#f97316', '#a855f7', '#f472b6'];
+      const placeholderColor = '#e2e8f0';
+      const currencyFormatter = {
+        format: (value) => {
+          const numFormatter = new Intl.NumberFormat(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+          return `$${numFormatter.format(value)}`;
+        }
+      };
+
+      const buildTooltipLabel = (formatter, fallbackLabel) => (context) => {
+        const value = Number(context.dataset.data[context.dataIndex]) || 0;
+        if (formatter) {
+          return formatter(context.label || fallbackLabel, value);
+        }
+        return `${context.label || fallbackLabel}: ${value}`;
+      };
+
+      const renderPie = (canvasId, dataId, fallbackLabel, tooltipFormatter) => {
+        const dataEl = document.getElementById(dataId);
+        const canvas = document.getElementById(canvasId);
+        if (!dataEl || !canvas) {
+          return;
+        }
+        let chartData = [];
+        try {
+          chartData = JSON.parse(dataEl.textContent || '[]') || [];
+        } catch (error) {
+          console.error(`Failed to parse chart data for ${dataId}`, error);
+          return;
+        }
+        let labels = chartData.map((item) => item.label || 'Data');
+        let values = chartData.map((item) => Number(item.value) || 0);
+        const total = values.reduce((sum, value) => sum + value, 0);
+        const isPlaceholder = total <= 0;
+        if (isPlaceholder) {
+          labels = [fallbackLabel];
+          values = [1];
+        }
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return;
+        }
+        const backgroundColor = labels.map((_, index) =>
+          isPlaceholder ? placeholderColor : palette[index % palette.length]
+        );
+
+        new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels,
+            datasets: [
+              {
+                data: values,
+                backgroundColor,
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            cutout: '65%',
+            maintainAspectRatio: false,
+            responsive: true,
+            animation: {
+              duration: 600,
+              easing: 'easeOutCubic',
+            },
+            plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                callbacks: {
+                  label: buildTooltipLabel(tooltipFormatter, fallbackLabel),
+                },
+              },
+            },
+          },
+        });
+      };
+
+      const renderLine = (canvasId, dataId) => {
+        const dataEl = document.getElementById(dataId);
+        const canvas = document.getElementById(canvasId);
+        if (!dataEl || !canvas) {
+          return;
+        }
+        let chartData = [];
+        try {
+          chartData = JSON.parse(dataEl.textContent || '[]') || [];
+        } catch (error) {
+          console.error(`Failed to parse chart data for ${dataId}`, error);
+          return;
+        }
+        let labels = chartData.map((item) => item.label || 'Month');
+        let values = chartData.map((item) => Number(item.value) || 0);
+        if (!chartData.length) {
+          labels = ['No data'];
+          values = [0];
+        }
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return;
+        }
+
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Spending',
+                data: values,
+                borderColor: palette[0],
+                backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                fill: true,
+                tension: 0.35,
+                pointRadius: 4,
+                pointHoverRadius: 5,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: palette[0],
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            maintainAspectRatio: false,
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (context) => currencyFormatter.format(context.parsed.y || 0),
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: '#6b7280' },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: '#e2e8f0' },
+                ticks: {
+                  color: '#6b7280',
+                  callback: (value) => currencyFormatter.format(value),
+                },
+              },
+            },
+          },
+        });
+      };
+
+      renderPie(
+        'vehicleSpendingPie',
+        'vehicle-spending-chart-data',
+        'No linked invoices yet',
+        (label, value) => `${label}: ${currencyFormatter.format(value)}`
+      );
+      renderPie(
+        'maintenancePerformancePie',
+        'maintenance-performance-chart-data',
+        'No completed tasks',
+        (label, value) => `${label}: ${value} completed`
+      );
+      renderLine('monthlySpendingChart', 'monthly-spending-chart-data');
+    })();
+  </script>
+{% endblock %}
+
+{% block portal_hero %}
+  <div class="portal-header-card store-hero-card">
+    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between gap-3">
+      <div>
+
+    </div>
+  </div>
+{% endblock %}
+
+{% block portal_content %}
+  <div class="store-simple">
+    <div class="store-hero-panel">
+      <div class="d-flex flex-column flex-lg-row align-items-start justify-content-between gap-4 store-hero-panel-content">
+        <div>
+          <span class="badge bg-white text-primary mb-3">Customer portal</span>
+          <h1 class="mb-1">Welcome, {{ customer_account.name|default:request.user.get_username }}.</h1>
+          <p class="store-hero-subtitle mb-2">Thanks for doing business with {{ business_name|default:default_business_name }}. Track outstanding invoices and workorders, review maintenance reminders (and add new ones), pull tax statements, or ask {{ business_name|default:default_business_name }} AI Assistant for help whenever you like.</p>
+        </div>
+        <div class="store-hero-actions">
+          <p class="mb-0">Need to log a reminder or keep an eye on your fleet stats?</p>
+          <button type="button" id="quickAddToggle" class="btn btn-light store-quick-toggle">
+            <i class="fas fa-plus-circle me-1"></i>
+            Log reminder
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <section class="store-card store-visuals-card" aria-labelledby="visuals-heading">
+      <div class="store-card-header">
+        <h2 id="visuals-heading">Fleet insights</h2>
+        <p class="store-card-subtitle">A compact view of spending and maintenance performance.</p>
+      </div>
+      <div class="store-visuals-grid">
+        <article class="store-mini-chart">
+          <div class="store-chart-title">
+            <span>Spending by vehicle</span>
+            <span class="store-chart-meta">Top 5 vehicles</span>
+          </div>
+          <div class="store-chart-area doughnut-area store-chart-area-small">
+            <canvas id="vehicleSpendingPie" aria-label="Spending proportion by vehicle" role="img"></canvas>
+          </div>
+          {% if not vehicle_spending_chart_data %}
+            <p class="store-mini-note">Invoices linked to vehicles will populate this chart.</p>
+          {% endif %}
+        </article>
+        <article class="store-mini-chart">
+          <div class="store-chart-title">
+            <span>Spending per month</span>
+            <span class="store-chart-meta">Last six months</span>
+          </div>
+          <div class="store-chart-area store-chart-area-mini-wide">
+            <canvas id="monthlySpendingChart" aria-label="Monthly spending trend" role="img"></canvas>
+          </div>
+          {% if not monthly_spending_chart_data %}
+            <p class="store-mini-note">We'll show monthly totals once invoices post.</p>
+          {% endif %}
+        </article>
+      </div>
+      {{ vehicle_spending_chart_data|json_script:"vehicle-spending-chart-data" }}
+      {{ maintenance_chart_data|json_script:"maintenance-performance-chart-data" }}
+      {{ monthly_spending_chart_data|json_script:"monthly-spending-chart-data" }}
+    </section>
+
+    <div class="store-top-grid">
+      <section class="store-card store-maintenance-card" aria-labelledby="maintenance-heading">
+        <div class="store-card-header">
+          <h2 id="maintenance-heading">Maintenance due</h2>
+          <p class="store-card-subtitle">Focus on the next reminders that need attention.</p>
+        </div>
+        {% if maintenance_tasks %}
+          <ul class="store-maintenance-list">
+            {% for task in maintenance_tasks %}
+              <li class="store-maintenance-item">
+                <div class="store-maintenance-title">{{ task.title }}</div>
+                <div class="store-maintenance-meta">
+                  {% if task.vehicle %}
+                    <span>{{ task.vehicle }}</span>
+                  {% endif %}
+                  {% if task.priority %}
+                    <span class="store-maintenance-priority">{{ task.get_priority_display }}</span>
+                  {% endif %}
+                </div>
+                <div class="store-maintenance-due">
+                  {% if task.due_date %}
+                    Due {{ task.due_date|date:"M j" }}
+                  {% else %}
+                    No due date set
+                  {% endif %}
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="store-empty">No active reminders right now. Add one using the quick add button above.</p>
+        {% endif %}
+      </section>
+      <section class="store-card store-workorder-card" aria-labelledby="workorder-heading">
+        <div class="store-card-header d-flex align-items-start justify-content-between gap-2 flex-wrap">
+          <div>
+            <h2 id="workorder-heading" class="mb-1">Workorder queue</h2>
+            <p class="store-card-subtitle mb-0">Newest requests at the top.</p>
+          </div>
+          <a href="{% url 'accounts:customer_workorder_list' %}" class="store-link-inline">View all</a>
+        </div>
+        <div class="table-responsive">
+          <table class="store-workorder-table">
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Assignee</th>
+                <th scope="col">Status</th>
+                <th scope="col">Due date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if recent_workorders %}
+                {% for wo in recent_workorders %}
+                  <tr>
+                    <td>{{ wo.workorder_number }}</td>
+                    <td>{{ wo.assigned_mechanic|default:"Unassigned" }}</td>
+                    <td><span class="store-status-pill{% if wo.status == 'completed' %} completed{% endif %}">{{ wo.get_status_display }}</span></td>
+                    <td class="text-end">
+                      {% if wo.scheduled_date %}
+                        {{ wo.scheduled_date|date:"M j, Y" }}
+                      {% else %}
+                        Not scheduled
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="4" class="text-muted text-center py-3">No workorders yet.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="store-quick-panel" id="quickAddPanel" aria-hidden="true">
+    <div class="store-quick-panel-backdrop" data-dismiss="panel" aria-hidden="true"></div>
+    <div class="store-quick-panel-body">
+      <div class="d-flex align-items-start justify-content-between mb-3 gap-2">
+        <div>
+          <h2 class="mb-1">Log a maintenance reminder</h2>
+          <p class="store-quick-panel-subtitle">Add a quick note so {{ business_name|default:default_business_name }} knows what to handle next.</p>
+        </div>
+        <button type="button" class="btn-close" data-dismiss="panel" aria-label="Close reminder form"></button>
+      </div>
+      <form method="post" class="store-form" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="quick_maintenance">
+        {% if quick_maintenance_form.non_field_errors %}
+          <div class="alert alert-danger small py-2 px-3">{{ quick_maintenance_form.non_field_errors|striptags }}</div>
+        {% endif %}
+        {% for field in quick_maintenance_form %}
+          <div class="store-form-group">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+            {{ field }}
+            {% if field.errors %}
+              <div class="text-danger small mt-1">{{ field.errors|striptags }}</div>
+            {% endif %}
+            {% if field.help_text %}
+              <div class="store-help-text">{{ field.help_text }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-plus-circle me-1"></i>
+          Save reminder
+        </button>
+        <button type="button" class="btn btn-link mt-2" data-dismiss="panel">Cancel</button>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+

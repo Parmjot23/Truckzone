@@ -1,0 +1,708 @@
+{% extends portal_base_template|default:"store/customer_portal_base.html" %}
+{% load humanize form_tags custom_tags %}
+{% block title %}My Vehicles{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <style>
+    .vehicle-summary-card {
+      border: 1px solid #dee2e6;
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: none;
+    }
+
+    .vehicle-summary-card .card-body {
+      padding: 1.25rem 1.5rem;
+    }
+
+    .vehicle-summary-card .text-muted {
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .vehicle-table th,
+    .vehicle-table td {
+      vertical-align: middle;
+    }
+
+    .vehicle-table .vehicle-nowrap {
+      white-space: nowrap;
+    }
+
+    .vehicle-table .vehicle-text,
+    .vehicle-table .vehicle-service-cell {
+      white-space: normal;
+    }
+
+    .vehicle-table .vehicle-service-cell {
+      min-width: 180px;
+    }
+
+    .vehicle-maintenance-badges .badge + .badge {
+      margin-left: 0.25rem;
+    }
+
+    .vehicle-form-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      color: #495057;
+    }
+
+    .vehicle-table .edit-field,
+    .vehicle-table .service-edit {
+      display: none !important;
+    }
+
+    .vehicle-table tr.is-editing .display-field,
+    .vehicle-table tr.is-editing .service-display {
+      display: none !important;
+    }
+
+    .vehicle-table tr.is-editing .edit-field,
+    .vehicle-table tr.is-editing .service-edit {
+      display: block !important;
+    }
+
+    .vehicle-table tr.is-editing .vehicle-inline-stack.edit-field {
+      display: grid !important;
+    }
+
+    .vehicle-table .vehicle-inline-stack {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .vehicle-table .service-edit .form-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.15rem;
+    }
+
+    .vehicle-table .vehicle-edit-error {
+      margin-top: 0.35rem;
+    }
+  </style>
+{% endblock %}
+{% block portal_content %}
+  <div class="customer-portal-section">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
+      <div>
+        <h2 class="h4 mb-1">My vehicles</h2>
+        <p class="text-muted mb-0">Keep every asset on file and quickly review maintenance status, history, and reminders.</p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <button
+          class="btn btn-primary btn-sm"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#add-vehicle"
+          aria-expanded="{% if vehicle_form.errors %}true{% else %}false{% endif %}"
+          aria-controls="add-vehicle"
+        >
+          <i class="fas fa-plus-circle me-1"></i>
+          Add vehicle
+        </button>
+        <a href="{% url 'accounts:customer_vehicle_overview' %}" class="btn btn-outline-primary btn-sm">
+          <i class="fas fa-clipboard-list me-1"></i>
+          Add maintenance reminder
+        </a>
+      </div>
+    </div>
+
+    <div class="collapse{% if vehicle_form.errors %} show{% endif %}" id="add-vehicle">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3 mb-3">
+            <div>
+              <h3 class="h5 mb-1">Add a vehicle</h3>
+              <p class="text-muted small mb-0">Provide the VIN and any identifying details so the {{ business_name|default:default_business_name }} team can keep everything in sync.</p>
+            </div>
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#add-vehicle"
+              aria-controls="add-vehicle"
+              aria-expanded="true"
+            >
+              Close
+            </button>
+          </div>
+          {% if vehicle_form.non_field_errors %}
+            <div class="alert alert-danger small" role="alert">
+              {% for error in vehicle_form.non_field_errors %}
+                {{ error }}{% if not forloop.last %}<br>{% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+          <form method="post" action="{% url 'accounts:customer_vehicle_overview' %}" class="row g-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_vehicle">
+            <div class="col-md-3">
+              <label for="{{ vehicle_form.unit_number.id_for_label }}" class="vehicle-form-label">Unit number</label>
+              {% if vehicle_form.unit_number.errors %}
+                {{ vehicle_form.unit_number|add_class:'form-control is-invalid' }}
+                {% for error in vehicle_form.unit_number.errors %}
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+              {% else %}
+                {{ vehicle_form.unit_number|add_class:'form-control' }}
+              {% endif %}
+            </div>
+            <div class="col-md-3">
+              <label for="{{ vehicle_form.vin_number.id_for_label }}" class="vehicle-form-label">VIN number</label>
+              {% if vehicle_form.vin_number.errors %}
+                {{ vehicle_form.vin_number|add_class:'form-control is-invalid' }}
+                {% for error in vehicle_form.vin_number.errors %}
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+              {% else %}
+                {{ vehicle_form.vin_number|add_class:'form-control' }}
+              {% endif %}
+            </div>
+            <div class="col-md-3">
+              <label for="{{ vehicle_form.make_model.id_for_label }}" class="vehicle-form-label">Make &amp; model</label>
+              {% if vehicle_form.make_model.errors %}
+                {{ vehicle_form.make_model|add_class:'form-control is-invalid' }}
+                {% for error in vehicle_form.make_model.errors %}
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+              {% else %}
+                {{ vehicle_form.make_model|add_class:'form-control' }}
+              {% endif %}
+            </div>
+            <div class="col-md-3">
+              <label for="{{ vehicle_form.year.id_for_label }}" class="vehicle-form-label">Year</label>
+              {% if vehicle_form.year.errors %}
+                {{ vehicle_form.year|add_class:'form-control is-invalid' }}
+                {% for error in vehicle_form.year.errors %}
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+              {% else %}
+                {{ vehicle_form.year|add_class:'form-control' }}
+              {% endif %}
+            </div>
+            <div class="col-md-3">
+              <label for="{{ vehicle_form.current_mileage.id_for_label }}" class="vehicle-form-label">Current mileage</label>
+              {% if vehicle_form.current_mileage.errors %}
+                {{ vehicle_form.current_mileage|add_class:'form-control is-invalid' }}
+                {% for error in vehicle_form.current_mileage.errors %}
+                  <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+              {% else %}
+                {{ vehicle_form.current_mileage|add_class:'form-control' }}
+              {% endif %}
+            </div>
+            <div class="col-12 d-flex justify-content-end">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-save me-1"></i>
+                Save vehicle
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-12">
+        <div class="card vehicle-summary-card">
+          <div class="card-body d-flex flex-wrap justify-content-between gap-4">
+            <div>
+              <div class="text-muted">Vehicles on file</div>
+              <div class="h4 mb-0">{{ summary.vehicle_count }}</div>
+            </div>
+            <div>
+              <div class="text-muted">Maintenance scheduled</div>
+              <div class="h4 mb-0">{{ summary.upcoming_total }}</div>
+            </div>
+            <div>
+              <div class="text-muted">Tasks overdue</div>
+              <div class="h4 mb-0 {% if summary.overdue_total %}text-danger{% endif %}">{{ summary.overdue_total }}</div>
+            </div>
+            <div>
+              <div class="text-muted">Next due date</div>
+              <div class="h6 mb-0">
+                {% if summary.next_due_date %}
+                  {{ summary.next_due_date|date:"M d, Y" }}
+                {% else %}
+                  <span class="text-muted">None scheduled</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            {% if vehicles %}
+              <div class="mb-3">
+                <label for="vehicleSearch" class="form-label small text-uppercase fw-semibold text-muted">Search vehicles</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                  <input
+                    type="search"
+                    id="vehicleSearch"
+                    class="form-control"
+                    placeholder="Search by unit, VIN, status, department, or service..."
+                    autocomplete="off"
+                    aria-label="Search vehicles"
+                  >
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle vehicle-table mb-0" id="vehicleTable">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col" class="vehicle-nowrap">Unit no</th>
+                      <th scope="col" class="vehicle-nowrap">Year</th>
+                      <th scope="col" class="vehicle-text">Vehicle</th>
+                      <th scope="col" class="vehicle-nowrap">License plate</th>
+                      <th scope="col" class="vehicle-nowrap">Status</th>
+                      <th scope="col" class="vehicle-nowrap">Start date in service</th>
+                      <th scope="col" class="vehicle-text">Department/Assigned to</th>
+                      {% for service in service_columns %}
+                        <th scope="col" class="vehicle-text">{{ service.job_name.name|default:service.name }}</th>
+                      {% endfor %}
+                      <th scope="col" class="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for vehicle in vehicles %}
+                      <tr data-row="vehicle" data-vehicle-id="{{ vehicle.id }}" data-update-url="{% url 'accounts:customer_vehicle_inline_update' vehicle.id %}">
+                        <td class="fw-semibold vehicle-nowrap">
+                          <span class="display-field" data-display="unit_number">
+                            {% if vehicle.unit_number %}
+                              {{ vehicle.unit_number }}
+                            {% else %}
+                              &mdash;
+                            {% endif %}
+                          </span>
+                          <input type="text" class="form-control form-control-sm edit-field" name="unit_number" value="{{ vehicle.unit_number|default_if_none:'' }}">
+                        </td>
+                        <td class="vehicle-nowrap">
+                          <span class="display-field" data-display="year">
+                            {% if vehicle.year %}
+                              {{ vehicle.year }}
+                            {% else %}
+                              &mdash;
+                            {% endif %}
+                          </span>
+                          <input type="number" class="form-control form-control-sm edit-field" name="year" min="0" step="1" value="{{ vehicle.year|default_if_none:'' }}">
+                        </td>
+                        <td class="vehicle-text">
+                          <div class="display-field">
+                            <div class="fw-semibold" data-display="make_model">{{ vehicle.make_model|default:"Vehicle" }}</div>
+                            <div class="text-muted small" data-display="vin_number">
+                              {% if vehicle.vin_number %}
+                                VIN {{ vehicle.vin_number }}
+                              {% else %}
+                                VIN &mdash;
+                              {% endif %}
+                            </div>
+                          </div>
+                          <div class="vehicle-inline-stack edit-field">
+                            <input type="text" class="form-control form-control-sm" name="make_model" value="{{ vehicle.make_model|default_if_none:'' }}" placeholder="Make &amp; model">
+                            <input type="text" class="form-control form-control-sm" name="vin_number" value="{{ vehicle.vin_number|default_if_none:'' }}" placeholder="VIN">
+                          </div>
+                        </td>
+                        <td class="vehicle-nowrap">
+                          <span class="display-field" data-display="license_plate">
+                            {% if vehicle.license_plate %}
+                              {{ vehicle.license_plate }}
+                            {% else %}
+                              &mdash;
+                            {% endif %}
+                          </span>
+                          <input type="text" class="form-control form-control-sm edit-field" name="license_plate" value="{{ vehicle.license_plate|default_if_none:'' }}">
+                        </td>
+                        <td class="vehicle-nowrap">
+                          <span class="display-field" data-display="status">
+                            {% if vehicle.status %}
+                              {{ vehicle.get_status_display }}
+                            {% else %}
+                              &mdash;
+                            {% endif %}
+                          </span>
+                          <select class="form-select form-select-sm edit-field" name="status">
+                            {% for value, label in vehicle_status_choices %}
+                              <option value="{{ value }}" {% if vehicle.status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                          </select>
+                        </td>
+                        <td class="vehicle-nowrap">
+                          <span class="display-field" data-display="start_date_in_service">
+                            {% if vehicle.start_date_in_service %}
+                              {{ vehicle.start_date_in_service|date:"M d, Y" }}
+                            {% else %}
+                              &mdash;
+                            {% endif %}
+                          </span>
+                          <input type="date" class="form-control form-control-sm edit-field" name="start_date_in_service" value="{{ vehicle.start_date_in_service|date:'Y-m-d' }}">
+                        </td>
+                        <td class="vehicle-text">
+                          <span class="display-field" data-display="assigned_to">
+                            {% if vehicle.assigned_to %}
+                              {{ vehicle.assigned_to }}
+                            {% else %}
+                              &mdash;
+                            {% endif %}
+                          </span>
+                          <input type="text" class="form-control form-control-sm edit-field" name="assigned_to" value="{{ vehicle.assigned_to|default_if_none:'' }}">
+                        </td>
+                        {% for service in service_columns %}
+                          {% with cell=vehicle.portal_service_cells|index:forloop.counter0 %}
+                            <td class="vehicle-service-cell" data-service-id="{{ service.id }}" data-last-mileage="{{ cell.last_mileage|default_if_none:'' }}" data-next-mileage="{{ cell.next_due_mileage|default_if_none:'' }}">
+                              <div class="service-display">
+                                <div class="service-last{% if not cell.last_date and not cell.last_mileage %} d-none{% endif %}">
+                                  <div class="text-muted small">Last</div>
+                                  <div class="fw-semibold small">
+                                    <span class="service-last-date">{% if cell.last_date %}{{ cell.last_date|date:"M d, Y" }}{% endif %}</span>
+                                    <span class="service-last-mileage">
+                                      {% if cell.last_mileage %}
+                                        {% if cell.last_date %} &bull; {% endif %}{{ cell.last_mileage|intcomma }} km
+                                      {% endif %}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div class="service-last-empty text-muted small{% if cell.last_date or cell.last_mileage %} d-none{% endif %}">Last: &mdash;</div>
+                                <div class="service-next{% if not cell.next_due_date and not cell.next_due_mileage %} d-none{% endif %}">
+                                  <div class="text-muted small mt-1">Next</div>
+                                  <div class="fw-semibold small">
+                                    <span class="service-next-date">{% if cell.next_due_date %}{{ cell.next_due_date|date:"M d, Y" }}{% endif %}</span>
+                                    <span class="service-next-mileage">
+                                      {% if cell.next_due_mileage %}
+                                        {% if cell.next_due_date %} &bull; {% endif %}{{ cell.next_due_mileage|intcomma }} km
+                                      {% endif %}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div class="service-next-empty text-muted small{% if cell.next_due_date or cell.next_due_mileage %} d-none{% endif %}">Next: &mdash;</div>
+                              </div>
+                              <div class="service-edit">
+                                <div class="vehicle-inline-stack">
+                                  <div>
+                                    <label class="form-label small text-muted">Last</label>
+                                    <input type="date" class="form-control form-control-sm service-last-date" value="{{ cell.last_date|date:'Y-m-d' }}" data-initial="{{ cell.last_date|date:'Y-m-d' }}">
+                                  </div>
+                                  <div>
+                                    <label class="form-label small text-muted">Next</label>
+                                    <input type="date" class="form-control form-control-sm service-next-date" value="{{ cell.next_due_date|date:'Y-m-d' }}" data-initial="{{ cell.next_due_date|date:'Y-m-d' }}">
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          {% endwith %}
+                        {% endfor %}
+                        <td class="text-end">
+                          <div class="btn-group btn-group-sm" role="group">
+                            <a href="{% url 'accounts:customer_vehicle_detail' vehicle.id %}" class="btn btn-outline-secondary">
+                              <i class="fas fa-eye"></i>
+                              <span class="visually-hidden">View details</span>
+                            </a>
+                            <a href="{% url 'accounts:customer_vehicle_detail' vehicle.id %}#add-maintenance" class="btn btn-outline-primary">
+                              <i class="fas fa-plus"></i>
+                              <span class="visually-hidden">Add maintenance</span>
+                            </a>
+                            <button type="button" class="btn btn-outline-primary js-vehicle-edit" data-state="view">
+                              <i class="fas fa-pen"></i>
+                              <span class="visually-hidden">Edit vehicle</span>
+                            </button>
+                          </div>
+                          <div class="text-danger small vehicle-edit-error d-none"></div>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                    <tr id="vehicleNoResults" class="d-none">
+                      <td colspan="{{ service_columns|length|add:'8' }}" class="text-center py-4 text-muted">No vehicles match your search.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="alert alert-info border-0 mb-0" role="alert">
+                No vehicles have been linked to your account yet. Use the â€œAdd vehicleâ€ button above to get started.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.location.hash === '#add-vehicle') {
+        var target = document.getElementById('add-vehicle');
+        if (target) {
+          var collapse = bootstrap.Collapse.getOrCreateInstance(target, {toggle: false});
+          collapse.show();
+          setTimeout(function () {
+            target.scrollIntoView({behavior: 'smooth', block: 'start'});
+          }, 150);
+        }
+      }
+
+      (function () {
+        var searchInput = document.getElementById('vehicleSearch');
+        var table = document.getElementById('vehicleTable');
+        if (!searchInput || !table) return;
+
+        var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr[data-row=\"vehicle\"]'));
+        var noResultsRow = document.getElementById('vehicleNoResults');
+
+        function filterRows() {
+          var query = (searchInput.value || '').toLowerCase().trim();
+          var visible = 0;
+
+          rows.forEach(function (row) {
+            var text = (row.dataset.searchText || row.textContent || '').toLowerCase();
+            var matches = !query || text.indexOf(query) !== -1;
+            row.style.display = matches ? '' : 'none';
+            if (matches) visible += 1;
+          });
+
+          if (noResultsRow) {
+            noResultsRow.classList.toggle('d-none', visible > 0 || !query);
+          }
+        }
+
+        searchInput.addEventListener('input', filterRows);
+      })();
+
+      (function () {
+        var table = document.getElementById('vehicleTable');
+        if (!table) return;
+
+        var csrfTokenField = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        var csrfToken = csrfTokenField ? csrfTokenField.value : '';
+        var emptyMark = '\u2014';
+
+        function formatDisplayDate(value) {
+          if (!value) return '';
+          var dateObj = new Date(value + 'T00:00:00');
+          if (isNaN(dateObj.getTime())) return '';
+          return dateObj.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        }
+
+        function formatMileage(value, hasDate) {
+          if (!value) return '';
+          var numberValue = Number(value);
+          var displayValue = isNaN(numberValue) ? String(value) : numberValue.toLocaleString('en-US');
+          return (hasDate ? ' \u2022 ' : '') + displayValue + ' km';
+        }
+
+        function setEditState(row, editing) {
+          row.classList.toggle('is-editing', editing);
+          var editButton = row.querySelector('.js-vehicle-edit');
+          if (!editButton) return;
+          editButton.dataset.state = editing ? 'save' : 'view';
+          editButton.innerHTML = editing
+            ? '<i class="fas fa-save"></i><span class="visually-hidden">Save vehicle</span>'
+            : '<i class="fas fa-pen"></i><span class="visually-hidden">Edit vehicle</span>';
+        }
+
+        function showRowError(row, message) {
+          var errorEl = row.querySelector('.vehicle-edit-error');
+          if (!errorEl) return;
+          errorEl.textContent = message || 'Unable to save changes.';
+          errorEl.classList.remove('d-none');
+        }
+
+        function clearRowError(row) {
+          var errorEl = row.querySelector('.vehicle-edit-error');
+          if (!errorEl) return;
+          errorEl.textContent = '';
+          errorEl.classList.add('d-none');
+        }
+
+        function updateVehicleDisplay(row, data) {
+          var unitDisplay = row.querySelector('[data-display="unit_number"]');
+          if (unitDisplay) unitDisplay.textContent = data.unit_number || emptyMark;
+          var yearDisplay = row.querySelector('[data-display="year"]');
+          if (yearDisplay) yearDisplay.textContent = data.year || emptyMark;
+          var makeDisplay = row.querySelector('[data-display="make_model"]');
+          if (makeDisplay) makeDisplay.textContent = data.make_model || 'Vehicle';
+          var vinDisplay = row.querySelector('[data-display="vin_number"]');
+          if (vinDisplay) vinDisplay.textContent = data.vin_number ? ('VIN ' + data.vin_number) : ('VIN ' + emptyMark);
+          var plateDisplay = row.querySelector('[data-display="license_plate"]');
+          if (plateDisplay) plateDisplay.textContent = data.license_plate || emptyMark;
+          var statusDisplay = row.querySelector('[data-display="status"]');
+          if (statusDisplay) statusDisplay.textContent = data.status_label || emptyMark;
+          var startDisplay = row.querySelector('[data-display="start_date_in_service"]');
+          if (startDisplay) startDisplay.textContent = data.start_date_in_service ? formatDisplayDate(data.start_date_in_service) : emptyMark;
+          var assignedDisplay = row.querySelector('[data-display="assigned_to"]');
+          if (assignedDisplay) assignedDisplay.textContent = data.assigned_to || emptyMark;
+
+          var unitInput = row.querySelector('input[name="unit_number"]');
+          if (unitInput) unitInput.value = data.unit_number || '';
+          var yearInput = row.querySelector('input[name="year"]');
+          if (yearInput) yearInput.value = data.year || '';
+          var makeInput = row.querySelector('input[name="make_model"]');
+          if (makeInput) makeInput.value = data.make_model || '';
+          var vinInput = row.querySelector('input[name="vin_number"]');
+          if (vinInput) vinInput.value = data.vin_number || '';
+          var plateInput = row.querySelector('input[name="license_plate"]');
+          if (plateInput) plateInput.value = data.license_plate || '';
+          var statusInput = row.querySelector('select[name="status"]');
+          if (statusInput && data.status) statusInput.value = data.status;
+          var startInput = row.querySelector('input[name="start_date_in_service"]');
+          if (startInput) startInput.value = data.start_date_in_service || '';
+          var assignedInput = row.querySelector('input[name="assigned_to"]');
+          if (assignedInput) assignedInput.value = data.assigned_to || '';
+        }
+
+        function updateServiceDisplay(cell, data) {
+          if (!cell || !data) return;
+          var lastDate = data.last_date || '';
+          var nextDate = data.next_date || '';
+          cell.dataset.lastDate = lastDate;
+          cell.dataset.nextDate = nextDate;
+
+          var lastDateText = formatDisplayDate(lastDate);
+          var nextDateText = formatDisplayDate(nextDate);
+          var lastMileage = cell.getAttribute('data-last-mileage') || '';
+          var nextMileage = cell.getAttribute('data-next-mileage') || '';
+
+          var lastSection = cell.querySelector('.service-last');
+          var lastEmpty = cell.querySelector('.service-last-empty');
+          var lastDateEl = cell.querySelector('.service-last-date');
+          var lastMileageEl = cell.querySelector('.service-last-mileage');
+          var hasLast = !!lastDateText || !!lastMileage;
+
+          if (lastDateEl) lastDateEl.textContent = lastDateText;
+          if (lastMileageEl) lastMileageEl.textContent = formatMileage(lastMileage, !!lastDateText);
+          if (lastSection) lastSection.classList.toggle('d-none', !hasLast);
+          if (lastEmpty) lastEmpty.classList.toggle('d-none', hasLast);
+
+          var nextSection = cell.querySelector('.service-next');
+          var nextEmpty = cell.querySelector('.service-next-empty');
+          var nextDateEl = cell.querySelector('.service-next-date');
+          var nextMileageEl = cell.querySelector('.service-next-mileage');
+          var hasNext = !!nextDateText || !!nextMileage;
+
+          if (nextDateEl) nextDateEl.textContent = nextDateText;
+          if (nextMileageEl) nextMileageEl.textContent = formatMileage(nextMileage, !!nextDateText);
+          if (nextSection) nextSection.classList.toggle('d-none', !hasNext);
+          if (nextEmpty) nextEmpty.classList.toggle('d-none', hasNext);
+
+          var lastInput = cell.querySelector('.service-last-date');
+          if (lastInput) {
+            lastInput.value = lastDate || '';
+            lastInput.dataset.initial = lastDate || '';
+          }
+          var nextInput = cell.querySelector('.service-next-date');
+          if (nextInput) {
+            nextInput.value = nextDate || '';
+            nextInput.dataset.initial = nextDate || '';
+          }
+        }
+
+        function collectRowData(row) {
+          function valueOf(selector) {
+            var input = row.querySelector(selector);
+            return input ? (input.value || '').trim() : '';
+          }
+
+          var vehicle = {
+            unit_number: valueOf('input[name="unit_number"]'),
+            year: valueOf('input[name="year"]'),
+            make_model: valueOf('input[name="make_model"]'),
+            vin_number: valueOf('input[name="vin_number"]'),
+            license_plate: valueOf('input[name="license_plate"]'),
+            status: valueOf('select[name="status"]'),
+            start_date_in_service: valueOf('input[name="start_date_in_service"]'),
+            assigned_to: valueOf('input[name="assigned_to"]'),
+          };
+
+          var services = {};
+          row.querySelectorAll('td[data-service-id]').forEach(function (cell) {
+            var lastInput = cell.querySelector('.service-last-date');
+            var nextInput = cell.querySelector('.service-next-date');
+            if (!lastInput && !nextInput) return;
+            var lastValue = lastInput ? lastInput.value || '' : '';
+            var nextValue = nextInput ? nextInput.value || '' : '';
+            var lastInitial = lastInput ? (lastInput.dataset.initial || '') : '';
+            var nextInitial = nextInput ? (nextInput.dataset.initial || '') : '';
+            if (lastValue === lastInitial && nextValue === nextInitial) return;
+            services[cell.getAttribute('data-service-id')] = {
+              last_date: lastValue,
+              next_date: nextValue,
+            };
+          });
+
+          return { vehicle: vehicle, services: services };
+        }
+
+        table.addEventListener('click', function (event) {
+          var editButton = event.target.closest('.js-vehicle-edit');
+          if (!editButton) return;
+          var row = editButton.closest('tr[data-row="vehicle"]');
+          if (!row) return;
+
+          clearRowError(row);
+
+          var isEditing = row.classList.contains('is-editing');
+          if (!isEditing) {
+            setEditState(row, true);
+            return;
+          }
+
+          var payload = collectRowData(row);
+          var updateUrl = row.getAttribute('data-update-url');
+          if (!updateUrl) return;
+
+          editButton.disabled = true;
+
+          fetch(updateUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify(payload),
+          })
+            .then(function (response) {
+              return response.json().then(function (data) {
+                return { ok: response.ok, data: data || {} };
+              });
+            })
+            .then(function (result) {
+              if (!result.ok || !result.data.success) {
+                var message = result.data.message || 'Unable to save changes.';
+                showRowError(row, message);
+                return;
+              }
+              if (result.data.vehicle) {
+                updateVehicleDisplay(row, result.data.vehicle);
+              }
+              if (result.data.services) {
+                Object.keys(result.data.services).forEach(function (serviceId) {
+                  var cell = row.querySelector('td[data-service-id="' + serviceId + '"]');
+                  if (!cell) return;
+                  updateServiceDisplay(cell, result.data.services[serviceId]);
+                });
+              }
+              setEditState(row, false);
+            })
+            .catch(function () {
+              showRowError(row, 'Unable to save changes. Please try again.');
+            })
+            .finally(function () {
+              editButton.disabled = false;
+            });
+        });
+      })();
+    });
+  </script>
+{% endblock %}
+

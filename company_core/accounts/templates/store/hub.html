@@ -1,0 +1,157 @@
+{% extends 'customer_portal_base.html' %}
+{% load humanize %}
+
+{% block title %}Manage Store Hub{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+  {% include 'store/partials/_manage_store_nav.html' %}
+
+  <div class="page-header">
+    <div>
+      <h1 class="mb-1">Manage Store Hub</h1>
+      <p class="text-muted mb-0">Monitor storefront readiness and jump to key setup tools.</p>
+    </div>
+    <div class="page-toolbar">
+      <a href="{% url 'accounts:store_manage' %}" class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-sliders me-1"></i>
+        Manage Storefront
+      </a>
+      <a href="{% url 'accounts:store_product_list' %}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">
+        <i class="fa-solid fa-up-right-from-square me-1"></i>
+        View Public Store
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4 col-lg-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Category Groups</div>
+          <div class="h4 mb-1">{{ active_group_count|intcomma }} active</div>
+          <div class="text-muted small">{{ group_count|intcomma }} total</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 col-lg-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Categories</div>
+          <div class="h4 mb-1">{{ active_category_count|intcomma }} active</div>
+          <div class="text-muted small">{{ category_count|intcomma }} total</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 col-lg-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Published Products</div>
+          <div class="h4 mb-1">{{ published_product_count|intcomma }}</div>
+          <div class="text-muted small">{{ product_count|intcomma }} total</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 col-lg-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Promotions</div>
+          <div class="h4 mb-1">{{ promotion_product_count|intcomma }}</div>
+          <div class="text-muted small">Featured: {{ featured_product_count|intcomma }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if price_form %}
+  <div class="card shadow-sm mt-4">
+    <div class="card-body">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <div>
+          <h2 class="h5 mb-1">Storefront Visibility</h2>
+          <p class="text-muted small mb-0">Control guest price visibility and whether empty categories stay visible.</p>
+        </div>
+      </div>
+      <form method="post" class="row g-3">
+        {% csrf_token %}
+        {% if price_form.errors %}
+        <div class="col-12">
+          <div class="alert alert-danger">Please review the price visibility settings below.</div>
+        </div>
+        {% endif %}
+        <div class="col-12 col-md-4">
+          <div class="form-check">
+            {{ price_form.storefront_show_prices_hero }}
+            <label class="form-check-label" for="{{ price_form.storefront_show_prices_hero.id_for_label }}">
+              {{ price_form.storefront_show_prices_hero.label }}
+            </label>
+          </div>
+          {% if price_form.storefront_show_prices_hero.help_text %}
+          <div class="form-text">{{ price_form.storefront_show_prices_hero.help_text }}</div>
+          {% endif %}
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="form-check">
+            {{ price_form.storefront_show_prices_featured }}
+            <label class="form-check-label" for="{{ price_form.storefront_show_prices_featured.id_for_label }}">
+              {{ price_form.storefront_show_prices_featured.label }}
+            </label>
+          </div>
+          {% if price_form.storefront_show_prices_featured.help_text %}
+          <div class="form-text">{{ price_form.storefront_show_prices_featured.help_text }}</div>
+          {% endif %}
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="form-check">
+            {{ price_form.storefront_show_prices_catalog }}
+            <label class="form-check-label" for="{{ price_form.storefront_show_prices_catalog.id_for_label }}">
+              {{ price_form.storefront_show_prices_catalog.label }}
+            </label>
+          </div>
+          {% if price_form.storefront_show_prices_catalog.help_text %}
+          <div class="form-text">{{ price_form.storefront_show_prices_catalog.help_text }}</div>
+          {% endif %}
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            {{ price_form.storefront_show_empty_categories }}
+            <label class="form-check-label" for="{{ price_form.storefront_show_empty_categories.id_for_label }}">
+              {{ price_form.storefront_show_empty_categories.label }}
+            </label>
+          </div>
+          {% if price_form.storefront_show_empty_categories.help_text %}
+          <div class="form-text">{{ price_form.storefront_show_empty_categories.help_text }}</div>
+          {% endif %}
+        </div>
+        <div class="col-12">
+          <button type="submit" name="save_price_settings" value="1" class="btn btn-outline-primary">
+            <i class="fas fa-save me-1"></i>
+            Save storefront settings
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="surface-card p-4">
+    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+      <div>
+        <h2 class="h5 mb-1">Store setup shortcuts</h2>
+        <p class="text-muted mb-0">Keep your catalog organized and ready for customers.</p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'accounts:inventory_category_groups' %}" class="btn btn-outline-secondary btn-sm">
+          Category Groups
+        </a>
+        <a href="{% url 'accounts:inventory_categories' %}" class="btn btn-outline-secondary btn-sm">
+          Categories
+        </a>
+        <a href="{% url 'accounts:inventory_products' %}" class="btn btn-outline-secondary btn-sm">
+          Inventory Products
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

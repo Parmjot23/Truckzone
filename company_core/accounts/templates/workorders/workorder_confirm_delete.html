@@ -1,0 +1,29 @@
+{% extends 'customer_portal_base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Delete Work Order{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <h1 class="mb-4 text-center">Delete Work Order</h1>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <p>Are you sure you want to delete Work Order <strong>#{{ workorder.id }}</strong>?</p>
+      <ul class="list-group">
+        <li class="list-group-item"><strong>Customer:</strong> {{ workorder.customer }}</li>
+        <li class="list-group-item"><strong>Scheduled Date:</strong> {{ workorder.scheduled_date }}</li>
+        <li class="list-group-item"><strong>Status:</strong> {{ workorder.get_status_display }}</li>
+        <li class="list-group-item"><strong>Description:</strong> {{ workorder.description }}</li>
+      </ul>
+    </div>
+    <div class="card-footer text-end">
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, Delete It</button>
+        <a href="{% url 'accounts:workorder_detail' workorder.id %}" class="btn btn-secondary ms-2">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

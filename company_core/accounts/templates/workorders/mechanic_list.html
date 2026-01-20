@@ -1,0 +1,61 @@
+{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0" id="mechanics-title">Mechanics</h2>
+            <div class="text-muted small">Manage mechanics and their portal access.</div>
+        </div>
+        <div class="page-toolbar">
+            <a href="{% url 'accounts:mechanic_create' %}" class="btn btn-primary btn-sm" id="btn-add-mechanic">
+                <i class="fa-solid fa-user-gear me-1"></i>Add Mechanic
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table mb-0 table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mechanic in mechanics %}
+                    <tr>
+                        <td>{{ mechanic.name }}</td>
+                        <td>{{ mechanic.phone|default:"-" }}</td>
+                        <td>{{ mechanic.email|default:"-" }}</td>
+                        <td>
+                            <a href="{% url 'accounts:mechanic_detail' mechanic.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4">No mechanics found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('tour')) return;
+    const tour = new Shepherd.Tour({ defaultStepOptions: { cancelIcon: { enabled: true }, scrollTo: true } });
+    tour.addStep({ title: 'Mechanics', text: 'Manage your mechanics and their access.', attachTo: { element: '#mechanics-title', on: 'bottom' }, buttons: [{ text: 'Next', action: tour.next }] });
+    tour.addStep({ title: 'Add Mechanic', text: 'Create a mechanic profile and portal access.', attachTo: { element: '#btn-add-mechanic', on: 'left' }, buttons: [{ text: 'Back', action: tour.back }, { text: 'Done', action: tour.complete }] });
+    tour.start();
+  } catch (e) {}
+})();
+</script>
+{% endblock %}

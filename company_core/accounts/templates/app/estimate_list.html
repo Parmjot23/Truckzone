@@ -1,0 +1,225 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+{% load static %}
+{% block title %}Manage Estimates{% endblock %}
+{% block content %}
+<style>
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    .summary-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        background: #f8fafc;
+        box-shadow: 0 10px 28px rgba(15,23,42,0.06);
+        padding: 0.85rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .summary-card .icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #e0e7ff;
+        color: #1d4ed8;
+        font-size: 1.1rem;
+    }
+    .summary-card .text-muted { margin: 0; }
+    .summary-card .value { font-weight: 700; font-size: 1.35rem; }
+
+    .estimate-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+        padding: 1rem;
+    }
+    .invoice-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .invoice-toolbar .search-box {
+        flex: 1;
+        min-width: 240px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.4rem 0.6rem;
+        background: #f8fafc;
+    }
+    .invoice-toolbar .search-box input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        outline: none;
+    }
+    .invoice-table-wrapper { overflow-x: auto; }
+    .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+    }
+    .invoice-table th {
+        text-align: left;
+        padding: 0.75rem;
+        color: #64748b;
+        background: #f1f5f9;
+        font-weight: 700;
+        border-bottom: 1px solid #e2e8f0;
+        white-space: nowrap;
+    }
+    .invoice-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .invoice-table tr:nth-child(even) td { background: #f8fafc; }
+    .invoice-table .dropdown-toggle {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 10px;
+        padding: 0.3rem 0.55rem;
+        color: #0f172a;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+    .empty-state .icon {
+        font-size: 3rem;
+        color: #2563eb;
+        margin-bottom: 0.5rem;
+    }
+    .pill-primary {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        border: none;
+        color: #fff;
+        border-radius: 12px;
+        padding: 0.45rem 0.95rem;
+        font-weight: 700;
+        font-size: 0.92rem;
+        box-shadow: 0 12px 24px rgba(37,99,235,0.18);
+    }
+</style>
+
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Manage Estimates</h2>
+            <div class="text-muted">Create, search, and manage estimates.</div>
+        </div>
+        <div class="page-toolbar">
+            <div class="page-tabs" role="group">
+                <a href="{% url 'accounts:groupedinvoice_list' %}" class="btn btn-outline-primary">
+                    Invoices
+                </a>
+                <a href="{% url 'accounts:estimate_list' %}" class="btn btn-primary">
+                    Estimates
+                </a>
+            </div>
+            <a href="{% url 'accounts:add_estimate' %}" class="pill-primary" id="btn-add-invoice">
+                <i class="fa-solid fa-plus me-2"></i>Add New Estimate
+            </a>
+        </div>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+            <div>
+                <p class="text-muted small mb-1">Total Estimates</p>
+                <div class="value" id="total-invoices">0</div>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="icon" style="background:#d1fae5; color:#16a34a;"><i class="fa-solid fa-dollar-sign"></i></div>
+            <div>
+                <p class="text-muted small mb-1">Total Amount</p>
+                <div class="value" id="total-amount">$0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="estimate-card">
+        <div class="invoice-toolbar">
+            <form method="GET" id="search-form" action="." class="flex-grow-1">
+                <div class="search-box">
+                    <i class="fa fa-search text-muted"></i>
+                    <input type="text" name="search" value="{{ search_query }}" id="search-input" placeholder="Search estimates..." aria-label="Search estimates">
+                </div>
+            </form>
+        </div>
+
+        <div id="invoice-list">
+            {% include 'app/estimate_list_content.html' %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search-input');
+        const form = document.getElementById('search-form');
+        const invoiceList = document.getElementById('invoice-list');
+        const totalInvoicesElem = document.getElementById('total-invoices');
+        const totalAmountElem = document.getElementById('total-amount');
+
+        function debounce(func, delay) {
+            let debounceTimer;
+            return function() {
+                const context = this;
+                const args = arguments;
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => func.apply(context, args), delay);
+            }
+        }
+
+        function fetchInvoices() {
+            const formData = new FormData(form);
+            const searchParams = new URLSearchParams(formData).toString();
+            fetch(`${form.action}?${searchParams}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                invoiceList.innerHTML = data.html;
+                updateTotals();
+            })
+            .catch(error => console.error('Error fetching the data:', error));
+        }
+
+        searchInput.addEventListener('input', debounce(fetchInvoices, 300));
+
+        function updateTotals() {
+            const invoiceRows = invoiceList.querySelectorAll('.invoice-row');
+            let totalInvoices = 0;
+            let totalAmount = 0;
+
+            invoiceRows.forEach(row => {
+                totalInvoices++;
+                const amount = parseFloat(row.getAttribute('data-amount'));
+                if (!isNaN(amount)) totalAmount += amount;
+            });
+
+            totalInvoicesElem.textContent = totalInvoices;
+            totalAmountElem.textContent = totalAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        }
+
+        updateTotals();
+    });
+</script>
+{% endblock %}

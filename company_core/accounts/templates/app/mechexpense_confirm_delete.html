@@ -1,0 +1,21 @@
+{% extends 'customer_portal_base.html' %}
+{% block title %}
+    Confirm Delete
+{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Confirm Delete</h2>
+    <div class="card">
+        <div class="card-body">
+            <p>Are you sure you want to delete the expense from supplier <strong>{{ object.vendor }}</strong>?</p>
+        </div>
+        <div class="card-footer text-right">
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Yes, delete</button>
+                <a href="{% url 'accounts:mechexpense_list' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

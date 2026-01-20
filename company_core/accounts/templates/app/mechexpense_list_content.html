@@ -1,0 +1,308 @@
+{% load custom_filters %}
+<style>
+    .expense-table-wrapper { overflow-x: auto; }
+    .expense-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+    }
+    .expense-table th {
+        text-align: left;
+        padding: 0.75rem;
+        color: #64748b;
+        background: #f1f5f9;
+        font-weight: 700;
+        border-bottom: 1px solid #e2e8f0;
+        white-space: nowrap;
+    }
+    .expense-table th.sortable {
+        padding: 0.4rem 0.75rem;
+    }
+    .sort-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: transparent;
+        border: none;
+        color: inherit;
+        font: inherit;
+        padding: 0;
+        cursor: pointer;
+    }
+    .sort-toggle i {
+        font-size: 0.8rem;
+        color: #94a3b8;
+    }
+    th[aria-sort="ascending"] .sort-toggle i,
+    th[aria-sort="descending"] .sort-toggle i {
+        color: #2563eb;
+    }
+    .expense-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .expense-table tr:nth-child(even) td { background: #f8fafc; }
+    .expense-table .dropdown-toggle {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 10px;
+        padding: 0.3rem 0.55rem;
+        color: #0f172a;
+    }
+    .status-pill {
+        border-radius: 999px;
+        padding: 0.25rem 0.75rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 92px;
+        text-align: center;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .status-toggle {
+        background: transparent;
+        border-radius: inherit;
+        padding: 0;
+        font-family: inherit;
+    }
+    .status-toggle:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35);
+    }
+    .status-paid { background: #dcfce7; color: #166534; border-color: #dcfce7; }
+    .status-partial { background: #fef9c3; color: #854d0e; border-color: #fef9c3; }
+    .status-unpaid { background: #eef2ff; color: #4338ca; border-color: #eef2ff; }
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+    .empty-state .icon {
+        font-size: 3rem;
+        color: #2563eb;
+        margin-bottom: 0.5rem;
+    }
+    .pill-primary {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        border: none;
+        color: #fff;
+        border-radius: 10px;
+        padding: 0.55rem 1rem;
+        font-weight: 600;
+        box-shadow: 0 10px 20px rgba(37,99,235,0.25);
+    }
+</style>
+
+<div class="expense-table-wrapper">
+    <table class="expense-table">
+        <thead>
+            <tr>
+                <th class="sortable" aria-sort="{% if sort == 'receipt' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                    <button type="button" class="sort-toggle" data-sort="receipt">
+                        Receipt
+                        {% if sort == 'receipt' %}
+                            {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                        {% else %}
+                            <i class="fa-solid fa-sort"></i>
+                        {% endif %}
+                    </button>
+                </th>
+                <th class="sortable" aria-sort="{% if sort == 'date' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                    <button type="button" class="sort-toggle" data-sort="date">
+                        Date
+                        {% if sort == 'date' %}
+                            {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                        {% else %}
+                            <i class="fa-solid fa-sort"></i>
+                        {% endif %}
+                    </button>
+                </th>
+                <th class="sortable" aria-sort="{% if sort == 'supplier' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                    <button type="button" class="sort-toggle" data-sort="supplier">
+                        Supplier
+                        {% if sort == 'supplier' %}
+                            {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                        {% else %}
+                            <i class="fa-solid fa-sort"></i>
+                        {% endif %}
+                    </button>
+                </th>
+                <th class="sortable" aria-sort="{% if sort == 'category' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                    <button type="button" class="sort-toggle" data-sort="category">
+                        Category
+                        {% if sort == 'category' %}
+                            {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                        {% else %}
+                            <i class="fa-solid fa-sort"></i>
+                        {% endif %}
+                    </button>
+                </th>
+                <th class="text-end sortable" aria-sort="{% if sort == 'total' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                    <button type="button" class="sort-toggle" data-sort="total">
+                        Total Amount
+                        {% if sort == 'total' %}
+                            {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                        {% else %}
+                            <i class="fa-solid fa-sort"></i>
+                        {% endif %}
+                    </button>
+                </th>
+                <th class="sortable" aria-sort="{% if sort == 'status' %}{% if direction == 'asc' %}ascending{% else %}descending{% endif %}{% else %}none{% endif %}">
+                    <button type="button" class="sort-toggle" data-sort="status">
+                        Status
+                        {% if sort == 'status' %}
+                            {% if direction == 'asc' %}<i class="fa-solid fa-sort-up"></i>{% else %}<i class="fa-solid fa-sort-down"></i>{% endif %}
+                        {% else %}
+                            <i class="fa-solid fa-sort"></i>
+                        {% endif %}
+                    </button>
+                </th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in object_list %}
+            {% with totals=expense.calculate_totals %}
+            <tr>
+                <td data-label="Receipt">
+                    <a href="{% url 'accounts:mechexpense_detail' expense.pk %}" class="btn btn-outline-primary btn-sm receipt-link" aria-label="View details for receipt {{ expense.receipt_no }}">
+                        {{ expense.receipt_no }}
+                    </a>
+                </td>
+                <td data-label="Date">{{ expense.date|date:"M d, Y" }}</td>
+                <td data-label="Supplier">{{ expense.vendor }}</td>
+                <td data-label="Category">{{ expense.categorie|default:"N/A" }}</td>
+                <td data-label="Total Amount" class="text-end">{{ totals.0|currency }}</td>
+                <td data-label="Status">
+                    <button type="button"
+                        class="status-pill status-toggle {% if expense.payment_status == 'paid' %}status-paid{% elif expense.payment_status == 'partial' %}status-partial{% else %}status-unpaid{% endif %}"
+                        data-toggle-url="{% url 'accounts:mechexpense_toggle_status' expense.pk %}"
+                        data-receipt="{{ expense.receipt_no|default:'' }}"
+                        data-vendor="{{ expense.vendor|default:'' }}"
+                        data-total-amount="{{ totals.0|default_if_none:0|floatformat:2 }}"
+                        data-remaining="{{ expense.remaining_balance|default_if_none:0|floatformat:2 }}"
+                        data-status="{{ expense.payment_status|default:'unpaid' }}"
+                        data-paid="{% if expense.payment_status == 'paid' %}true{% else %}false{% endif %}"
+                        aria-pressed="{% if expense.payment_status == 'paid' %}true{% else %}false{% endif %}"
+                        aria-label="Toggle payment status for receipt {{ expense.receipt_no|default:'expense' }}">
+                        {% if expense.payment_status == 'paid' %}Paid{% elif expense.payment_status == 'partial' %}Partial Paid{% else %}Unpaid{% endif %}
+                    </button>
+                </td>
+                <td data-label="Actions" class="text-center">
+                    <div class="dropdown">
+                        <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <a class="dropdown-item" href="{% url 'accounts:mechexpense_edit' expense.pk %}">Edit</a>
+                            <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal{{ expense.pk }}">Delete</a>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="deleteModal{{ expense.pk }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ expense.pk }}" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title" id="deleteModalLabel{{ expense.pk }}">Confirm Delete</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            Are you sure you want to delete expense <strong>{{ expense.receipt_no }}</strong>?
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <form method="post" action="{% url 'accounts:mechexpense_delete' expense.pk %}" class="d-inline delete-expense-form">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                </td>
+            </tr>
+            {% endwith %}
+            {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="empty-state">
+                        <div class="icon"><i class="fa-regular fa-file-lines"></i></div>
+                        <h5 class="mb-1">No expenses found.</h5>
+                        <p class="text-muted mb-3">Start tracking your business spending. Add your first expense now.</p>
+                        <a href="{% url 'accounts:add_records' %}" class="pill-primary"><i class="fa-solid fa-plus me-2"></i>Add New Expense</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination controls -->
+{% if page_obj.paginator.count %}
+<nav class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3" aria-label="Expense pagination">
+    <div class="text-muted small">
+        {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+    </div>
+    <ul class="pagination mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page=1{{ query_params }}">First</a></li>
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{{ query_params }}">Previous</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">First</span></li>
+        <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{{ query_params }}">Next</a></li>
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{{ query_params }}">Last</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Next</span></li>
+        <li class="page-item disabled"><span class="page-link">Last</span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Custom CSS for Uniform Receipt Number Links -->
+<style>
+    /* Ensure receipt links have a fixed width and are centered */
+    .receipt-link {
+        width: 100px; /* Adjust as needed */
+        text-align: center;
+        display: inline-block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Optional: Adjust badge padding for better appearance */
+    .badge-primary {
+        padding: 0.5em 0.75em;
+    }
+
+    /* Optional: Change background color on table row hover */
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    /* Optional: Add transition for smooth hover effect */
+    .table-hover tbody tr {
+        transition: background-color 0.2s ease;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        .receipt-link {
+            width: 80px; /* Reduce width on small screens */
+        }
+
+        .badge-primary {
+            padding: 0.3em 0.5em;
+            font-size: 0.9em;
+        }
+    }
+</style>

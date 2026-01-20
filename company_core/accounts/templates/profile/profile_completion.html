@@ -1,0 +1,99 @@
+{% extends 'customer_portal_base.html' %}
+{% load static crispy_forms_tags %}
+
+{% block title %}
+    Complete Your Profile
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Profile Completion</h3>
+            <div id="progress-circle" class="progress-circle"></div>
+            <ul id="empty-fields-list"></ul>
+        </div>
+        <div class="col-md-6">
+            <form method="post" enctype="multipart/form-data" id="profile-form">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button type="submit" class="btn btn-primary">Save</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .is-invalid {
+        border-color: #dc3545;
+        background-color: #f8d7da;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('profile-form');
+        const emptyFieldsList = document.getElementById('empty-fields-list');
+        const provinceField = document.getElementById('id_province');
+        const qstField = document.getElementById('qst-field');
+        const qstInput = qstField ? qstField.querySelector('input') : null;
+
+        function toggleQstField() {
+            if (!provinceField || !qstField) {
+                return;
+            }
+            const isQc = provinceField.value === 'QC';
+            qstField.classList.toggle('d-none', !isQc);
+            if (!isQc && qstInput) {
+                qstInput.value = '';
+            }
+        }
+
+        Array.from(form.elements).forEach(function(element) {
+            if (element.type !== 'hidden' && element.type !== 'submit' && element.type !== 'button') {
+                if (element.offsetParent === null) {
+                    return;
+                }
+                if (!element.value.trim()) {
+                    const label = document.querySelector(`label[for="${element.id}"]`);
+                    if (label) {
+                        const li = document.createElement('li');
+                        li.textContent = label.textContent.trim();
+                        emptyFieldsList.appendChild(li);
+                    } else if (element.name) {
+                        const li = document.createElement('li');
+                        li.textContent = element.name.replace(/_/g, ' ').trim();
+                        emptyFieldsList.appendChild(li);
+                    }
+                }
+            }
+        });
+
+        if (emptyFieldsList.children.length === 0) {
+            const li = document.createElement('li');
+            li.textContent = 'All fields are complete.';
+            emptyFieldsList.appendChild(li);
+        }
+
+        if (provinceField && qstField) {
+            provinceField.addEventListener('change', toggleQstField);
+            toggleQstField();
+        }
+    });
+
+    // Initialize the CircleProgress
+    const completionPercentage = {{ completion_percentage }} / 100; // Convert to a fraction
+    $('#progress-circle').circleProgress({
+        value: completionPercentage,
+        size: 120,
+        fill: {
+            gradient: ["#007bff", "#6f42c1"]
+        },
+        thickness: 15,
+        startAngle: -Math.PI / 4 * 2,
+        animation: { duration: 1200, easing: "circleProgressEasing" }
+    }).on('circle-animation-progress', function(event, progress, stepValue) {
+        $(this).find('strong').text(String(stepValue.toFixed(2).substr(2)) + '%');
+    });
+</script>
+{% endblock %}

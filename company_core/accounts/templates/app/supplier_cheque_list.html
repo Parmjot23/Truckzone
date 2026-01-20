@@ -1,0 +1,78 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+
+{% block title %}Supplier Cheques{% endblock %}
+
+{% block content %}
+<style>
+  .cheque-shell { display: flex; flex-direction: column; gap: 1rem; }
+  .cheque-card { border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; box-shadow: 0 12px 30px rgba(15,23,42,0.06); padding: 1rem; }
+  .search-box { flex: 1; min-width: 240px; display: flex; align-items: center; gap: 0.5rem; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.45rem 0.65rem; background: #f8fafc; }
+  .search-box input { border: none; background: transparent; width: 100%; outline: none; }
+  .pill-btn { border-radius: 12px; padding: 0.42rem 0.9rem; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; font-size: 0.92rem; box-shadow: 0 10px 18px rgba(15,23,42,0.06); }
+  .pill-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: #fff; border-radius: 12px; padding: 0.45rem 0.95rem; font-weight: 700; font-size: 0.92rem; box-shadow: 0 12px 24px rgba(37,99,235,0.18); }
+  .cheque-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .cheque-table th { text-align: left; padding: 0.75rem; color: #64748b; background: #f1f5f9; font-weight: 700; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+  .cheque-table td { padding: 0.75rem; border-bottom: 1px solid #f1f5f9; }
+  .cheque-table tr:nth-child(even) td { background: #f8fafc; }
+</style>
+
+<div class="page-shell cheque-shell">
+  <div class="page-header">
+    <div>
+      <h2 class="mb-0">Supplier Cheques</h2>
+      <div class="text-muted small">Pay multiple expenses in one cheque.</div>
+    </div>
+    <div class="page-toolbar">
+      <a href="{% url 'accounts:supplier_cheque_add' %}" class="pill-primary btn btn-sm">
+        <i class="fas fa-plus-circle me-1"></i>Create cheque
+      </a>
+      <a href="{% url 'accounts:supplier_credit_list' %}" class="pill-btn btn btn-sm">
+        <i class="fas fa-undo-alt me-1"></i>Supplier credits
+      </a>
+    </div>
+  </div>
+
+  <div class="cheque-card">
+    <form method="get" class="d-flex gap-2 align-items-center mb-3">
+      <div class="search-box">
+        <i class="fa fa-search text-muted"></i>
+        <input type="text" name="q" placeholder="Search cheques..." value="{{ query }}">
+      </div>
+      <button type="submit" class="pill-btn btn btn-sm">Search</button>
+    </form>
+
+    <table class="cheque-table">
+      <thead>
+        <tr>
+          <th>Cheque #</th>
+          <th>Date</th>
+          <th>Supplier</th>
+          <th>Bank Account</th>
+          <th class="text-end">Total</th>
+          <th class="text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cheque in cheques %}
+        <tr>
+          <td><a href="{% url 'accounts:supplier_cheque_detail' cheque.pk %}" class="btn btn-outline-primary btn-sm">{{ cheque.cheque_number }}</a></td>
+          <td>{{ cheque.date|date:"M d, Y" }}</td>
+          <td>{{ cheque.supplier_name|default:cheque.supplier|default:"-" }}</td>
+          <td>{{ cheque.bank_account|default:"-" }}</td>
+          <td class="text-end">{{ cheque.total_amount|currency }}</td>
+          <td class="text-center">
+            <a href="{% url 'accounts:supplier_cheque_pdf' cheque.pk %}" class="btn btn-sm btn-outline-secondary">PDF</a>
+            <a href="{% url 'accounts:supplier_cheque_detail' cheque.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted">No cheques created yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

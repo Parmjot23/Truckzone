@@ -1,0 +1,142 @@
+<div class="flyer-sheet">
+  <div class="flyer-header">
+    <div>
+      <div class="flyer-title">{{ flyer.title|default:"Package Deals & Discounts" }}</div>
+      <div class="flyer-subtitle">{{ flyer.subtitle|default:"Featured hero products and bundle savings." }}</div>
+    </div>
+    <div class="flyer-meta">
+      <div class="flyer-business">{{ business_name|default:default_business_name }}</div>
+      <div class="flyer-date">Updated {{ flyer.updated_at|date:"M d, Y" }}</div>
+    </div>
+  </div>
+
+  {% if flyer_slides %}
+  <div class="flyer-section">
+    <div class="flyer-section-title">Featured Discounts</div>
+    <div class="flyer-grid">
+      {% for slide in flyer_slides %}
+      {% with product=slide.product %}
+      <div class="flyer-card">
+        <div class="flyer-card-body">
+          {% if product.brand %}
+          <div class="flyer-card-brand">{{ product.brand.name }}</div>
+          {% elif product.source_name %}
+          <div class="flyer-card-brand">{{ product.source_name }}</div>
+          {% endif %}
+          <div class="flyer-card-title">{{ product.name }}</div>
+          {% if product.sku or product.source_product_id %}
+          <div class="flyer-card-meta">Part # {{ product.sku|default:product.source_product_id }}</div>
+          {% endif %}
+          {% if show_prices_hero %}
+          <div class="flyer-card-price">
+            {% if product.has_promotion %}
+              {% if product.sale_price %}
+              <span class="flyer-price-original">${{ product.sale_price|floatformat:2 }}</span>
+              {% endif %}
+              {% with promo=product.promotion_price|floatformat:2 %}
+              <span class="flyer-price-main">
+                <span class="flyer-price-currency">$</span>
+                <span class="flyer-price-dollars">{{ promo|slice:":-3" }}</span>
+                <span class="flyer-price-cents">{{ promo|slice:"-2:" }}</span>
+              </span>
+              {% endwith %}
+            {% elif product.sale_price %}
+              {% with sale=product.sale_price|floatformat:2 %}
+              <span class="flyer-price-main">
+                <span class="flyer-price-currency">$</span>
+                <span class="flyer-price-dollars">{{ sale|slice:":-3" }}</span>
+                <span class="flyer-price-cents">{{ sale|slice:"-2:" }}</span>
+              </span>
+              {% endwith %}
+            {% else %}
+            <span class="flyer-price-call">Call for price</span>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+        <div class="flyer-card-media">
+          {% if product.image %}
+          <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+          {% else %}
+          <i class="fas fa-box"></i>
+          {% endif %}
+        </div>
+        {% if slide.discount_percent %}
+        <div class="flyer-card-badge">Save {{ slide.discount_percent }}%</div>
+        {% elif product.has_promotion %}
+          {% if product.promotion_discount_percent %}
+          <div class="flyer-card-badge">Save {{ product.promotion_discount_percent }}%</div>
+          {% else %}
+          <div class="flyer-card-badge">Promo</div>
+          {% endif %}
+        {% endif %}
+      </div>
+      {% endwith %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if flyer_packages %}
+  <div class="flyer-section">
+    <div class="flyer-section-title">Package Deals</div>
+    <div class="flyer-grid flyer-grid--packages">
+      {% for package in flyer_packages %}
+      <div class="flyer-package-card">
+        <div class="flyer-package-title">{{ package.title }}</div>
+        <div class="flyer-package-subtitle">{{ package.subtitle|default:"Bundle savings for fleet-ready orders." }}</div>
+        <div class="flyer-package-items">
+          {% if package.primary_product %}
+          <div class="flyer-package-item">
+            {% if package.primary_product.image %}
+            <img src="{{ package.primary_product.image.url }}" alt="{{ package.primary_product.name }}" loading="lazy">
+            {% else %}
+            <i class="fas fa-box"></i>
+            {% endif %}
+            <span>{{ package.primary_product.name }}</span>
+          </div>
+          {% endif %}
+          {% if package.secondary_product %}
+          <div class="flyer-package-item">
+            {% if package.secondary_product.image %}
+            <img src="{{ package.secondary_product.image.url }}" alt="{{ package.secondary_product.name }}" loading="lazy">
+            {% else %}
+            <i class="fas fa-box"></i>
+            {% endif %}
+            <span>{{ package.secondary_product.name }}</span>
+          </div>
+          {% endif %}
+          {% if package.free_product %}
+          <div class="flyer-package-item">
+            {% if package.free_product.image %}
+            <img src="{{ package.free_product.image.url }}" alt="{{ package.free_product.name }}" loading="lazy">
+            {% else %}
+            <i class="fas fa-gift"></i>
+            {% endif %}
+            <span>{{ package.free_product.name }}</span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="flyer-package-badge">
+          {% if package.free_product and package.discount_percent %}
+          Free {{ package.free_product.name }} + {{ package.discount_percent }}% off
+          {% elif package.free_product %}
+          Free {{ package.free_product.name }}
+          {% elif package.discount_percent %}
+          Save {{ package.discount_percent }}%
+          {% else %}
+          Bundle deal
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="flyer-footer">
+    <span>{{ business_name|default:default_business_name }}</span>
+    <span>Shop: {{ store_url }}</span>
+    <span>Contact: {{ contact_url }}</span>
+  </div>
+</div>

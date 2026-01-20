@@ -1,0 +1,26 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Jobs for Grouped Invoice {{ grouped_invoice.invoice_number }}</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Job</th>
+            <th>Quantity</th>
+            <th>Rate</th>
+            <th>Amount</th>
+            <th>Tax Collected</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for job in jobs %}
+        <tr>
+            <td>{{ job.job|linebreaksbr }}</td>
+            <td>{{ job.qty }}</td>
+            <td>{{ job.rate }}</td>
+            <td>{{ job.amount }}</td>
+            <td>{{ job.tax_collected }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

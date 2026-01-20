@@ -1,0 +1,409 @@
+/* ============================================================================
+   MOBILE FIXES - Address grid and scroll issues
+   ============================================================================ */
+
+/* Prevent content shifting and disappearing on scroll */
+* {
+    -webkit-transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    -ms-transform: translateZ(0);
+    -o-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* Ensure stable layout during scroll */
+html {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+body {
+    overflow-x: hidden;
+    position: relative;
+    min-height: 100vh;
+}
+
+/* Fix for disappearing grids on mobile */
+.row {
+    margin-left: -15px;
+    margin-right: -15px;
+    display: flex !important;
+    flex-wrap: wrap !important;
+}
+
+.row::before,
+.row::after {
+    display: table;
+    content: " ";
+}
+
+.row::after {
+    clear: both;
+}
+
+/* Enhanced column panel styling */
+div.col-md-6 {
+    border-width: 10px;
+    border-style: solid;
+    border-color: rgba(169, 117, 117, 1);
+    border-image: linear-gradient(90deg, rgba(117, 169, 165, 1) 0%, rgba(255, 255, 255, 1) 100%) 1;
+    background-color: var(--font-heading);
+    box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.15);
+}
+
+/* Ensure columns don't disappear */
+[class*="col-"] {
+    position: relative;
+    min-height: 1px;
+    padding-right: 15px;
+    padding-left: 15px;
+    float: left;
+    will-change: auto;
+}
+
+/* Fix for mobile column layout */
+@media (max-width: 768px) {
+
+    .col-12,
+    .col-sm-12,
+    .col-md-6,
+    .col-lg-4,
+    .col-lg-6 {
+        width: 100% !important;
+        float: none !important;
+        display: block !important;
+        margin-bottom: 1rem;
+    }
+}
+
+/* Prevent hero section from flickering */
+.hero-section {
+    position: relative;
+    will-change: auto;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.hero-content {
+    will-change: auto;
+    transform: translateZ(0);
+}
+
+/* Fix for service cards disappearing */
+.service-card,
+.feature-item,
+.mission-card,
+.team-card,
+.contact-card,
+.service-detail-card,
+.certification-card,
+.emergency-card {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    will-change: auto;
+    backface-visibility: hidden;
+}
+
+/* Ensure sections are always visible */
+.services-wrapper,
+.why-choose-wrapper,
+.cta-wrapper,
+.story-wrapper,
+.mission-wrapper,
+.team-wrapper,
+.certifications-wrapper,
+.contact-info-wrapper,
+.contact-form-wrapper,
+.emergency-services-wrapper,
+.service-areas-wrapper,
+.faq-wrapper {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    will-change: auto;
+}
+
+/* Fix for mobile touch scrolling */
+@media (max-width: 768px) {
+    body {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Prevent navbar from causing layout shifts */
+    .navbar {
+        position: sticky !important;
+        top: 0 !important;
+        width: 100% !important;
+        z-index: 1000 !important;
+        transform: translateZ(0);
+        will-change: auto;
+    }
+
+    /* Ensure container doesn't shift */
+    .container {
+        max-width: 100% !important;
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+    }
+
+    /* Fix hero stats from disappearing */
+    .hero-stats {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
+    .hero-stat {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+}
+
+/* Fix for grid items in mobile */
+@media (max-width: 576px) {
+
+    .mb-4,
+    .mb-3,
+    .mb-2 {
+        margin-bottom: 1.5rem !important;
+    }
+
+    /* Ensure all grid items are visible */
+    .col-12 {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+}
+
+/* Prevent animation-related disappearing */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Fix for intersection observer issues on mobile */
+@media (max-width: 768px) {
+
+    [style*="opacity: 0"],
+    [style*="transform: translateY"] {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
+
+/* Ensure buttons are always visible and clickable */
+.btn,
+.hero-buttons .btn,
+.scroll-up-button {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+/* Fix for mobile menu overlay */
+@media (max-width: 991px) {
+    .navbar-collapse.show {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
+    /* Prevent body scroll when menu is open */
+    body.menu-open {
+        overflow: hidden !important;
+        position: fixed !important;
+        width: 100% !important;
+    }
+}
+
+/* Ensure images don't disappear */
+img {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    width: fit-content !important;
+    max-width: 100% !important;
+    height: auto !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Fix for FAQ accordion */
+.faq-wrapper .card,
+.faq-wrapper .card-body {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Stable positioning for fixed elements */
+.scroll-up-button {
+    position: fixed !important;
+    z-index: 999 !important;
+    transform: translateZ(0) !important;
+    backface-visibility: hidden !important;
+}
+
+/* Fix for form elements */
+.form-control,
+.form-select,
+.form-label {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Ensure footer is always visible */
+.footer {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    margin-top: auto !important;
+}
+
+/* Fix for text elements */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span,
+a {
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Prevent layout shifts during page load */
+.hero-section,
+.services-wrapper,
+.why-choose-wrapper {
+    min-height: 100px;
+}
+
+/* Mobile-specific layout fixes */
+@media (max-width: 768px) {
+
+    /* Ensure proper spacing */
+    section {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }
+
+    /* Fix card layouts */
+    .service-card,
+    .feature-item,
+    .contact-card {
+        margin-bottom: 1rem !important;
+        width: 100% !important;
+    }
+
+    /* Ensure proper flex behavior */
+    .d-flex {
+        display: flex !important;
+    }
+
+    .flex-wrap {
+        flex-wrap: wrap !important;
+    }
+
+    /* Fix hero buttons */
+    .hero-buttons {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem !important;
+        width: 100% !important;
+    }
+
+    .hero-buttons .btn {
+        width: 100% !important;
+        justify-content: center !important;
+        min-height: 48px !important;
+        font-size: 1rem !important;
+    }
+
+    /* Navigation styles removed - now inline in base.html */
+
+    /* Prevent body scroll when mobile menu is open */
+    body.menu-open {
+        overflow: hidden !important;
+        position: fixed !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    /* Better spacing for form elements */
+    .form-control,
+    .form-select {
+        min-height: 48px !important;
+        font-size: 16px !important;
+        /* Prevent zoom on iOS */
+        padding: 0.75rem 1rem !important;
+    }
+
+    /* Fix accordion on mobile */
+    .faq-wrapper .btn-link {
+        min-height: 48px !important;
+        padding: 1rem 1.25rem !important;
+        font-size: 1rem !important;
+    }
+
+    /* Improve hero section on mobile */
+    .hero-section {
+        padding: 1.5rem 0 !important;
+        min-height: auto !important;
+    }
+
+    .hero-content {
+        padding: 1.5rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    /* Better grid spacing */
+    .row {
+        margin-left: -10px !important;
+        margin-right: -10px !important;
+    }
+
+    [class*="col-"] {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    /* Fix overlapping elements */
+    .hero-badge {
+        font-size: 0.85rem !important;
+        padding: 0.5rem 1rem !important;
+    }
+
+    .hero-stat-number {
+        font-size: 1.75rem !important;
+    }
+
+    .hero-stat-label {
+        font-size: 0.8rem !important;
+    }
+
+    /* Improve footer on mobile */
+    .footer {
+        padding: 2rem 0 1rem !important;
+    }
+
+    .footer .footer-links li {
+        margin-bottom: 0.75rem !important;
+    }
+}

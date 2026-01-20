@@ -1,0 +1,34 @@
+﻿{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Import Paystubs</h2>
+            <div class="text-muted small">Upload paystub totals for {{ payroll_run.period_start }} - {{ payroll_run.period_end }}.</div>
+        </div>
+    </div>
+
+    {% include 'payroll/_nav.html' %}
+
+    <div class="card">
+        <div class="card-body">
+            <p class="text-muted small">Accepted columns: employee_id or employee_email, employee_name, hours, regular_hours, overtime_hours, regular_pay, overtime_pay, gross_pay, taxable_income, federal_tax, provincial_tax, cpp_employee, cpp2_employee, ei_employee, other_deductions, net_pay, cpp_employer, cpp2_employer, ei_employer, employer_total.</p>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label">CSV or Excel file</label>
+                        <input type="file" name="file" class="form-control" accept=".csv,.xlsx">
+                    </div>
+                    <div class="col-md-6">
+                        <button type="submit" class="btn btn-primary">Import paystubs</button>
+                        <a href="{% url 'accounts:payroll_run_detail' payroll_run.id %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

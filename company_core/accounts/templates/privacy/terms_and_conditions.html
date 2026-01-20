@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_css %}
+<style>
+    .legal-hero {
+        background: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.8)),
+        url("{% static 'images/hero_legal_new.png' %}");
+        background-size: cover;
+        background-position: center;
+        padding: 5rem 0;
+        color: white;
+    }
+
+    .legal-content {
+        background: white;
+        padding: 3rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        margin-top: -3rem;
+        position: relative;
+        z-index: 10;
+    }
+
+    .legal-content h2 {
+        color: var(--brand-navy);
+        font-weight: bold;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+    }
+
+    .legal-content h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--neutral-700);
+        margin-top: 1.5rem;
+    }
+
+    .legal-content ul {
+        margin-bottom: 1.5rem;
+    }
+
+    .legal-content li {
+        margin-bottom: 0.5rem;
+        color: var(--neutral-600);
+    }
+
+    .legal-content p {
+        color: var(--neutral-600);
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="legal-hero text-center">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto">
+                <div class="d-inline-flex align-items-center bg-white bg-opacity-10 rounded-pill px-3 py-1 mb-3">
+                    <i class="fas fa-file-contract text-brand-orange me-2"></i>
+                    <span class="text-white small fw-bold text-uppercase">Legal Information</span>
+                </div>
+                <h1 class="display-4 fw-bold mb-3 text-white">Terms and Conditions</h1>
+                <p class="lead text-white-50">The rules that govern our services and your use of our platform.</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="legal-content">
+                <p class="text-muted small border-bottom pb-3 mb-4"><strong>Last updated:</strong> December 7, 2025</p>
+
+                <h2>1. Acceptance of Terms</h2>
+                <p>
+                    By accessing our website or utilizing our repair and maintenance services, you ("Customer," "you,"
+                    or "your") agree to be bound by these Terms of Service ("Terms"). If you do not agree to these
+                    Terms, please do not use our services.
+                </p>
+
+                <h2>2. Service Authorization</h2>
+                <p>
+                    By submitting a service request or dropping off a vehicle, you authorize
+                    {{ business_name|default:default_business_name }} to perform the requested work along with any necessary diagnostics. You grant us permission
+                    to operate the vehicle on streets, highways, or elsewhere for testing and inspection purposes.
+                </p>
+
+                <h2>3. Estimates and Payment</h2>
+                <ul>
+                    <li><strong>Estimates:</strong> We will provide an estimate for repairs. Unforeseen issues may arise
+                        during the repair process; we will contact you for approval if costs significantly exceed the
+                        initial estimate.</li>
+                    <li><strong>Payment:</strong> Payment is due upon completion of services unless prior credit
+                        arrangements have been made (e.g., Fleet Accounts).</li>
+                    <li><strong>Liens:</strong> We reserve the right to assert a mechanic's lien on any vehicle for
+                        which payment has not been received, in accordance with Ontario law.</li>
+                </ul>
+
+                <h2>4. Warranty</h2>
+                <ul>
+                    <li><strong>Labor:</strong> We offer a standard warranty on our labor for a specific period or
+                        mileage, whichever comes first, as stated on your invoice.</li>
+                    <li><strong>Parts:</strong> Parts are subject to the manufacturer's warranty. We do not offer
+                        additional warranties on parts unless explicitly stated.</li>
+                </ul>
+
+                <h2>5. User Accounts (Fleet Portal)</h2>
+                <ul>
+                    <li><strong>Registration:</strong> To access fleet management features, you must register for an
+                        account using accurate business information.</li>
+                    <li><strong>Responsibility:</strong> You are responsible for safeguarding your account credentials
+                        and for all activity that occurs under your account.</li>
+                </ul>
+
+                <h2>6. Limitation of Liability</h2>
+                <p>
+                    {{ business_name|default:default_business_name }} shall not be liable for loss or damage to the vehicle or its
+                    contents in case of fire, theft, accident, or any other cause beyond our control. We are not
+                    responsible for articles left in vehicles.
+                </p>
+
+                <h2>7. Governing Law</h2>
+                <p>
+                    These Terms are governed by and construed in accordance with the laws of the Province of Ontario and
+                    the federal laws of Canada applicable therein.
+                </p>
+
+                <h2>8. Contact Information</h2>
+                <p>
+                    If you have any questions about these Terms, please contact us:
+                </p>
+                <ul>
+                    <li><strong>Email:</strong>
+                        <a href="mailto:{{ business_contact_email|default:default_business_email }}">{{ business_contact_email|default:default_business_email }}</a>
+                    </li>
+                    {% if business_contact_phone %}<li><strong>Phone:</strong> {{ business_contact_phone }}</li>{% endif %}
+                    {% if business_contact_address %}<li><strong>Address:</strong> {{ business_contact_address }}</li>{% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

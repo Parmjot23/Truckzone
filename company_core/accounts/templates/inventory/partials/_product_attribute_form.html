@@ -1,0 +1,75 @@
+<!-- inventory/partials/_product_attribute_form.html -->
+<input type="hidden" name="product_id" value="{{ form.instance.id }}">
+{{ form.non_field_errors }}
+<div class="product-modal-grid">
+  <div class="form-group span-2">
+    {{ form.category.label_tag }}
+    {{ form.category }}
+    <div class="form-text text-muted">Choose a category to load its custom attributes.</div>
+  </div>
+  <div class="form-group span-2" data-attribute-fields="true" data-attribute-url="{% url 'accounts:get_attribute_fields' %}" data-product-id="{{ form.instance.id|default_if_none:'' }}">
+    {% include 'inventory/partials/_attribute_fields.html' with form=form %}
+    <div class="mt-2">
+      <a class="btn btn-link btn-sm px-0" href="{% url 'accounts:inventory_attributes' %}" target="_blank" rel="noopener">Create custom attributes</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  if (window.__catalogAttributeInit) {
+    return;
+  }
+  window.__catalogAttributeInit = true;
+
+  function fetchAttributeFields(selectEl) {
+    const form = selectEl.closest('form');
+    if (!form) {
+      return;
+    }
+    const container = form.querySelector('[data-attribute-fields]');
+    if (!container) {
+      return;
+    }
+    const url = container.getAttribute('data-attribute-url');
+    if (!url) {
+      return;
+    }
+    const categoryId = selectEl.value || '';
+    const productId = container.getAttribute('data-product-id') || '';
+    const params = new URLSearchParams();
+    params.set('category_id', categoryId);
+    if (productId) {
+      params.set('product_id', productId);
+    }
+
+    fetch(url + '?' + params.toString(), {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to load attributes.');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        container.innerHTML = data.html || '';
+      })
+      .catch(() => {
+        // Keep existing attribute fields if the update fails.
+      });
+  }
+
+  document.addEventListener('change', (event) => {
+    const target = event.target;
+    if (!target || !(target instanceof HTMLElement)) {
+      return;
+    }
+    if (target.matches('[data-attribute-source]')) {
+      fetchAttributeFields(target);
+    }
+  });
+})();
+</script>

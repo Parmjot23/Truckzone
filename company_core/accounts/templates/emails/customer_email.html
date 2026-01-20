@@ -1,0 +1,154 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice Statement</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fb;
+            color: #111827;
+        }
+        .email-card {
+            max-width: 640px;
+            margin: 24px auto;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .header {
+            background-color: {{ profile.invoice_header_color|default:"#1f4b99" }};
+            color: #ffffff;
+            padding: 20px 24px;
+        }
+        .header-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .header-subtitle {
+            font-size: 12px;
+            margin-top: 6px;
+            opacity: 0.9;
+        }
+        .body {
+            padding: 24px;
+        }
+        .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0 12px;
+            border: 1px solid #e5e7eb;
+        }
+        .meta-table td {
+            padding: 10px 12px;
+            border-right: 1px solid #e5e7eb;
+        }
+        .meta-table td:last-child {
+            border-right: none;
+        }
+        .meta-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #6b7280;
+        }
+        .meta-value {
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .note {
+            background-color: #f8fafc;
+            border-left: 4px solid {{ profile.invoice_header_color|default:"#1f4b99" }};
+            padding: 12px;
+            margin-top: 12px;
+            color: #374151;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            padding: 18px 20px 22px;
+            border-top: 1px solid #e5e7eb;
+            background-color: #f9fafb;
+        }
+        a {
+            color: {{ profile.invoice_header_color|default:"#1f4b99" }};
+        }
+    </style>
+</head>
+<body>
+    <div class="email-card">
+        <div class="header">
+            <div class="header-title">Invoice Statement</div>
+            <div class="header-subtitle">{{ profile.company_name|default:business_name|default:default_business_name }}</div>
+        </div>
+        <div class="body">
+            <p>Hi {{ customer.name }},</p>
+            <p>Your statement is attached. Below is a quick summary for your records.</p>
+
+            <table class="meta-table" role="presentation">
+                <tr>
+                    <td>
+                        <div class="meta-label">Statement type</div>
+                        <div class="meta-value">
+                            {% if invoice_type == 'paid' %}Paid invoices
+                            {% elif invoice_type == 'all' %}All invoices
+                            {% else %}Pending invoices{% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="meta-label">Period</div>
+                        <div class="meta-value">
+                            {% if start_date and end_date %}
+                                {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}
+                            {% else %}
+                                All available invoices
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="meta-label">Generated</div>
+                        <div class="meta-value">{% now "M d, Y" %}</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="meta-label">Total invoiced</div>
+                        <div class="meta-value">{{ total_amount|currency }}</div>
+                    </td>
+                    <td>
+                        <div class="meta-label">Total paid</div>
+                        <div class="meta-value">{{ total_paid|currency }}</div>
+                    </td>
+                    <td>
+                        <div class="meta-label">Balance due</div>
+                        <div class="meta-value">{{ total_balance_due|currency }}</div>
+                    </td>
+                </tr>
+            </table>
+
+            <div class="note">
+                {% if invoice_type == 'pending' %}
+                    This statement includes open invoices with outstanding balances. Please remit payment by the due date shown.
+                {% elif invoice_type == 'paid' %}
+                    This statement includes fully paid invoices only. Thank you for your prompt payment.
+                {% else %}
+                    This statement includes both paid and outstanding invoices. Balances shown reflect payments received to date.
+                {% endif %}
+            </div>
+
+            <p>If you have any questions, please contact us at <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+            <p>Sincerely,<br>{{ profile.company_name }} Team</p>
+        </div>
+        <div class="footer">
+            &copy; {{ current_year }} {{ profile.company_name }}. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

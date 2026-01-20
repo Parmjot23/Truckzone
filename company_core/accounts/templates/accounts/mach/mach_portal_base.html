@@ -1,0 +1,31 @@
+{% extends 'customer_portal_base.html' %}
+
+{% block html_attrs %} class="mach-portal-html"{% endblock %}
+{% block body_class %} mach-portal{% if portal_read_only %} accountant-portal{% endif %}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        :root {
+            --mach-base-font: 0.95rem;
+            --mach-base-line: 1.45;
+        }
+
+        html.mach-portal-html {
+            font-size: var(--mach-base-font);
+        }
+
+        body.mach-portal {
+            font-size: inherit;
+            line-height: var(--mach-base-line);
+            font-family: 'Manrope', 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        /* Lock consistent sizing across the layout without overriding icon fonts */
+        body.mach-portal .app-main,
+        body.mach-portal .app-content {
+            font-size: inherit !important;
+            line-height: var(--mach-base-line) !important;
+        }
+    </style>
+{% endblock %}

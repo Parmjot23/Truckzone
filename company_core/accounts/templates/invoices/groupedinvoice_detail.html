@@ -1,0 +1,22 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Invoice Detail</h2>
+    <!-- Include your invoice display here, or you can link to the invoice template -->
+    <!-- For example, you can include the invoice template -->
+    {% include 'invoices/invoice.html' %}
+    <!-- Action Buttons -->
+    <div class="mt-4">
+        <a href="{% url 'accounts:print_invoice' invoice.pk %}" class="btn btn-primary">Print</a>
+        <a href="{% url 'accounts:download_invoice' invoice.pk %}" class="btn btn-primary">Download</a>
+        <a href="{% url 'accounts:email_invoice' invoice.pk %}" class="btn btn-primary">Email</a>
+        {% if invoice.work_order %}
+            <a href="{% url 'accounts:email_invoice' invoice.pk %}?include_workorder=1" class="btn btn-primary">Email with Work Order</a>
+        {% endif %}
+        {% if invoice.work_order %}
+            <a href="{% url 'accounts:workorder_download' invoice.work_order.pk %}" class="btn btn-secondary">Work Order PDF</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

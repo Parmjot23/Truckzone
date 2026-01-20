@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ subject }}</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: {{ theme.background|default:"#f3f4f6" }};
+      font-family: Arial, sans-serif;
+      color: #0f172a;
+    }
+    .card {
+      max-width: 640px;
+      margin: 24px auto;
+      background-color: {{ theme.surface|default:"#ffffff" }};
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .hero {
+      background-color: {{ theme.primary|default:"#0f766e" }};
+      color: #ffffff;
+      padding: 28px 28px 24px;
+      text-align: left;
+    }
+    .eyebrow {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+      opacity: 0.9;
+    }
+    .headline {
+      font-size: 26px;
+      font-weight: 700;
+      margin: 10px 0 6px;
+    }
+    .subheadline {
+      font-size: 15px;
+      margin: 0;
+      opacity: 0.95;
+    }
+    .cta {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 12px 20px;
+      border-radius: 999px;
+      background-color: {{ theme.accent|default:"#f59e0b" }};
+      color: #1f2937;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .body {
+      padding: 24px 28px 12px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .highlight-card {
+      margin: 18px 0 10px;
+      padding: 16px;
+      border-radius: 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+    .highlight-card h4 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: {{ theme.primary|default:"#0f766e" }};
+    }
+    .highlight-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .footer {
+      padding: 16px 28px 22px;
+      font-size: 12px;
+      color: #6b7280;
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+    }
+    .logo {
+      max-height: 40px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  {% if preheader %}
+  <span style="display:none;visibility:hidden;opacity:0;max-height:0;overflow:hidden;">{{ preheader }}</span>
+  {% endif %}
+  <div class="card">
+    <div class="hero">
+      {% if company_logo_url %}
+      <img src="{{ company_logo_url }}" alt="{{ company_name }}" class="logo">
+      {% endif %}
+      <div class="eyebrow">{{ eyebrow|default:"Holiday special" }}</div>
+      <div class="headline">{{ headline }}</div>
+      {% if subheadline %}
+      <p class="subheadline">{{ subheadline }}</p>
+      {% endif %}
+      {% if cta_text and cta_url %}
+      <a class="cta" href="{{ cta_url }}">{{ cta_text }}</a>
+      {% endif %}
+    </div>
+    <div class="body">
+      <p>Hi {{ recipient_name }},</p>
+      <p>{{ message|linebreaksbr }}</p>
+      {% if highlights %}
+      <div class="highlight-card">
+        <h4>Holiday readiness checklist</h4>
+        <ul class="highlight-list">
+          {% for item in highlights %}
+          <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      {% if footer_note %}
+      <p><strong>{{ footer_note }}</strong></p>
+      {% endif %}
+      <p>Need help? Email us at <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+      <p>Thanks,<br>{{ company_name }} Team</p>
+    </div>
+    <div class="footer">
+      <div>{{ company_name }} | {{ business_phone }}</div>
+      <div>{{ business_address|linebreaksbr }}</div>
+      <div>&copy; {{ current_year }} {{ company_name }}. All rights reserved.</div>
+    </div>
+  </div>
+</body>
+</html>

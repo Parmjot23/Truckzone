@@ -1,0 +1,16 @@
+{% extends "accounts/mach/mach_portal_base.html" %}
+{% load static %}
+{% block title %}
+   Record Keeping
+{% endblock %}
+{% block content %}
+<form method="post">
+    {% csrf_token %}
+    <h2>Income Form</h2>
+    {{ pending_invoice_form.as_p }}
+    <hr>
+    <button type="submit" name="save_continue">Save and Continue</button>
+    <hr>
+    <button type="submit" name="submit_income">Save and Finish</button>
+</form>
+{% endblock %}

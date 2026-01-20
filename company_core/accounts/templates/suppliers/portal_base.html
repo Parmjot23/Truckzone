@@ -1,0 +1,74 @@
+{% extends "suppliers/supplier_portal_base_layout.html" %}
+{% block title %}Supplier Portal{% endblock %}
+{% block extra_css %}
+  <style>
+    .supplier-portal-shell {
+      background: linear-gradient(180deg, rgba(14, 116, 144, 0.08), rgba(15, 118, 110, 0.05));
+      min-height: calc(100vh - 160px);
+      padding: 2.5rem 0 3rem;
+    }
+
+    .supplier-portal-header {
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 18px 40px rgba(14, 116, 144, 0.12);
+      padding: 2.25rem 2.5rem;
+      margin-bottom: 1.75rem;
+      border: 1px solid rgba(45, 212, 191, 0.2);
+    }
+
+    .supplier-portal-body {
+      background: transparent;
+    }
+
+    @media (max-width: 991.98px) {
+      .supplier-portal-shell {
+        padding: 1.75rem 0 2.25rem;
+      }
+
+      .supplier-portal-header {
+        padding: 1.75rem;
+      }
+    }
+  </style>
+{% endblock %}
+{% block content %}
+  <div class="supplier-portal-shell">
+    <div class="container">
+      <div class="supplier-portal-header">
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-4">
+          <div>
+            <span class="badge bg-info-subtle text-info mb-2">Supplier portal</span>
+            <h1 class="h2 mb-2">Hello {{ supplier_account.name|default:request.user.get_full_name|default:request.user.get_username }}</h1>
+            <p class="mb-0 text-muted">Stay connected with {{ business_contact.name|default:request.user.get_full_name|default:request.user.get_username }} – review current stock levels, track what has been purchased, and reach out whenever you need to.</p>
+          </div>
+          <div class="d-flex flex-column align-items-lg-end gap-3 align-self-start w-100 w-lg-auto">
+            <div class="border rounded-4 bg-light p-3 align-self-stretch align-self-lg-end">
+              <div class="fw-semibold text-uppercase text-muted small mb-2">Business contact</div>
+              <ul class="list-unstyled mb-2 small">
+                {% if business_contact.email %}
+                  <li><i class="fas fa-envelope me-2 text-info"></i>{{ business_contact.email }}</li>
+                {% endif %}
+                {% if business_contact.phone %}
+                  <li><i class="fas fa-phone me-2 text-info"></i>{{ business_contact.phone }}</li>
+                {% endif %}
+                {% if business_contact.address %}
+                  <li><i class="fas fa-location-dot me-2 text-info"></i>{{ business_contact.address }}</li>
+                {% endif %}
+              </ul>
+              {% url 'accounts:contact_support' as contact_support_url %}
+              <a href="{% if business_contact.support_url %}{{ business_contact.support_url }}{% else %}{{ contact_support_url }}?source=supplier_portal{% endif %}" class="btn btn-outline-info btn-sm">
+                <i class="fas fa-comments me-1"></i>
+                Message the business
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="supplier-portal-body">
+        {% block portal_content %}{% endblock %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,1011 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% block title %}Vehicle Management{% endblock %}
+{% block content %}
+<style>
+    .vm-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+        padding: 1rem;
+    }
+    .vm-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .pill-primary {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        border: none;
+        color: #fff;
+        border-radius: 12px;
+        padding: 0.45rem 0.95rem;
+        font-weight: 700;
+        font-size: 0.92rem;
+        box-shadow: 0 12px 24px rgba(37,99,235,0.18);
+    }
+    .pill-secondary {
+        border-radius: 12px;
+        padding: 0.42rem 0.9rem;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #0f172a;
+        font-weight: 700;
+        font-size: 0.92rem;
+        box-shadow: 0 10px 18px rgba(15,23,42,0.06);
+    }
+    .select-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem;
+        background: #fff;
+        box-shadow: 0 6px 16px rgba(15,23,42,0.05);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #0f172a;
+    }
+    .empty-state .icon {
+        font-size: 3rem;
+        color: #2563eb;
+        margin-bottom: 0.75rem;
+    }
+</style>
+
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Vehicle management</h2>
+            <p class="text-muted mb-0">Choose a customer to manage their fleet, import data, or add vehicles.</p>
+        </div>
+        <div class="page-toolbar vm-toolbar">
+            <button id="addVehicleBtn" class="pill-primary btn btn-sm" data-bs-toggle="modal" data-bs-target="#addVehicleModal" {% if not selected_customer %}disabled{% endif %}>
+                <i class="fas fa-truck me-1"></i> Add Vehicle
+            </button>
+            <button id="addCustomerBtn" class="pill-primary btn btn-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+                <i class="fas fa-user-plus me-1"></i> Add Customer
+            </button>
+            <button id="editCustomerBtn" class="pill-secondary btn btn-sm" data-bs-toggle="modal" data-bs-target="#editCustomerModal" {% if not selected_customer %}disabled{% endif %}>
+                <i class="fas fa-edit me-1"></i> Edit Customer
+            </button>
+            <button id="importVehiclesButton" type="button" class="pill-secondary btn btn-sm" data-bs-toggle="modal" data-bs-target="#importVehiclesModal" {% if not selected_customer %}disabled{% endif %}>
+                <i class="fas fa-file-import me-1"></i> Import
+            </button>
+            <a id="downloadVehicleTemplate"
+               class="pill-secondary btn btn-sm {% if not selected_customer %}disabled{% endif %}"
+               data-template-base-url="{% url 'accounts:vehicle_management_template' %}"
+               {% if selected_customer %}
+                   href="{% url 'accounts:vehicle_management_template' %}?customer_id={{ selected_customer.id }}"
+               {% else %}
+                   href="#"
+                   tabindex="-1"
+                   aria-disabled="true"
+               {% endif %}>
+                <i class="fas fa-file-export me-1"></i> Template
+            </a>
+        </div>
+    </div>
+
+    <div class="select-card mb-3">
+        <label for "customerSelect" class="form-label small text-muted">Select Customer</label>
+        <select id="customerSelect" class="form-select">
+            <option value="">-- Choose Customer --</option>
+            {% for cust in customers %}
+            <option value="{{ cust.id }}" {% if selected_customer and cust.id == selected_customer.id %}selected{% endif %}>{{ cust.name }}</option>
+            {% endfor %}
+        </select>
+        <div class="text-muted small mt-2">Select a customer to manage their fleet, or import data.</div>
+    </div>
+
+    <div class="vm-card">
+        <div id="vehicleTableContainer" class="vehicle-table-container">
+            {% if not selected_customer %}
+                <div class="empty-state">
+                    <div class="icon"><i class="fas fa-truck-moving"></i></div>
+                    <h5 class="fw-semibold mb-1">Choose a customer to get started</h5>
+                    <p class="text-muted mb-3">Select a customer to review their fleet, add new units, or import a spreadsheet of vehicles.</p>
+                    <button class="pill-primary btn btn-sm" id="emptyAddCustomer" data-bs-toggle="modal" data-bs-target="#addCustomerModal">Add Customer</button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<!-- Edit Vehicle Modal -->
+<div class="modal fade" id="editVehicleModal" tabindex="-1" aria-labelledby="editVehicleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="edit-vehicle-form">
+        {% csrf_token %}
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editVehicleModalLabel">Edit Vehicle</h5>
+                <button type="button" class="close" data-bs-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-vehicle-id">
+                <div class="mb-3">
+                    <label for="edit-unit-number" class="form-label">Unit Number</label>
+                    <input type="text" id="edit-unit-number" name="unit_number" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="edit-vin-number" class="form-label">VIN Number</label>
+                    <input type="text" id="edit-vin-number" name="vin_number" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="edit-license-plate" class="form-label">License Plate</label>
+                    <input type="text" id="edit-license-plate" name="license_plate" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="edit-make-model" class="form-label">Make &amp; Model</label>
+                    <input type="text" id="edit-make-model" name="make_model" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="edit-year" class="form-label">Year</label>
+                    <input type="number" id="edit-year" name="year" class="form-control" min="0">
+                </div>
+                <div class="mb-3">
+                    <label for="edit-current-mileage" class="form-label">Current Mileage</label>
+                    <input type="number" id="edit-current-mileage" name="current_mileage" class="form-control" min="0">
+                </div>
+                <div id="edit-vehicle-errors" class="text-danger mt-2"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Vehicle Modal -->
+<div class="modal fade" id="addVehicleModal" tabindex="-1" aria-labelledby="addVehicleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="add-vehicle-form">
+        {% csrf_token %}
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addVehicleModalLabel">Add Vehicle</h5>
+                <button type="button" class="close" data-bs-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="add-unit-number" class="form-label">Unit Number</label>
+                    <input type="text" id="add-unit-number" name="unit_number" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="add-vin-number" class="form-label">VIN Number</label>
+                    <input type="text" id="add-vin-number" name="vin_number" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="add-license-plate" class="form-label">License Plate</label>
+                    <input type="text" id="add-license-plate" name="license_plate" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="add-make-model" class="form-label">Make &amp; Model</label>
+                    <input type="text" id="add-make-model" name="make_model" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="add-year" class="form-label">Year</label>
+                    <input type="number" id="add-year" name="year" class="form-control" min="0">
+                </div>
+                <div class="mb-3">
+                    <label for="add-current-mileage" class="form-label">Current Mileage</label>
+                    <input type="number" id="add-current-mileage" name="current_mileage" class="form-control" min="0">
+                </div>
+                <div id="add-vehicle-feedback" class="mt-2 small"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary" data-submit-action="save-close">Save Vehicle</button>
+                <button type="submit" class="btn btn-outline-primary" data-submit-action="save-continue">Save &amp; Continue</button>
+            </div>
+        </div>
+  </form>
+  </div>
+</div>
+
+<!-- Import Vehicles Modal -->
+<div class="modal fade" id="importVehiclesModal" tabindex="-1" aria-labelledby="importVehiclesModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" enctype="multipart/form-data" action="{% url 'accounts:vehicle_management_import' %}">
+      {% csrf_token %}
+      <input type="hidden" name="customer_id" value="{% if selected_customer %}{{ selected_customer.id }}{% endif %}">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="importVehiclesModalLabel">Import Vehicles from Excel</h5>
+          <button type="button" class="close" data-bs-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-3">Download the template, fill in VIN, Unit, License Plate, Make/Model, and mileage, then upload it here.</p>
+          <div class="mb-3">
+            <label for="importVehiclesFile" class="form-label">Excel File (.xlsx)</label>
+            <input id="importVehiclesFile" type="file" name="file" class="form-control" accept=".xlsx" required>
+          </div>
+          <p class="small mb-0">Need the template? <a id="importModalTemplateLink"
+              data-template-base-url="{% url 'accounts:vehicle_management_template' %}"
+              href="{% if selected_customer %}{% url 'accounts:vehicle_management_template' %}?customer_id={{ selected_customer.id }}{% else %}#{% endif %}"{% if not selected_customer %} tabindex="-1" aria-disabled="true"{% endif %}>Download it here.</a></p>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Upload</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Customer Modal -->
+<div class="modal fade" id="editCustomerModal" tabindex="-1" aria-labelledby="editCustomerModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="edit-customer-form">
+        {% csrf_token %}
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editCustomerModalLabel">Edit Customer</h5>
+                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                {{ customer_form|crispy }}
+                <div id="edit-customer-errors" class="text-danger mt-2"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="add-customer-form">
+        {% csrf_token %}
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addCustomerModalLabel">Add New Customer</h5>
+                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                {{ customer_form|crispy }}
+                <div id="add-customer-errors" class="text-danger mt-2"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Add Customer</button>
+            </div>
+        </div>
+    </form>
+  </div>
+</div>
+
+<style>
+    .vehicle-management-page {
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.08), rgba(25, 135, 84, 0.08));
+        min-height: calc(100vh - 120px);
+    }
+    .text-white-75 {
+        color: rgba(255, 255, 255, 0.75) !important;
+    }
+    .vehicle-hero-card {
+        background: linear-gradient(135deg, #0d6efd, #198754);
+        border-radius: 1.5rem;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+    }
+    .vehicle-hero-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.35), transparent 55%);
+        pointer-events: none;
+    }
+    .vehicle-hero-card .card-body {
+        position: relative;
+        z-index: 1;
+    }
+    .vehicle-hero-actions .badge {
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+    }
+    .vehicle-controls-card {
+        border-radius: 1.25rem;
+        border: none;
+        box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+        background-color: #fff;
+    }
+    .vehicle-customer-picker {
+        background-color: #fff;
+    }
+    .vehicle-customer-picker .input-group-text {
+        background-color: #fff;
+        border: none;
+    }
+    .vehicle-customer-picker .form-select {
+        border: none;
+        box-shadow: none;
+    }
+    .vehicle-helper {
+        line-height: 1.5;
+    }
+    .vehicle-table-card {
+        border-radius: 1rem;
+        border: 1px solid rgba(15, 23, 42, 0.05);
+        box-shadow: 0 15px 30px rgba(15, 23, 42, 0.06);
+        background-color: #fff;
+    }
+    .vehicle-table-header {
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        padding-bottom: 1rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .vehicle-search-wrapper {
+        position: relative;
+        max-width: 320px;
+        width: 100%;
+    }
+    .vehicle-search-input {
+        border-radius: 999px;
+        padding-left: 2.75rem;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    }
+    .vehicle-search-icon {
+        position: absolute;
+        top: 50%;
+        left: 1.1rem;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+    .vehicle-table thead th {
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-size: 0.75rem;
+        color: #495057;
+        background-color: #f8f9fa;
+        border-top: none;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    }
+    .vehicle-table tbody td {
+        vertical-align: middle;
+    }
+    .vehicle-table tbody tr {
+        transition: background-color 0.2s ease;
+    }
+    .vehicle-table tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.04);
+    }
+    .vehicle-maintenance-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .bg-soft-primary {
+        background-color: rgba(13, 110, 253, 0.15) !important;
+        color: #0d6efd !important;
+    }
+    .bg-soft-secondary {
+        background-color: rgba(108, 117, 125, 0.15) !important;
+        color: #6c757d !important;
+    }
+    .bg-soft-danger {
+        background-color: rgba(220, 53, 69, 0.15) !important;
+        color: #dc3545 !important;
+    }
+    .vehicle-empty-state {
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 1px dashed rgba(13, 110, 253, 0.25);
+        border-radius: 1.25rem;
+    }
+    .vehicle-table-card .btn-group .btn {
+        border-radius: 0.5rem;
+    }
+    .vehicle-table-card .btn-group .btn + .btn {
+        margin-left: 0.5rem;
+    }
+    .vehicle-table-card .btn-primary {
+        color: #fff;
+    }
+    .vehicle-table-card .btn-outline-secondary:hover,
+    .vehicle-table-card .btn-outline-secondary:focus {
+        color: #0d6efd;
+        border-color: rgba(13, 110, 253, 0.35);
+    }
+    @media (max-width: 991.98px) {
+        .vehicle-search-wrapper {
+            max-width: 100%;
+        }
+    }
+    @media (max-width: 767.98px) {
+        .vehicle-hero-actions {
+            text-align: center;
+        }
+        .vehicle-controls-card .d-flex {
+            justify-content: flex-start !important;
+        }
+        .vehicle-search-wrapper {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+function getCookie(name){
+    let cookieValue = null;
+    if(document.cookie && document.cookie !== ''){
+        const cookies = document.cookie.split(';');
+        for(let i=0;i<cookies.length;i++){
+            const cookie = cookies[i].trim();
+            if(cookie.substring(0,name.length+1) === (name+'=')){
+                cookieValue = decodeURIComponent(cookie.substring(name.length+1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+const customerSelect = document.getElementById('customerSelect');
+const vehicleContainer = document.getElementById('vehicleTableContainer');
+const editCustomerBtn = document.getElementById('editCustomerBtn');
+const editCustomerForm = document.getElementById('edit-customer-form');
+const editCustomerErrors = document.getElementById('edit-customer-errors');
+const addCustomerForm = document.getElementById('add-customer-form');
+const addCustomerErrors = document.getElementById('add-customer-errors');
+const editVehicleForm = document.getElementById('edit-vehicle-form');
+const editVehicleErrors = document.getElementById('edit-vehicle-errors');
+const editVehicleId = document.getElementById('edit-vehicle-id');
+const editUnitInput = document.getElementById('edit-unit-number');
+const editVinInput = document.getElementById('edit-vin-number');
+const editLicenseInput = document.getElementById('edit-license-plate');
+const editMakeInput = document.getElementById('edit-make-model');
+const editYearInput = document.getElementById('edit-year');
+const editMileageInput = document.getElementById('edit-current-mileage');
+const addVehicleForm = document.getElementById('add-vehicle-form');
+const addVehicleFeedback = document.getElementById('add-vehicle-feedback');
+const addVehicleBtn = document.getElementById('addVehicleBtn');
+const addLicenseInput = document.getElementById('add-license-plate');
+const addMileageInput = document.getElementById('add-current-mileage');
+const addVehicleModalElement = document.getElementById('addVehicleModal');
+const importVehiclesButton = document.getElementById('importVehiclesButton');
+const downloadVehicleTemplate = document.getElementById('downloadVehicleTemplate');
+const importModalTemplateLink = document.getElementById('importModalTemplateLink');
+const importCustomerInput = document.querySelector('#importVehiclesModal input[name="customer_id"]');
+const templateBaseUrl = (downloadVehicleTemplate && downloadVehicleTemplate.dataset.templateBaseUrl) || (importModalTemplateLink && importModalTemplateLink.dataset.templateBaseUrl) || '';
+
+function updateTemplateAccess(customerId){
+    const hasCustomer = !!customerId;
+    if(importVehiclesButton){
+        importVehiclesButton.disabled = !hasCustomer;
+    }
+    if(importCustomerInput){
+        importCustomerInput.value = hasCustomer ? customerId : '';
+    }
+    const href = hasCustomer && templateBaseUrl ? `${templateBaseUrl}?customer_id=${customerId}` : '#';
+
+    if(downloadVehicleTemplate){
+        if(hasCustomer){
+            downloadVehicleTemplate.classList.remove('disabled');
+            downloadVehicleTemplate.setAttribute('href', href);
+            downloadVehicleTemplate.removeAttribute('tabindex');
+            downloadVehicleTemplate.removeAttribute('aria-disabled');
+        } else {
+            downloadVehicleTemplate.classList.add('disabled');
+            downloadVehicleTemplate.setAttribute('href', '#');
+            downloadVehicleTemplate.setAttribute('tabindex', '-1');
+            downloadVehicleTemplate.setAttribute('aria-disabled', 'true');
+        }
+    }
+
+    if(importModalTemplateLink){
+        if(hasCustomer){
+            importModalTemplateLink.setAttribute('href', href);
+            importModalTemplateLink.removeAttribute('tabindex');
+            importModalTemplateLink.removeAttribute('aria-disabled');
+        } else {
+            importModalTemplateLink.setAttribute('href', '#');
+            importModalTemplateLink.setAttribute('tabindex', '-1');
+            importModalTemplateLink.setAttribute('aria-disabled', 'true');
+        }
+    }
+}
+const $jq = window.jQuery || window.$;
+
+function setupCustomerPortalFields(form){
+    if(!form || form.dataset.portalReady === '1'){
+        return;
+    }
+    const toggle = form.querySelector('#id_register_portal');
+    if(!toggle){
+        return;
+    }
+    const usernameWrapper = form.querySelector('#div_id_portal_username') || (form.querySelector('#id_portal_username') ? form.querySelector('#id_portal_username').closest('p') : null);
+    const passwordWrapper = form.querySelector('#div_id_portal_password') || (form.querySelector('#id_portal_password') ? form.querySelector('#id_portal_password').closest('p') : null);
+    const usernameInput = form.querySelector('#id_portal_username');
+    const passwordInput = form.querySelector('#id_portal_password');
+
+    function toggleVisibility(){
+        const show = toggle.checked;
+        if(usernameWrapper){
+            usernameWrapper.style.display = show ? '' : 'none';
+        }
+        if(passwordWrapper){
+            passwordWrapper.style.display = show ? '' : 'none';
+        }
+        if(!show){
+            if(passwordInput){
+                passwordInput.value = '';
+            }
+        }
+    }
+
+    toggleVisibility();
+    toggle.addEventListener('change', toggleVisibility);
+    form.dataset.portalReady = '1';
+}
+
+setupCustomerPortalFields(editCustomerForm);
+setupCustomerPortalFields(addCustomerForm);
+
+const bootstrapModal = window.bootstrap && window.bootstrap.Modal ? window.bootstrap.Modal : null;
+const modalCache = {};
+
+function getModalInstance(selector){
+    if(!bootstrapModal){
+        return null;
+    }
+    if(!modalCache[selector]){
+        const element = document.querySelector(selector);
+        if(!element){
+            return null;
+        }
+        modalCache[selector] = bootstrapModal.getOrCreateInstance(element);
+    }
+    return modalCache[selector];
+}
+
+function showModal(selector){
+    const instance = getModalInstance(selector);
+    if(instance){
+        instance.show();
+        return;
+    }
+    if($jq && typeof $jq.fn.modal === 'function'){
+        $jq(selector).modal('show');
+        return;
+    }
+    const fallback = document.querySelector(selector);
+    if(fallback){
+        fallback.classList.add('show');
+        fallback.style.display = 'block';
+        fallback.removeAttribute('aria-hidden');
+    }
+}
+
+function hideModal(selector){
+    const instance = getModalInstance(selector);
+    if(instance){
+        instance.hide();
+        return;
+    }
+    if($jq && typeof $jq.fn.modal === 'function'){
+        $jq(selector).modal('hide');
+        return;
+    }
+    const fallback = document.querySelector(selector);
+    if(fallback){
+        fallback.classList.remove('show');
+        fallback.style.display = 'none';
+        fallback.setAttribute('aria-hidden','true');
+    }
+}
+
+function setupFallbackDismiss(){
+    if(bootstrapModal || ($jq && typeof $jq.fn.modal === 'function')){
+        return;
+    }
+    document.querySelectorAll('[data-bs-dismiss="modal"],[data-bs-dismiss="modal"]').forEach(btn=>{
+        if(btn.dataset.dismissBound === '1'){
+            return;
+        }
+        btn.addEventListener('click',function(){
+            const modal = this.closest('.modal');
+            if(modal && modal.id){
+                hideModal(`#${modal.id}`);
+            }
+        });
+        btn.dataset.dismissBound = '1';
+    });
+}
+
+setupFallbackDismiss();
+
+function loadCustomerDetails(id){
+    fetch(`/get_customer_details/?customer_id=${id}`)
+    .then(r=>r.json())
+    .then(d=>{
+        if(editCustomerForm){
+            editCustomerForm.querySelector('#id_name').value = d.name || '';
+            editCustomerForm.querySelector('#id_email').value = d.email || '';
+            const ccInput = editCustomerForm.querySelector('#id_cc_emails');
+            if (ccInput) {
+                ccInput.value = d.cc_emails || '';
+            }
+            editCustomerForm.querySelector('#id_address').value = d.address || '';
+            const portalToggle = editCustomerForm.querySelector('#id_register_portal');
+            if(portalToggle){
+                portalToggle.checked = !!d.portal_enabled;
+                const usernameInput = editCustomerForm.querySelector('#id_portal_username');
+                const passwordInput = editCustomerForm.querySelector('#id_portal_password');
+                if(usernameInput){
+                    usernameInput.value = d.portal_username || '';
+                }
+                if(passwordInput){
+                    passwordInput.value = '';
+                }
+                portalToggle.dispatchEvent(new Event('change'));
+            }
+        }
+    });
+}
+
+function loadVehicles(id){
+    fetch(`/api/customer/${id}/vehicles/`, {
+        credentials: 'same-origin',
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(r=>{
+        if(!r.ok){
+            throw new Error(`Unable to load vehicles (${r.status})`);
+        }
+        const contentType = r.headers.get('content-type') || '';
+        if(!contentType.includes('application/json')){
+            return r.text().then(text=>{
+                throw new Error(`Unexpected response while loading vehicles: ${text.slice(0, 160)}`);
+            });
+        }
+        return r.json();
+    })
+    .then(data=>{
+        const vehicles = Array.isArray(data.vehicles) ? data.vehicles : [];
+        let html='';
+        if(vehicles.length){
+            const total = vehicles.length;
+            const summaryLabel = total === 1 ? 'vehicle' : 'vehicles';
+            html += `
+                <div class="vehicle-table-header d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+                    <div>
+                        <h3 class="h5 mb-1">Fleet overview</h3>
+                        <p class="small text-muted mb-0">${total} ${summaryLabel} in this customer account.</p>
+                    </div>
+                    <div class="vehicle-search-wrapper">
+                        <i class="fas fa-search vehicle-search-icon"></i>
+                        <input type="text" id="vehicleSearch" class="form-control vehicle-search-input" placeholder="Search vehicles...">
+                    </div>
+                </div>`;
+            html += `
+                <div class="table-responsive vehicle-table-responsive">
+                    <table class="table table-hover table-striped align-middle mb-0 vehicle-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Unit #</th>
+                                <th scope="col">VIN</th>
+                                <th scope="col">License Plate</th>
+                                <th scope="col">Make &amp; Model</th>
+                                <th scope="col" class="text-center">Mileage</th>
+                                <th scope="col">Maintenance</th>
+                                <th scope="col">Last job</th>
+                                <th scope="col" class="text-center">Jobs</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            vehicles.forEach(v=>{
+                const hasMileage = v.current_mileage !== null && v.current_mileage !== '' && !isNaN(Number(v.current_mileage));
+                const mileageDisplay = hasMileage ? Number(v.current_mileage).toLocaleString() : '—';
+                const maintenanceBadges = [];
+                if(v.upcoming_maintenance){
+                    maintenanceBadges.push(`<span class="badge rounded-pill bg-soft-primary"><i class="fas fa-clock me-1"></i>${v.upcoming_maintenance} due</span>`);
+                } else {
+                    maintenanceBadges.push('<span class="badge rounded-pill bg-soft-secondary"><i class="fas fa-clock me-1"></i>0 due</span>');
+                }
+                if(v.overdue_maintenance){
+                    maintenanceBadges.push(`<span class="badge rounded-pill bg-soft-danger"><i class="fas fa-exclamation-triangle me-1"></i>${v.overdue_maintenance} overdue</span>`);
+                }
+                let nextDueLabel = 'No upcoming maintenance scheduled';
+                if(v.next_due_title){
+                    nextDueLabel = v.next_due_title;
+                    if(v.next_due_date){
+                        nextDueLabel += ` • ${v.next_due_date}`;
+                    }
+                }
+                const maintenanceCell = `<div class="vehicle-maintenance-badges">${maintenanceBadges.join('')}</div><div class="small text-muted mt-2">${nextDueLabel}</div>`;
+                html += `
+                    <tr id="vehicle-row-${v.id}">
+                        <td class="vehicle-unit fw-semibold">${v.unit_no || ''}</td>
+                        <td class="vehicle-vin text-monospace">${v.vin_no}</td>
+                        <td class="vehicle-license">${v.license_plate || '—'}</td>
+                        <td class="vehicle-make-model">${v.make_model || ''}</td>
+                        <td class="vehicle-mileage text-center">${mileageDisplay}</td>
+                        <td class="vehicle-maintenance">${maintenanceCell}</td>
+                        <td>${v.last_job_date ? v.last_job_date : '—'}</td>
+                        <td class="text-center">
+                            <a href="/vehicles/${v.id}/history/" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-list-alt me-1"></i>View (${v.job_count})
+                            </a>
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a class="btn btn-primary" href="${v.detail_url}">
+                                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                                </a>
+                                <button type="button" class="btn btn-outline-secondary edit-vehicle-btn" data-id="${v.id}" data-unit="${v.unit_no}" data-vin="${v.vin_no}" data-license="${v.license_plate || ''}" data-make-model="${v.make_model}" data-year="${v.year || ''}" data-mileage="${v.current_mileage || ''}">Edit</button>
+                                <button class="btn btn-outline-danger delete-vehicle-btn" data-id="${v.id}" data-vin="${v.vin_no}">Delete</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+            html += `
+                        </tbody>
+                    </table>
+                </div>`;
+        } else {
+            html = `
+                <div class="vehicle-empty-state text-center text-muted py-5">
+                    <i class="fas fa-clipboard-list fa-3x mb-3 text-primary"></i>
+                    <h3 class="h5 mb-1">No vehicles found</h3>
+                    <p class="small mb-0">Add a vehicle manually or import from Excel to build this fleet.</p>
+                </div>`;
+        }
+        if(vehicleContainer){
+            vehicleContainer.innerHTML = html;
+        }
+        attachVehicleButtons();
+        attachDeleteButtons();
+        setupSearchFilter();
+    })
+    .catch(err=>{
+        console.error('Failed to load vehicles', err);
+        if(vehicleContainer){
+            vehicleContainer.innerHTML = `
+                <div class="vehicle-empty-state text-center text-muted py-5">
+                    <i class="fas fa-triangle-exclamation fa-3x mb-3 text-danger"></i>
+                    <h3 class="h5 mb-1">Unable to load vehicles</h3>
+                    <p class="small mb-0">Please refresh the page or contact support if the issue persists.</p>
+                </div>`;
+        }
+    });
+}
+function attachVehicleButtons(){
+    document.querySelectorAll('.edit-vehicle-btn').forEach(btn=>{
+        btn.addEventListener('click',function(){
+            editVehicleId.value = this.dataset.id;
+            editUnitInput.value = this.dataset.unit || '';
+            editVinInput.value = this.dataset.vin || '';
+            if(editLicenseInput){
+                editLicenseInput.value = this.dataset.license || '';
+            }
+            editMakeInput.value = this.dataset.makeModel || this.getAttribute('data-make-model') || '';
+            if(editYearInput){
+                editYearInput.value = this.dataset.year || '';
+            }
+            if(editMileageInput){
+                editMileageInput.value = this.dataset.mileage || '';
+            }
+            editVehicleErrors.textContent='';
+            showModal('#editVehicleModal');
+        });
+    });
+}
+
+function attachDeleteButtons(){
+    document.querySelectorAll('.delete-vehicle-btn').forEach(btn=>{
+        btn.addEventListener('click',function(){
+            const id=this.dataset.id;
+            if(confirm('Are you sure you want to delete this vehicle?')){
+                fetch(`/vehicles/${id}/delete/`,{method:'POST',headers:{'X-CSRFToken':csrftoken}})
+                .then(r=>r.json())
+                .then(d=>{
+                    if(d.success){
+                        const row=document.getElementById(`vehicle-row-${id}`);
+                        if(row) row.remove();
+                    } else {
+                        alert(d.error || 'Could not delete vehicle.');
+                    }
+                });
+            }
+        });
+    });
+}
+
+function setupSearchFilter(){
+    const search=document.getElementById('vehicleSearch');
+    if(!search) return;
+    search.addEventListener('input',function(){
+        const q=this.value.toLowerCase();
+        document.querySelectorAll('#vehicleTableContainer tbody tr').forEach(row=>{
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    });
+}
+
+function renderVehicleEmptyState(){
+    if(!vehicleContainer){
+        return;
+    }
+    vehicleContainer.innerHTML='<div class="vehicle-empty-state text-center text-muted py-5"><i class="fas fa-truck-moving fa-3x mb-3 text-primary"></i><h3 class="h5 mb-1">Choose a customer to get started</h3><p class="small mb-0">Select a customer to review their fleet, add new units, or import a spreadsheet of vehicles.</p></div>';
+}
+
+function toggleCustomerActions(shouldEnable){
+    if(editCustomerBtn){
+        editCustomerBtn.disabled = !shouldEnable;
+    }
+    if(addVehicleBtn){
+        addVehicleBtn.disabled = !shouldEnable;
+    }
+}
+
+function handleCustomerSelection(value){
+    const customerId = (value || '').toString();
+    if(customerId){
+        loadVehicles(customerId);
+        toggleCustomerActions(true);
+        updateTemplateAccess(customerId);
+        loadCustomerDetails(customerId);
+    } else {
+        renderVehicleEmptyState();
+        toggleCustomerActions(false);
+        updateTemplateAccess('');
+    }
+}
+
+customerSelect.addEventListener('change',function(){
+    handleCustomerSelection(this.value);
+});
+
+if(customerSelect){
+    customerSelect.addEventListener('select2:select',function(){
+        handleCustomerSelection(this.value);
+    });
+    customerSelect.addEventListener('select2:clear',function(){
+        handleCustomerSelection('');
+    });
+}
+
+if(customerSelect){
+    handleCustomerSelection(customerSelect.value);
+}
+
+editCustomerForm.addEventListener('submit',function(e){
+    e.preventDefault();
+    const id=customerSelect.value;
+    const data=new URLSearchParams(new FormData(editCustomerForm));
+    fetch(`/ajax/customer/${id}/edit/`,{method:'POST',headers:{'X-CSRFToken':csrftoken},body:data})
+    .then(r=>r.json()).then(d=>{
+        if(d.success){
+            const option=customerSelect.querySelector(`option[value='${id}']`);
+            if(option) option.textContent=d.customer.name;
+            hideModal('#editCustomerModal');
+        } else {
+            editCustomerErrors.textContent=Object.values(d.errors).join(', ');
+        }
+    });
+});
+
+addCustomerForm.addEventListener('submit',function(e){
+    e.preventDefault();
+    const data=new URLSearchParams(new FormData(addCustomerForm));
+    fetch('/add_customer/',{method:'POST',headers:{'X-CSRFToken':csrftoken},body:data})
+    .then(r=>r.json()).then(d=>{
+        if(d.success){
+            // Add new customer to the dropdown
+            const option = document.createElement('option');
+            option.value = d.customer.id;
+            option.textContent = d.customer.name;
+            customerSelect.appendChild(option);
+            // Select the new customer
+            customerSelect.value = d.customer.id;
+            // Trigger change event to load vehicles
+            customerSelect.dispatchEvent(new Event('change'));
+            hideModal('#addCustomerModal');
+            addCustomerForm.reset();
+        } else {
+            addCustomerErrors.textContent=Object.values(d.errors).map(e=>e[0]?.message||e).join(', ');
+        }
+    });
+});
+
+editVehicleForm.addEventListener('submit',function(e){
+    e.preventDefault();
+    const id=editVehicleId.value;
+    const data=new URLSearchParams(new FormData(editVehicleForm));
+    fetch(`/vehicles/${id}/edit/`,{method:'POST',headers:{'X-CSRFToken':csrftoken},body:data})
+    .then(r=>r.json()).then(d=>{
+        if(d.success){
+            loadVehicles(customerSelect.value);
+            hideModal('#editVehicleModal');
+        } else {
+            editVehicleErrors.textContent=Object.values(d.errors).join(', ');
+        }
+    });
+});
+
+if(addVehicleForm){
+    addVehicleForm.dataset.submitAction = 'save-close';
+    const submitButtons = addVehicleForm.querySelectorAll('button[type="submit"]');
+    submitButtons.forEach(btn=>{
+        btn.addEventListener('click',()=>{
+            addVehicleForm.dataset.submitAction = btn.dataset.submitAction || 'save-close';
+        });
+    });
+
+    addVehicleForm.addEventListener('submit',function(e){
+        e.preventDefault();
+        if(addVehicleFeedback){
+            addVehicleFeedback.textContent='';
+            addVehicleFeedback.classList.remove('text-danger','text-success');
+        }
+        const formData=new URLSearchParams(new FormData(addVehicleForm));
+        formData.append('customer', customerSelect.value);
+        const action = addVehicleForm.dataset.submitAction || 'save-close';
+        fetch('/api/vehicle/add/',{method:'POST',headers:{'X-CSRFToken':csrftoken},body:formData})
+        .then(r=>r.json())
+        .then(d=>{
+            if(d.success){
+                loadVehicles(customerSelect.value);
+                addVehicleForm.reset();
+                if(addVehicleFeedback){
+                    addVehicleFeedback.textContent = 'Vehicle saved successfully.';
+                    addVehicleFeedback.classList.add('text-success');
+                }
+                if(action === 'save-close'){
+                    hideModal('#addVehicleModal');
+                } else {
+                    const firstInput = addVehicleForm.querySelector('input:not([type="hidden"]), select, textarea');
+                    if(firstInput){
+                        firstInput.focus();
+                    }
+                }
+                addVehicleForm.dataset.submitAction = 'save-close';
+            } else if(d.errors){
+                if(addVehicleFeedback){
+                    addVehicleFeedback.textContent=Object.values(d.errors).map(e=>e[0]?.message||e).join(', ');
+                    addVehicleFeedback.classList.add('text-danger');
+                }
+            }
+        });
+    });
+}
+
+if(addVehicleModalElement){
+    addVehicleModalElement.addEventListener('hidden.bs.modal',()=>{
+        if(addVehicleFeedback){
+            addVehicleFeedback.textContent='';
+            addVehicleFeedback.classList.remove('text-danger','text-success');
+        }
+        if(addVehicleForm){
+            addVehicleForm.reset();
+        }
+    });
+}
+</script>
+{% endblock %}

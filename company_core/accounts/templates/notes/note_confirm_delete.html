@@ -1,0 +1,25 @@
+{% extends 'customer_portal_base.html' %}
+{% block title %}
+    Confirm Delete Note
+{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Delete Note</h5>
+                </div>
+                <div class="card-body text-center">
+                    <p>Are you sure you want to delete the note titled "<strong>{{ note.title }}</strong>"?</p>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                        <a href="{% url 'accounts:home' %}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

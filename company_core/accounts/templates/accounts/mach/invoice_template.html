@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 0.8rem; line-height: 1.4; }
+        .container { width: 80%; margin: 0 auto; }
+        .header, .footer { text-align: center; }
+        .header img { max-width: 150px; }
+        .invoice-details, .company-details, .job-table { margin-bottom: 20px; }
+        .job-table table { width: 100%; border-collapse: collapse; }
+        .job-table table, .job-table th, .job-table td { border: 1px solid black; }
+        .job-table th, .job-table td { padding: 10px; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="{{ logo_url }}" alt="Company Logo">
+            <h1>{{ company_name }}</h1>
+            <p>{{ company_address|linebreaksbr }}</p>
+            <p>{{ company_email }}</p>
+            {% if company_phone %}
+                <p>{{ company_phone }}</p>
+            {% endif %}
+            {% if gst_number %}
+                <p>GST/HST Registration No.: {{ gst_number }}</p>
+            {% endif %}
+        </div>
+
+        <div class="invoice-details">
+            <h2>Invoice</h2>
+            <p><strong>Invoice Number:</strong> {{ invoice.invoice_number }}</p>
+            <p><strong>Date:</strong> {{ invoice.date }}</p>
+            <p><strong>Bill To:</strong> {{ invoice.bill_to }}</p>
+            <p><strong>Unit No:</strong> {{ invoice.unit_no }}</p>
+            <p><strong>Mileage:</strong> {{ invoice.mileage }}</p>
+            <p><strong>Vin No:</strong> {{ invoice.vin_no }}</p>
+        </div>
+
+        <div class="job-table">
+            <h3>Job Details</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Qty</th>
+                        <th>Rate</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                        <tr>
+                            <td>{{ job.job|linebreaksbr }}</td>
+                            <td>{{ job.qty }}</td>
+                            <td>{{ job.rate }}</td>
+                            <td>{{ job.amount }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p><strong>Subtotal:</strong> {{ subtotal }}</p>
+            <p><strong>Tax:</strong> {{ tax }}</p>
+            <p><strong>Total Due:</strong> {{ total_due }}</p>
+            <p><strong>Status:</strong> {% if is_paid %}<span style="color: green;">PAID</span>{% else %}<span style="color: red;">UNPAID</span>{% endif %}</p>
+        </div>
+    </div>
+</body>
+</html>

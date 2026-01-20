@@ -1,0 +1,43 @@
+{% extends 'customer_portal_base.html' %}
+{% block title %}
+    Customer Jobs
+{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Jobs for {{ bill_to }}</h2>
+    <a href="{% url 'accounts:customer_list' %}" class="btn btn-secondary mb-3">Back to Customer List</a>
+    {% if invoices %}
+        <p><strong>Email:</strong> {{ invoices.first.bill_to_email }}</p>
+        <h3>Invoices</h3>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="thead-dark"> 
+                    <tr>
+                        <th>Date</th>
+                        <th>Invoice No</th>
+                        <th>Total Amount</th>
+                        <th>Link to Jobs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in invoices %}
+                    <tr>
+                        <td data-label="Date">{{ invoice.date }}</td>
+                        <td data-label="Invoice No">{{ invoice.invoice_number }}</td>
+                        <td data-label="Total Amount">${{ invoice.total_amount|floatformat:2 }}</td>
+                        <td data-label="Link to Jobs"><a href="{% url 'accounts:groupedinvoice_detail' invoice.pk %}?source=customer_jobs&customer={{ bill_to }}" class="btn btn-info btn-sm mb-1 mr-2">View Jobs</a></td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <td colspan="2"><strong>Total</strong></td>
+                        <td data-label="Total"><strong>${{ total_invoice_amount|floatformat:2 }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No invoices found for this customer.</p>
+    {% endif %}
+</div>
+{% endblock %}

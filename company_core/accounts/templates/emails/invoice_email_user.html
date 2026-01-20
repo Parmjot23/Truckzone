@@ -1,0 +1,22 @@
+<!-- templates/email/invoice_email_user.html -->
+<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #ffffff; color: #333; border-radius: 10px; text-align: left;">
+    <p>Dear {{ invoice.user.first_name }},</p>
+
+    <p>Your invoice <strong>#{{ invoice.invoice_number }}</strong> has been sent to <strong>{{ customer }}</strong> ({{ customer_email }}).</p>
+
+    <p><strong>Invoice Details:</strong></p>
+    <ul>
+        <li><strong>Invoice Number:</strong> {{ invoice.invoice_number }}</li>
+        <li><strong>Date:</strong> {{ invoice.date }}</li>
+        <li><strong>Total Amount Due:</strong> ${{ total_amount|floatformat:2 }}</li>
+        {% if invoice.is_subscription %}
+        <li><strong>Payment Type:</strong> Subscription – {{ invoice.get_subscription_frequency_display }}</li>
+        {% else %}
+        <li><strong>Payment Type:</strong> One-time</li>
+        {% endif %}
+    </ul>
+
+    <p>If you have any questions, please contact us at <a href="mailto:{{ profile.company_email }}">{{ profile.company_email }}</a>.</p>
+
+    <p>Best regards,<br>{{ company_name }}</p>
+</div>

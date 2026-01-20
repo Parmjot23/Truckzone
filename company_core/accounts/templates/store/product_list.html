@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Products - {{ business_name|default:default_business_name }}{% endblock %}
+{% block body_class %}public-page-road-bg page-without-hero topbar-light no-scroll-animations storefront-page{% endblock
+%}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/storefront_public.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="storefront-shell">
+    <!-- Hero Section -->
+    <div class="storefront-hero">
+        <div class="container">
+            <div class="storefront-hero-inner">
+                <div class="storefront-hero-copy">
+                    <h1>Truck Parts & Accessories</h1>
+                    {% if customer_account %}
+                    <p>Browse our inventory of premium heavy-duty truck parts.</p>
+                    {% else %}
+                    <p>Quality parts for every make and model.</p>
+                    {% endif %}
+                </div>
+                <div class="storefront-hero-actions">
+                    {% if customer_account %}
+                    <a href="{% url 'accounts:customer_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-user-circle me-2"></i>My Account
+                    </a>
+                    <a href="{% url 'accounts:store_cart' %}" class="btn btn-primary">
+                        <i class="fas fa-shopping-cart me-2"></i>View Cart
+                    </a>
+                    {% else %}
+                    <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_product_list' %}"
+                        class="btn btn-light">
+                        Log In
+                    </a>
+                    <a href="{% url 'accounts:customer_signup' %}?next={% url 'accounts:store_product_list' %}"
+                        class="btn btn-primary">
+                        Create Account
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        {% if not customer_account %}
+        <!-- Login Promo -->
+        <div class="store-filter-panel p-0 overflow-hidden mb-5">
+            <div class="row g-0">
+                <div class="col-lg-6 bg-light p-5">
+                    <h2 class="h3 fw-bold mb-3">Sign in to Unlock Exclusive Pricing</h2>
+                    <p class="text-muted mb-4">
+                        Connect directly to your fleet account to see contracted rates, real-time inventory, and order
+                        history.
+                    </p>
+                    <ul class="list-unstyled mb-0 d-flex flex-column gap-2 text-muted">
+                        <li><i class="fas fa-check-circle text-primary me-2"></i> Fleet-specific pricing &amp; discounts
+                        </li>
+                        <li><i class="fas fa-check-circle text-primary me-2"></i> Live inventory visibility</li>
+                        <li><i class="fas fa-check-circle text-primary me-2"></i> One-click reordering</li>
+                    </ul>
+                </div>
+                <div class="col-lg-6 p-5 d-flex flex-column justify-content-center border-start">
+                    <div class="text-center text-lg-start">
+                        <h4 class="mb-3">Existing Customer?</h4>
+                        <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_product_list' %}"
+                            class="btn btn-primary w-100 mb-3 btn-lg">Log In Now</a>
+                        <p class="small text-muted mb-0 text-center">New here? <a
+                                href="{% url 'accounts:customer_signup' %}?next={% url 'accounts:store_product_list' %}">Register
+                                your fleet</a>.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if category_groups %}
+</div> <!-- End Main Container temporarily -->
+
+<section class="category-groups-section mb-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="badge bg-primary-subtle text-primary mb-2 text-uppercase fw-bold ls-1">Category
+                Groups</span>
+            <h2 class="fw-bold">Browse by System</h2>
+            <p class="text-muted">Find the right parts fast with organized groups.</p>
+        </div>
+
+        <div class="row g-4">
+            {% for group in category_groups %}
+            <div class="col-md-6 col-lg-4 d-flex">
+                <a href="{% url 'accounts:store_group_detail' group.id %}"
+                    class="category-card w-100 bg-white shadow-sm border-0">
+                    <div class="category-card-media bg-transparent">
+                        {% if group.image %}
+                        <img src="{{ group.image.url }}" alt="{{ group.name }}" loading="lazy">
+                        {% else %}
+                        <i class="fas fa-layer-group fa-3x text-muted opacity-25"></i>
+                        {% endif %}
+                    </div>
+                    <div class="category-card-body text-center">
+                        <h3 class="category-card-title">{{ group.name }}</h3>
+                        <div class="category-card-meta">
+                            {% if group.description %}
+                            {{ group.description|truncatewords:12 }}
+                            {% else %}
+                            Browse {{ group.name|lower }} parts.
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<div class="container"> <!-- Re-open Main Container -->
+    {% endif %}
+
+    <!-- Products Grid (if any product list is passed here directly) -->
+    {% if products.paginator.count %}
+    <div class="product-grid">
+        {% for product in products %}
+        <div class="product-card">
+            <div class="product-card-media">
+                {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                {% else %}
+                <i class="fas fa-box-open fa-3x text-muted opacity-25"></i>
+                {% endif %}
+            </div>
+            <div class="product-card-body">
+                {% if product.category %}
+                <div class="product-card-meta">{{ product.category.name }}</div>
+                {% endif %}
+                <div class="product-card-title">
+                    <a href="{% url 'accounts:store_product_detail' product.id %}">{{ product.name }}</a>
+                </div>
+                {% if product.brand %}
+                <div class="product-card-meta">{{ product.brand.name }}</div>
+                {% endif %}
+
+                {% if customer_account or show_prices_catalog %}
+                {% if product.has_promotion %}
+                <div class="product-card-price">
+                    <span class="text-muted text-decoration-line-through me-2 fw-normal fs-6">${{
+                        product.sale_price|floatformat:2 }}</span>
+                    ${{ product.promotion_price|floatformat:2 }}
+                </div>
+                {% elif product.storefront_price %}
+                <div class="product-card-price">${{ product.storefront_price|floatformat:2 }}</div>
+                {% elif product.cost_price %}
+                <div class="product-card-price">${{ product.cost_price|floatformat:2 }} <small
+                        class="text-muted fw-normal ms-1">Account</small></div>
+                {% else %}
+                <div class="product-card-meta">Call for price</div>
+                {% endif %}
+                {% else %}
+                <div class="product-card-meta">Sign in for price</div>
+                {% endif %}
+
+                <div class="product-card-actions">
+                    {% if customer_account %}
+                    <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" class="w-100">
+                        {% csrf_token %}
+                        <input type="hidden" name="quantity" value="1">
+                        <button type="submit" class="btn btn-primary w-100 btn-sm" {% if product.quantity_in_stock <=0
+                            %}disabled{% endif %}>
+                            Add to Cart
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_product_detail' product.id %}"
+                        class="btn btn-outline-primary w-100 btn-sm">
+                        Check Price
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}

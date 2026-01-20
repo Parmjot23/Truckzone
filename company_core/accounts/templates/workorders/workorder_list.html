@@ -1,0 +1,219 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block content %}
+<style>
+  .workorder-card { border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; box-shadow: 0 12px 30px rgba(15,23,42,0.06); padding: 1rem; }
+  .wo-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .wo-search { flex: 1; min-width: 260px; display: flex; align-items: center; gap: 0.5rem; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.45rem 0.65rem; background: #f8fafc; }
+  .wo-search input { border: none; background: transparent; width: 100%; outline: none; }
+  .pill-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: #fff; border-radius: 12px; padding: 0.45rem 0.95rem; font-weight: 700; font-size: 0.92rem; box-shadow: 0 12px 24px rgba(37,99,235,0.18); }
+  .pill-secondary { border-radius: 12px; padding: 0.42rem 0.9rem; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; font-weight: 700; font-size: 0.92rem; box-shadow: 0 10px 18px rgba(15,23,42,0.06); }
+  .wo-table-wrapper { overflow-x: auto; overflow-y: visible; max-height: none; }
+  .wo-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .wo-table th { text-align: left; padding: 0.75rem; color: #64748b; background: #f1f5f9; font-weight: 700; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+  .wo-table td { padding: 0.75rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  .wo-table tr:nth-child(even) td { background: #f8fafc; }
+  .badge-soft { border-radius: 999px; padding: 0.2rem 0.75rem; font-weight: 700; font-size: 0.85rem; }
+  .badge-status { background: #e0e7ff; color: #1d4ed8; }
+  .badge-status-completed { background: #dcfce7; color: #166534; }
+  .badge-mech { background: #e5e7eb; color: #4b5563; }
+  .badge-pending { background: #fef3c7; color: #92400e; }
+  .badge-submitted { background: #dcfce7; color: #166534; }
+  .mechanic-summary { display: flex; flex-direction: column; gap: 0.35rem; }
+  .mechanic-names { font-size: 0.95rem; font-weight: 600; color: #0f172a; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem; }
+  .mechanic-names .mech-name { color: #2563eb; }
+  .portal-action-list { margin-top: 0.35rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  .wo-table .dropdown-toggle { border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; padding: 0.3rem 0.55rem; color: #0f172a; }
+  .date-range-custom { display: none; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+  .date-range-custom.show { display: flex; }
+
+  @media (max-width: 992px) {
+    .wo-table-wrapper { max-height: 70vh; overflow-y: auto; }
+  }
+</style>
+
+<div class="page-shell">
+  <div class="page-header">
+    <div>
+      <h2 class="mb-0">Work Orders</h2>
+      <div class="text-muted small">Create, filter, and manage work orders.</div>
+    </div>
+    <div class="page-toolbar">
+      <a href="{% url 'accounts:add_workorder' %}" class="btn btn-primary btn-sm" id="wo-create">
+        <i class="fa-solid fa-plus me-1"></i>Create New Work Order
+      </a>
+    </div>
+  </div>
+
+    <div class="workorder-card">
+      <div class="wo-toolbar">
+      <form method="get" id="workorder-filter-form" class="flex-grow-1">
+        <div class="wo-search">
+          <i class="fa fa-search text-muted"></i>
+          <input type="text" name="search" id="search-input" value="{{ search_query }}" placeholder="Search...">
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-wrap mt-2">
+          <label class="text-muted small mb-0">Period:</label>
+          <select class="form-select form-select-sm" name="date_range" id="date-range-filter" style="max-width: 220px;" data-select2-skip="true">
+            {% for value,label in date_range_options %}
+              <option value="{{ value }}"{% if current_date_range == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <div id="custom-date-range" class="date-range-custom{% if current_date_range == 'custom' %} show{% endif %}">
+            <input type="date" class="form-control form-control-sm" name="start_date" id="start-date" value="{{ selected_start_date|date:'Y-m-d' }}">
+            <span class="text-muted small">to</span>
+            <input type="date" class="form-control form-control-sm" name="end_date" id="end-date" value="{{ selected_end_date|date:'Y-m-d' }}">
+          </div>
+        </div>
+      </form>
+      </div>
+
+    <div class="wo-table-wrapper">
+      <table class="wo-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Unit</th>
+            <th>Customer</th>
+            <th>Scheduled Date</th>
+            <th>Status</th>
+            <th>Mechanic</th>
+            <th>Mechanic Portal Links</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="workorder-table-body">
+          {% include 'workorders/workorder_rows.html' %}
+        </tbody>
+      </table>
+    </div>
+
+    <div id="workorder-pagination">
+      {% include 'workorders/workorder_pagination.html' %}
+    </div>
+  </div>
+</div>
+
+<script>
+  // Ensure dropdown menus are fully visible by scrolling the nearest scrollable container (or the page).
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('workorder-filter-form');
+    const searchInput = document.getElementById('search-input');
+    const dateRangeFilter = document.getElementById('date-range-filter');
+    const customRange = document.getElementById('custom-date-range');
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+    const tableBody = document.getElementById('workorder-table-body');
+    const pagination = document.getElementById('workorder-pagination');
+
+    function debounce(func, delay) {
+      let debounceTimer;
+      return function () {
+        const context = this;
+        const args = arguments;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => func.apply(context, args), delay);
+      };
+    }
+
+    function toggleCustomRange() {
+      if (!customRange || !dateRangeFilter) return;
+      customRange.classList.toggle('show', dateRangeFilter.value === 'custom');
+    }
+
+    function fetchWorkorders(url) {
+      if (!form || !tableBody) return;
+      const params = new URLSearchParams(new FormData(form));
+      const targetUrl = url || `${form.action}?${params.toString()}`;
+
+      fetch(targetUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.json();
+        })
+        .then(data => {
+          tableBody.innerHTML = data.rows_html || '';
+          if (pagination) pagination.innerHTML = data.pagination_html || '';
+          attachDropdownHandlers();
+        })
+        .catch(error => console.error('Error fetching work orders:', error));
+    }
+
+    function getScrollableParent(el) {
+      var node = el.parentElement;
+      while (node) {
+        var style = window.getComputedStyle(node);
+        if (/(auto|scroll)/.test(style.overflowY)) return node;
+        node = node.parentElement;
+      }
+      return document.scrollingElement || document.documentElement;
+    }
+
+    function scrollIntoViewWithin(container, targetRect) {
+      if (container === document.scrollingElement || container === document.documentElement || container === document.body) {
+        var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        var bottomOverflow = targetRect.bottom - viewportHeight;
+        var topOverflow = 0 - targetRect.top;
+        if (bottomOverflow > 0) window.scrollBy({ top: bottomOverflow + 12, behavior: 'smooth' });
+        else if (topOverflow > 0) window.scrollBy({ top: -topOverflow - 12, behavior: 'smooth' });
+        return;
+      }
+
+      var containerRect = container.getBoundingClientRect();
+      var bottomOverflowInner = targetRect.bottom - containerRect.bottom;
+      var topOverflowInner = containerRect.top - targetRect.top;
+
+      if (bottomOverflowInner > 0) {
+        container.scrollBy({ top: bottomOverflowInner + 12, behavior: 'smooth' });
+      } else if (topOverflowInner > 0) {
+        container.scrollBy({ top: -topOverflowInner - 12, behavior: 'smooth' });
+      }
+    }
+
+    function attachDropdownHandlers() {
+      document.querySelectorAll('.workorder-card .dropdown').forEach(function (dropdown) {
+        if (dropdown.dataset.dropdownBound === 'true') return;
+        dropdown.dataset.dropdownBound = 'true';
+        dropdown.addEventListener('shown.bs.dropdown', function () {
+          var menu = dropdown.querySelector('.dropdown-menu');
+          if (!menu) return;
+          var scrollContainer = getScrollableParent(dropdown);
+          var rect = menu.getBoundingClientRect();
+          scrollIntoViewWithin(scrollContainer, rect);
+        });
+      });
+    }
+
+    toggleCustomRange();
+    attachDropdownHandlers();
+
+    if (searchInput) {
+      searchInput.addEventListener('input', debounce(function () { fetchWorkorders(); }, 300));
+    }
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        fetchWorkorders();
+      });
+    }
+    dateRangeFilter?.addEventListener('change', function () {
+      toggleCustomRange();
+      fetchWorkorders();
+    });
+    startDateInput?.addEventListener('change', function () {
+      if (dateRangeFilter?.value === 'custom') fetchWorkorders();
+    });
+    endDateInput?.addEventListener('change', function () {
+      if (dateRangeFilter?.value === 'custom') fetchWorkorders();
+    });
+
+    pagination?.addEventListener('click', function (event) {
+      var link = event.target.closest('a.page-link');
+      if (!link) return;
+      event.preventDefault();
+      fetchWorkorders(link.href);
+    });
+  });
+</script>
+{% endblock %}

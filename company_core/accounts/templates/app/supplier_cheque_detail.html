@@ -1,0 +1,88 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+
+{% block title %}Cheque Detail{% endblock %}
+
+{% block content %}
+<style>
+  .cheque-shell { max-width: 100%; width: 100%; margin: 0 auto 2rem; padding: 0 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 12px 30px rgba(15,23,42,0.06); padding: 1.25rem; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .title { font-size: 1.4rem; font-weight: 800; margin: 0; color: #111827; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 0.75rem; margin-top: 0.5rem; }
+  .stat { padding: 0.9rem; border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb; display: grid; gap: 0.1rem; }
+  .stat-label { color: #6b7280; font-size: 0.9rem; }
+  .stat-value { font-weight: 800; color: #0f172a; }
+  .table-modern thead th { background: #f8fafc; color: #6b7280; font-weight: 700; }
+  .table-modern td, .table-modern th { border-color: #eef1f5 !important; }
+  .actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+</style>
+
+<div class="cheque-shell">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="title"><i class="fas fa-money-check me-2 text-primary"></i>Cheque {{ cheque.cheque_number }}</h2>
+        <div class="text-muted">Payee: {{ cheque.supplier_name|default:cheque.supplier|default:"-" }}</div>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{% url 'accounts:supplier_cheque_pdf' cheque.pk %}" class="btn btn-outline-secondary">Download PDF</a>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">Date</div>
+        <div class="stat-value">{{ cheque.date|date:"F d, Y" }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Bank Account</div>
+        <div class="stat-value">{{ cheque.bank_account|default:"-" }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total Amount</div>
+        <div class="stat-value">{{ cheque.total_amount|currency }}</div>
+      </div>
+      {% if cheque.memo %}
+      <div class="stat">
+        <div class="stat-label">Memo</div>
+        <div class="stat-value">{{ cheque.memo }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <h5 class="mb-3">Applied Expenses</h5>
+    <div class="table-responsive">
+      <table class="table table-modern align-middle">
+        <thead>
+          <tr>
+            <th>Receipt</th>
+            <th>Date</th>
+            <th class="text-end">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in lines %}
+          <tr>
+            <td>{% if line.mech_expense %}{{ line.mech_expense.receipt_no }}{% else %}-{% endif %}</td>
+            <td>{% if line.mech_expense %}{{ line.mech_expense.date|date:"M d, Y" }}{% else %}-{% endif %}</td>
+            <td class="text-end">{{ line.amount|currency }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="text-center text-muted">No expenses attached to this cheque.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel actions">
+    <a href="{% url 'accounts:supplier_cheque_list' %}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Back to Cheques
+    </a>
+  </div>
+</div>
+{% endblock %}

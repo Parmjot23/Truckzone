@@ -1,0 +1,111 @@
+{% extends "accounts/mach/mach_portal_base.html" %}
+{% load custom_filters %}
+{% block title %}
+    Income Details - {{ specific_date }}
+{% endblock %}
+<!-- company_core/accounts/templates/accounts/mach/income_details_by_date.html -->
+{% block content %}
+<div class="container">
+    <h1>Income Details</h1>
+
+    <!-- Check if specific_date is provided to decide the table structure -->
+    {% if specific_date %}
+    <table class="table" id="income-details-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Invoice Number</th>
+                <th>Total Tax</th>
+                <th>Total Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for invoice in grouped_incomes %}
+            <tr>
+                <td>{{ invoice.date_fully_paid|date:"Y-m-d" }}</td>
+                <td>
+                    <a href="{% url 'accounts:groupedinvoice_detail' invoice.id %}">{{ invoice.invoice_number }}</a>
+                </td>
+                <td>{{ invoice.total_tax_collected|default:0|currency }}</td>
+                <td>{{ invoice.total_paid|default:0|currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="2">Totals</th>
+                <th id="total-tax">{{ 0|currency }}</th>
+                <th id="total-amount">{{ 0|currency }}</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    <!-- JavaScript to Calculate and Format Totals -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Select the table by its ID
+            const table = document.getElementById('income-details-table');
+            if (!table) return; // Exit if the table is not found
+
+            let totalTax = 0;
+            let totalAmount = 0;
+
+            // Select all rows within the tbody
+            const tbody = table.querySelector('tbody');
+            const rows = tbody.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                // Assuming the 3rd and 4th cells contain Total Tax and Total Amount
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 4) {
+                    // Parse the text content to float, removing any non-numeric characters
+                    const taxText = cells[2].textContent.trim().replace(/[^0-9.-]+/g,"");
+                    const amountText = cells[3].textContent.trim().replace(/[^0-9.-]+/g,"");
+
+                    const tax = parseFloat(taxText) || 0;
+                    const amount = parseFloat(amountText) || 0;
+
+                    totalTax += tax;
+                    totalAmount += amount;
+                }
+            });
+
+            // Define the currency formatter
+            const formatter = new Intl.NumberFormat('{{ request.LANGUAGE_CODE|default:"en-US" }}', {
+                style: 'currency',
+                currency: '{{ currency_code|default:"USD" }}', // Ensure you pass 'currency_code' from your view
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+
+            // Update the totals in the <tfoot> of the table with formatted currency
+            document.getElementById('total-tax').textContent = formatter.format(totalTax);
+            document.getElementById('total-amount').textContent = formatter.format(totalAmount);
+        });
+    </script>
+    {% else %}
+    <!-- Handle aggregated data when specific_date is not provided -->
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date Fully Paid</th>
+                <th>Total Invoices</th>
+                <th>Total Amount</th>
+                <th>Total Tax Collected</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for income in grouped_incomes %}
+            <tr>
+                <td>{{ income.date_fully_paid|date:"Y-m-d" }}</td>
+                <td>{{ income.total_invoices }}</td>
+                <td>{{ income.total_amount|default:0|currency }}</td>
+                <td>{{ income.total_tax_collected|default:0|currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+</div>
+{% endblock %}

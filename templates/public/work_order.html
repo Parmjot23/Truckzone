@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-5">
+  <!-- Hero Section -->
+  <section class="hero-section text-center mb-5">
+    <h1 class="display-4">Work Order Feature</h1>
+    <p class="lead">Streamline your jobs, parts, and invoicing with one seamless workflow.</p>
+  </section>
+
+  <!-- Overview Section -->
+  <section class="overview-section mb-4">
+    <h2 class="mb-3">Overview</h2>
+    <p>
+      Our Work Order feature empowers your business to create, assign, and track detailed job tasks while integrating with the inventory system. Employees can log parts usage and progress, and once the task is complete, the system automatically updates inventory and generates invoices.
+    </p>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="how-it-works-section mb-4">
+    <h2 class="mb-3">How It Works</h2>
+    <ol>
+      <li><strong>Create a Work Order:</strong> Initiate the process by detailing the job requirements and specific instructions.</li>
+      <li><strong>Assign to an Employee:</strong> Allocate the task and enable the employee to access available inventory parts.</li>
+      <li><strong>Employee Updates:</strong> The assigned employee logs parts usage and progress in real time.</li>
+      <li><strong>Review &amp; Finalize:</strong> The business reviews the updated work order, makes any necessary adjustments, and finalizes it.</li>
+      <li><strong>Automatic Integration:</strong> Upon completion, the system automatically updates your inventory and generates the corresponding invoice.</li>
+    </ol>
+  </section>
+
+  <!-- Benefits Section -->
+  <section class="benefits-section mb-5">
+    <h2 class="mb-3">Benefits</h2>
+    <ul>
+      <li><strong>Efficiency:</strong> Eliminate manual entry and reduce operational delays.</li>
+      <li><strong>Accuracy:</strong> Automation minimizes errors and ensures data integrity.</li>
+      <li><strong>Transparency:</strong> Everyone has access to real-time status updates and inventory levels.</li>
+      <li><strong>Streamlined Workflow:</strong> Seamlessly integrates work orders, inventory management, and invoicing.</li>
+    </ul>
+  </section>
+
+  <!-- Call to Action Section -->
+  <section class="cta-section text-center">
+    <h2 class="mb-3">Get Started Today</h2>
+    <p>Experience the power of a streamlined work order system that boosts productivity and reduces errors.</p>
+                    <a href="{% url 'accounts:login' %}" class="btn btn-primary btn-lg">Get Started</a>
+  </section>
+</div>
+{% endblock %}

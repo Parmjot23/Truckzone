@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_css %}
+<style>
+    .legal-hero {
+        background: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.8)),
+        url("{% static 'images/hero_legal_new.png' %}");
+        background-size: cover;
+        background-position: center;
+        padding: 5rem 0;
+        color: white;
+    }
+
+    .legal-content {
+        background: white;
+        padding: 3rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        margin-top: -3rem;
+        position: relative;
+        z-index: 10;
+    }
+
+    .legal-content h2 {
+        color: var(--brand-navy);
+        font-weight: bold;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+    }
+
+    .legal-content h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--neutral-700);
+        margin-top: 1.5rem;
+    }
+
+    .legal-content ul {
+        margin-bottom: 1.5rem;
+    }
+
+    .legal-content li {
+        margin-bottom: 0.5rem;
+        color: var(--neutral-600);
+    }
+
+    .legal-content p {
+        color: var(--neutral-600);
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="legal-hero text-center">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto">
+                <div class="d-inline-flex align-items-center bg-white bg-opacity-10 rounded-pill px-3 py-1 mb-3">
+                    <i class="fas fa-shield-alt text-brand-orange me-2"></i>
+                    <span class="text-white small fw-bold text-uppercase">We respect your privacy</span>
+                </div>
+                <h1 class="display-4 fw-bold mb-3 text-white">Privacy Policy</h1>
+                <p class="lead text-white-50">How we collect, use, and protect your information at {{ business_name|default:default_business_name }}.</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="legal-content">
+                <p class="text-muted small border-bottom pb-3 mb-4"><strong>Last updated:</strong> December 18, 2025</p>
+
+                <h2>1. Introduction</h2>
+                <p>
+                    This Privacy Policy explains how <strong>{{ business_name|default:default_business_name }}</strong>
+                    ("Company", "we", "us", "our") collects, uses, shares, and protects information when you use our
+                    website, online parts catalog/store, customer portal, and parts inquiry forms (collectively, the
+                    "Platform").
+                </p>
+                <p>
+                    This Privacy Policy is provided by the Company. Any independent software developers, contractors, or
+                    technology vendors involved in building or maintaining the Platform do so on behalf of the Company
+                    and are not the controller/owner of your personal information for their own independent purposes.
+                </p>
+
+                <h2>2. Information We Collect</h2>
+                <h3>2.1 Information you provide</h3>
+                <ul>
+                    <li><strong>Contact details:</strong> Name, email address, phone number, and the details you include in messages.</li>
+                    <li><strong>Parts inquiries and quotes:</strong> Part numbers, vehicle details (make/model/year, VIN or unit number), photos, and fitment notes you share.</li>
+                    <li><strong>Orders and billing:</strong> Shipping and billing addresses, tax numbers (if applicable), purchase history, and fleet account details.</li>
+                    <li><strong>Customer/portal account details:</strong> Account credentials (stored in hashed form), company name (if applicable), and authorized users.</li>
+                    <li><strong>Uploads:</strong> Photos, documents, and other files you choose to upload (for example, part images or spec sheets).</li>
+                    <li><strong>Communications:</strong> Messages you send to us by email, forms, portal messaging, or AI chat features (where available).</li>
+                </ul>
+
+                <h3>2.2 Information collected automatically</h3>
+                <ul>
+                    <li><strong>Device and connection data:</strong> IP address, browser type, device identifiers (where available), operating system, and approximate location (derived from IP).</li>
+                    <li><strong>Usage data:</strong> Pages viewed, actions taken, access times, referring URLs, and diagnostic logs.</li>
+                    <li><strong>Cookies and similar technologies:</strong> See our Cookies Policy for details.</li>
+                </ul>
+
+                <h3>2.3 Payment information</h3>
+                <p>
+                    If you buy parts through our Platform, payment processing may be handled by third-party payment
+                    processors. We do not store full payment card numbers on our servers. Payment processors handle
+                    your payment information according to their own policies.
+                </p>
+
+                <h2>3. How We Use Your Information</h2>
+                <p>We use your information to:</p>
+                <ul>
+                    <li>Respond to parts inquiries, confirm fitment, and provide quotes.</li>
+                    <li>Process orders, returns, and warranty requests.</li>
+                    <li>Create and manage customer/portal accounts and authenticate users.</li>
+                    <li>Prepare invoices, receipts, and account statements where applicable.</li>
+                    <li>Communicate with you about orders, availability, pickup or delivery, and support requests.</li>
+                    <li>Maintain security, prevent fraud/abuse, and enforce our Terms and policies.</li>
+                    <li>Comply with applicable laws, accounting requirements, and regulatory obligations.</li>
+                </ul>
+
+                <h2>4. Disclosure of Your Information</h2>
+                <p>We may share your information in the following circumstances:</p>
+                <ul>
+                    <li><strong>With vendors:</strong> Partners that help us run the Platform (hosting, email/SMS, analytics, maps, file storage, payments, customer support tools, shipping carriers, and similar providers) under appropriate confidentiality/security obligations.</li>
+                    <li><strong>With operational partners:</strong> When needed to fulfill your request (for example, parts suppliers or manufacturers).</li>
+                    <li><strong>For legal reasons:</strong> If required by law, regulation, or legal process; or to protect our rights, safety, and property, and those of our customers.</li>
+                    <li><strong>Business transfers:</strong> In connection with a merger, acquisition, financing, or sale of all or a portion of the business (subject to standard protections).</li>
+                </ul>
+
+                <h2>5. Data Security</h2>
+                <p>
+                    We use reasonable administrative, technical, and physical safeguards designed to protect your
+                    information. However, no security measure is perfect, and we cannot guarantee absolute security.
+                </p>
+
+                <h2>6. Data Retention</h2>
+                <p>
+                    We retain personal information as long as necessary to provide the Platform and for legitimate
+                    business purposes such as recordkeeping, invoicing/accounting, dispute resolution, and compliance
+                    with legal obligations. Retention periods may vary depending on the type of record.
+                </p>
+
+                <h2>7. Your Rights and Choices</h2>
+                <p>You may have rights and choices regarding your personal information, including:</p>
+                <ul>
+                    <li><strong>Access and correction:</strong> Request access to and correction of certain information we hold about you.</li>
+                    <li><strong>Account preferences:</strong> Update certain details through your account (if available).</li>
+                    <li><strong>Marketing choices:</strong> Opt out of marketing communications by using unsubscribe links or contacting us.</li>
+                    <li><strong>Deletion:</strong> Request deletion of your account and/or certain information, subject to legal and business recordkeeping needs.</li>
+                </ul>
+
+                <h2>8. Children</h2>
+                <p>
+                    Our Platform is not intended for children, and we do not knowingly collect personal information
+                    from children.
+                </p>
+
+                <h2>9. Changes to This Privacy Policy</h2>
+                <p>
+                    We may update this Privacy Policy from time to time. The "Last updated" date above will indicate
+                    when changes become effective once posted.
+                </p>
+
+                <h2>10. Contact Information</h2>
+                <p>
+                    If you have any questions or concerns about this Privacy Policy, please contact us:
+                </p>
+                <ul>
+                    <li><strong>Business:</strong> {{ business_name|default:default_business_name }}</li>
+                    <li><strong>Email:</strong> <a href="mailto:{{ business_contact_email }}">{{ business_contact_email }}</a></li>
+                    <li><strong>Phone:</strong> <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}">{{ business_contact_phone }}</a></li>
+                    <li><strong>Address:</strong> {{ business_contact_address|linebreaksbr }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

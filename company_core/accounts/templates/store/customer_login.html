@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Customer Login{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          {% if portal_switch_options %}
+          <div class="mb-4">
+            <div class="btn-group w-100" role="group" aria-label="Select a portal">
+              {% for option in portal_switch_options %}
+              <a href="{{ option.url }}" class="btn {% if option.slug == active_portal %}btn-primary{% else %}btn-outline-primary{% endif %}">{{ option.label }} Portal</a>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          <h2 class="h4 mb-3 text-center">Customer Login</h2>
+          <p class="text-muted text-center">
+            Sign in to manage your relationship with {{ business_name|default:default_business_name }}—review your fleet activity, stay on top of invoices,
+            and browse or purchase products tailored to your business.
+          </p>
+          <p class="small text-muted text-center">
+            Once logged in you'll be able to choose between managing your account details or jumping straight into the
+            store to discover new parts and services.
+          </p>
+          <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger" role="alert">
+                {% for error in form.non_field_errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+            <div class="form-group">
+              <label for="id_username">Username or Email</label>
+              {{ form.username|as_crispy_field }}
+            </div>
+            <div class="form-group">
+              <label for="id_password">Password</label>
+              {{ form.password|as_crispy_field }}
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Log in</button>
+            {% if next %}
+              <input type="hidden" name="next" value="{{ next }}" />
+            {% endif %}
+          </form>
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-4">
+            <a href="{% url 'accounts:password_reset' %}" class="small">Forgot password?</a>
+            <a href="{% url 'accounts:customer_signup' %}{% if next %}?next={{ next }}{% endif %}" class="small">Create a customer account</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

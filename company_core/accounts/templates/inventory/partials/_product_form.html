@@ -1,0 +1,179 @@
+<!-- inventory/partials/_product_form.html -->
+{% load static %}
+<input type="hidden" name="product_id" value="{{ form.instance.id }}">
+{{ form.non_field_errors }}
+<div class="product-modal-grid">
+  <div class="form-group">
+    {{ form.sku.label_tag }}
+    {{ form.sku }}
+  </div>
+  <div class="form-group">
+    {{ form.name.label_tag }}
+    {{ form.name }}
+  </div>
+  <div class="form-group span-2">
+    {{ form.description.label_tag }}
+    {{ form.description }}
+  </div>
+  <div class="form-group">
+    {{ form.category.label_tag }}
+    <div class="input-group">
+      {{ form.category }}
+      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addCategoryModal" data-keep-parent-open="true" aria-label="Add category">+</button>
+    </div>
+  </div>
+  <div class="form-group">
+    {{ form.supplier.label_tag }}
+    <div class="input-group">
+      {{ form.supplier }}
+      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addSupplierModal" data-keep-parent-open="true" aria-label="Add supplier">+</button>
+    </div>
+  </div>
+  <div class="form-group">
+    {{ form.brand.label_tag }}
+    {{ form.brand }}
+  </div>
+  <div class="form-group">
+    {{ form.vehicle_model.label_tag }}
+    {{ form.vehicle_model }}
+  </div>
+  <div class="form-group">
+    {{ form.vin_number.label_tag }}
+    {{ form.vin_number }}
+  </div>
+  <div class="form-group">
+    {{ form.cost_price.label_tag }}
+    {{ form.cost_price }}
+  </div>
+  <div class="form-group">
+    {{ form.sale_price.label_tag }}
+    {{ form.sale_price }}
+  </div>
+  <div class="form-group">
+    {{ form.promotion_price.label_tag }}
+    {{ form.promotion_price }}
+  </div>
+  <div class="form-group">
+    {{ form.margin.label_tag }}
+    {{ form.margin }}
+  </div>
+  {% if stock_visible|default:true %}
+  <div class="form-group">
+    {{ form.quantity_in_stock.label_tag }}
+    {{ form.quantity_in_stock }}
+  </div>
+  <div class="form-group">
+    {{ form.reorder_level.label_tag }}
+    {{ form.reorder_level }}
+  </div>
+  {% else %}
+  <div class="form-group span-2">
+    <div class="text-muted small">Stock on hand is managed per store.</div>
+  </div>
+  {% endif %}
+  <div class="form-group">
+    {{ form.location.label_tag }}
+    <div class="input-group">
+      {{ form.location }}
+      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addLocationModal" data-keep-parent-open="true" aria-label="Add location">+</button>
+    </div>
+  </div>
+  <div class="form-group">
+    {{ form.warranty_expiry_date.label_tag }}
+    {{ form.warranty_expiry_date }}
+  </div>
+  <div class="form-group">
+    {{ form.warranty_length.label_tag }}
+    {{ form.warranty_length }}
+  </div>
+  <div class="form-group span-2">
+    {{ form.image.label_tag }}
+    {{ form.image }}
+  </div>
+  <div class="form-group span-2" data-attribute-fields="true" data-attribute-url="{% url 'accounts:get_attribute_fields' %}" data-product-id="{{ form.instance.id|default_if_none:'' }}">
+    {% include 'inventory/partials/_attribute_fields.html' with form=form %}
+  </div>
+  <div class="form-group span-2">
+    <div class="form-check storefront-toggle">
+      {{ form.is_published_to_store }}
+      <label class="form-check-label" for="{{ form.is_published_to_store.id_for_label }}">
+        {{ form.is_published_to_store.label }}
+      </label>
+    </div>
+    {% if form.is_published_to_store.help_text %}
+    <small class="form-text text-muted">{{ form.is_published_to_store.help_text }}</small>
+    {% endif %}
+    {{ form.is_published_to_store.errors }}
+  </div>
+  <div class="form-group span-2">
+    <div class="form-check storefront-toggle">
+      {{ form.is_featured }}
+      <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
+        {{ form.is_featured.label }}
+      </label>
+    </div>
+    {% if form.is_featured.help_text %}
+    <small class="form-text text-muted">{{ form.is_featured.help_text }}</small>
+    {% endif %}
+    {{ form.is_featured.errors }}
+  </div>
+</div>
+
+<script>
+(function () {
+  if (window.__catalogAttributeInit) {
+    return;
+  }
+  window.__catalogAttributeInit = true;
+
+  function fetchAttributeFields(selectEl) {
+    const form = selectEl.closest('form');
+    if (!form) {
+      return;
+    }
+    const container = form.querySelector('[data-attribute-fields]');
+    if (!container) {
+      return;
+    }
+    const url = container.getAttribute('data-attribute-url');
+    if (!url) {
+      return;
+    }
+    const categoryId = selectEl.value || '';
+    const productId = container.getAttribute('data-product-id') || '';
+    const params = new URLSearchParams();
+    params.set('category_id', categoryId);
+    if (productId) {
+      params.set('product_id', productId);
+    }
+
+    fetch(url + '?' + params.toString(), {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to load attributes.');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        container.innerHTML = data.html || '';
+      })
+      .catch(() => {
+        // Keep existing attribute fields if the update fails.
+      });
+  }
+
+  document.addEventListener('change', (event) => {
+    const target = event.target;
+    if (!target || !(target instanceof HTMLElement)) {
+      return;
+    }
+    if (target.matches('[data-attribute-source]')) {
+      fetchAttributeFields(target);
+    }
+  });
+})();
+</script>

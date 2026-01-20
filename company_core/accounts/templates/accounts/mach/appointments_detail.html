@@ -1,0 +1,102 @@
+{% extends 'accounts/mach/mach_portal_base.html' %}
+{% block title %}Appointment Details{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  {% include 'accounts/communications/_comm_styles.html' %}
+{% endblock %}
+{% block content %}
+<div class="comm-wrapper container-fluid">
+  <div class="comm-header">
+    <div>
+      <div class="eyebrow">Communication hub</div>
+      <h1>Appointment details</h1>
+      <p class="comm-subtitle">Review the booking request and plan next steps.</p>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <a class="pill" href="{% url 'accounts:appointments_list' %}">
+        <i class="fa-solid fa-arrow-left"></i>
+        Back to appointments
+      </a>
+      <a class="pill pill-primary" href="{% url 'accounts:communication_hub' %}">
+        <i class="fa-solid fa-tower-broadcast"></i>
+        Hub overview
+      </a>
+    </div>
+  </div>
+
+  <div class="mt-3">
+    {% include 'accounts/communications/_comm_nav.html' %}
+  </div>
+
+  <div class="row g-3 mt-2">
+    <div class="col-lg-8">
+      <div class="comm-card">
+        <div class="comm-card-header">
+          <div>
+            <h3>Request details</h3>
+            <p>Submitted {{ booking.created_at|date:'M d, Y g:i a' }}</p>
+          </div>
+          <span class="status-pill {% if booking.status == 'new' %}status-new{% elif booking.status == 'scheduled' %}status-success{% elif booking.status == 'processing' %}status-open{% else %}status-open{% endif %}">
+            <span class="dot"></span>
+            {{ booking.get_status_display }}
+          </span>
+        </div>
+        <div class="comm-detail-grid">
+          <div class="comm-detail">
+            <div class="comm-detail-label">Full name</div>
+            <div class="comm-detail-value">{{ booking.full_name }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Email</div>
+            <div class="comm-detail-value">{{ booking.email }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Phone</div>
+            <div class="comm-detail-value">{{ booking.phone|default:'N/A' }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Company</div>
+            <div class="comm-detail-value">{{ booking.company|default:'N/A' }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Service</div>
+            <div class="comm-detail-value">{{ booking.get_service_type_display }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Preferred time</div>
+            <div class="comm-detail-value">
+              {% if booking.preferred_datetime %}
+                {{ booking.preferred_datetime|date:'M d, Y g:i a' }}
+              {% else %}
+                N/A
+              {% endif %}
+            </div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Pickup</div>
+            <div class="comm-detail-value">{{ booking.pickup_location|default:'N/A' }}</div>
+          </div>
+          <div class="comm-detail">
+            <div class="comm-detail-label">Dropoff</div>
+            <div class="comm-detail-value">{{ booking.dropoff_location|default:'N/A' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comm-card mt-3">
+        <div class="comm-card-header">
+          <div>
+            <h3>Notes</h3>
+            <p>Additional details from the requester.</p>
+          </div>
+        </div>
+        {% if booking.notes %}
+          <div class="comm-message">{{ booking.notes }}</div>
+        {% else %}
+          <div class="comm-empty">No notes provided.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

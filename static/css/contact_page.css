@@ -1,0 +1,201 @@
+/* ==========================================================================
+   Contact page specific styles
+   ========================================================================== */
+.contact-hero {
+  position: relative;
+  padding: clamp(3.5rem, 6vw, 5.75rem) 0 3rem;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(249, 115, 22, 0.35), transparent 55%),
+    radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.3), transparent 60%),
+    linear-gradient(135deg, #020617 0%, #0F172A 65%, #111827 100%);
+  color: #fff;
+  overflow: hidden;
+}
+
+.contact-hero h1 {
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-weight: 700;
+}
+
+.contact-hero .lead {
+  max-width: 520px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.contact-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.contact-hero-buttons .btn {
+  min-width: 190px;
+}
+
+.contact-hero-card {
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(10px);
+}
+
+.contact-hero-card-title {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 0.75rem;
+}
+
+.contact-hero-phones a {
+  display: block;
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.contact-hero-card-note {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.95rem;
+}
+
+.contact-hero-mini {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.contact-hero-mini-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
+.contact-location-card {
+  background: #fff;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--neutral-200);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.contact-location-card-header {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+
+.contact-location-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(59, 130, 246, 0.25));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(249, 115, 22, 0.25);
+}
+
+.contact-location-icon i {
+  color: var(--brand-orange);
+  font-size: 1.2rem;
+}
+
+.contact-location-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.contact-location-details a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--brand-navy);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.contact-location-details a i {
+  color: var(--brand-orange);
+}
+
+.contact-map-card {
+  background: #fff;
+  border-radius: var(--radius-2xl, 1.5rem);
+  border: 1px solid var(--neutral-200);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  margin-top: 1.5rem;
+}
+
+.contact-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--neutral-200);
+  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+}
+
+.contact-map {
+  width: 100%;
+  height: 380px;
+}
+
+.contact-map .leaflet-container {
+  height: 100%;
+}
+
+.contact-form-card {
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--neutral-200);
+  background: #fff;
+  box-shadow: var(--shadow-lg);
+}
+
+.contact-form-card .form-label {
+  font-weight: 600;
+  color: var(--neutral-700);
+}
+
+.contact-form-card .form-control,
+.contact-form-card .form-select,
+.contact-form-card textarea {
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 991px) {
+  .contact-map {
+    height: 280px;
+  }
+}
+
+@media (max-width: 767px) {
+  .contact-location-card {
+    padding: 1rem;
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "MechAssign",
+    "slug": "mechanics-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/MechAssign.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "mechanicsapp",
+    "extra": {
+      "apiBaseUrl": "https://www.itranstech.ca/api",
+      "eas": {
+        "projectId": "902b5850-724e-445d-be04-335c571dfa8f"
+      }
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow camera to capture job photos and signatures.",
+        "NSPhotoLibraryUsageDescription": "Allow access to photo library to attach images to jobs.",
+        "NSPhotoLibraryAddUsageDescription": "Allow saving captured photos to library.",
+        "NSLocationWhenInUseUsageDescription": "Allow location for navigation and job arrival verification."
+      }
+    },
+    "android": {
+      "package": "com.transtex.mechanics",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/MechAssign.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.FOREGROUND_SERVICE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "owner": "parmjot23",
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-sqlite",
+      "expo-font"
+    ]
+  }
+}

@@ -1,0 +1,52 @@
+{% with current=request.resolver_match.url_name %}
+<nav class="page-top-nav" aria-label="Inventory navigation">
+  <a href="{% url 'accounts:inventory_hub' %}" class="btn btn-sm {% if current == 'inventory_hub' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-gauge-high me-1"></i>
+    Hub
+  </a>
+  <a href="{% url 'accounts:inventory_products' %}" class="btn btn-sm {% if current == 'inventory_products' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-box me-1"></i>
+    Products
+  </a>
+  <a href="{% url 'accounts:inventory_transactions' %}" class="btn btn-sm {% if current == 'inventory_transactions' or current == 'qr_stock_in' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-clipboard-list me-1"></i>
+    Transactions
+  </a>
+  <a href="{% url 'accounts:inventory_suppliers' %}" class="btn btn-sm {% if current == 'inventory_suppliers' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-truck-field me-1"></i>
+    Suppliers
+  </a>
+  <a href="{% url 'accounts:inventory_locations' %}" class="btn btn-sm {% if current == 'inventory_locations' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-warehouse me-1"></i>
+    Locations
+  </a>
+  <a href="{% url 'accounts:inventory_category_groups' %}" class="btn btn-sm {% if current == 'inventory_category_groups' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-layer-group me-1"></i>
+    Category Groups
+  </a>
+  <a href="{% url 'accounts:inventory_categories' %}" class="btn btn-sm {% if current == 'inventory_categories' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-tags me-1"></i>
+    Categories
+  </a>
+  <a href="{% url 'accounts:inventory_attributes' %}" class="btn btn-sm {% if current == 'inventory_attributes' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-sliders me-1"></i>
+    Attributes
+  </a>
+  <a href="{% url 'accounts:inventory_brands' %}" class="btn btn-sm {% if current == 'inventory_brands' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-certificate me-1"></i>
+    Brands
+  </a>
+  <a href="{% url 'accounts:inventory_models' %}" class="btn btn-sm {% if current == 'inventory_models' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-truck me-1"></i>
+    Models
+  </a>
+  <a href="{% url 'accounts:inventory_vins' %}" class="btn btn-sm {% if current == 'inventory_vins' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-barcode me-1"></i>
+    VINs
+  </a>
+  <a href="{% url 'accounts:inventory_analytics' %}" class="btn btn-sm {% if current == 'inventory_analytics' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-chart-column me-1"></i>
+    Analytics
+  </a>
+</nav>
+{% endwith %}

@@ -1,0 +1,132 @@
+{% extends "suppliers/portal_base.html" %}
+{% load humanize %}
+{% block extra_css %}{{ block.super }}
+  <style>
+    .receipt-summary-card {
+      border-radius: 18px;
+      padding: 1.5rem;
+      background: #fff;
+      border: 1px solid rgba(15, 118, 110, 0.18);
+      box-shadow: 0 18px 36px rgba(13, 148, 136, 0.16);
+      height: 100%;
+    }
+
+    .receipt-summary-card .summary-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #0f172a;
+      opacity: 0.7;
+    }
+
+    .receipt-summary-card .summary-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .receipts-table thead {
+      background: rgba(13, 148, 136, 0.08);
+    }
+
+    .receipts-table thead th {
+      border: 0;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      color: #0f172a;
+    }
+
+    .receipts-table tbody tr:hover {
+      background: rgba(13, 148, 136, 0.06);
+    }
+  </style>
+{% endblock %}
+{% block portal_content %}
+  <div class="row g-4">
+    <div class="col-lg-3 col-sm-6">
+      <div class="receipt-summary-card">
+        <div class="summary-label">Invoices shared</div>
+        <div class="summary-value">{{ summary.total_receipts|intcomma }}</div>
+        <div class="text-muted small">Total invoices linked to your business</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+      <div class="receipt-summary-card">
+        <div class="summary-label">Pending balance</div>
+        <div class="summary-value">${{ summary.pending_balance|floatformat:2|intcomma }}</div>
+        <div class="text-muted small">Amount still outstanding with {{ business_contact.name }}</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+      <div class="receipt-summary-card">
+        <div class="summary-label">Paid invoices</div>
+        <div class="summary-value">{{ summary.paid_receipts|intcomma }}</div>
+        <div class="text-muted small">Invoices marked as paid</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-sm-6">
+      <div class="receipt-summary-card">
+        <div class="summary-label">Total volume</div>
+        <div class="summary-value">${{ summary.total_volume|floatformat:2|intcomma }}</div>
+        <div class="text-muted small">Value of all invoices shared</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+          <h2 class="h5 mb-1">Your invoices from {{ business_contact.name }}</h2>
+          <p class="text-muted mb-0">Track which invoices have been paid and review the details any time.</p>
+        </div>
+      </div>
+      {% if receipts %}
+        <div class="table-responsive">
+          <table class="table align-middle receipts-table">
+            <thead>
+              <tr>
+                <th scope="col">Invoice</th>
+                <th scope="col">Date</th>
+                <th scope="col" class="text-end">Amount</th>
+                <th scope="col" class="text-center">Status</th>
+                <th scope="col" class="text-end">Pending</th>
+                <th scope="col" class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for receipt in receipts %}
+                <tr>
+                  <td>
+                    <div class="fw-semibold">{{ receipt.receipt_no }}</div>
+                    <div class="text-muted small">{{ receipt.vendor }}</div>
+                  </td>
+                  <td>{{ receipt.date|date:"M d, Y" }}</td>
+                  <td class="text-end fw-semibold">${{ receipt.total_amount|floatformat:2|intcomma }}</td>
+                  <td class="text-center">
+                    {% if receipt.paid %}
+                      <span class="badge bg-success-subtle text-success"><i class="fas fa-circle-check me-1"></i>Paid</span>
+                    {% else %}
+                      <span class="badge bg-warning-subtle text-warning"><i class="fas fa-clock me-1"></i>Pending</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">${{ receipt.pending_amount|floatformat:2|intcomma }}</td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-info" href="{% url 'accounts:supplier_receipt_detail' receipt.id %}">
+                      View details
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="alert alert-info mb-0">
+          Invoices shared by {{ business_contact.name }} will show up here once they're linked to your supplier profile.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

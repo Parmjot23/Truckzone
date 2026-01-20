@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Paid invoice statement</title>
+  <style>
+    body { font-family: "Helvetica", "Arial", sans-serif; font-size: 12px; color: #1f2933; margin: 0; padding: 0; }
+    .container { padding: 24px 32px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .header img { max-height: 60px; }
+    .title { font-size: 20px; margin: 0 0 4px 0; }
+    .meta { color: #4b5563; margin: 0; }
+    .summary { margin-bottom: 16px; }
+    .summary p { margin: 4px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid #d2d6dc; text-align: left; }
+    th { background-color: #f3f4f6; font-weight: 600; }
+    tfoot td { font-weight: 600; }
+    .footer { margin-top: 24px; font-size: 11px; color: #6b7280; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1 class="title">Paid invoice statement</h1>
+        <p class="meta">{{ period_label }} &middot; {{ start_date|date:"M d, Y" }} – {{ end_date|date:"M d, Y" }}</p>
+        <p class="meta">Generated on {{ generated_on|date:"M d, Y H:i" }}</p>
+      </div>
+      {% if logo_url_pdf %}
+      <div>
+        <img src="{{ logo_url_pdf }}" alt="Company logo">
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="summary">
+      <p><strong>Business:</strong> {{ business_name|default:default_business_name }}</p>
+      <p><strong>Customer:</strong> {{ customer.name }}</p>
+      {% if customer.gst_hst_number %}
+        <p><strong>Tax number:</strong> {{ customer.gst_hst_number }}</p>
+      {% endif %}
+      {% if customer.address %}
+        <p><strong>Mailing address:</strong> {{ customer.address }}</p>
+      {% endif %}
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Invoice #</th>
+          <th>Date</th>
+          <th>Subtotal</th>
+          <th>Tax</th>
+          <th>Total</th>
+          <th>Paid on</th>
+          <th>Method</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for invoice in invoices %}
+        <tr>
+          <td>{{ invoice.invoice_number }}</td>
+          <td>{{ invoice.date|date:"M d, Y" }}</td>
+          <td>${{ invoice.subtotal|floatformat:2 }}</td>
+          <td>${{ invoice.tax_total|floatformat:2 }}</td>
+          <td>${{ invoice.total_amount|floatformat:2 }}</td>
+          <td>
+            {% if invoice.latest_payment %}
+              {{ invoice.latest_payment.date|date:"M d, Y" }}
+            {% endif %}
+          </td>
+          <td>{% if invoice.latest_payment %}{{ invoice.latest_payment.method|default:"" }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Totals</td>
+          <td>${{ totals.subtotal|floatformat:2 }}</td>
+          <td>${{ totals.tax|floatformat:2 }}</td>
+          <td>${{ totals.total|floatformat:2 }}</td>
+          <td colspan="2">${{ totals.paid|floatformat:2 }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="footer">
+      <p>This statement includes only invoices marked as fully paid. Retain this document with your bookkeeping records to support GST/HST or sales tax filings.</p>
+    </div>
+  </div>
+</body>
+</html>

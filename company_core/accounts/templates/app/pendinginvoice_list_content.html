@@ -1,0 +1,634 @@
+﻿{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+{% block title %}Pending Invoices{% endblock %}
+{% block content %}
+<style>
+    .pending-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+        padding: 1rem;
+    }
+    .pending-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    .pending-search {
+        flex: 1;
+        min-width: 240px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.4rem 0.6rem;
+        background: #f8fafc;
+    }
+    .pending-search input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        outline: none;
+    }
+    .pending-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2.5rem;
+        margin: 0.75rem 0 1rem;
+        align-items: center;
+    }
+    .pending-summary .summary-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+    .pending-table th {
+        white-space: nowrap;
+    }
+    .table-sort-link {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .table-sort-link:hover {
+        color: #1d4ed8;
+        text-decoration: none;
+    }
+    .sort-indicator {
+        font-size: 0.7rem;
+        color: #94a3b8;
+    }
+    .date-range-custom {
+        display: none;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .date-range-custom.show { display: flex; }
+</style>
+
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Pending invoices</h2>
+            <div class="text-muted">Track balances waiting for payment.</div>
+        </div>
+        <div class="page-toolbar">
+            <a href="{% url 'accounts:add_dailylog' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus-circle"></i> New invoice
+            </a>
+        </div>
+    </div>
+
+    <div class="pending-card">
+        <div class="pending-toolbar">
+            <form method="GET" id="pending-filter-form" action="." class="flex-grow-1">
+                <div class="pending-search">
+                    <i class="fa fa-search text-muted"></i>
+                    <input type="text" name="search" id="search-input" placeholder="Search by any field" value="{{ search_query }}">
+                </div>
+                <input type="hidden" name="view" id="view-input" value="{{ view_mode }}">
+                <input type="hidden" name="sort_by" id="sort-by-input" value="{{ sort_by }}">
+                <input type="hidden" name="order" id="order-input" value="{{ order }}">
+                <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Pending view">
+                        <button type="button" class="btn {% if view_mode == 'invoice' %}btn-primary{% else %}btn-outline-primary{% endif %} js-view-toggle" data-view="invoice">Invoices</button>
+                        <button type="button" class="btn {% if view_mode == 'customer' %}btn-primary{% else %}btn-outline-primary{% endif %} js-view-toggle" data-view="customer">Customers</button>
+                    </div>
+                    <label class="text-muted small mb-0 ms-2">Period:</label>
+                    <select class="form-select form-select-sm" name="date_range" id="date-range-filter" style="max-width: 220px;" data-select2-skip="true">
+                        {% for value,label in date_range_options %}
+                            <option value="{{ value }}"{% if current_date_range == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <div id="custom-date-range" class="date-range-custom{% if current_date_range == 'custom' %} show{% endif %}">
+                        <input type="date" class="form-control form-control-sm" name="start_date" id="start-date" value="{{ selected_start_date|date:'Y-m-d' }}">
+                        <span class="text-muted small">to</span>
+                        <input type="date" class="form-control form-control-sm" name="end_date" id="end-date" value="{{ selected_end_date|date:'Y-m-d' }}">
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="pending-summary">
+            <div>
+                <div class="text-muted small" id="pending-count-label">Pending {{ pending_count_label }}</div>
+                <div class="summary-value" id="pending-count">{{ pending_count|default:0 }}</div>
+            </div>
+            <div>
+                <div class="text-muted small">Outstanding</div>
+                <div class="summary-value text-danger" id="pending-total">{{ total_pending|currency }}</div>
+            </div>
+        </div>
+
+        <div id="pending-action-status" class="alert d-none" role="alert"></div>
+
+        <div id="pending-list" data-start-date="{{ selected_start_date|date:'Y-m-d' }}" data-end-date="{{ selected_end_date|date:'Y-m-d' }}">
+            {% include 'app/pending_invoices_table.html' %}
+        </div>
+    </div>
+</div>
+
+<!-- Invoice Payment Modal -->
+<div class="modal fade" id="pendingPaymentModal" tabindex="-1" aria-labelledby="pendingPaymentModalLabel" aria-hidden="true" data-today="{% now 'Y-m-d' %}">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pendingPaymentModalLabel">Record Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="pending-payment-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <div class="modal-body">
+                    <div class="alert alert-info">Use this form to record full or partial payments for the invoice.</div>
+                    <div class="mb-3">
+                        <label for="pending-payment-amount" class="form-label">Amount</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="pending-payment-amount" name="amount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="pending-payment-date" class="form-label">Payment Date</label>
+                        <input type="date" class="form-control" id="pending-payment-date" name="payment_date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="pending-payment-method" class="form-label">Payment Method</label>
+                        <select class="form-select" id="pending-payment-method" name="method">
+                            {% for method in payment_methods %}
+                            <option value="{{ method }}">{{ method }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="pending-payment-notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="pending-payment-notes" name="notes" rows="2" placeholder="Optional notes"></textarea>
+                    </div>
+                    <div class="text-muted small">Balance due: <span id="pending-payment-balance"></span></div>
+                    <div class="alert alert-danger mt-3 d-none" id="pending-payment-error"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Payment Modal -->
+<div class="modal fade" id="customerPaymentModal" tabindex="-1" aria-labelledby="customerPaymentModalLabel" aria-hidden="true" data-today="{% now 'Y-m-d' %}">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerPaymentModalLabel">Record Customer Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="customer-payment-form">
+                {% csrf_token %}
+                <input type="hidden" id="customer-payment-customer-id" value="">
+                <div class="modal-body">
+                    <div class="alert alert-info mb-3">Record a payment and apply it to outstanding invoices.</div>
+                    <div class="mb-2">
+                        <div class="fw-semibold" id="customer-payment-customer-name"></div>
+                        <div class="text-muted small">Outstanding balance: <span id="customer-payment-outstanding"></span></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="customer-payment-amount" class="form-label">Amount</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="customer-payment-amount" name="amount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="customer-payment-date" class="form-label">Payment Date</label>
+                        <input type="date" class="form-control" id="customer-payment-date" name="payment_date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="customer-payment-method" class="form-label">Payment Method</label>
+                        <select class="form-select" id="customer-payment-method" name="method">
+                            {% for method in payment_methods %}
+                            <option value="{{ method }}">{{ method }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-0">
+                        <label for="customer-payment-notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="customer-payment-notes" name="notes" rows="2" placeholder="Optional notes"></textarea>
+                    </div>
+                    <div class="alert alert-danger mt-3 d-none" id="customer-payment-error"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Record Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('pending-filter-form');
+    const list = document.getElementById('pending-list');
+    const searchInput = document.getElementById('search-input');
+    const dateRangeFilter = document.getElementById('date-range-filter');
+    const customRange = document.getElementById('custom-date-range');
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+    const viewInput = document.getElementById('view-input');
+    const sortByInput = document.getElementById('sort-by-input');
+    const orderInput = document.getElementById('order-input');
+    const viewButtons = document.querySelectorAll('.js-view-toggle');
+
+    const pendingCountLabel = document.getElementById('pending-count-label');
+    const pendingCount = document.getElementById('pending-count');
+    const pendingTotal = document.getElementById('pending-total');
+    const actionStatus = document.getElementById('pending-action-status');
+
+    let currentStartDate = list?.dataset.startDate || '';
+    let currentEndDate = list?.dataset.endDate || '';
+
+    function debounce(func, delay) {
+        let debounceTimer;
+        return function() {
+            const context = this;
+            const args = arguments;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => func.apply(context, args), delay);
+        };
+    }
+
+    function toggleCustomRange() {
+        if (!customRange || !dateRangeFilter) return;
+        customRange.classList.toggle('show', dateRangeFilter.value === 'custom');
+    }
+
+    function setViewButtons(view) {
+        viewButtons.forEach(btn => {
+            const isActive = btn.dataset.view === view;
+            btn.classList.toggle('btn-primary', isActive);
+            btn.classList.toggle('btn-outline-primary', !isActive);
+        });
+        if (viewInput) viewInput.value = view;
+    }
+
+    function setViewDefaults(view) {
+        if (!sortByInput || !orderInput) return;
+        if (view === 'customer') {
+            sortByInput.value = 'balance_due';
+            orderInput.value = 'desc';
+        } else {
+            sortByInput.value = 'invoice_number';
+            orderInput.value = 'desc';
+        }
+    }
+
+    function showStatus(type, message) {
+        if (!actionStatus) return;
+        actionStatus.className = `alert alert-${type}`;
+        actionStatus.textContent = message;
+        actionStatus.classList.remove('d-none');
+    }
+
+    function hideStatus() {
+        if (!actionStatus) return;
+        actionStatus.classList.add('d-none');
+        actionStatus.textContent = '';
+    }
+
+    function getCsrfToken() {
+        const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (input && input.value) return input.value;
+        const name = 'csrftoken=';
+        const parts = document.cookie.split(';');
+        for (const part of parts) {
+            const trimmed = part.trim();
+            if (trimmed.startsWith(name)) {
+                return decodeURIComponent(trimmed.substring(name.length));
+            }
+        }
+        return '';
+    }
+
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function resolveDateRange() {
+        const key = dateRangeFilter ? dateRangeFilter.value : 'year';
+        const today = new Date();
+        const localToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        if (key === 'all') {
+            return { startDate: '', endDate: '' };
+        }
+        if (key === 'custom') {
+            return {
+                startDate: startDateInput?.value || '',
+                endDate: endDateInput?.value || '',
+            };
+        }
+        let start = null;
+        let end = localToday;
+        if (key === 'today') {
+            start = localToday;
+            end = localToday;
+        } else if (key === 'yesterday') {
+            start = new Date(localToday);
+            start.setDate(start.getDate() - 1);
+            end = new Date(start);
+        } else if (key === 'week') {
+            start = new Date(localToday);
+            const day = (start.getDay() + 6) % 7;
+            start.setDate(start.getDate() - day);
+        } else if (key === 'month') {
+            start = new Date(localToday.getFullYear(), localToday.getMonth(), 1);
+        } else if (key === '3m') {
+            start = new Date(localToday);
+            start.setMonth(start.getMonth() - 3);
+        } else if (key === '6m') {
+            start = new Date(localToday);
+            start.setMonth(start.getMonth() - 6);
+        } else if (key === 'year') {
+            start = new Date(localToday.getFullYear(), 0, 1);
+        } else if (key === '1y') {
+            start = new Date(localToday);
+            start.setFullYear(start.getFullYear() - 1);
+        }
+        return {
+            startDate: start ? formatDate(start) : '',
+            endDate: end ? formatDate(end) : '',
+        };
+    }
+
+    function fetchPendingInvoices(url) {
+        if (!form || !list) return;
+        const params = new URLSearchParams(new FormData(form));
+        const targetUrl = url || `${form.action}?${params.toString()}`;
+
+        fetch(targetUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                list.innerHTML = data.html || '';
+                if (pendingTotal && data.total_pending) pendingTotal.textContent = data.total_pending;
+                if (pendingCount && typeof data.pending_count !== 'undefined') pendingCount.textContent = data.pending_count;
+                if (pendingCountLabel && data.pending_count_label) {
+                    pendingCountLabel.textContent = `Pending ${data.pending_count_label}`;
+                }
+                if (data.view_mode) {
+                    setViewButtons(data.view_mode);
+                }
+                if (typeof data.start_date !== 'undefined') {
+                    currentStartDate = data.start_date || '';
+                }
+                if (typeof data.end_date !== 'undefined') {
+                    currentEndDate = data.end_date || '';
+                }
+                if (list) {
+                    list.dataset.startDate = currentStartDate;
+                    list.dataset.endDate = currentEndDate;
+                }
+            })
+            .catch(error => console.error('Error fetching data:', error));
+    }
+
+    toggleCustomRange();
+
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(() => fetchPendingInvoices(), 300));
+    }
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            fetchPendingInvoices();
+        });
+    }
+    dateRangeFilter?.addEventListener('change', () => {
+        toggleCustomRange();
+        fetchPendingInvoices();
+    });
+    startDateInput?.addEventListener('change', () => {
+        if (dateRangeFilter?.value === 'custom') fetchPendingInvoices();
+    });
+    endDateInput?.addEventListener('change', () => {
+        if (dateRangeFilter?.value === 'custom') fetchPendingInvoices();
+    });
+
+    viewButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const view = button.dataset.view;
+            setViewButtons(view);
+            setViewDefaults(view);
+            fetchPendingInvoices();
+        });
+    });
+
+    list?.addEventListener('click', (event) => {
+        const sortLink = event.target.closest('.js-sort-link');
+        if (sortLink) {
+            event.preventDefault();
+            const url = new URL(sortLink.href, window.location.origin);
+            const sortBy = url.searchParams.get('sort_by') || '';
+            const order = url.searchParams.get('order') || 'asc';
+            if (sortByInput) sortByInput.value = sortBy;
+            if (orderInput) orderInput.value = order;
+            fetchPendingInvoices();
+            return;
+        }
+
+        const paginationLink = event.target.closest('.pagination a');
+        if (paginationLink) {
+            event.preventDefault();
+            fetchPendingInvoices(paginationLink.href);
+            return;
+        }
+
+        const statementBtn = event.target.closest('.js-send-statement');
+        if (statementBtn) {
+            event.preventDefault();
+            hideStatus();
+            const customerId = statementBtn.getAttribute('data-customer-id');
+            const customerName = statementBtn.getAttribute('data-customer-name') || 'this customer';
+            if (!customerId) return;
+
+            const { startDate, endDate } = resolveDateRange();
+            if (dateRangeFilter?.value === 'custom' && (!startDate || !endDate)) {
+                showStatus('warning', 'Select a start and end date for the custom range.');
+                return;
+            }
+
+            if (!confirm(`Send a pending statement to ${customerName}?`)) return;
+
+            const urlTemplate = "{% url 'accounts:send_invoice_statement' 0 %}";
+            const url = urlTemplate.replace('/0/', `/${customerId}/`);
+            statementBtn.disabled = true;
+            const originalText = statementBtn.textContent;
+            statementBtn.textContent = 'Sending.';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    invoice_type: 'pending',
+                    start_date: startDate,
+                    end_date: endDate
+                })
+            })
+                .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) throw new Error(data.error || data.message || 'Unable to send statement.');
+                    showStatus('success', data.message || 'Statement sent successfully.');
+                })
+                .catch(err => showStatus('danger', err.message || 'Unable to send statement.'))
+                .finally(() => {
+                    statementBtn.disabled = false;
+                    statementBtn.textContent = originalText;
+                });
+        }
+    });
+
+    const invoicePaymentModal = document.getElementById('pendingPaymentModal');
+    const invoicePaymentForm = document.getElementById('pending-payment-form');
+    const invoicePaymentAmount = document.getElementById('pending-payment-amount');
+    const invoicePaymentDate = document.getElementById('pending-payment-date');
+    const invoicePaymentMethod = document.getElementById('pending-payment-method');
+    const invoicePaymentNotes = document.getElementById('pending-payment-notes');
+    const invoicePaymentBalance = document.getElementById('pending-payment-balance');
+    const invoicePaymentError = document.getElementById('pending-payment-error');
+
+    if (invoicePaymentModal && invoicePaymentForm) {
+        invoicePaymentModal.addEventListener('show.bs.modal', event => {
+            invoicePaymentError?.classList.add('d-none');
+            const button = event.relatedTarget;
+            const actionUrl = button?.getAttribute('data-action-url');
+            const balance = button?.getAttribute('data-balance') || '';
+            const invoiceNumber = button?.getAttribute('data-invoice-number') || '';
+            const today = invoicePaymentModal.getAttribute('data-today');
+
+            invoicePaymentForm.action = actionUrl || invoicePaymentForm.action;
+            if (invoicePaymentAmount) invoicePaymentAmount.value = balance;
+            if (invoicePaymentBalance) invoicePaymentBalance.textContent = balance ? `$${parseFloat(balance).toFixed(2)}` : '';
+            if (invoicePaymentDate) invoicePaymentDate.value = invoicePaymentDate.value || today;
+            if (invoicePaymentMethod) invoicePaymentMethod.selectedIndex = 0;
+            if (invoicePaymentNotes) invoicePaymentNotes.value = '';
+
+            const title = document.getElementById('pendingPaymentModalLabel');
+            if (title) {
+                title.textContent = invoiceNumber ? `Record Payment for ${invoiceNumber}` : 'Record Payment';
+            }
+        });
+
+        invoicePaymentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            invoicePaymentError?.classList.add('d-none');
+            const formData = new FormData(invoicePaymentForm);
+
+            fetch(invoicePaymentForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData,
+                credentials: 'same-origin'
+            })
+                .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok || data.status !== 'success') {
+                        throw new Error(data.message || 'Unable to save payment.');
+                    }
+                    const modalInstance = bootstrap.Modal.getInstance(invoicePaymentModal);
+                    modalInstance?.hide();
+                    fetchPendingInvoices();
+                    showStatus('success', data.message || 'Payment recorded.');
+                })
+                .catch(err => {
+                    if (invoicePaymentError) {
+                        invoicePaymentError.textContent = err.message || 'Unable to save payment.';
+                        invoicePaymentError.classList.remove('d-none');
+                    }
+                });
+        });
+    }
+
+    const customerPaymentModal = document.getElementById('customerPaymentModal');
+    const customerPaymentForm = document.getElementById('customer-payment-form');
+    const customerPaymentCustomerId = document.getElementById('customer-payment-customer-id');
+    const customerPaymentCustomerName = document.getElementById('customer-payment-customer-name');
+    const customerPaymentOutstanding = document.getElementById('customer-payment-outstanding');
+    const customerPaymentAmount = document.getElementById('customer-payment-amount');
+    const customerPaymentDate = document.getElementById('customer-payment-date');
+    const customerPaymentMethod = document.getElementById('customer-payment-method');
+    const customerPaymentNotes = document.getElementById('customer-payment-notes');
+    const customerPaymentError = document.getElementById('customer-payment-error');
+    const recordPaymentUrlTemplate = "{% url 'accounts:record_customer_payment' 0 %}";
+
+    if (customerPaymentModal && customerPaymentForm) {
+        customerPaymentModal.addEventListener('show.bs.modal', event => {
+            customerPaymentError?.classList.add('d-none');
+            const button = event.relatedTarget;
+            const customerId = button?.getAttribute('data-customer-id');
+            const customerName = button?.getAttribute('data-customer-name') || 'Customer';
+            const balance = button?.getAttribute('data-balance') || '';
+            const today = customerPaymentModal.getAttribute('data-today');
+
+            if (customerPaymentCustomerId) customerPaymentCustomerId.value = customerId || '';
+            if (customerPaymentCustomerName) customerPaymentCustomerName.textContent = customerName;
+            if (customerPaymentOutstanding) customerPaymentOutstanding.textContent = balance ? `$${parseFloat(balance).toFixed(2)}` : '$0.00';
+            if (customerPaymentAmount) customerPaymentAmount.value = balance || '';
+            if (customerPaymentDate) customerPaymentDate.value = customerPaymentDate.value || today;
+            if (customerPaymentMethod) customerPaymentMethod.selectedIndex = 0;
+            if (customerPaymentNotes) customerPaymentNotes.value = '';
+
+            customerPaymentForm.action = customerId ? recordPaymentUrlTemplate.replace('/0/', `/${customerId}/`) : '';
+        });
+
+        customerPaymentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            customerPaymentError?.classList.add('d-none');
+            const actionUrl = customerPaymentForm.action;
+            if (!actionUrl) return;
+            const formData = new FormData(customerPaymentForm);
+
+            fetch(actionUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData,
+                credentials: 'same-origin'
+            })
+                .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok || data.status !== 'success') {
+                        throw new Error(data.message || 'Unable to record payment.');
+                    }
+                    const modalInstance = bootstrap.Modal.getInstance(customerPaymentModal);
+                    modalInstance?.hide();
+                    fetchPendingInvoices();
+                    showStatus('success', data.message || 'Payment recorded.');
+                })
+                .catch(err => {
+                    if (customerPaymentError) {
+                        customerPaymentError.textContent = err.message || 'Unable to record payment.';
+                        customerPaymentError.classList.remove('d-none');
+                    }
+                });
+        });
+    }
+});
+</script>
+{% endblock %}

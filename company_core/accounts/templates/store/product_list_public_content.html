@@ -1,0 +1,363 @@
+<div class="storefront-layout" data-storefront-layout>
+    <aside class="storefront-sidebar">
+        <form method="get" class="sidebar-card" data-storefront-filters>
+            <input type="hidden" name="q" value="{{ search_query }}">
+            <input type="hidden" name="sort" value="{{ sort_value }}">
+            <input type="hidden" name="per_page" value="{{ per_page }}">
+            <input type="hidden" name="view" value="{{ view_mode }}">
+            <div class="sidebar-title">Refine Search</div>
+
+            {% if brands %}
+            <div class="filter-group">
+                <div class="filter-group-title">Brands</div>
+                {% for brand in brands %}
+                <label class="filter-option">
+                    <input type="checkbox" name="brand" value="{{ brand.id }}"
+                        {% if brand.id|stringformat:"s" in selected_brand_ids %}checked{% endif %}>
+                    <span>{{ brand.name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if models %}
+            <div class="filter-group">
+                <div class="filter-group-title">Models</div>
+                {% for model in models %}
+                <label class="filter-option">
+                    <input type="checkbox" name="model" value="{{ model.id }}"
+                        {% if model.id|stringformat:"s" in selected_model_ids %}checked{% endif %}>
+                    <span>{{ model.name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if vins %}
+            <div class="filter-group">
+                <div class="filter-group-title">VIN</div>
+                {% for vin in vins %}
+                <label class="filter-option">
+                    <input type="checkbox" name="vin" value="{{ vin.id }}"
+                        {% if vin.id|stringformat:"s" in selected_vin_ids %}checked{% endif %}>
+                    <span>{{ vin.vin }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if attribute_filters %}
+                {% for filter in attribute_filters %}
+                    {% if filter.options %}
+                    <div class="filter-group">
+                        <div class="filter-group-title">{{ filter.attribute.name }}</div>
+                        <select name="{{ filter.param }}" class="form-select">
+                            <option value="">All</option>
+                            {% for option in filter.options %}
+                            <option value="{{ option.value }}" {% if filter.selected == option.value %}selected{% endif %}>
+                                {{ option.label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+        </form>
+    </aside>
+
+    <main class="storefront-main">
+        <form method="get" class="storefront-toolbar" data-storefront-toolbar
+            data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}">
+            <input type="hidden" name="view" value="{{ view_mode }}">
+            {% for brand_id in selected_brand_ids %}
+            <input type="hidden" name="brand" value="{{ brand_id }}">
+            {% endfor %}
+            {% for model_id in selected_model_ids %}
+            <input type="hidden" name="model" value="{{ model_id }}">
+            {% endfor %}
+            {% for vin_id in selected_vin_ids %}
+            <input type="hidden" name="vin" value="{{ vin_id }}">
+            {% endfor %}
+            {% for filter in attribute_filters %}
+                {% if filter.selected %}
+                <input type="hidden" name="{{ filter.param }}" value="{{ filter.selected }}">
+                {% endif %}
+            {% endfor %}
+            <div class="toolbar-meta">
+                {% if products.paginator.count %}
+                {{ products.start_index }}-{{ products.end_index }} of {{ products_count }}
+                {% else %}
+                0 results
+                {% endif %}
+            </div>
+            <div class="toolbar-search">
+                <input type="search" name="q" value="{{ search_query }}" placeholder="Search within results"
+                    data-storefront-search-input data-storefront-search-sync autocomplete="off">
+                <button type="submit"><i class="fas fa-search"></i></button>
+            </div>
+            <div class="toolbar-controls">
+                <select name="per_page">
+                    {% for option in per_page_options %}
+                    <option value="{{ option }}" {% if per_page == option %}selected{% endif %}>View {{ option }}</option>
+                    {% endfor %}
+                </select>
+                <select name="sort">
+                    {% for option_value, option_label in sort_options %}
+                    <option value="{{ option_value }}" {% if sort_value == option_value %}selected{% endif %}>{{ option_label }}</option>
+                    {% endfor %}
+                </select>
+                <div class="view-toggle" aria-label="View toggle">
+                    <a href="{{ grid_view_url }}" class="{% if view_mode == 'grid' %}active{% endif %}" aria-label="Grid view">
+                        <i class="fas fa-grip"></i>
+                    </a>
+                    <a href="{{ list_view_url }}" class="{% if view_mode == 'list' %}active{% endif %}" aria-label="List view">
+                        <i class="fas fa-bars"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        {% if products.paginator.count %}
+            {% if view_mode == "list" %}
+            <div class="product-list">
+                {% for product in products %}
+                <div class="product-row">
+                    <div class="product-row-media">
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                        {% else %}
+                        <i class="fas fa-box-open fa-2x text-muted"></i>
+                        {% endif %}
+                    </div>
+                    <div class="product-row-body">
+                        {% if product.brand %}
+                        <div class="product-card-meta">{{ product.brand.name }}</div>
+                        {% endif %}
+                        <div class="product-card-title">
+                            <a href="{% url 'accounts:store_product_detail' product.id %}{% if query_string %}?{{ query_string }}{% endif %}">
+                                {{ product.name }}
+                            </a>
+                        </div>
+                        {% if product.sku %}
+                        <div class="product-card-meta">#{{ product.sku }}</div>
+                        {% endif %}
+                        {% if product.description %}
+                        <div class="product-card-meta">{{ product.description|truncatewords:18 }}</div>
+                        {% endif %}
+                        {% if product.has_promotion %}
+                        <div class="discount-badge-row">
+                            {% if product.promotion_discount_percent %}
+                            <span class="discount-badge">Save {{ product.promotion_discount_percent }}%</span>
+                            {% else %}
+                            <span class="discount-badge">Promo</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="product-row-actions">
+                        {% if customer_account or show_prices_catalog %}
+                            {% if product.has_promotion %}
+                            <div class="product-card-price">
+                                <span class="text-muted text-decoration-line-through me-2">${{ product.sale_price|floatformat:2 }}</span>
+                                ${{ product.promotion_price|floatformat:2 }}
+                            </div>
+                            {% elif product.storefront_price %}
+                            <div class="product-card-price">${{ product.storefront_price|floatformat:2 }}</div>
+                            {% elif product.cost_price %}
+                            <div class="product-card-price">${{ product.cost_price|floatformat:2 }}</div>
+                            {% else %}
+                            <div class="product-card-meta">Call for price</div>
+                            {% endif %}
+                        {% else %}
+                        <div class="product-card-meta">Sign in to view price</div>
+                        {% endif %}
+
+                        {% if customer_account %}
+                        <div class="cart-slot cart-slot-end {% if product.id|stringformat:'s' in cart_product_ids %}is-in-cart{% endif %}" data-cart-slot data-product-id="{{ product.id }}">
+                            <div class="cart-action-add">
+                                <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" data-add-to-cart>
+                                    {% csrf_token %}
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="btn btn-primary btn-sm btn-icon" title="Add to cart" aria-label="Add to cart" data-loading-label="Adding..." data-success-label="Added" {% if product.quantity_in_stock <= 0 %}disabled{% endif %}>
+                                        <i class="fas fa-cart-plus"></i>
+                                        <span class="visually-hidden btn-text">Add to cart</span>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="cart-action-in">
+                                <span class="product-card-meta text-success">Already in cart</span>
+                                <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-shopping-cart"></i>
+                                    <span>View cart</span>
+                                </a>
+                            </div>
+                        </div>
+                        {% elif show_prices_catalog %}
+                        <a href="{% url 'accounts:store_product_detail' product.id %}{% if query_string %}?{{ query_string }}{% endif %}" class="btn btn-outline-primary btn-sm">
+                            View Details
+                        </a>
+                        {% else %}
+                        <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_product_detail' product.id %}" class="btn btn-primary btn-sm">
+                            Check Price
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="product-grid">
+                {% for product in products %}
+                <div class="product-card">
+                    <div class="product-card-media">
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                        {% else %}
+                        <i class="fas fa-box-open fa-2x text-muted"></i>
+                        {% endif %}
+                    </div>
+                    <div class="product-card-body">
+                        {% if product.category %}
+                        <div class="product-card-meta">{{ product.category.name }}</div>
+                        {% endif %}
+                        <div class="product-card-title">
+                            <a href="{% url 'accounts:store_product_detail' product.id %}{% if query_string %}?{{ query_string }}{% endif %}">
+                                {{ product.name }}
+                            </a>
+                        </div>
+                        {% if product.brand %}
+                        <div class="product-card-meta">{{ product.brand.name }}</div>
+                        {% endif %}
+                        {% if product.has_promotion %}
+                        <div class="discount-badge-row">
+                            {% if product.promotion_discount_percent %}
+                            <span class="discount-badge">Save {{ product.promotion_discount_percent }}%</span>
+                            {% else %}
+                            <span class="discount-badge">Promo</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% if customer_account or show_prices_catalog %}
+                            {% if product.has_promotion %}
+                            <div class="product-card-price">
+                                <span class="text-muted text-decoration-line-through me-2">${{ product.sale_price|floatformat:2 }}</span>
+                                ${{ product.promotion_price|floatformat:2 }}
+                            </div>
+                            {% elif product.storefront_price %}
+                            <div class="product-card-price">${{ product.storefront_price|floatformat:2 }}</div>
+                            {% elif product.cost_price %}
+                            <div class="product-card-price">${{ product.cost_price|floatformat:2 }}</div>
+                            {% else %}
+                            <div class="product-card-meta">Call for price</div>
+                            {% endif %}
+                        {% else %}
+                        <div class="product-card-meta">Sign in to view price</div>
+                        {% endif %}
+                        <div class="product-card-actions">
+                            <span class="product-card-meta">
+                                {% if product.quantity_in_stock > 0 %}
+                                {{ product.quantity_in_stock }} in stock
+                                {% else %}
+                                Out of stock
+                                {% endif %}
+                            </span>
+                            {% if customer_account %}
+                            <div class="cart-slot {% if product.id|stringformat:'s' in cart_product_ids %}is-in-cart{% endif %}" data-cart-slot data-product-id="{{ product.id }}">
+                                <div class="cart-action-add">
+                                    <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" data-add-to-cart>
+                                        {% csrf_token %}
+                                        <input type="hidden" name="quantity" value="1">
+                                        <button type="submit" class="btn btn-primary btn-sm btn-icon" title="Add to cart" aria-label="Add to cart" data-loading-label="Adding..." data-success-label="Added" {% if product.quantity_in_stock <= 0 %}disabled{% endif %}>
+                                            <i class="fas fa-cart-plus"></i>
+                                            <span class="visually-hidden btn-text">Add to cart</span>
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="cart-action-in">
+                                    <span class="product-card-meta text-success">Already in cart</span>
+                                    <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-shopping-cart"></i>
+                                        <span>View cart</span>
+                                    </a>
+                                </div>
+                            </div>
+                            {% elif show_prices_catalog %}
+                            <a href="{% url 'accounts:store_product_detail' product.id %}{% if query_string %}?{{ query_string }}{% endif %}" class="btn btn-outline-primary btn-sm">
+                                View Details
+                            </a>
+                            {% else %}
+                            <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_product_detail' product.id %}" class="btn btn-primary btn-sm">
+                                Check Price
+                            </a>
+                            {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% else %}
+            {% if active_category and not has_active_filters %}
+            <div class="storefront-empty">
+                <div class="storefront-empty-icon">
+                    <i class="fas fa-box-open"></i>
+                </div>
+                <h3>No products in {{ active_category.name }} yet</h3>
+                <p>We are still stocking this category. Check back soon or browse other sections.</p>
+                <div class="storefront-empty-actions">
+                    <a href="{% url 'accounts:store_product_list' %}" class="btn btn-outline-primary">
+                        Browse all categories
+                    </a>
+                    {% if active_group %}
+                    <a href="{% url 'accounts:store_group_detail' active_group.id %}" class="btn btn-primary">
+                        View {{ active_group.name }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% elif search_query %}
+            <div class="empty-state">No products found for "{{ search_query }}". Try adjusting your search or filters.</div>
+            {% else %}
+            <div class="empty-state">No products found. Try adjusting your search or filters.</div>
+            {% endif %}
+        {% endif %}
+
+        {% if products.paginator.num_pages > 1 %}
+        <nav class="storefront-pagination" aria-label="Pagination">
+            <div class="toolbar-meta">
+                Page {{ products.number }} of {{ products.paginator.num_pages }}
+            </div>
+            <div class="storefront-page-links">
+                {% if products.has_previous %}
+                <a class="storefront-page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ products.previous_page_number }}">Prev</a>
+                {% else %}
+                <span class="storefront-page-link">Prev</span>
+                {% endif %}
+
+                {% for page_num in products.paginator.page_range %}
+                    {% if page_num == 1 or page_num == products.paginator.num_pages or page_num >= products.number|add:"-2" and page_num <= products.number|add:"2" %}
+                        {% if page_num == products.number %}
+                        <span class="storefront-page-link active">{{ page_num }}</span>
+                        {% else %}
+                        <a class="storefront-page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_num }}">{{ page_num }}</a>
+                        {% endif %}
+                    {% elif page_num == 2 and products.number > 4 %}
+                        <span class="storefront-page-ellipsis">...</span>
+                    {% elif page_num == products.paginator.num_pages|add:"-1" and products.number < products.paginator.num_pages|add:"-3" %}
+                        <span class="storefront-page-ellipsis">...</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if products.has_next %}
+                <a class="storefront-page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ products.next_page_number }}">Next</a>
+                {% else %}
+                <span class="storefront-page-link">Next</span>
+                {% endif %}
+            </div>
+        </nav>
+        {% endif %}
+    </main>
+</div>

@@ -1,0 +1,1527 @@
+{% load static %}
+{% load form_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mechanic Work Order #{{ workorder.id }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <style>
+        :root {
+            color-scheme: light;
+        }
+        body {
+            background: #f4f6fb;
+            font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .mechanic-container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 1rem 5rem;
+        }
+        .page-header {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .page-header .back-btn {
+            align-self: flex-start;
+        }
+        .page-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        .page-header p {
+            margin-bottom: 0;
+            color: #475467;
+            font-size: 0.95rem;
+        }
+        .status-pill {
+            font-size: 0.85rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+        .summary-label {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.7rem;
+            color: #667085;
+            font-weight: 600;
+        }
+        .timer-card {
+            border: none;
+            border-radius: 1rem;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        }
+        .timer-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        }
+        .timer-display {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .timer-subtext {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+        .action-btns {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+        }
+        .action-btns .btn {
+            width: 100%;
+            font-weight: 600;
+        }
+        .section-card {
+            border: none;
+            border-radius: 1rem;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        }
+        .section-card.section-vehicle {
+            background: #eef2ff;
+        }
+        .section-card.section-pm {
+            background: #f0f9ff;
+        }
+        .section-card.section-products {
+            background: #fefce8;
+        }
+        .section-card.section-vehicle .card-header,
+        .section-card.section-vehicle .card-body,
+        .section-card.section-pm .card-header,
+        .section-card.section-pm .card-body,
+        .section-card.section-products .card-header,
+        .section-card.section-products .card-body {
+            background-color: transparent;
+        }
+        .section-card .card-header {
+            border-bottom: none;
+            padding: 1.15rem 1.25rem 0.35rem;
+            background: transparent;
+        }
+        .section-card .card-body {
+            border-top: none;
+            padding: 1.25rem;
+        }
+        .section-card h2,
+        .section-card h5,
+        .section-card label,
+        .section-card strong {
+            color: #101828;
+        }
+        .section-card p.text-muted {
+            color: #475467 !important;
+        }
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+        .media-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            background: #fff;
+            padding: 0.5rem;
+            position: relative;
+        }
+        .media-card img,
+        .media-card iframe {
+            width: 100%;
+            border-radius: 0.5rem;
+            object-fit: cover;
+        }
+        .media-card .remove-media {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+        }
+        .signature-wrapper {
+            border: 1px dashed #94a3b8;
+            border-radius: 0.75rem;
+            background: #fff;
+        }
+        .signature-toolbar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+        }
+        .formset-row .form-check {
+            padding-top: 2rem;
+        }
+        .formset-row.marked-for-deletion {
+            opacity: 0.6;
+            background-color: #f8d7da;
+            text-decoration: line-through;
+        }
+        .formset-row.marked-for-deletion select,
+        .formset-row.marked-for-deletion input:not([type=checkbox]) {
+            pointer-events: none;
+        }
+        .select2-container--open {
+            z-index: 1060;
+        }
+        .select2-container {
+            width: 100% !important;
+        }
+        .info-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: rgba(59, 130, 246, 0.08);
+            color: #1d4ed8;
+            padding: 0.35rem 0.65rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .mobile-collapsible summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .mobile-collapsible summary::marker {
+            color: #2563eb;
+        }
+        .sticky-submit {
+            position: sticky;
+            bottom: 0;
+            padding: 1rem 0 0;
+            background: linear-gradient(0deg, rgba(244, 246, 251, 0.95) 0%, rgba(244, 246, 251, 0) 100%);
+            backdrop-filter: blur(6px);
+        }
+        .sticky-submit .btn {
+            font-size: 1rem;
+            padding: 0.9rem 1rem;
+            font-weight: 700;
+        }
+        @media (min-width: 768px) {
+            .page-header {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .page-header .back-btn {
+                order: -1;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="mechanic-container py-4">
+    <div class="page-header">
+        <a href="javascript:history.back()" class="btn btn-outline-secondary back-btn">Back</a>
+        <div>
+            <h1>Work Order #{{ workorder.id }}</h1>
+            <p>
+                Assigned to
+                {% if assignment.mechanic %}
+                    <strong>{{ assignment.mechanic.name }}</strong>
+                {% else %}
+                    <span class="text-muted">Unassigned</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if requires_rework %}
+    <div class="alert alert-warning border-0 shadow-sm">
+        <div>
+            <div class="fw-semibold text-uppercase small text-warning mb-1">Urgent updates requested{% if rework_requested_at %} • {{ rework_requested_at|date:'M j, Y g:i A' }}{% endif %}</div>
+            <div class="mb-0">{{ rework_instructions|default:'Please review the updated instructions from the business.'|linebreaksbr }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mb-3">
+        <span id="mechanic-status-pill" class="status-pill bg-info-subtle text-info">{{ mechanic_status_display }}</span>
+    </div>
+
+    <div class="timer-card mb-3">
+        <div class="card-body">
+            <div id="primary-timer-container" class="mb-3">
+                <div class="summary-label" id="primary-timer-label">Active Time</div>
+                <div class="timer-display" id="active-timer">00:00:00</div>
+                <div class="timer-subtext" id="timer-subtext"></div>
+            </div>
+            <div id="travel-timer-container" class="mb-3 d-none">
+                <div class="summary-label">Travel Time</div>
+                <div class="timer-display" id="travel-timer">00:00:00</div>
+            </div>
+            <div class="action-btns">
+                <button type="button" class="btn btn-success" data-timer-action="start">Start Job</button>
+                <button type="button" class="btn btn-outline-warning" data-timer-action="pause" data-requires-modal="true">Pause</button>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="workorder-form" class="mb-4">
+        {% csrf_token %}
+        <div class="card shadow-sm mb-3 section-card section-vehicle">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">Work Order &amp; Vehicle</h2>
+                    <span class="info-chip">Original request is read only</span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if workorder.road_service %}
+                <div class="alert alert-warning mb-4">
+                    <div class="fw-semibold mb-2">Road service details</div>
+                    {% if workorder.road_location %}
+                    <div><strong>Location:</strong> {{ workorder.road_location }}</div>
+                    {% endif %}
+                    {% if workorder.road_location_lat and workorder.road_location_lng %}
+                    <div>
+                        <strong>Map:</strong>
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ workorder.road_location_lat|urlencode }},{{ workorder.road_location_lng|urlencode }}" target="_blank" rel="noopener noreferrer">
+                            Open in Google Maps
+                        </a>
+                    </div>
+                    {% elif workorder.road_location %}
+                    <div>
+                        <strong>Map:</strong>
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ workorder.road_location|urlencode }}" target="_blank" rel="noopener noreferrer">
+                            Open in Google Maps
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% if workorder.road_contact_phone %}
+                    <div><strong>Customer phone:</strong> <a href="tel:{{ workorder.road_contact_phone }}">{{ workorder.road_contact_phone }}</a></div>
+                    {% elif workorder.customer and workorder.customer.phone_number %}
+                    <div><strong>Customer phone:</strong> <a href="tel:{{ workorder.customer.phone_number }}">{{ workorder.customer.phone_number }}</a></div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Owner's Description</label>
+                    {{ form.description }}
+                </div>
+                <h5 class="mb-3">Vehicle</h5>
+                <div class="row gy-3">
+                    <div class="col-12">
+                        <label for="vehicle-select" class="form-label">Select Vehicle / Unit</label>
+                        <select id="vehicle-select" class="form-select">
+                            <option value="">— Select vehicle —</option>
+                            {% for option in vehicle_options %}
+                                <option value="{{ option.id }}"
+                                        data-unit="{{ option.unit|default_if_none:'' }}"
+                                        data-vin="{{ option.vin|default_if_none:'' }}"
+                                        data-make="{{ option.make|default_if_none:'' }}"
+                                        data-mileage="{{ option.mileage|default_if_none:'' }}"
+                                        {% if workorder.vehicle_id == option.id %}selected{% endif %}>{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                        {{ form.vehicle }}
+                        <button type="button" class="btn btn-link p-0 mt-1" data-bs-toggle="modal" data-bs-target="#addVehicleModal" id="btnOpenAddVehicleModal" {% if not workorder.customer %}disabled{% endif %}>Add New Vehicle</button>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm me-2" id="vehicle-history-button" data-bs-toggle="modal" data-bs-target="#vehicleHistoryModal" disabled>View Vehicle History</button>
+                            <small class="text-muted" id="vehicle-history-hint">History is available for the assigned vehicle.</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.make_model.label_tag }}
+                        {{ form.make_model }}
+                        {% if form.make_model.errors %}<div class="text-danger small">{{ form.make_model.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.vehicle_vin.label_tag }}
+                        {{ form.vehicle_vin }}
+                        {% if form.vehicle_vin.errors %}<div class="text-danger small">{{ form.vehicle_vin.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.mileage.label_tag }}
+                        {{ form.mileage }}
+                        {% if form.mileage.errors %}<div class="text-danger small">{{ form.mileage.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.unit_no.label_tag }}
+                        {{ form.unit_no }}
+                        {% if form.unit_no.errors %}<div class="text-danger small">{{ form.unit_no.errors }}</div>{% endif %}
+                    </div>
+                </div>
+                <hr>
+                <div class="row gy-3">
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            {{ form.cause.label_tag }}
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-audio-target="cause">
+                                Record (AI)
+                            </button>
+                        </div>
+                        {{ form.cause }}
+                        {% if form.cause.errors %}<div class="text-danger small">{{ form.cause.errors }}</div>{% endif %}
+                        <div class="text-muted small mt-1" id="cause-audio-status">Voice: idle</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            {{ form.correction.label_tag }}
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-audio-target="correction">
+                                Record (AI)
+                            </button>
+                        </div>
+                        {{ form.correction }}
+                        {% if form.correction.errors %}<div class="text-danger small">{{ form.correction.errors }}</div>{% endif %}
+                        <div class="text-muted small mt-1" id="correction-audio-status">Voice: idle</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3 section-card section-pm">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">PM Checklist</h2>
+                    <span class="info-chip">Optional tools</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <a
+                        class="btn btn-primary"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href="{% url 'accounts:mechanic_pm_checklist' assignment.assignment_token %}"
+                    >
+                        Open PM Checklist
+                    </a>
+                    <a
+                        class="btn btn-outline-secondary"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href="{% url 'accounts:pm_inspection_blank_pdf' %}"
+                    >
+                        Download Blank PM Sheet (PDF)
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3 section-card section-products">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0">Parts &amp; Materials</h2>
+                <button type="button" id="add-product-line" class="btn btn-sm btn-outline-success">
+                    <span class="me-1">&#43;</span>Add Item
+                </button>
+            </div>
+            <div class="card-body">
+                {{ product_formset.management_form }}
+                <div id="product-lines-container">
+                    {% for prod_form in product_formset %}
+                        <div class="row formset-row product-line mb-3 pb-3 border-bottom border-light {% if prod_form.instance.pk and prod_form.DELETE.value %}marked-for-deletion{% endif %}" id="product-line-{{ forloop.counter0 }}">
+                            {{ prod_form.id }}
+                            {% if prod_form.non_field_errors %}<div class="col-12 alert alert-warning p-1 small">{{ prod_form.non_field_errors }}</div>{% endif %}
+                            <div class="col-md-7 mb-2">
+                                {{ prod_form.product.label_tag }}
+                                {{ prod_form.product|add_class:"product-select-searchable" }}
+                                {% if prod_form.product.errors %}<div class="text-danger small">{{ prod_form.product.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                {{ prod_form.qty.label_tag }}
+                                {{ prod_form.qty }}
+                                {% if prod_form.qty.errors %}<div class="text-danger small">{{ prod_form.qty.errors }}</div>{% endif %}
+                            </div>
+                            {% if product_formset.can_delete %}
+                                <div class="col-md-3 mb-2 align-self-center">
+                                    <div class="form-check">
+                                        {{ prod_form.DELETE }}
+                                        <label class="form-check-label" for="{{ prod_form.DELETE.id_for_label }}">Delete</label>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="sticky-submit">
+            <div class="d-flex flex-column flex-md-row align-items-md-center gap-3">
+                <div class="form-check mb-0">
+                    {{ form.submitted }}
+                    <label class="form-check-label" for="{{ form.submitted.id_for_label }}">
+                        <strong>{{ form.submitted.label }}</strong> (Finalize this Work Order)
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg ms-md-auto">Save Updates</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="card shadow-sm mb-3 section-card section-media">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0">Photos &amp; Files</h2>
+                <small class="text-muted">Add jobsite photos or receipts</small>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="media-grid" class="media-grid mb-3">
+                {% for media in media_entries %}
+                    <div class="media-card" data-path="{{ media.path }}">
+                        {% if media.url|lower|slice:'-4:' == '.pdf' %}
+                            <iframe src="{{ media.url }}" title="Attachment"></iframe>
+                        {% else %}
+                            <img src="{{ media.url }}" alt="Attachment">
+                        {% endif %}
+                        <button class="btn btn-sm btn-outline-danger remove-media" data-path="{{ media.path }}">Remove</button>
+                        <div class="small text-muted mt-2">{{ media.path }}</div>
+                    </div>
+                {% empty %}
+                    <p class="text-muted mb-0" id="no-media-placeholder">No attachments yet.</p>
+                {% endfor %}
+            </div>
+            <form id="upload-media-form" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center">
+                {% csrf_token %}
+                <input type="file" name="file" class="form-control" accept="image/*,application/pdf" required>
+                <button type="submit" class="btn btn-outline-primary">Upload</button>
+                <div class="spinner-border text-primary d-none" role="status" id="upload-spinner" style="width: 1.5rem; height: 1.5rem;">
+                    <span class="visually-hidden">Uploading...</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-5 section-card section-signature">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0">Customer Signature</h2>
+                <small class="text-muted">Required to close the job</small>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 align-items-start">
+                <div class="col-lg-6">
+                    <div class="signature-wrapper p-3">
+                        <canvas id="signature-pad" class="w-100" style="height:260px;"></canvas>
+                    </div>
+                    <div class="signature-toolbar mt-3">
+                        <button class="btn btn-outline-secondary" id="clear-signature">Clear</button>
+                        <button class="btn btn-outline-primary" id="save-signature">Save Signature</button>
+                        <button class="btn btn-outline-danger" id="remove-signature">Remove Stored Signature</button>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0">Saved signatures appear in the preview and are required before marking complete.</p>
+                </div>
+                <div class="col-lg-6">
+                    <div class="border rounded p-3 bg-light" id="signature-preview-wrapper">
+                        {% if signature_url %}
+                            <img id="signature-preview" src="{{ signature_url }}" alt="Signature" class="img-fluid">
+                        {% else %}
+                            <p class="text-muted mb-0" id="signature-empty-state">No signature saved yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="pauseModal" tabindex="-1" aria-labelledby="pauseModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pauseModalLabel">Pause Reason</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">Choose the reason for pausing this assignment. Travel automatically tracks separately.</p>
+        <div class="mb-3">
+            <label for="pause-reason-select" class="form-label">Quick Reasons</label>
+            <select id="pause-reason-select" class="form-select">
+                <option value="travel">Travel to jobsite</option>
+                <option value="lunch">Lunch / Break</option>
+                <option value="other_job">Working on other job</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="mb-0">
+            <label for="pause-custom-reason" class="form-label">Custom Reason</label>
+            <input type="text" class="form-control" id="pause-custom-reason">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirm-pause">Pause Job</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="vehicleHistoryModal" tabindex="-1" aria-labelledby="vehicleHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="vehicleHistoryModalLabel">Vehicle History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="vehicle-history-status" class="alert alert-info mb-3">History is available once the assigned vehicle is selected.</div>
+                <div id="vehicle-history-sections" class="d-none">
+                    <p class="text-muted mb-3" id="vehicle-history-vehicle-label"></p>
+                    <div class="mb-4">
+                        <h6 class="fw-semibold">Recent Jobs</h6>
+                        <div class="list-group list-group-flush" id="vehicle-history-jobs"></div>
+                        <div class="text-muted small" id="vehicle-history-jobs-empty">No recent labor entries recorded for this vehicle.</div>
+                    </div>
+                    <div>
+                        <h6 class="fw-semibold">Parts Used</h6>
+                        <div class="list-group list-group-flush" id="vehicle-history-parts"></div>
+                        <div class="text-muted small" id="vehicle-history-parts-empty">No recent parts usage recorded for this vehicle.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addVehicleModal" tabindex="-1" aria-labelledby="addVehicleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form id="add-vehicle-form">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addVehicleModalLabel">Add New Vehicle</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {% csrf_token %}
+          {{ vehicle_form.as_p }}
+          <div id="vehicle-form-errors" class="text-danger small"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary" id="save-vehicle-button">Save Vehicle</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="empty-product-form-template" class="d-none">
+  <div class="row formset-row product-line mb-3 pb-3 border-bottom border-light" id="product-line-__prefix__">
+     {{ product_formset.empty_form.id }}
+     {% if product_formset.empty_form.non_field_errors %}<div class="col-12 alert alert-warning p-1 small">{{ product_formset.empty_form.non_field_errors }}</div>{% endif %}
+     <div class="col-md-7 mb-2">
+         {{ product_formset.empty_form.product.label_tag }}
+         {{ product_formset.empty_form.product|add_class:"product-select-searchable" }}
+     </div>
+     <div class="col-md-2 mb-2">
+         {{ product_formset.empty_form.qty.label_tag }}
+         {{ product_formset.empty_form.qty }}
+     </div>
+     {% if product_formset.can_delete %}
+         <div class="col-md-3 mb-2 align-self-center">
+             <div class="form-check">
+                 {{ product_formset.empty_form.DELETE }}
+                 <label class="form-check-label" for="id_{{ product_formset.prefix }}-__prefix__-DELETE">Delete</label>
+             </div>
+         </div>
+      {% endif %}
+   </div>
+</div>
+
+{{ timer_context|json_script:"timer-context-data" }}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+<script>
+(function() {
+    const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const timerContext = JSON.parse(document.getElementById('timer-context-data').textContent || '{}');
+    timerContext.current_status = timerContext.current_status || '{{ mechanic_status }}';
+    const mechanicStatusPill = document.getElementById('mechanic-status-pill');
+    const startButton = document.querySelector('[data-timer-action="start"]');
+    const pauseButton = document.querySelector('[data-timer-action="pause"]');
+    const primaryTimerContainer = document.getElementById('primary-timer-container');
+    const travelTimerContainer = document.getElementById('travel-timer-container');
+    const timerSubtext = document.getElementById('timer-subtext');
+
+    function formatSeconds(totalSeconds) {
+        totalSeconds = Math.max(0, Math.floor(totalSeconds || 0));
+        const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+        const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+        const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    }
+
+    function syncActionButtons(status) {
+        if (!startButton || !pauseButton) { return; }
+        const normalizedStatus = (status || '').toLowerCase();
+        let showStart = false;
+        let showPause = false;
+        let startLabel = 'Start Job';
+
+        if (!normalizedStatus || normalizedStatus === 'not_started') {
+            showStart = true;
+            startLabel = 'Start Job';
+        } else if (normalizedStatus === 'in_progress') {
+            showPause = true;
+        } else if (normalizedStatus === 'paused') {
+            showStart = true;
+            startLabel = 'Resume Job';
+        } else if (normalizedStatus === 'travel') {
+            showStart = true;
+            startLabel = 'Arrived';
+        }
+
+        startButton.textContent = startLabel;
+        startButton.classList.toggle('d-none', !showStart);
+        pauseButton.classList.toggle('d-none', !showPause);
+    }
+
+    function updateTimerDisplay(status) {
+        const now = new Date();
+        const start = timerContext.started_at ? new Date(timerContext.started_at) : null;
+        const end = timerContext.ended_at ? new Date(timerContext.ended_at) : null;
+        const pausedAt = timerContext.paused_at ? new Date(timerContext.paused_at) : null;
+        const travelStart = timerContext.travel_started_at ? new Date(timerContext.travel_started_at) : null;
+        const totalPausedBase = timerContext.total_paused_seconds || 0;
+        const totalTravelBase = timerContext.total_travel_seconds || 0;
+        const currentStatus = (status || timerContext.current_status || '{{ mechanic_status }}').toLowerCase();
+        let effectiveEnd = end || now;
+
+        if (currentStatus === 'paused' && pausedAt) {
+            effectiveEnd = pausedAt;
+        }
+
+        let activeSeconds = 0;
+        let pausedSeconds = totalPausedBase;
+        let travelSeconds = totalTravelBase;
+
+        if (start) {
+            if (currentStatus === 'paused' && pausedAt) {
+                pausedSeconds += Math.max(0, (now - pausedAt) / 1000);
+            }
+            if (currentStatus === 'travel' && travelStart) {
+                travelSeconds += Math.max(0, (now - travelStart) / 1000);
+            }
+            const elapsed = Math.max(0, (effectiveEnd - start) / 1000);
+            const subtractPaused = currentStatus !== 'travel';
+            activeSeconds = subtractPaused ? Math.max(0, elapsed - pausedSeconds) : Math.max(0, elapsed);
+        }
+
+        const showTravel = currentStatus === 'travel';
+
+        const activeEl = document.getElementById('active-timer');
+        if (activeEl) {
+            activeEl.textContent = formatSeconds(activeSeconds);
+        }
+        const travelEl = document.getElementById('travel-timer');
+        if (travelEl) {
+            travelEl.textContent = formatSeconds(travelSeconds);
+        }
+        if (primaryTimerContainer) {
+            primaryTimerContainer.classList.toggle('d-none', showTravel);
+        }
+        if (travelTimerContainer) {
+            travelTimerContainer.classList.toggle('d-none', !showTravel);
+        }
+
+        if (timerSubtext) {
+            if (showTravel) {
+                timerSubtext.textContent = 'Travel timer running';
+            } else {
+                const startedAtText = start ? `Started ${start.toLocaleString()}` : 'Not started';
+                const endedAtText = timerContext.ended_at ? ` • Stopped ${new Date(timerContext.ended_at).toLocaleString()}` : '';
+                timerSubtext.textContent = `${startedAtText}${endedAtText}`;
+            }
+        }
+    }
+
+    updateTimerDisplay('{{ mechanic_status }}');
+    syncActionButtons(timerContext.current_status);
+
+    setInterval(() => {
+        updateTimerDisplay(timerContext.current_status || '{{ mechanic_status }}');
+        syncActionButtons(timerContext.current_status || '{{ mechanic_status }}');
+    }, 1000);
+
+    function sendAjax(data, options = {}) {
+        const headers = Object.assign({'X-Requested-With': 'XMLHttpRequest'}, options.headers || {});
+        if (!(data instanceof FormData)) {
+            headers['Content-Type'] = 'application/json';
+        }
+        const body = data instanceof FormData ? data : JSON.stringify(data);
+        if (data instanceof FormData && !data.has('csrfmiddlewaretoken')) {
+            data.append('csrfmiddlewaretoken', csrftoken);
+        }
+        return fetch(window.location.href, {
+            method: 'POST',
+            headers: data instanceof FormData ? headers : Object.assign(headers, {'X-CSRFToken': csrftoken}),
+            body: body
+        }).then(resp => resp.json().then(json => ({ status: resp.status, json })));
+    }
+
+    function showAlert(message, type = 'info') {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+        const host = document.querySelector('.mechanic-container') || document.body;
+        host.prepend(alert);
+    }
+
+    const causeTextarea = document.getElementById('id_cause');
+    const correctionTextarea = document.getElementById('id_correction');
+
+    let autocorrectTimer = null;
+    let autocorrectInFlight = false;
+    let pendingAutocorrect = false;
+    let skipAutocorrectInput = false;
+
+    function ensureInitialBullet(textarea) {
+        if (!textarea) {
+            return;
+        }
+        if (!textarea.value.trim()) {
+            textarea.value = '- ';
+            const caret = textarea.value.length;
+            textarea.setSelectionRange(caret, caret);
+        }
+    }
+
+    function handleBulletEnter(textarea, event) {
+        if (!textarea || event.key !== 'Enter' || event.shiftKey || event.metaKey || event.ctrlKey) {
+            return;
+        }
+        event.preventDefault();
+        const insert = '\n- ';
+        const { selectionStart, selectionEnd } = textarea;
+        textarea.setRangeText(insert, selectionStart, selectionEnd, 'end');
+        const newPos = selectionStart + insert.length;
+        textarea.setSelectionRange(newPos, newPos);
+        scheduleAutocorrect(1200);
+    }
+
+    function attachBulletHandlers(textarea) {
+        if (!textarea) {
+            return;
+        }
+        textarea.addEventListener('focus', () => ensureInitialBullet(textarea));
+        textarea.addEventListener('keydown', (event) => handleBulletEnter(textarea, event));
+        textarea.addEventListener('input', () => scheduleAutocorrect());
+    }
+
+    function applyAutocorrectField(textarea, correctedValue, previousValue, previousSelectionEnd) {
+        if (!textarea || typeof correctedValue !== 'string') {
+            return;
+        }
+        if (previousValue === correctedValue || textarea.value === correctedValue) {
+            return;
+        }
+        const fromEnd = Math.max(0, (previousValue || '').length - (previousSelectionEnd || 0));
+        skipAutocorrectInput = true;
+        textarea.value = correctedValue;
+        ensureInitialBullet(textarea);
+        const position = Math.max(0, correctedValue.length - fromEnd);
+        textarea.setSelectionRange(position, position);
+    }
+
+    function requestAutocorrect() {
+        if (autocorrectInFlight) {
+            pendingAutocorrect = true;
+            return;
+        }
+        const causeValue = causeTextarea ? causeTextarea.value : '';
+        const correctionValue = correctionTextarea ? correctionTextarea.value : '';
+        if (!causeValue.trim() && !correctionValue.trim()) {
+            return;
+        }
+        const causeSelectionEnd = causeTextarea ? causeTextarea.selectionEnd : 0;
+        const correctionSelectionEnd = correctionTextarea ? correctionTextarea.selectionEnd : 0;
+        autocorrectInFlight = true;
+        sendAjax({
+            ajax_action: 'autocorrect_cause_correction',
+            cause: causeValue,
+            correction: correctionValue,
+        })
+            .then(({ status, json }) => {
+                if (status >= 200 && status < 300 && json && json.ok) {
+                    applyAutocorrectField(causeTextarea, json.cause, causeValue, causeSelectionEnd);
+                    applyAutocorrectField(correctionTextarea, json.correction, correctionValue, correctionSelectionEnd);
+                }
+            })
+            .catch(() => {
+                /* silently ignore autocorrect failures */
+            })
+            .finally(() => {
+                autocorrectInFlight = false;
+                if (pendingAutocorrect) {
+                    pendingAutocorrect = false;
+                    scheduleAutocorrect(400);
+                }
+            });
+    }
+
+    function scheduleAutocorrect(delay = 1200) {
+        if (skipAutocorrectInput) {
+            skipAutocorrectInput = false;
+            return;
+        }
+        clearTimeout(autocorrectTimer);
+        autocorrectTimer = setTimeout(() => requestAutocorrect(), delay);
+    }
+
+    const audioButtons = {
+        cause: document.querySelector('[data-audio-target="cause"]'),
+        correction: document.querySelector('[data-audio-target="correction"]'),
+    };
+    const audioStatus = {
+        cause: document.getElementById('cause-audio-status'),
+        correction: document.getElementById('correction-audio-status'),
+    };
+    const textareaByTarget = {
+        cause: causeTextarea,
+        correction: correctionTextarea,
+    };
+
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordingTarget = null;
+
+    function setAudioStatus(target, message, tone = 'muted') {
+        const el = audioStatus[target];
+        if (!el) {
+            return;
+        }
+        el.textContent = message;
+        el.classList.remove('text-danger', 'text-success');
+        if (tone === 'error') {
+            el.classList.add('text-danger');
+        } else if (tone === 'success') {
+            el.classList.add('text-success');
+        }
+    }
+
+    function toggleRecordButton(target, isRecording) {
+        const btn = audioButtons[target];
+        if (!btn) {
+            return;
+        }
+        btn.textContent = isRecording ? 'Stop Recording' : 'Record (AI)';
+        btn.classList.toggle('btn-danger', isRecording);
+        btn.classList.toggle('btn-outline-primary', !isRecording);
+    }
+
+    async function startRecording(target) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+            showAlert('Microphone recording is not supported in this browser.', 'warning');
+            setAudioStatus(target, 'Microphone not available', 'error');
+            return;
+        }
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            stopRecording();
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            recordedChunks = [];
+            recordingTarget = target;
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+            mediaRecorder.onstop = () => {
+                stream.getTracks().forEach((t) => t.stop());
+                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                if (blob.size > 0) {
+                    uploadAudio(blob, target);
+                } else {
+                    setAudioStatus(target, 'No audio captured', 'error');
+                }
+            };
+            mediaRecorder.start();
+            toggleRecordButton(target, true);
+            setAudioStatus(target, 'Recording... tap to stop', 'success');
+        } catch (err) {
+            console.error('Unable to start recording', err);
+            showAlert('Unable to access microphone. Please check browser permissions.', 'danger');
+            setAudioStatus(target, 'Microphone permission denied', 'error');
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            toggleRecordButton(recordingTarget, false);
+            setAudioStatus(recordingTarget || 'cause', 'Processing audio...', 'success');
+        }
+    }
+
+    async function uploadAudio(blob, target) {
+        const formData = new FormData();
+        formData.append('ajax_action', 'transcribe_audio');
+        formData.append('target', target);
+        formData.append('file', blob, `note-${target}-${Date.now()}.webm`);
+        setAudioStatus(target, 'Transcribing and polishing...', 'success');
+        try {
+            const { status, json } = await sendAjax(formData);
+            if (status >= 200 && status < 300 && json && json.ok) {
+                const textarea = textareaByTarget[target];
+                const nextText = json.polished || json.transcript || '';
+                if (textarea && nextText) {
+                    const existing = textarea.value || '';
+                    textarea.value = existing ? `${existing.trim()}\n${nextText}` : nextText;
+                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    setAudioStatus(target, 'Added text from AI.', 'success');
+                    scheduleAutocorrect(400);
+                } else {
+                    setAudioStatus(target, 'No text returned from AI', 'error');
+                }
+            } else {
+                const message = (json && (json.message || json.error)) || 'Unable to transcribe audio.';
+                setAudioStatus(target, message, 'error');
+            }
+        } catch (err) {
+            console.error('Audio transcription failed', err);
+            showAlert('Audio transcription failed. Please try again.', 'danger');
+            setAudioStatus(target, 'Transcription failed', 'error');
+        } finally {
+            recordedChunks = [];
+            recordingTarget = null;
+            toggleRecordButton(target, false);
+        }
+    }
+
+    Object.entries(audioButtons).forEach(([target, button]) => {
+        const textarea = textareaByTarget[target];
+        const isReadOnly = textarea && (textarea.hasAttribute('readonly') || textarea.disabled);
+        if (!button) {
+            return;
+        }
+        if (!textarea || isReadOnly) {
+            button.setAttribute('disabled', 'disabled');
+            button.title = 'Recording disabled for read-only field';
+            setAudioStatus(target, 'Recording disabled', 'muted');
+            return;
+        }
+        button.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording' && recordingTarget === target) {
+                stopRecording();
+            } else {
+                startRecording(target);
+            }
+        });
+    });
+
+    attachBulletHandlers(causeTextarea);
+    attachBulletHandlers(correctionTextarea);
+    scheduleAutocorrect(600);
+
+    if (startButton) {
+        startButton.addEventListener('click', () => {
+            const status = (timerContext.current_status || '{{ mechanic_status }}').toLowerCase();
+            if (status === 'paused') {
+                sendTimerAction('resume');
+            } else if (status === 'travel') {
+                sendTimerAction('arrived');
+            } else {
+                sendTimerAction('start');
+            }
+        });
+    }
+
+    if (pauseButton) {
+        pauseButton.addEventListener('click', () => {
+            const modalElement = document.getElementById('pauseModal');
+            if (!modalElement) { return; }
+            const modal = new bootstrap.Modal(modalElement);
+            const selectEl = document.getElementById('pause-reason-select');
+            const customInput = document.getElementById('pause-custom-reason');
+            if (selectEl) { selectEl.value = 'travel'; }
+            if (customInput) { customInput.value = ''; }
+            modal.show();
+            const confirmBtn = document.getElementById('confirm-pause');
+            if (confirmBtn) {
+                confirmBtn.onclick = function() {
+                    const quickReason = selectEl ? selectEl.value : 'other';
+                    const customReason = customInput ? customInput.value.trim() : '';
+                    let reason = '';
+                    if (quickReason === 'travel') { reason = 'Traveling to jobsite'; }
+                    else if (quickReason === 'lunch') { reason = 'Lunch'; }
+                    else if (quickReason === 'other_job') { reason = 'Working on other job'; }
+                    else { reason = customReason || 'Other'; }
+                    modal.hide();
+                    sendTimerAction('pause', reason);
+                };
+            }
+        });
+    }
+
+    function sendTimerAction(action, reason) {
+        const payload = { ajax_action: 'timer', timer_action: action };
+        if (reason) { payload.reason = reason; }
+        sendAjax(payload).then(({ status, json }) => {
+            if (status >= 200 && status < 300) {
+                timerContext.started_at = json.started_at || timerContext.started_at;
+                timerContext.ended_at = json.ended_at || null;
+                timerContext.paused_at = json.paused_at || null;
+                timerContext.travel_started_at = json.travel_started_at || null;
+                timerContext.total_paused_seconds = json.total_paused_seconds || 0;
+                timerContext.total_travel_seconds = json.total_travel_seconds || 0;
+                timerContext.current_status = json.mechanic_status;
+                mechanicStatusPill.textContent = json.mechanic_status_display || mechanicStatusPill.textContent;
+                updateTimerDisplay(json.mechanic_status);
+                syncActionButtons(timerContext.current_status);
+                showAlert('Status updated successfully.', 'success');
+            } else if (json && json.missing) {
+                showAlert(`Cannot complete yet. Missing: ${json.missing.join(', ')}`, 'warning');
+            } else {
+                showAlert('Unable to update status. Please try again.', 'danger');
+            }
+        }).catch(() => showAlert('Network error while updating status.', 'danger'));
+    }
+
+    const mediaGrid = document.getElementById('media-grid');
+    const noMediaPlaceholder = document.getElementById('no-media-placeholder');
+    const uploadForm = document.getElementById('upload-media-form');
+    if (uploadForm) uploadForm.addEventListener('submit', function(evt) {
+        evt.preventDefault();
+        const formData = new FormData(this);
+        formData.append('ajax_action', 'upload_media');
+        document.getElementById('upload-spinner').classList.remove('d-none');
+        sendAjax(formData).then(({ status, json }) => {
+            document.getElementById('upload-spinner').classList.add('d-none');
+            if (status >= 200 && status < 300 && json.entry) {
+                if (noMediaPlaceholder) { noMediaPlaceholder.remove(); }
+                const card = document.createElement('div');
+                card.className = 'media-card';
+                card.dataset.path = json.entry.path;
+                if (json.entry.url.toLowerCase().endsWith('.pdf')) {
+                    card.innerHTML = `<iframe src="${json.entry.url}" title="Attachment"></iframe>`;
+                } else {
+                    card.innerHTML = `<img src="${json.entry.url}" alt="Attachment">`;
+                }
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn btn-sm btn-outline-danger remove-media';
+                removeBtn.dataset.path = json.entry.path;
+                removeBtn.textContent = 'Remove';
+                card.appendChild(removeBtn);
+                mediaGrid.appendChild(card);
+                showAlert('Attachment uploaded.', 'success');
+                this.reset();
+            } else {
+                showAlert('Unable to upload attachment.', 'danger');
+            }
+        }).catch(() => {
+            document.getElementById('upload-spinner').classList.add('d-none');
+            showAlert('Upload failed. Please try again.', 'danger');
+        });
+    });
+
+    if (mediaGrid) mediaGrid.addEventListener('click', function(evt) {
+        if (!evt.target.classList.contains('remove-media')) { return; }
+        evt.preventDefault();
+        const path = evt.target.dataset.path;
+        if (!path) { return; }
+        sendAjax({ ajax_action: 'remove_media', path }).then(({ status }) => {
+            if (status >= 200 && status < 300) {
+                evt.target.closest('.media-card').remove();
+                if (!mediaGrid.querySelector('.media-card') && !noMediaPlaceholder) {
+                    const p = document.createElement('p');
+                    p.id = 'no-media-placeholder';
+                    p.className = 'text-muted mb-0';
+                    p.textContent = 'No attachments yet.';
+                    mediaGrid.appendChild(p);
+                }
+                showAlert('Attachment removed.', 'success');
+            } else {
+                showAlert('Unable to remove attachment.', 'danger');
+            }
+        });
+    });
+
+    const signatureCanvas = document.getElementById('signature-pad');
+    const signaturePad = new SignaturePad(signatureCanvas, { backgroundColor: 'rgba(255,255,255,1)' });
+    function resizeCanvas() {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        signatureCanvas.width = signatureCanvas.offsetWidth * ratio;
+        signatureCanvas.height = signatureCanvas.offsetHeight * ratio;
+        signatureCanvas.getContext('2d').scale(ratio, ratio);
+        signaturePad.clear();
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    document.getElementById('clear-signature').addEventListener('click', function(evt) {
+        evt.preventDefault();
+        signaturePad.clear();
+    });
+
+    document.getElementById('save-signature').addEventListener('click', function(evt) {
+        evt.preventDefault();
+        if (signaturePad.isEmpty()) {
+            showAlert('Capture a signature before saving.', 'warning');
+            return;
+        }
+        const dataUrl = signaturePad.toDataURL('image/png');
+        sendAjax({ ajax_action: 'save_signature', data_url: dataUrl }).then(({ status, json }) => {
+            if (status >= 200 && status < 300 && json.signature_url) {
+                let preview = document.getElementById('signature-preview');
+                if (!preview) {
+                    document.getElementById('signature-preview-wrapper').innerHTML = '';
+                    preview = document.createElement('img');
+                    preview.id = 'signature-preview';
+                    preview.className = 'img-fluid';
+                    document.getElementById('signature-preview-wrapper').appendChild(preview);
+                }
+                preview.src = json.signature_url;
+                showAlert('Signature saved.', 'success');
+            } else {
+                showAlert('Unable to save signature.', 'danger');
+            }
+        }).catch(() => showAlert('Network error while saving signature.', 'danger'));
+    });
+
+    document.getElementById('remove-signature').addEventListener('click', function(evt) {
+        evt.preventDefault();
+        sendAjax({ ajax_action: 'clear_signature' }).then(({ status }) => {
+            if (status >= 200 && status < 300) {
+                const wrapper = document.getElementById('signature-preview-wrapper');
+                wrapper.innerHTML = '<p class="text-muted mb-0">No signature saved yet.</p>';
+                showAlert('Signature removed.', 'info');
+            } else {
+                showAlert('Unable to remove signature.', 'danger');
+            }
+        });
+    });
+
+    const vehicleSelect = document.getElementById('vehicle-select');
+    const hiddenVehicleInput = document.getElementById('id_vehicle');
+    const unitInput = document.getElementById('id_unit_no');
+    const vinInput = document.getElementById('id_vehicle_vin');
+    const makeInput = document.getElementById('id_make_model');
+    const mileageInput = document.getElementById('id_mileage');
+    const vehicleHistoryButton = document.getElementById('vehicle-history-button');
+    const vehicleHistoryHint = document.getElementById('vehicle-history-hint');
+    const vehicleHistoryModalEl = document.getElementById('vehicleHistoryModal');
+    const vehicleHistoryStatus = document.getElementById('vehicle-history-status');
+    const vehicleHistorySections = document.getElementById('vehicle-history-sections');
+    const vehicleHistoryVehicleLabel = document.getElementById('vehicle-history-vehicle-label');
+    const vehicleHistoryJobs = document.getElementById('vehicle-history-jobs');
+    const vehicleHistoryJobsEmpty = document.getElementById('vehicle-history-jobs-empty');
+    const vehicleHistoryParts = document.getElementById('vehicle-history-parts');
+    const vehicleHistoryPartsEmpty = document.getElementById('vehicle-history-parts-empty');
+    let vehicleHistoryData = {};
+    try {
+        vehicleHistoryData = JSON.parse('{{ vehicle_history_json|escapejs }}');
+    } catch (error) {
+        vehicleHistoryData = {};
+    }
+    let mechanicHistoryState = null;
+    const assignmentVehicleId = hiddenVehicleInput ? (hiddenVehicleInput.value || '') : '';
+    let lastPersistedVehicleId = hiddenVehicleInput ? (hiddenVehicleInput.value || '') : '';
+    let vehicleSaveInProgress = false;
+
+    function normalizeHistory(raw) {
+        const state = raw && typeof raw === 'object' ? raw : {};
+        const jobs = Array.isArray(state.jobs) ? state.jobs : [];
+        const parts = Array.isArray(state.parts) ? state.parts : [];
+        const vehicle = state.vehicle && typeof state.vehicle === 'object' ? state.vehicle : null;
+        const normalizedVehicle = vehicle ? Object.assign({}, vehicle) : null;
+        if (normalizedVehicle && !normalizedVehicle.label && vehicleSelect) {
+            const option = vehicleSelect.querySelector(`option[value="${normalizedVehicle.id}"]`);
+            if (option && option.textContent) {
+                normalizedVehicle.label = option.textContent.trim();
+            }
+        }
+        return {
+            vehicle: normalizedVehicle,
+            jobs,
+            parts,
+            has_history: Boolean(state.has_history || jobs.length || parts.length),
+        };
+    }
+
+    function renderVehicleHistory() {
+        mechanicHistoryState = normalizeHistory(vehicleHistoryData);
+        if (!vehicleHistoryStatus) { return; }
+        const data = mechanicHistoryState;
+        const hasVehicle = Boolean(data.vehicle && data.vehicle.id);
+        if (!hasVehicle) {
+            vehicleHistoryStatus.className = 'alert alert-info mb-3';
+            vehicleHistoryStatus.textContent = assignmentVehicleId ? 'History is available for the assigned vehicle only.' : 'History is available once the assigned vehicle is selected.';
+            vehicleHistoryStatus.classList.remove('d-none');
+            if (vehicleHistorySections) {
+                vehicleHistorySections.classList.add('d-none');
+            }
+            return;
+        }
+
+        if (vehicleHistoryVehicleLabel) {
+            const label = data.vehicle.label || '';
+            vehicleHistoryVehicleLabel.textContent = label ? `History for ${label}` : '';
+        }
+
+        if (vehicleHistoryJobs) {
+            vehicleHistoryJobs.innerHTML = '';
+            data.jobs.forEach(function(job) {
+                const row = document.createElement('div');
+                row.className = 'list-group-item';
+                const title = document.createElement('div');
+                title.className = 'fw-semibold mb-1';
+                title.textContent = job.description || 'Job';
+                row.appendChild(title);
+                const meta = document.createElement('div');
+                meta.className = 'd-flex justify-content-between align-items-center text-muted small';
+                const dateSpan = document.createElement('span');
+                dateSpan.textContent = job.date || '';
+                meta.appendChild(dateSpan);
+                row.appendChild(meta);
+                if (job.notes) {
+                    const notes = document.createElement('div');
+                    notes.className = 'small mt-2 text-muted';
+                    notes.textContent = job.notes;
+                    row.appendChild(notes);
+                }
+                vehicleHistoryJobs.appendChild(row);
+            });
+            if (vehicleHistoryJobsEmpty) {
+                vehicleHistoryJobsEmpty.classList.toggle('d-none', data.jobs.length > 0);
+            }
+            vehicleHistoryJobs.classList.toggle('d-none', data.jobs.length === 0);
+        }
+
+        if (vehicleHistoryParts) {
+            vehicleHistoryParts.innerHTML = '';
+            data.parts.forEach(function(part) {
+                const row = document.createElement('div');
+                row.className = 'list-group-item';
+                const title = document.createElement('div');
+                title.className = 'fw-semibold mb-1';
+                title.textContent = part.description || 'Part';
+                row.appendChild(title);
+                const meta = document.createElement('div');
+                meta.className = 'd-flex justify-content-between align-items-center text-muted small';
+                const dateSpan = document.createElement('span');
+                dateSpan.textContent = part.date || '';
+                meta.appendChild(dateSpan);
+                if (part.quantity) {
+                    const qty = document.createElement('span');
+                    qty.className = 'badge bg-light text-dark';
+                    qty.textContent = `Qty ${part.quantity}`;
+                    meta.appendChild(qty);
+                }
+                row.appendChild(meta);
+                vehicleHistoryParts.appendChild(row);
+            });
+            if (vehicleHistoryPartsEmpty) {
+                vehicleHistoryPartsEmpty.classList.toggle('d-none', data.parts.length > 0);
+            }
+            vehicleHistoryParts.classList.toggle('d-none', data.parts.length === 0);
+        }
+
+        if (vehicleHistorySections) {
+            vehicleHistorySections.classList.remove('d-none');
+        }
+        if (vehicleHistoryStatus) {
+            if (data.jobs.length || data.parts.length) {
+                vehicleHistoryStatus.classList.add('d-none');
+            } else {
+                vehicleHistoryStatus.className = 'alert alert-info mb-3';
+                vehicleHistoryStatus.textContent = 'No previous work recorded for this vehicle yet.';
+                vehicleHistoryStatus.classList.remove('d-none');
+            }
+        }
+    }
+
+    function updateHistoryAvailability() {
+        const currentVehicleId = hiddenVehicleInput ? (hiddenVehicleInput.value || '') : '';
+        const matchesAssignment = Boolean(assignmentVehicleId && currentVehicleId && assignmentVehicleId === currentVehicleId);
+        if (vehicleHistoryButton) {
+            vehicleHistoryButton.disabled = !matchesAssignment;
+        }
+        if (vehicleHistoryHint) {
+            if (!assignmentVehicleId) {
+                vehicleHistoryHint.textContent = 'Vehicle history will appear once a vehicle is assigned.';
+            } else if (!matchesAssignment) {
+                vehicleHistoryHint.textContent = 'History is available for the assigned vehicle only.';
+            } else if (mechanicHistoryState && mechanicHistoryState.has_history) {
+                vehicleHistoryHint.textContent = 'Vehicle history ready to view.';
+            } else {
+                vehicleHistoryHint.textContent = 'No previous history recorded for this vehicle yet.';
+            }
+        }
+
+        if (matchesAssignment) {
+            renderVehicleHistory();
+        } else if (vehicleHistoryStatus) {
+            vehicleHistoryStatus.className = 'alert alert-info mb-3';
+            vehicleHistoryStatus.textContent = assignmentVehicleId ? 'History is available for the assigned vehicle only.' : 'Vehicle history will appear once a vehicle is assigned.';
+            vehicleHistoryStatus.classList.remove('d-none');
+            if (vehicleHistorySections) {
+                vehicleHistorySections.classList.add('d-none');
+            }
+        }
+    }
+
+    mechanicHistoryState = normalizeHistory(vehicleHistoryData);
+
+    if (vehicleHistoryModalEl) {
+        vehicleHistoryModalEl.addEventListener('show.bs.modal', function() {
+            renderVehicleHistory();
+        });
+    }
+
+    function getSelectedVehicleOption() {
+        if (!vehicleSelect) { return null; }
+        if (vehicleSelect.selectedOptions && vehicleSelect.selectedOptions.length) {
+            return vehicleSelect.selectedOptions[0];
+        }
+        const idx = vehicleSelect.selectedIndex;
+        return idx >= 0 ? vehicleSelect.options[idx] : null;
+    }
+
+    function syncVehicleFields() {
+        if (!vehicleSelect) { return; }
+        const selectedOption = getSelectedVehicleOption();
+        const dataset = selectedOption ? selectedOption.dataset : {};
+        if (hiddenVehicleInput) {
+            hiddenVehicleInput.value = selectedOption ? selectedOption.value : '';
+        }
+        if (unitInput) {
+            unitInput.value = dataset.unit || '';
+        }
+        if (vinInput) {
+            vinInput.value = dataset.vin || '';
+        }
+        if (makeInput) {
+            makeInput.value = dataset.make || '';
+        }
+        if (mileageInput) {
+            mileageInput.value = dataset.mileage || '';
+        }
+        updateHistoryAvailability();
+    }
+
+    function persistVehicleSelection() {
+        if (!hiddenVehicleInput || vehicleSaveInProgress) { return; }
+        const currentValue = hiddenVehicleInput.value || '';
+        if (currentValue === lastPersistedVehicleId) { return; }
+        vehicleSaveInProgress = true;
+        sendAjax({ ajax_action: 'update_vehicle', vehicle_id: currentValue || null }).then(({ status, json }) => {
+            if (status >= 200 && status < 300 && json) {
+                if (json.ok === false) {
+                    showAlert('Unable to save vehicle selection.', 'danger');
+                    return;
+                }
+                const updatedId = json.vehicle_id !== undefined && json.vehicle_id !== null ? String(json.vehicle_id) : '';
+                lastPersistedVehicleId = updatedId;
+            } else {
+                showAlert('Unable to save vehicle selection.', 'danger');
+            }
+        }).catch(() => showAlert('Network error while saving vehicle selection.', 'danger'))
+        .finally(() => {
+            vehicleSaveInProgress = false;
+        });
+    }
+
+    if (vehicleSelect) {
+        vehicleSelect.addEventListener('change', function() {
+            syncVehicleFields();
+            persistVehicleSelection();
+        });
+        syncVehicleFields();
+    }
+
+    $('#vehicle-select').select2({ theme: 'bootstrap-5' });
+
+    function initializeSelect2(elements) {
+        elements.select2({
+            theme: 'bootstrap-5',
+            allowClear: true
+        }).on('select2:open', function (e) {
+            const evt = 'scroll.select2';
+            $(e.target).parents().off(evt);
+            $(window).off(evt);
+        });
+    }
+
+    initializeSelect2($('.product-select-searchable'));
+
+    function setupDynamicFormset() {
+        const addButton = document.getElementById('add-product-line');
+        const container = document.getElementById('product-lines-container');
+        const templateHolder = document.getElementById('empty-product-form-template');
+        const totalFormsInput = document.getElementById('id_{{ product_formset.prefix }}-TOTAL_FORMS');
+        if (!addButton || !container || !templateHolder || !totalFormsInput) { return; }
+        const templateHtml = templateHolder.innerHTML.trim();
+        addButton.addEventListener('click', function() {
+            const currentCount = parseInt(totalFormsInput.value, 10) || 0;
+            let newHtml = templateHtml.replace(/__prefix__/g, currentCount);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = newHtml;
+            const newRow = tempDiv.firstElementChild;
+            container.appendChild(newRow);
+            totalFormsInput.value = currentCount + 1;
+            initializeSelect2($(newRow).find('.product-select-searchable'));
+        });
+        container.addEventListener('change', function(event) {
+            if (event.target.matches('input[type="checkbox"][name$="-DELETE"]')) {
+                const row = event.target.closest('.formset-row');
+                if (row) {
+                    row.classList.toggle('marked-for-deletion', event.target.checked);
+                }
+            }
+        });
+    }
+
+    setupDynamicFormset();
+
+    document.getElementById('add-vehicle-form').addEventListener('submit', function(evt) {
+        evt.preventDefault();
+        const data = new FormData(this);
+        data.append('ajax_action', 'add_vehicle');
+        sendAjax(data).then(({ status, json }) => {
+            if (status >= 200 && status < 300 && json.ok) {
+                const newOption = new Option(json.label, json.id, true, true);
+                if (json.vehicle) {
+                    newOption.dataset.unit = json.vehicle.unit || '';
+                    newOption.dataset.vin = json.vehicle.vin || '';
+                    newOption.dataset.make = json.vehicle.make || '';
+                    newOption.dataset.mileage = (json.vehicle.mileage !== undefined && json.vehicle.mileage !== null) ? json.vehicle.mileage : '';
+                }
+                $(vehicleSelect).append(newOption).trigger('change');
+                syncVehicleFields();
+                bootstrap.Modal.getInstance(document.getElementById('addVehicleModal')).hide();
+                document.getElementById('vehicle-form-errors').textContent = '';
+                showAlert('Vehicle added successfully.', 'success');
+            } else if (json && json.errors) {
+                document.getElementById('vehicle-form-errors').textContent = Object.values(json.errors).flat().join(' ');
+            } else {
+                showAlert('Unable to add vehicle.', 'danger');
+            }
+        }).catch(() => showAlert('Network error while adding vehicle.', 'danger'));
+    });
+})();
+</script>
+</body>
+</html>

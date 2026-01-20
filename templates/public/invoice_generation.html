@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5">
+  <!-- Hero Section -->
+  <section class="hero-section text-center mb-5">
+    <h1 class="display-4">Invoice Generation</h1>
+    <p class="lead">
+      Create professional invoices for parts orders and fleet accounts. Whether you're billing stocked items or special orders, our system keeps it effortless.
+    </p>
+  </section>
+
+  <!-- Invoice Creation Explanation -->
+  <section class="explanation-section mb-5">
+    <div class="row align-items-center">
+      <div class="col-md-6">
+        <img src="{% static 'images/manage_invoices.jpg' %}" class="img-fluid rounded modern-image" alt="Invoice Form Preview">
+      </div>
+      <div class="col-md-6">
+        <h2>Tailored Forms for Your Profession</h2>
+        <p>
+          Depending on your workflow, we provide invoice forms built for parts counter and fleet billing. Add items from inventory, quick-create special orders, and keep your stock levels in sync automatically.
+        </p>
+        <p>
+          Want to know more about inventory integration? Visit our <a href="{% url 'accounts:inventory_info' %}">Inventory Management</a> page.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Additional Invoice Options -->
+  <section class="additional-options-section mb-5">
+    <div class="row align-items-center flex-md-row-reverse">
+      <div class="col-md-6">
+        <img src="{% static 'img/invoice_options_placeholder.jpg' %}" class="img-fluid rounded modern-image" alt="Invoice Options Preview">
+      </div>
+      <div class="col-md-6">
+        <h2>Flexible Invoice Options</h2>
+        <p>
+          Whether you are recording parts sales or account billing, our modern forms guide you through the process with intuitive layouts and interactive elements.
+        </p>
+        <p>
+          Every invoice generated is automatically linked to your inventory data when applicable, ensuring a seamless workflow.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Call to Action -->
+  <section class="cta-section text-center">
+    <h2>Create Your Invoice Today</h2>
+    <p>Experience a streamlined invoice generation process - choose items and let our system do the heavy lifting.</p>
+    <a href="{% url 'accounts:invoice_generation' %}" class="btn btn-primary btn-lg">Create Invoice</a>
+  </section>
+</div>
+{% endblock %}

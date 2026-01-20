@@ -1,0 +1,72 @@
+{% load custom_filters %} {# Ensure this custom filter tag library is loaded if you use e.g. |currency #}
+
+{% if low_stock_products %}
+    <div class="notification-section mb-3">
+        <h6 class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i> Low Stock Alerts</h6>
+        <ul class="list-group list-group-flush">
+            {% for product in low_stock_products %}
+                <li class="list-group-item list-group-item-action list-group-item-warning d-flex justify-content-between align-items-center small py-2">
+                    <span>
+                        <strong>{{ product.name }}</strong> ({{ product.sku }})
+                        <br>
+                        <small class="text-muted">In Stock: {{ product.quantity_in_stock }}, Reorder Level: {{ product.reorder_level }}</small>
+                    </span>
+                    {# Replace '#' with your actual product detail URL, e.g., {% url 'inventory:product_detail' product.pk %} #}
+                    <a href="#" class="btn btn-sm btn-outline-secondary ms-2 px-2 py-1">View</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+{% comment %}
+    ADD OTHER NOTIFICATION SECTIONS HERE AS YOU DEVELOP THEM
+    Example: Products with expiring warranties
+{% endcomment %}
+{% if expiring_warranty_products %}
+    <div class="notification-section mb-3">
+        <h6 class="text-info"><i class="fas fa-shield-alt me-1"></i> Warranty Expiring Soon</h6>
+        <ul class="list-group list-group-flush">
+            {% for product in expiring_warranty_products %}
+                <li class="list-group-item list-group-item-action list-group-item-info d-flex justify-content-between align-items-center small py-2">
+                    <span>
+                        <strong>{{ product.name }}</strong> ({{ product.sku }})
+                        <br>
+                        <small class="text-muted">Expires: {{ product.warranty_expiry_date|date:"M d, Y" }}</small>
+                    </span>
+                    <a href="#" class="btn btn-sm btn-outline-secondary ms-2 px-2 py-1">Details</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+{% comment %}
+    Example: Overdue Tasks
+{% endcomment %}
+{% if overdue_tasks %}
+    <div class="notification-section mb-3">
+        <h6 class="text-primary"><i class="fas fa-tasks me-1"></i> Overdue Tasks</h6>
+        <ul class="list-group list-group-flush">
+            {% for task in overdue_tasks %}
+                <li class="list-group-item list-group-item-action list-group-item-primary d-flex justify-content-between align-items-center small py-2">
+                    <span>
+                        <strong>{{ task.title }}</strong>
+                        <br>
+                        <small class="text-muted">Due: {{ task.due_date|date:"M d, Y" }}</small>
+                    </span>
+                    <a href="#" class="btn btn-sm btn-outline-secondary ms-2 px-2 py-1">View Task</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+
+{% comment %} Check if ANY notifications were passed and rendered {% endcomment %}
+{% if not low_stock_products and not expiring_warranty_products and not overdue_tasks %} {# Update this condition as you add more types #}
+    <p class="text-muted text-center mt-3">
+        <i class="fas fa-check-circle text-success fa-2x mb-2"></i><br>
+        All clear! No active notifications.
+    </p>
+{% endif %}

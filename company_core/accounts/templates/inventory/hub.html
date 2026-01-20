@@ -1,0 +1,747 @@
+{% extends 'customer_portal_base.html' %}
+{% load humanize %}
+
+{% block title %}Inventory Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --inv-surface: #f4f6fb;
+    --inv-surface-alt: #eef1f8;
+    --inv-primary: #2563eb;
+    --inv-primary-strong: #1d4ed8;
+    --inv-success: #16a34a;
+    --inv-warning: #f97316;
+    --inv-danger: #ef4444;
+    --inv-border: #e5e7eb;
+    --inv-slate: #0f172a;
+  }
+
+  .inventory-surface {
+    background: radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.04), transparent 40%),
+                radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.05), transparent 35%),
+                var(--inv-surface);
+    border-radius: 18px;
+    padding: 1rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .dashboard-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    color: #6b7280;
+    font-size: 0.75rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .hero-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--inv-slate);
+    margin-bottom: 0.2rem;
+  }
+
+  .hero-subtitle {
+    color: #6b7280;
+    font-size: 0.98rem;
+    margin: 0;
+  }
+
+  .pill-action {
+    border-radius: 12px;
+    padding: 0.45rem 0.95rem;
+    font-weight: 700;
+    font-size: 0.92rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--inv-border);
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+  }
+
+  .pill-action-primary {
+    background: linear-gradient(135deg, var(--inv-primary), var(--inv-primary-strong));
+    color: #fff;
+    border: none;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
+  }
+
+  .pill-action:hover { filter: brightness(1.02); text-decoration: none; }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+
+  .metric-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+  }
+
+  .metric-card h6 {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin: 0 0 0.35rem 0;
+  }
+
+  .metric-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--inv-slate);
+    margin: 0;
+  }
+
+  .metric-sub {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  .metric-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.05rem;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
+  }
+
+  .metric-icon-primary { background: linear-gradient(145deg, #60a5fa, #2563eb); }
+  .metric-icon-warning { background: linear-gradient(145deg, #fbbf24, #f97316); box-shadow: 0 10px 20px rgba(251, 191, 36, 0.35); }
+  .metric-icon-danger { background: linear-gradient(145deg, #f97316, #ef4444); box-shadow: 0 10px 20px rgba(239, 68, 68, 0.35); }
+  .metric-icon-star { background: linear-gradient(145deg, #fcd34d, #f59e0b); color: #92400e; box-shadow: 0 10px 20px rgba(245, 158, 11, 0.35); }
+
+  .trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .trend-up { color: var(--inv-success); }
+  .trend-down { color: var(--inv-danger); }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .chart-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 0.85rem;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+  }
+
+  .chart-canvas {
+    position: relative;
+    min-height: 190px;
+    max-height: 240px;
+  }
+
+  .chart-card h5 {
+    margin: 0 0 0.3rem 0;
+    font-weight: 800;
+    color: var(--inv-slate);
+    letter-spacing: -0.01em;
+  }
+
+  .chart-card p {
+    margin: 0;
+    color: #6b7280;
+  }
+
+  .recent-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+  }
+
+  .recent-table th {
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    border: none;
+  }
+
+  .recent-table td {
+    border: none;
+    padding: 0.55rem 0.35rem;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .badge-soft {
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .badge-soft-success { background: #dcfce7; color: #166534; }
+  .badge-soft-danger { background: #ffe4e6; color: #b91c1c; }
+  .badge-soft-muted { background: #e5e7eb; color: #374151; }
+
+  .small-note { color: #6b7280; font-size: 0.85rem; margin: 0; }
+
+  .inventory-modal .modal-content {
+    border-radius: 18px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 24px 50px rgba(15, 23, 42, 0.2);
+  }
+
+  .inventory-modal .modal-header {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    color: #fff;
+    border-bottom: none;
+  }
+
+  .inventory-modal .modal-title {
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  .inventory-modal .modal-subtitle {
+    margin: 0.15rem 0 0 0;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .inventory-modal .btn-close {
+    filter: invert(1);
+    opacity: 0.85;
+  }
+
+  .inventory-modal .modal-body {
+    background: #f8fafc;
+  }
+
+  .inventory-modal .modal-footer {
+    background: #f1f5f9;
+    border-top: none;
+  }
+
+  .inventory-modal .product-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.9rem;
+  }
+
+  .inventory-modal .product-modal-grid .form-group {
+    margin-bottom: 0;
+  }
+
+  .inventory-modal .product-modal-grid .span-2 {
+    grid-column: 1 / -1;
+  }
+
+  .inventory-modal .product-modal-grid label {
+    font-weight: 700;
+    color: #111827;
+    font-size: 0.9rem;
+  }
+
+  .inventory-modal .product-modal-grid input,
+  .inventory-modal .product-modal-grid select,
+  .inventory-modal .product-modal-grid textarea {
+    width: 100%;
+    border-radius: 12px;
+    border-color: #e2e8f0;
+  }
+
+  .inventory-modal .product-modal-grid textarea {
+    min-height: 110px;
+  }
+
+  .inventory-modal .product-modal-grid .input-group > .btn {
+    border-radius: 10px;
+  }
+
+  .inventory-modal .product-modal-grid .input-group > .btn.btn-outline-secondary {
+    border-color: #e2e8f0;
+    color: #334155;
+  }
+
+  .inventory-modal .storefront-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .inventory-modal .storefront-toggle .form-check-input {
+    width: 0.85rem;
+    height: 0.85rem;
+    margin-top: 0;
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-hero { flex-direction: column; align-items: flex-start; }
+    .inventory-surface { padding: 0.75rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inventory-surface">
+  <div class="page-shell">
+    {% include 'inventory/partials/_inventory_nav.html' %}
+    <div class="page-header dashboard-hero">
+      <div>
+        <div class="eyebrow">Operations</div>
+        <div class="d-flex align-items-center flex-wrap gap-2">
+          <div>
+            <div class="hero-title mb-1">Inventory Dashboard</div>
+            <p class="hero-subtitle">Real-time overview of stock levels, valuation, and movement.</p>
+          </div>
+        </div>
+        </div>
+        <div class="page-toolbar d-flex flex-wrap gap-2">
+          <button type="button" class="pill-action" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+            <i class="fas fa-user-plus"></i> New supplier
+          </button>
+          <button type="button" class="pill-action pill-action-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+            <i class="fas fa-box"></i> Add product
+          </button>
+        </div>
+      </div>
+    <div class="metrics-grid mt-3">
+      <div class="metric-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h6>Total Inventory Value</h6>
+            <p class="metric-value">${{ total_inventory_value|floatformat:2|intcomma }}</p>
+            <p class="metric-sub">{{ total_quantity|default:0|intcomma }} units on hand</p>
+          </div>
+          <span class="metric-icon metric-icon-primary">
+            <i class="fas fa-coins"></i>
+          </span>
+        </div>
+        <div class="mt-2">
+          <span class="trend {% if trend_direction == 'up' %}trend-up{% else %}trend-down{% endif %}">
+            <i class="fas fa-arrow-{% if trend_direction == 'up' %}up{% else %}down{% endif %}"></i>
+            {% if value_trend_percent >= 0 %}+{% endif %}{{ value_trend_percent|floatformat:1 }}%
+          </span>
+          <span class="text-muted small ms-1">vs. last {{ window_days }} days movement</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h6>Low Stock Alerts</h6>
+            <p class="metric-value">{{ low_stock_count|intcomma }} Items</p>
+            <div class="badge-soft badge-soft-danger">Action Required</div>
+          </div>
+          <span class="metric-icon metric-icon-warning">
+            <i class="fas fa-bell"></i>
+          </span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h6>Out of Stock</h6>
+            <p class="metric-value">{{ out_of_stock_count|intcomma }} Items</p>
+            <p class="metric-sub">Track replenishment priorities.</p>
+          </div>
+          <span class="metric-icon metric-icon-danger">
+            <i class="fas fa-box-open"></i>
+          </span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h6>Top Selling Item</h6>
+            {% if top_selling %}
+              <p class="metric-value mb-1">{{ top_selling.name }}</p>
+              <p class="metric-sub">Qty sold: {{ top_selling.qty_sold|default:0|intcomma }}</p>
+            {% else %}
+              <p class="metric-value mb-1">No sales yet</p>
+              <p class="metric-sub">Sales data will appear here.</p>
+            {% endif %}
+          </div>
+          <span class="metric-icon metric-icon-star">
+            <i class="fas fa-star"></i>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-grid mt-3">
+      <div class="chart-card">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <h5>Inventory Movement (Last {{ window_days }} Days)</h5>
+            <p class="small-note mb-0">Stock in vs. stock out, day by day.</p>
+            </div>
+            <div class="d-flex gap-2">
+              <span class="badge-soft badge-soft-success">In: {{ stock_in_total|intcomma }}</span>
+              <span class="badge-soft badge-soft-danger">Out: {{ stock_out_total|intcomma }}</span>
+            </div>
+          </div>
+          <div class="chart-canvas">
+            <canvas id="movementChart"></canvas>
+          </div>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <div class="recent-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <h5 class="mb-0">Recent Transactions</h5>
+            <p class="small-note mb-0">Latest stock movements and valuation.</p>
+          </div>
+          <a href="{% url 'accounts:inventory_transactions' %}" class="pill-action">View all</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table recent-table mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Update</th>
+                <th class="text-end">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for tx in recent_transactions %}
+                <tr>
+                  <td class="text-muted">{{ tx.date|date:"M j, Y" }}</td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge-soft {% if tx.type_code == 'IN' %}badge-soft-success{% elif tx.type_code == 'OUT' %}badge-soft-danger{% else %}badge-soft-muted{% endif %}">
+                        {{ tx.type }}
+                      </span>
+                      <div>
+                        <div class="fw-bold">{{ tx.product }}</div>
+                        {% if tx.remarks %}
+                          <div class="small text-muted">{{ tx.remarks|truncatechars:60 }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-end">${{ tx.value|floatformat:2|intcomma }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="3" class="text-center text-muted py-3">No transactions logged yet.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Supplier Modal -->
+<div class="modal fade inventory-modal" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{% url 'accounts:add_supplier' %}" data-modal-form="supplier" data-select-name="supplier">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'accounts:inventory_hub' %}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addSupplierModalLabel">Add Supplier</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-inline-error text-danger small d-none" data-modal-error></div>
+          {% include 'inventory/partials/_supplier_form.html' with form=supplier_form %}
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save Supplier</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Category Modal -->
+<div class="modal fade inventory-modal" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{% url 'accounts:add_category' %}" data-modal-form="category" data-select-name="category">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'accounts:inventory_hub' %}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addCategoryModalLabel">Add Category</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-inline-error text-danger small d-none" data-modal-error></div>
+          {% include 'inventory/partials/_category_form.html' with form=category_form %}
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save Category</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Location Modal -->
+<div class="modal fade inventory-modal" id="addLocationModal" tabindex="-1" aria-labelledby="addLocationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{% url 'accounts:add_location' %}" data-modal-form="location" data-select-name="location">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'accounts:inventory_hub' %}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addLocationModalLabel">Add Location</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-inline-error text-danger small d-none" data-modal-error></div>
+          {% include 'inventory/partials/_location_form.html' with form=location_form %}
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save Location</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Product Modal -->
+<div class="modal fade inventory-modal" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" enctype="multipart/form-data" action="{% url 'accounts:add_product' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'accounts:inventory_hub' %}">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title" id="addProductModalLabel">Add Product</h5>
+            <p class="modal-subtitle">Capture pricing, stock, and location details in one place.</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {% include 'inventory/partials/_product_form.html' with form=product_form %}
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save Product</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{ movement_chart|json_script:"movement-chart" }}
+<script>
+  (function() {
+    const movementEl = document.getElementById('movement-chart');
+
+    const movementData = movementEl ? JSON.parse(movementEl.textContent) : {labels: [], stock_in: [], stock_out: []};
+
+    const movementCtx = document.getElementById('movementChart');
+    if (movementCtx && movementData && movementData.labels) {
+      new Chart(movementCtx, {
+        type: 'bar',
+        data: {
+          labels: movementData.labels,
+          datasets: [
+            {
+              label: 'Stock In',
+              data: movementData.stock_in,
+              backgroundColor: '#22c55e',
+              borderRadius: 8,
+              maxBarThickness: 18
+            },
+            {
+              label: 'Stock Out',
+              data: movementData.stock_out,
+              backgroundColor: '#ef4444',
+              borderRadius: 8,
+              maxBarThickness: 18
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#6b7280' }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(226, 232, 240, 0.7)' },
+              ticks: { color: '#6b7280', precision: 0 }
+            }
+          },
+          plugins: {
+            legend: { display: true, labels: { usePointStyle: true } },
+            tooltip: { mode: 'index', intersect: false }
+          }
+        }
+      });
+    }
+  })();
+</script>
+<script>
+  document.addEventListener('show.bs.modal', (event) => {
+    const modalEl = event.target;
+    const openModals = document.querySelectorAll('.modal.show').length;
+    const zIndex = 1050 + (openModals * 20);
+    modalEl.style.zIndex = zIndex;
+    setTimeout(() => {
+      const backdrops = document.querySelectorAll('.modal-backdrop:not(.modal-stack)');
+      backdrops.forEach((backdrop) => {
+        backdrop.classList.add('modal-stack');
+        backdrop.style.zIndex = zIndex - 10;
+      });
+    }, 0);
+  });
+
+  document.addEventListener('hidden.bs.modal', () => {
+    if (document.querySelectorAll('.modal.show').length > 0) {
+      document.body.classList.add('modal-open');
+    }
+  });
+
+  document.addEventListener('hide.bs.modal', (event) => {
+    const modalEl = event.target;
+    if (modalEl?.dataset?.keepOpen === 'true') {
+      event.preventDefault();
+      modalEl.dataset.keepOpen = 'false';
+    }
+  });
+
+  document.querySelectorAll('[data-keep-parent-open="true"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const parentModal = button.closest('.modal');
+      if (parentModal) {
+        parentModal.dataset.keepOpen = 'true';
+      }
+    });
+  });
+
+  function updateProductSelect(selectName, value, label) {
+    const addProductModal = document.getElementById('addProductModal');
+    if (!addProductModal) return;
+    const select = addProductModal.querySelector(`[name="${selectName}"]`);
+    if (!select) return;
+    const valueString = String(value);
+    let option = Array.from(select.options).find((opt) => opt.value === valueString);
+    if (!option) {
+      option = new Option(label, valueString);
+      select.add(option);
+    }
+    option.selected = true;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function getErrorMessage(data) {
+    if (!data || !data.errors) {
+      return 'Unable to save. Please check the form.';
+    }
+    const entries = Object.values(data.errors);
+    for (const entry of entries) {
+      if (entry && entry.length) {
+        return entry[0];
+      }
+    }
+    return 'Unable to save. Please check the form.';
+  }
+
+  function setModalError(form, message) {
+    const errorEl = form.querySelector('[data-modal-error]');
+    if (!errorEl) return;
+    errorEl.textContent = message;
+    errorEl.classList.remove('d-none');
+  }
+
+  function clearModalError(form) {
+    const errorEl = form.querySelector('[data-modal-error]');
+    if (!errorEl) return;
+    errorEl.textContent = '';
+    errorEl.classList.add('d-none');
+  }
+
+  document.querySelectorAll('[data-modal-form]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearModalError(form);
+
+      const submitButton = form.querySelector('[type="submit"]');
+      const originalText = submitButton ? submitButton.textContent : null;
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Saving...';
+      }
+
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin'
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          setModalError(form, getErrorMessage(data));
+          return;
+        }
+
+        const selectName = form.dataset.selectName;
+        if (selectName) {
+          updateProductSelect(selectName, data.value, data.label || data.value);
+        }
+
+        form.reset();
+        const modalEl = form.closest('.modal');
+        if (modalEl && window.bootstrap?.Modal) {
+          bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        }
+      } catch (err) {
+        setModalError(form, 'Unable to save. Please try again.');
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = originalText;
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,2991 @@
+<!-- templates/accounts/mach/add_records.html -->
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if is_edit %}Edit Purchase{% else %}Add Records{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+<div class="compact-wrap">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #111827;
+            --muted: #6b7280;
+            --border: #d6dbe1;
+            --panel-bg: #ffffff;
+            --panel-border: #d7dde5;
+            --panel-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+            --primary: #2563eb;
+            --primary-strong: #1d4ed8;
+            --accent: #2563eb;
+            --accent-strong: #1d4ed8;
+            --soft: #f8fafb;
+        }
+
+        .page-shell {
+            background:
+                radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 55%),
+                linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+            padding: 1.25rem 0 5rem;
+        }
+
+        .compact-wrap {
+            max-width: 100%;
+            width: 100%;
+            margin: 0 auto 2rem;
+            padding: 0 clamp(1rem, 2vw, 2rem);
+            font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
+            color: var(--ink);
+        }
+
+        .hero {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero-copy {
+            flex: 1 1 320px;
+            min-width: 220px;
+        }
+
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: 1.6rem;
+            font-weight: 800;
+        }
+
+        .hero p { margin: 0.2rem 0 0; color: var(--muted); }
+
+        .pill-action {
+            border-radius: 999px;
+            padding: 0.5rem 0.9rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border: 1px solid var(--panel-border);
+            background: #fff;
+            color: #0f172a;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05), 0 1px 0 rgba(255,255,255,0.8);
+        }
+
+        .pill-action-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+            color: #fff;
+            border: none;
+            box-shadow: 0 16px 40px rgba(37, 99, 235, 0.25);
+        }
+
+        .ui-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 1.25rem;
+            box-shadow: var(--panel-shadow);
+            margin-bottom: 1rem;
+            width: 100%;
+        }
+
+        .panel-title { font-weight: 800; margin-bottom: 0.35rem; }
+        .panel-sub { color: var(--muted); margin-bottom: 1rem; }
+
+        .soft-box {
+            background: #eef2ff;
+            border: 1px solid #d6ddff;
+            border-radius: 12px;
+            padding: 0.75rem 0.9rem;
+        }
+
+        .soft-box .form-check { margin: 0; }
+
+        .inventory-dropdown { position: relative; }
+        .inventory-dropdown .inventory-product-select { display: none; }
+        .inventory-dropdown-trigger { display: flex; align-items: center; gap: 0.5rem; }
+
+        .inventory-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            background-color: #fff;
+            border: 1px solid #d7dbe3;
+            border-radius: 10px;
+            padding: 0.55rem 0.8rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #111827;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+        }
+
+        .inventory-dropdown-toggle:focus {
+            outline: none;
+            box-shadow: 0 0 0 0.15rem rgba(37, 99, 235, 0.25);
+            border-color: #80bdff;
+        }
+
+        .inventory-dropdown-toggle::after {
+            content: '\25BC';
+            font-size: 0.65rem;
+            margin-left: 0.75rem;
+            color: #6c757d;
+        }
+
+        .inventory-dropdown-toggle .inventory-selected-text {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .inventory-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            z-index: 1050;
+            background-color: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 10px;
+            margin-top: 0.25rem;
+            padding: 0;
+            box-shadow: 0 14px 40px rgba(15, 23, 42, 0.15);
+            display: none;
+        }
+
+        .inventory-dropdown-menu.show { display: block; }
+
+        .inventory-dropdown-menu .inventory-search-wrapper {
+            padding: 0.6rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .inventory-dropdown-menu .inventory-dropdown-options {
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .inventory-dropdown-option {
+            width: 100%;
+            background: transparent;
+            border: none;
+            text-align: left;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.95rem;
+            color: #111827;
+            cursor: pointer;
+        }
+
+        .inventory-dropdown-option:hover,
+        .inventory-dropdown-option:focus {
+            background-color: #f8fafc;
+            outline: none;
+        }
+
+        .supplier-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.35rem 0.65rem;
+            border-radius: 12px;
+            background: #e0e7ff;
+            color: #1d4ed8;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .supplier-inline-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .expense-item-form {
+            padding: 0.9rem 0.5rem;
+            border-bottom: 1px dashed #e5e7eb;
+            background: #fff;
+        }
+
+        .expense-item-form:last-of-type { border-bottom: none; }
+
+        .expense-item-form.marked-for-deletion { opacity: 0.6; }
+
+        .expense-item-form.marked-for-deletion .form-control,
+        .expense-item-form.marked-for-deletion .form-check-label { text-decoration: line-through; }
+
+        .line-item-actions { display: flex; gap: 0.4rem; align-items: center; justify-content: flex-end; }
+
+        .add-line-btn {
+            border-radius: 10px;
+            border: 1px solid #d7dbe3;
+            background: #f8fafc;
+            padding: 0.5rem 0.9rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .summary-box {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 0.75rem;
+            margin-top: 0.5rem;
+            display: grid;
+            grid-template-columns: repeat(3, auto);
+            justify-content: end;
+            gap: 1.25rem;
+            align-items: center;
+        }
+
+        .expense-item-card {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
+        }
+
+        .expense-item-card .inventory-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .expense-item-card .inventory-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 0.45rem;
+        }
+
+        .expense-item-card .inventory-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            font-size: 0.85rem;
+            color: #475569;
+        }
+
+        .expense-item-card .item-fields {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            align-items: flex-start;
+        }
+
+        .expense-item-card .item-total {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            text-align: right;
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 0.5rem;
+            min-width: 140px;
+        }
+
+        .expense-item-card .item-total .total-label {
+            font-size: 0.8rem;
+            color: #475569;
+        }
+
+        .expense-item-card .item-total .total-value {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .expense-item-card .item-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .expense-item-card .edit-product-button {
+            white-space: nowrap;
+        }
+
+        .expense-item-card .delete-row-btn {
+            border-radius: 999px;
+            min-width: 40px;
+            padding: 0.35rem 0.6rem;
+        }
+
+        .expense-item-card .item-fields > div {
+            flex: 1 1 140px;
+        }
+
+        .expense-item-card .item-fields > .item-total {
+            flex: 0 0 160px;
+        }
+
+        .compact-card { background: transparent; border: 0; padding: 0; box-shadow: none; width: 100%; }
+
+        .form-control,
+        .form-select { border-radius: 10px; }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            user-select: none;
+            font-weight: 600;
+        }
+
+        .toggle-switch input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .toggle-track {
+            width: 54px;
+            height: 28px;
+            border-radius: 999px;
+            background: #e5e7eb;
+            position: relative;
+            transition: background 0.2s ease;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
+        }
+
+        .toggle-thumb {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 6px 12px rgba(15,23,42,0.18);
+            transition: transform 0.2s ease;
+        }
+
+        .toggle-switch input:checked + .toggle-track {
+            background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+        }
+
+        .toggle-switch input:checked + .toggle-track .toggle-thumb {
+            transform: translateX(26px);
+        }
+
+        .inventory-bar {
+            background: linear-gradient(135deg, #1f68ff, #2b7bff);
+            color: #fff;
+            border-radius: 14px;
+            padding: 0.8rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            box-shadow: 0 16px 40px rgba(37, 99, 235, 0.25);
+        }
+
+        .inventory-bar .info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .inventory-bar .title {
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+
+        .inventory-bar .hint {
+            font-size: 0.9rem;
+            opacity: 0.95;
+        }
+
+        .paid-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .qb-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .qb-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .qb-title {
+            margin: 0;
+            font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .qb-doc-pill {
+            background: #eef2f7;
+            border: 1px solid var(--border);
+            color: #4b5563;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+        }
+
+        .qb-subtitle {
+            margin: 0.35rem 0 0;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .qb-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+
+        .qb-balance {
+            text-align: right;
+            min-width: 160px;
+        }
+
+        .qb-balance span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .qb-balance strong {
+            display: block;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .qb-header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .ui-panel {
+            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 1.1rem 1.25rem;
+            box-shadow: var(--panel-shadow);
+        }
+
+        .panel-title {
+            font-weight: 700;
+            color: var(--ink);
+            font-size: 1rem;
+        }
+
+        .panel-sub {
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .btn {
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 0.55rem 0.95rem;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-strong);
+            border-color: var(--accent-strong);
+        }
+
+        .btn-outline-secondary {
+            border-color: var(--border);
+            color: #4b5563;
+        }
+
+        .btn-outline-secondary:hover {
+            border-color: #c0c7d2;
+            color: var(--ink);
+        }
+
+        .pill-action {
+            border-radius: 8px;
+            padding: 0.45rem 0.85rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: #374151;
+            box-shadow: none;
+        }
+
+        .pill-action-primary {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            box-shadow: none;
+        }
+
+        .add-line-btn {
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: #374151;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .line-items-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+        }
+
+        .line-items-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .line-items-buttons {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .details-toggle {
+            display: inline-flex;
+            align-items: center;
+            background: #e5e7eb;
+            border-radius: 999px;
+            padding: 0.2rem;
+            gap: 0.2rem;
+        }
+
+        .details-option {
+            border: none;
+            background: transparent;
+            padding: 0.45rem 0.95rem;
+            border-radius: 999px;
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        .details-option.active {
+            background: #fff;
+            color: var(--ink);
+            box-shadow: 0 1px 4px rgba(17, 24, 39, 0.12);
+        }
+
+        #line-items-panel:not(.inventory-mode) .inventory-only {
+            display: none;
+        }
+
+        .manual-fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .manual-fields .form-group {
+            margin-bottom: 0;
+        }
+
+        .manual-field label {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.35rem;
+        }
+
+        .manual-fields textarea.form-control {
+            min-height: 62px;
+            resize: vertical;
+        }
+
+        #frequency-field {
+            display: none;
+        }
+
+        .expense-item-card {
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .expense-item-card .item-fields {
+            border-top: 1px dashed var(--border);
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+        }
+
+        .summary-box {
+            border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 900px) {
+            .qb-header-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .qb-balance {
+                text-align: left;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .line-items-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+    <div class="qb-header">
+        <div>
+            <div class="qb-title-row">
+                <h1 class="qb-title">{% if is_edit %}Edit Purchase{% else %}Add Purchase{% endif %}</h1>
+                <span class="qb-doc-pill">Expense</span>
+            </div>
+            <p class="qb-subtitle">
+                {% if is_edit %}
+                    Update supplier, receipt, and product details for this purchase.
+                {% else %}
+                    Capture expenses that affect inventory or operating costs.
+                {% endif %}
+            </p>
+        </div>
+        <div class="qb-header-actions">
+            <div class="qb-balance">
+                <span>Amount</span>
+                <strong id="header-total-amount">$0.00</strong>
+            </div>
+            <div class="qb-header-buttons">
+                <button type="submit" form="add-records-form" name="submit_expense" class="btn btn-primary">{% if is_edit %}Update Purchase{% else %}Save Purchase{% endif %}</button>
+                <a href="{% url 'accounts:mechexpense_list' %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Display messages (for errors or success) -->
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <div class="alert alert-{{ message.level_tag }} mb-2" role="alert">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if mech_expense_item_formset.non_form_errors %}
+        <div class="alert alert-danger mb-2" role="alert">
+            {% for error in mech_expense_item_formset.non_form_errors %}
+                <p class="mb-1">{{ error }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% for form in mech_expense_item_formset %}
+        {% if form.errors %}
+            <div class="alert alert-danger mb-2" role="alert">
+                <strong>Line {{ forloop.counter }}:</strong>
+                <ul class="mb-0 mt-1 ps-3">
+                {% for field_name, field_errors in form.errors.items %}
+                    <li>
+                        {% if field_name == '__all__' %}
+                            {{ field_errors|join:", " }}
+                        {% else %}
+                            {{ field_name|capfirst }}:
+                            {{ field_errors|join:", " }}
+                        {% endif %}
+                    </li>
+                {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    <form id="add-records-form" method="post" enctype="multipart/form-data" class="compact-card" novalidate>
+        {% csrf_token %}
+
+        <!-- Datalist for Suppliers -->
+        <datalist id="vendor_list">
+            {% for vendor in distinct_vendors %}
+                <option value="{{ vendor }}">
+            {% endfor %}
+        </datalist>
+
+        <div class="ui-panel">
+            <div class="panel-title">Purchase Details</div>
+            <div class="panel-sub">Add payee, receipt, and category information for this expense.</div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    {{ mech_expense_form.date|as_crispy_field }}
+                </div>
+                <div class="col-md-4">
+                    {{ mech_expense_form.receipt_no|as_crispy_field }}
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group mb-0">
+                        <label class="form-label">Payee / Supplier</label>
+                        {{ mech_expense_form.vendor.as_hidden }}
+                        <div class="supplier-inline-actions">
+                            <div class="inventory-dropdown flex-grow-1" data-supplier-dropdown>
+                                <div class="inventory-dropdown-trigger">
+                                    <button type="button"
+                                            class="inventory-dropdown-toggle"
+                                            data-target-input="id_vendor"
+                                            aria-haspopup="listbox"
+                                            aria-expanded="false"
+                                            data-placeholder="Select supplier"
+                                            data-selected-text="{{ mech_expense_form.vendor.value|default:'' }}">
+                                        <span class="inventory-selected-text">
+                                            {% if mech_expense_form.vendor.value %}{{ mech_expense_form.vendor.value }}{% else %}Select supplier{% endif %}
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="inventory-dropdown-menu" role="listbox">
+                                    <div class="inventory-search-wrapper">
+                                        <input type="text"
+                                               class="form-control supplier-search"
+                                               placeholder="Search suppliers"
+                                               aria-label="Search suppliers">
+                                    </div>
+                                    <div class="inventory-dropdown-options">
+                                        {% for vendor in distinct_vendors %}
+                                            <button type="button" class="inventory-dropdown-option supplier-option" data-value="{{ vendor }}">{{ vendor }}</button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="pill-action btn-sm" data-bs-toggle="modal" data-bs-target="#addSupplierModal">+</button>
+                        </div>
+                        {% if mech_expense_form.vendor.errors %}
+                            {% for error in mech_expense_form.vendor.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-end">
+                        {{ mech_expense_form.categorie|as_crispy_field }}
+                        <button type="button" class="pill-action btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#addCategoryModal">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3 align-items-end mt-1">
+                <div class="col-md-4">
+                    {{ mech_expense_form.province|as_crispy_field }}
+                    <div id="province-tax-rate" class="text-muted small mt-1"></div>
+                </div>
+                <div class="col-md-4" id="custom-tax-container" style="display: none;">
+                    {{ mech_expense_form.custom_tax_rate|as_crispy_field }}
+                </div>
+            </div>
+            <div id="odometer-reading-field" style="display: none;">
+                <div class="row g-3 align-items-end mt-1">
+                    <div class="col-md-4">
+                        {{ mech_expense_form.unit_number|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ mech_expense_form.odometer_reading|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+            <div id="date-range-field" style="display: none;">
+                <div class="row g-3 align-items-end mt-1">
+                    <div class="col-md-4">
+                        {{ mech_expense_form.start_date|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ mech_expense_form.end_date|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3 align-items-end mt-1">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="toggle-switch mb-0">
+                            {{ mech_expense_form.is_recurring }}
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </label>
+                        <span class="fw-semibold">Recurring expense</span>
+                    </div>
+                    <div class="text-muted small">Repeat this expense on a schedule.</div>
+                </div>
+                <div class="col-md-4" id="frequency-field">
+                    {{ mech_expense_form.frequency|as_crispy_field }}
+                </div>
+                {% if not recurring_worker_enabled %}
+                    <div class="col-12">
+                        <div class="alert alert-warning mb-0 mt-2 small">
+                            Recurring expenses are saved, but automation needs the daily worker to be set up.
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="ui-panel" id="line-items-panel">
+        <div class="line-items-header">
+            <div>
+                <div class="panel-title mb-0" id="details-mode-title">Line items</div>
+                <div class="panel-sub mb-0" id="details-mode-subtitle">Add the right fields for the selected category.</div>
+            </div>
+            <div class="line-items-actions">
+                <div class="line-items-buttons">
+                    <button type="button" class="add-line-btn" id="add-expense-item"><i class="fa fa-plus"></i> Add Line</button>
+                    <button type="button" class="pill-action inventory-only" id="open-quick-add-product-btn">+ Add Product</button>
+                </div>
+            </div>
+        </div>
+        <div class="visually-hidden">
+            {{ mech_expense_form.record_in_inventory }}
+        </div>
+        <div id="quick-product-feedback" class="alert alert-success d-none" role="alert"></div>
+        <div id="mechexpenseitem_set-forms">
+            {{ mech_expense_item_formset.management_form }}
+            {% for form in mech_expense_item_formset %}
+                <div class="expense-item-form expense-item-card">
+                    {{ form.id }}
+                    <div class="inventory-section">
+                        <div class="inventory-fields">
+                            <div class="inventory-label">Product</div>
+                            <div class="form-group mb-0 inventory-dropdown">
+                                <div class="inventory-dropdown-trigger">
+                                    {% with selected_product=form.instance.inventory_product %}
+                                    <button type="button"
+                                            class="inventory-dropdown-toggle"
+                                            data-target-select="{{ form.inventory_product.auto_id }}"
+                                            data-placeholder="Select product"
+                                            aria-haspopup="listbox"
+                                            aria-expanded="false"
+                                            data-selected-text="{% if selected_product %}{{ selected_product.name }}{% if selected_product.sku %} ({{ selected_product.sku }}){% endif %}{% endif %}">
+                                        <span class="inventory-selected-text">
+                                            {% if selected_product %}
+                                                {{ selected_product.name }}{% if selected_product.sku %} ({{ selected_product.sku }}){% endif %}
+                                            {% else %}
+                                                Select product
+                                            {% endif %}
+                                        </span>
+                                    </button>
+                                    {% endwith %}
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-sm edit-product-button open-quick-product-modal"
+                                            data-select-id="{{ form.inventory_product.auto_id }}"
+                                            data-product-id="{{ form.inventory_product.value }}"
+                                        aria-label="Edit selected product">
+                                        Edit Product
+                                    </button>
+                                </div>
+                                <div class="inventory-dropdown-menu" role="listbox">
+                                    <div class="inventory-search-wrapper">
+                                        <input type="text"
+                                               class="form-control inventory-product-search"
+                                               placeholder="Search products"
+                                               data-target-select="{{ form.inventory_product.auto_id }}"
+                                               aria-label="Search products">
+                                    </div>
+                                    <div class="inventory-dropdown-options"></div>
+                                </div>
+                                {{ form.inventory_product }}
+                                {% if form.inventory_product.errors %}
+                                    {% for error in form.inventory_product.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <div class="d-none">
+                                {{ form.DELETE }}
+                            </div>
+                            <button type="button" class="btn btn-outline-danger btn-sm delete-row-btn" data-delete-target="{{ form.DELETE.id_for_label }}">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="manual-fields">
+                        <div class="manual-field part-no-field">
+                            {{ form.part_no|as_crispy_field }}
+                        </div>
+                        <div class="manual-field">
+                            {{ form.description|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="item-fields">
+                        <div>{{ form.qty|as_crispy_field }}</div>
+                        <div>{{ form.price|as_crispy_field }}</div>
+                        <div class="item-total" data-row-total>
+                            <span class="total-label">Total</span>
+                            <span class="total-value">$<span class="row-total">0.00</span></span>
+                        </div>
+                        <div class="item-actions">
+                            {% if form.create_inventory_product %}
+                                <div class="d-none">
+                                    {{ form.create_inventory_product|as_crispy_field }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <!-- Hidden empty form template -->
+        <div id="empty-form-template" style="display: none;">
+            <div class="expense-item-form expense-item-card">
+                <div class="inventory-section">
+                    <div class="inventory-fields">
+                        <div class="inventory-label">Product</div>
+                        <div class="form-group mb-0 inventory-dropdown">
+                            <div class="inventory-dropdown-trigger">
+                                <button type="button"
+                                        class="inventory-dropdown-toggle"
+                                        data-target-select="id_mechexpenseitem_set-__prefix__-inventory_product"
+                                        data-placeholder="Select product"
+                                        aria-haspopup="listbox"
+                                        aria-expanded="false">
+                                    <span class="inventory-selected-text">Select product</span>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm edit-product-button open-quick-product-modal"
+                                        data-select-id="id_mechexpenseitem_set-__prefix__-inventory_product"
+                                        aria-label="Edit selected product">Edit Product</button>
+                            </div>
+                            <div class="inventory-dropdown-menu" role="listbox">
+                                <div class="inventory-search-wrapper">
+                                    <input type="text"
+                                           class="form-control inventory-product-search"
+                                           placeholder="Search products"
+                                           data-target-select="id_mechexpenseitem_set-__prefix__-inventory_product"
+                                           aria-label="Search products">
+                                </div>
+                                <div class="inventory-dropdown-options"></div>
+                            </div>
+                            <select name="mechexpenseitem_set-__prefix__-inventory_product" class="form-control inventory-product-select" id="id_mechexpenseitem_set-__prefix__-inventory_product">
+                                <option value="">---------</option>
+                                {% for product in inventory_products %}
+                                    <option value="{{ product.id }}">{{ product.name }}{% if product.sku %} ({{ product.sku }}){% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <div class="d-none">
+                            <input type="checkbox" name="mechexpenseitem_set-__prefix__-DELETE" class="form-check-input delete-row-checkbox" id="id_mechexpenseitem_set-__prefix__-DELETE">
+                        </div>
+                        <button type="button" class="btn btn-outline-danger btn-sm delete-row-btn" data-delete-target="id_mechexpenseitem_set-__prefix__-DELETE">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="manual-fields">
+                    <div class="manual-field part-no-field">
+                        <label for="id_mechexpenseitem_set-__prefix__-part_no">Part no</label>
+                        <input type="text" name="mechexpenseitem_set-__prefix__-part_no" class="form-control" id="id_mechexpenseitem_set-__prefix__-part_no" placeholder="Enter part number">
+                    </div>
+                    <div class="manual-field">
+                        <label for="id_mechexpenseitem_set-__prefix__-description">Description</label>
+                        <textarea name="mechexpenseitem_set-__prefix__-description" class="form-control" id="id_mechexpenseitem_set-__prefix__-description" placeholder="Enter description" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="item-fields">
+                    <div>
+                        <label for="id_mechexpenseitem_set-__prefix__-qty">Qty</label>
+                        <input type="number" name="mechexpenseitem_set-__prefix__-qty" class="form-control" id="id_mechexpenseitem_set-__prefix__-qty" min="0" step="1" placeholder="Quantity">
+                    </div>
+                    <div>
+                        <label for="id_mechexpenseitem_set-__prefix__-price">Price</label>
+                        <input type="number" name="mechexpenseitem_set-__prefix__-price" class="form-control" id="id_mechexpenseitem_set-__prefix__-price" min="0" step="0.01" placeholder="Price">
+                    </div>
+                    <div class="item-total" data-row-total>
+                        <span class="total-label">Total</span>
+                        <span class="total-value">$<span class="row-total">0.00</span></span>
+                    </div>
+                    <div class="item-actions d-none">
+                        <input type="checkbox" name="mechexpenseitem_set-__prefix__-create_inventory_product" class="form-check-input create-inventory-checkbox" id="id_mechexpenseitem_set-__prefix__-create_inventory_product" checked>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted small">Totals update automatically as you edit lines.</div>
+            <div class="summary-box">
+                <div>
+                    <div class="text-muted small">Subtotal</div>
+                    <div id="subtotal-amount" class="fw-bold">$0.00</div>
+                </div>
+                <div>
+                    <div class="text-muted small">Tax <span id="tax-label"></span></div>
+                    <div id="tax-amount" class="fw-bold">$0.00</div>
+                </div>
+                <div>
+                    <div class="text-muted small">Total</div>
+                    <div id="total-amount" class="fw-bold">$0.00</div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <div id="payment-summary" class="alert alert-info d-none" role="status">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-credit-card mr-2"></i>
+                <div>
+                    <div class="mb-0"><strong>Recording payment:</strong> <span id="payment-summary-amount"></span> via <span id="payment-summary-method"></span></div>
+                    <div id="payment-summary-notes" class="text-muted small"></div>
+                </div>
+            </div>
+        </div>
+
+        <input type="hidden" name="record_payment" id="record-payment-flag" value="false">
+        <input type="hidden" name="payment_amount" id="payment-amount-hidden" value="">
+        <input type="hidden" name="payment_method" id="payment-method-hidden" value="">
+        <input type="hidden" name="payment_notes" id="payment-notes-hidden" value="">
+        <input type="hidden" name="payment_create_cheque" id="payment-create-cheque" value="false">
+        <input type="hidden" name="payment_cheque_number" id="payment-cheque-number-hidden" value="">
+        <input type="hidden" name="payment_cheque_date" id="payment-cheque-date-hidden" value="">
+        <input type="hidden" name="payment_bank_account" id="payment-bank-account-hidden" value="">
+        <input type="hidden" name="payment_cheque_memo" id="payment-cheque-memo-hidden" value="">
+
+        <div class="ui-panel">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-4 flex-wrap">
+                    <div class="paid-toggle-row">
+                        <label class="toggle-switch mb-0">
+                            {{ mech_expense_form.paid }}
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </label>
+                        <span class="fw-semibold">Paid</span>
+                    </div>
+                    <div class="paid-toggle-row">
+                        <span class="fw-semibold me-2">Tax Inclusive</span>
+                        <label class="toggle-switch mb-0">
+                            {{ mech_expense_form.tax_included }}
+                            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    {% if not is_edit %}
+                        <button type="submit" name="save_continue" class="pill-action">Save &amp; Add Another</button>
+                    {% endif %}
+                    <button type="submit" name="submit_expense" class="pill-action pill-action-primary">{% if is_edit %}Update Purchase{% else %}Save Purchase{% endif %}</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Category Modal -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'accounts:add_category' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="addCategoryModalLabel">Add Category</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {{ category_form.as_p }}
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Save Category</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Add Supplier Modal -->
+<div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'accounts:add_supplier' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="addSupplierModalLabel">Add Supplier</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {{ supplier_form.as_p }}
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Save Supplier</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Add Product Modal -->
+<div class="modal fade" id="quickAddProductModal" tabindex="-1" role="dialog" aria-labelledby="quickAddProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <form id="quick-add-product-form" method="post" action="{% url 'accounts:quick_create_inventory_product' %}">
+        {% csrf_token %}
+        <input type="hidden" name="product_id" id="quick_product_id" value="">
+        <input type="hidden" name="supplier_name" id="quick_product_supplier_name" value="">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="quickAddProductModalLabel">Add Inventory Product</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="quick-product-errors" class="alert alert-danger d-none" role="alert"></div>
+          <div class="form-group">
+            <label for="quick_product_name">{{ quick_product_form.name.label }}</label>
+            {{ quick_product_form.name }}
+          </div>
+          <div class="form-group">
+            <label for="quick_product_sku">{{ quick_product_form.sku.label }}</label>
+            {{ quick_product_form.sku }}
+          </div>
+          <div class="form-group">
+            <label for="quick_product_description">{{ quick_product_form.description.label }}</label>
+            {{ quick_product_form.description }}
+          </div>
+          <div class="form-group">
+            <label for="quick_product_category">{{ quick_product_form.category.label }}</label>
+            {{ quick_product_form.category }}
+          </div>
+          <div class="form-group">
+            <label for="quick_product_cost_price">{{ quick_product_form.cost_price.label }}</label>
+            {{ quick_product_form.cost_price }}
+          </div>
+          <div class="form-group">
+            <label for="quick_product_sale_price">{{ quick_product_form.sale_price.label }}</label>
+            {{ quick_product_form.sale_price }}
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success" id="quick-product-submit">Save Product</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Inline Record Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" role="dialog" aria-labelledby="paymentModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content shadow-lg">
+      <form id="inline-payment-form">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="paymentModalLabel"><i class="fas fa-credit-card"></i> Record Payment</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted mb-3">Capture payment details for this expense.</p>
+          <div class="alert alert-danger d-none" id="payment-error" role="alert"></div>
+          <div class="form-group">
+            <label for="payment-amount">Payment Amount</label>
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <span class="input-group-text">$</span>
+              </div>
+              <input type="number" step="0.01" min="0" class="form-control" id="payment-amount" required>
+            </div>
+            <small class="form-text text-muted">Defaults to the current total for this expense.</small>
+          </div>
+          <div class="form-group">
+            <label for="payment-method">Payment Method</label>
+            <select class="form-control" id="payment-method" required>
+              <option value="Cash">Cash</option>
+              <option value="Cheque">Cheque</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Credit Card">Credit Card</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div id="cheque-fields" class="border rounded p-3 mb-3 d-none">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-semibold">Cheque Details</div>
+              <span class="text-muted small">A cheque record will be created.</span>
+            </div>
+            <div class="form-group">
+              <label for="payment-cheque-number">Cheque #</label>
+              <input type="text" class="form-control" id="payment-cheque-number" placeholder="Cheque number">
+            </div>
+            <div class="form-group">
+              <label for="payment-cheque-date">Cheque Date</label>
+              <input type="date" class="form-control" id="payment-cheque-date">
+            </div>
+            <div class="form-group">
+              <label for="payment-bank-account">Bank Account</label>
+              <div class="input-group">
+                <select class="form-control" id="payment-bank-account">
+                  <option value="">Select bank account</option>
+                  {% for account in bank_accounts %}
+                    <option value="{{ account.display_label }}">{{ account.display_label }}</option>
+                  {% endfor %}
+                </select>
+                <div class="input-group-append">
+                  <button class="btn btn-outline-secondary" type="button" id="add-bank-account-btn">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group mb-0">
+              <label for="payment-cheque-memo">Cheque Memo (optional)</label>
+              <textarea class="form-control" id="payment-cheque-memo" rows="2" placeholder="Memo for this cheque"></textarea>
+            </div>
+          </div>
+          <div class="form-group mb-0">
+            <label for="payment-notes">Notes (optional)</label>
+            <textarea class="form-control" id="payment-notes" rows="3" placeholder="Add a note about this payment..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="bankAccountModal" tabindex="-1" aria-labelledby="bankAccountModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="bank-account-form">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="bankAccountModalLabel"><i class="fas fa-university mr-2"></i>Add Bank Account</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger d-none" id="bank-account-error" role="alert"></div>
+          <div class="form-group">
+            <label for="bank-account-name">Account Name</label>
+            <input type="text" class="form-control" id="bank-account-name" name="name" placeholder="e.g. Operating account" required>
+          </div>
+          <div class="form-group mb-0">
+            <label for="bank-account-number">Account Number (optional)</label>
+            <input type="text" class="form-control" id="bank-account-number" name="account_number" placeholder="Optional">
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+
+            <!-- Include jQuery if not already included in customer_portal_base.html -->
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script>
+const provinceTaxRates = JSON.parse('{{ province_tax_rates|default:"{}"|escapejs }}');
+const inventoryProducts = JSON.parse('{{ inventory_products_data|default:"{}"|escapejs }}');
+const vendorProductMap = JSON.parse('{{ vendor_product_map|default:"{}"|escapejs }}');
+const allInventoryProductIds = JSON.parse('{{ all_inventory_product_ids|default:"[]"|escapejs }}');
+const UNASSIGNED_VENDOR_KEY = '__unassigned__';
+let activeInventorySelectId = null;
+
+let quickProductFormElement = null;
+let quickProductIdInput = null;
+let quickProductModalElement = null;
+let quickProductEditingProductId = null;
+
+function updatePartInfoForRow(formRow) {
+    if (!formRow) {
+        return;
+    }
+    const select = formRow.querySelector('.inventory-product-select');
+    const partNoDisplay = formRow.querySelector('.part-no-display');
+    const descriptionDisplay = formRow.querySelector('.description-display');
+    const partNoInput = formRow.querySelector('input[name$="-part_no"]');
+    const descriptionInput = formRow.querySelector('textarea[name$="-description"]') || formRow.querySelector('input[name$="-description"]');
+    const productId = select ? select.value : '';
+    const productData = productId && inventoryProducts[productId] ? inventoryProducts[productId] : null;
+    const partNoValue = productData && productData.sku ? productData.sku : (partNoInput ? partNoInput.value : '');
+    const descriptionValue = productData && productData.description ? productData.description : (descriptionInput ? descriptionInput.value : '');
+    if (partNoInput && productData && productData.sku && !partNoInput.value) {
+        partNoInput.value = productData.sku;
+    }
+    if (descriptionInput && productData && productData.description && !descriptionInput.value) {
+        descriptionInput.value = productData.description;
+    }
+    if (partNoDisplay) {
+        partNoDisplay.textContent = `Part #: ${partNoValue || '-'}`;
+    }
+    if (descriptionDisplay) {
+        descriptionDisplay.textContent = `Description: ${descriptionValue || '-'}`;
+    }
+    const editButton = formRow.querySelector('.open-quick-product-modal');
+    if (editButton) {
+        editButton.dataset.productId = productId;
+    }
+}
+
+function syncAllPartInfoDisplays() {
+    getExpenseFormRows().forEach(updatePartInfoForRow);
+}
+
+function prepareQuickProductForm(productId) {
+    if (!quickProductFormElement || !quickProductModalElement) {
+        return;
+    }
+    quickProductFormElement.reset();
+    if (quickProductIdInput) {
+        quickProductIdInput.value = productId || '';
+    }
+    quickProductEditingProductId = productId || null;
+    const modalTitle = document.getElementById('quickAddProductModalLabel');
+    if (modalTitle) {
+        modalTitle.textContent = productId ? 'Edit Inventory Product' : 'Add Inventory Product';
+    }
+    const nameInput = quickProductFormElement.querySelector('#quick_product_name');
+    const skuInput = quickProductFormElement.querySelector('#quick_product_sku');
+    const descriptionInput = quickProductFormElement.querySelector('#quick_product_description');
+    const costInput = quickProductFormElement.querySelector('#quick_product_cost_price');
+    const saleInput = quickProductFormElement.querySelector('#quick_product_sale_price');
+    const categorySelect = quickProductFormElement.querySelector('#quick_product_category');
+    if (productId && inventoryProducts[productId]) {
+        const productData = inventoryProducts[productId];
+        if (nameInput) nameInput.value = productData.name || '';
+        if (skuInput) skuInput.value = productData.sku || '';
+        if (descriptionInput) descriptionInput.value = productData.description || '';
+        if (costInput) {
+            costInput.value = productData.cost_price != null ? productData.cost_price : '';
+        }
+        if (saleInput) {
+            saleInput.value = productData.sale_price != null ? productData.sale_price : '';
+        }
+        if (categorySelect) {
+            categorySelect.value = productData.category_id || '';
+        }
+    } else {
+        if (categorySelect) {
+            categorySelect.value = '';
+        }
+        if (saleInput) {
+            saleInput.value = '';
+        }
+    }
+    if (quickProductModalElement) {
+        quickProductModalElement.modal('show');
+    }
+}
+
+function refreshInventoryDropdownForProduct(productId) {
+    if (!productId) {
+        return;
+    }
+    document.querySelectorAll('.inventory-product-select').forEach(select => {
+        const option = select.querySelector(`option[value="${productId}"]`);
+        if (option && inventoryProducts[productId]) {
+            option.textContent = inventoryProducts[productId].display_name || inventoryProducts[productId].name;
+        }
+        if (select.value === productId) {
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the form with existing data
+    toggleFields();
+    toggleFrequencyField();
+    toggleCustomTaxField();
+    updateProvinceTaxRate();
+    calculateTotalAmount();
+    attachInventoryProductListeners();
+    syncAllPartInfoDisplays();
+    initializeInventoryDropdowns();
+    attachCreateInventoryCheckboxListeners();
+    attachDeleteCheckboxListeners();
+    attachDeleteRowButtons();
+    attachQuickAddProductButtons();
+    attachAmountListeners();
+    initializeQuickProductForm();
+    updateQuickAddButtonTargets();
+    initializeSupplierDropdown();
+
+    quickProductFormElement = document.getElementById('quick-add-product-form');
+    quickProductIdInput = document.getElementById('quick_product_id');
+    quickProductModalElement = $('#quickAddProductModal');
+
+    // Event listeners
+    const categoryField = document.getElementById('id_categorie');
+    if (categoryField) {
+        categoryField.addEventListener('change', toggleFields);
+    }
+
+    const provinceField = document.getElementById('id_province');
+    if (provinceField) {
+        provinceField.addEventListener('change', function() {
+            toggleCustomTaxField();
+            updateProvinceTaxRate();
+            calculateTotalAmount();
+        });
+    }
+
+    const customTaxField = document.getElementById('id_custom_tax_rate');
+    if (customTaxField) {
+        customTaxField.addEventListener('input', function() {
+            updateProvinceTaxRate();
+            calculateTotalAmount();
+        });
+    }
+
+    const recordInventoryCheckbox = document.getElementById('id_record_in_inventory');
+    if (recordInventoryCheckbox) {
+        recordInventoryCheckbox.addEventListener('change', function() {
+            toggleInventoryFields(getSelectedCategory());
+        });
+    }
+
+    const openProductButton = document.getElementById('open-quick-add-product-btn');
+    if (openProductButton) {
+        openProductButton.addEventListener('click', function() {
+            activeInventorySelectId = null;
+            prepareQuickProductForm(null);
+        });
+    }
+
+    const isRecurringField = document.getElementById('id_is_recurring');
+    if (isRecurringField) {
+        isRecurringField.addEventListener('change', toggleFrequencyField);
+    }
+
+    const addExpenseButton = document.getElementById('add-expense-item');
+    if (addExpenseButton) {
+        addExpenseButton.addEventListener('click', addForm);
+    }
+
+    const vendorField = document.getElementById('id_vendor');
+    if (vendorField) {
+        vendorField.addEventListener('input', applyVendorFilter);
+        vendorField.addEventListener('change', applyVendorFilter);
+    }
+
+    applyVendorFilter();
+    initializePaymentModal();
+
+    const taxIncludedField = document.getElementById('id_tax_included');
+    if (taxIncludedField) {
+        taxIncludedField.addEventListener('change', calculateTotalAmount);
+    }
+
+});
+
+function getExpenseFormRows() {
+    return document.querySelectorAll('#mechexpenseitem_set-forms .expense-item-form');
+}
+
+// Function to add a new expense item form
+function addForm() {
+    const totalFormsInput = document.getElementById('id_mechexpenseitem_set-TOTAL_FORMS');
+    const currentFormCount = parseInt(totalFormsInput.value, 10) || 0;
+    const emptyFormTemplate = document.getElementById('empty-form-template').innerHTML;
+
+    // Replace __prefix__ with currentFormCount
+    const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, currentFormCount);
+
+    // Append the new form
+    document.getElementById('mechexpenseitem_set-forms').insertAdjacentHTML('beforeend', newFormHtml);
+
+    const newFormRow = document.querySelector('#mechexpenseitem_set-forms .expense-item-form:last-child');
+
+    // Update the total forms count
+    totalFormsInput.value = currentFormCount + 1;
+
+    // Reapply field toggling if necessary
+    toggleFields();
+
+    attachInventoryProductListeners();
+    filterInventoryProductsByVendor(getCurrentVendorValue(), newFormRow);
+    attachCreateInventoryCheckboxListeners();
+    attachDeleteCheckboxListeners();
+    attachDeleteRowButtons();
+    attachQuickAddProductButtons();
+    updateQuickAddButtonTargets();
+    attachAmountListenersToForm(newFormRow);
+    calculateTotalAmount();
+    updatePartInfoForRow(newFormRow);
+
+    // If the user deletes the new row immediately, keep its fields optional.
+    const deleteCheckbox = newFormRow.querySelector('input[name$="-DELETE"]');
+    if (deleteCheckbox) {
+        deleteCheckbox.addEventListener('change', () => {
+            ['part_no', 'description', 'qty', 'price'].forEach(name => {
+                const field = newFormRow.querySelector(`[name$="-${name}"]`);
+                if (!field) return;
+                if (deleteCheckbox.checked) {
+                    field.required = false;
+                }
+            });
+        });
+    }
+}
+
+function getCurrentVendorValue() {
+    const vendorField = document.getElementById('id_vendor');
+    return vendorField ? vendorField.value : '';
+}
+
+function getSelectedCategory() {
+    const categoryField = document.getElementById('id_categorie');
+    return categoryField ? categoryField.value : '';
+}
+
+const NON_INVENTORY_CATEGORIES = new Set(['rent', 'lease', 'installment', 'insurance', 'fuel', 'labour']);
+const INVENTORY_CATEGORIES = new Set(['parts', 'supplies', 'tools']);
+
+function normalizeCategory(value) {
+    return (value || '').trim().toLowerCase();
+}
+
+function shouldAutoDisableInventory(category) {
+    return NON_INVENTORY_CATEGORIES.has(normalizeCategory(category));
+}
+
+function shouldAutoEnableInventory(category) {
+    return INVENTORY_CATEGORIES.has(normalizeCategory(category));
+}
+
+function normalizeVendorName(value) {
+    return (value || '').trim().toLowerCase();
+}
+
+function applyVendorFilter() {
+    filterInventoryProductsByVendor(getCurrentVendorValue());
+}
+
+function getAllowedProductIdsForVendor() {
+    return Array.isArray(allInventoryProductIds) ? allInventoryProductIds.slice() : [];
+}
+
+function buildProductLabel(productData) {
+    if (!productData) {
+        return '';
+    }
+    if (productData.sku) {
+        return `${productData.name} (${productData.sku})`;
+    }
+    return productData.name || '';
+}
+
+function setVendorValue(value) {
+    const hiddenInput = document.getElementById('id_vendor');
+    if (hiddenInput) {
+        hiddenInput.value = value || '';
+        hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+}
+
+function getTaxRateAndLabel() {
+    const provinceField = document.getElementById('id_province');
+    const customTaxInput = document.getElementById('id_custom_tax_rate');
+    const province = provinceField ? provinceField.value : '';
+    let rate = 0;
+    let label = '';
+
+    if (province === 'CU') {
+        const customValue = parseFloat(customTaxInput && customTaxInput.value ? customTaxInput.value : 0);
+        if (!isNaN(customValue) && customValue > 0) {
+            rate = customValue / 100;
+            label = `Custom ${customValue.toFixed(2)}%`;
+        }
+    } else if (province) {
+        const mappedRate = provinceTaxRates[province];
+        if (typeof mappedRate !== 'undefined') {
+            rate = parseFloat(mappedRate) || 0;
+            label = `${province.toUpperCase()} ${(rate * 100).toFixed(2)}%`;
+        }
+    }
+
+    return { rate, label };
+}
+
+function rebuildInventorySelectOptions(select, allowedIds) {
+    const previousValue = select.value;
+    const allowedList = Array.isArray(allowedIds) ? allowedIds.slice() : [];
+    const allowedSet = new Set(allowedList.map(String));
+    const fragment = document.createDocumentFragment();
+    const placeholderOption = document.createElement('option');
+    placeholderOption.value = '';
+    placeholderOption.textContent = '---------';
+    fragment.appendChild(placeholderOption);
+
+    allowedList.forEach(id => {
+        const productData = inventoryProducts[String(id)];
+        if (!productData) {
+            return;
+        }
+        const option = document.createElement('option');
+        option.value = String(id);
+        option.textContent = buildProductLabel(productData);
+        fragment.appendChild(option);
+    });
+
+    select.innerHTML = '';
+    select.appendChild(fragment);
+
+    if (previousValue && allowedSet.has(String(previousValue))) {
+        select.value = previousValue;
+    } else {
+        select.value = '';
+    }
+}
+
+function filterInventoryProductsByVendor(vendorValue, rootElement) {
+    const allowedIds = getAllowedProductIdsForVendor(vendorValue);
+    const base = rootElement || document;
+    const selects = base.querySelectorAll('.inventory-product-select');
+    selects.forEach(select => {
+        if (isInEmptyFormTemplate(select)) {
+            return;
+        }
+        const previousValue = select.value;
+        rebuildInventorySelectOptions(select, allowedIds);
+        const currentValue = select.value;
+        if (previousValue !== currentValue) {
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const dropdown = select.closest('.inventory-dropdown');
+        if (dropdown) {
+            initializeInventoryDropdowns(dropdown);
+        }
+    });
+}
+
+// Function to calculate the total amount
+function calculateTotalAmount() {
+    let subtotalAmount = 0;
+    let taxAmount = 0;
+    let totalAmount = 0;
+
+    const provinceInfo = getTaxRateAndLabel();
+    const taxRate = provinceInfo.rate;
+    const taxIncluded = document.getElementById('id_tax_included') ? document.getElementById('id_tax_included').checked : false;
+
+    getExpenseFormRows().forEach(form => {
+        const deleteInput = form.querySelector('input[name$="-DELETE"]');
+        if (form.style.display === 'none' || (deleteInput && deleteInput.checked) || form.classList.contains('marked-for-deletion')) {
+            return;
+        }
+        const qtyInput = form.querySelector('input[name$="-qty"]');
+        const priceInput = form.querySelector('input[name$="-price"]');
+        const qty = parseFloat(qtyInput && qtyInput.value ? qtyInput.value : 0) || 0;
+        const price = parseFloat(priceInput && priceInput.value ? priceInput.value : 0) || 0;
+        const lineGross = qty * price;
+        let lineNet = lineGross;
+        let lineTax = 0;
+
+        if (taxRate > 0) {
+            if (taxIncluded) {
+                lineNet = lineGross / (1 + taxRate);
+                lineTax = lineGross - lineNet;
+            } else {
+                lineTax = lineNet * taxRate;
+            }
+        }
+
+        const displayGross = taxIncluded ? lineGross : lineNet + lineTax;
+
+        subtotalAmount += lineNet;
+        taxAmount += lineTax;
+        totalAmount += displayGross;
+
+        const rowTotalEl = form.querySelector('[data-row-total] .row-total');
+        if (rowTotalEl) {
+            rowTotalEl.textContent = displayGross.toFixed(2);
+        }
+    });
+
+    const subtotalDisplay = document.getElementById('subtotal-amount');
+    if (subtotalDisplay) {
+        subtotalDisplay.innerText = formatCurrency(subtotalAmount);
+    }
+    const taxDisplay = document.getElementById('tax-amount');
+    if (taxDisplay) {
+        taxDisplay.innerText = formatCurrency(taxAmount);
+    }
+    const totalDisplay = document.getElementById('total-amount');
+    if (totalDisplay) {
+        totalDisplay.innerText = formatCurrency(totalAmount);
+    }
+    const headerTotal = document.getElementById('header-total-amount');
+    if (headerTotal) {
+        headerTotal.innerText = formatCurrency(totalAmount);
+    }
+
+    const taxLabel = document.getElementById('tax-label');
+    if (taxLabel) {
+        taxLabel.textContent = provinceInfo.label ? `(${provinceInfo.label})` : '';
+    }
+}
+
+function attachDeleteCheckboxListeners() {
+    document.querySelectorAll('#mechexpenseitem_set-forms input[name$="-DELETE"]').forEach(checkbox => {
+        if (checkbox.dataset.listenerAttached === 'true') {
+            if (checkbox.checked) {
+                checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            return;
+        }
+        checkbox.addEventListener('change', function(event) {
+            const formRow = event.target.closest('.expense-item-form');
+            if (!formRow) {
+                return;
+            }
+            if (event.target.checked) {
+                formRow.classList.add('marked-for-deletion');
+            } else {
+                formRow.classList.remove('marked-for-deletion');
+            }
+
+            formRow.querySelectorAll('input, select, textarea').forEach(field => {
+                if (field === event.target) {
+                    return;
+                }
+                if (event.target.checked) {
+                    if (field.required) {
+                        field.dataset.wasRequired = 'true';
+                        field.required = false;
+                    }
+                } else if (field.dataset.wasRequired === 'true') {
+                    field.required = true;
+                    delete field.dataset.wasRequired;
+                }
+            });
+
+            calculateTotalAmount();
+        });
+        checkbox.dataset.listenerAttached = 'true';
+        if (checkbox.checked) {
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+}
+
+// Function to format a number as currency
+function formatCurrency(value) {
+    return "$" + value.toFixed(2);
+}
+
+function attachAmountListeners() {
+    getExpenseFormRows().forEach(formRow => {
+        attachAmountListenersToForm(formRow);
+    });
+}
+
+function attachAmountListenersToForm(formRow) {
+    if (!formRow) {
+        return;
+    }
+    const qtyInput = formRow.querySelector('input[name$="-qty"]');
+    const priceInput = formRow.querySelector('input[name$="-price"]');
+    [qtyInput, priceInput].forEach(input => {
+        if (!input || input.dataset.amountListenerAttached === 'true') {
+            return;
+        }
+        input.addEventListener('input', calculateTotalAmount);
+        input.addEventListener('change', calculateTotalAmount);
+        input.dataset.amountListenerAttached = 'true';
+    });
+}
+
+// Function to toggle fields based on selected category
+function toggleFields() {
+    const selectedCategory = getSelectedCategory();
+    togglePartNoField(selectedCategory);
+    toggleOdometerField(selectedCategory);
+    toggleDateRangeField(selectedCategory);
+    toggleInventoryFields(selectedCategory);
+}
+
+// Function to toggle Part No field
+function togglePartNoField(selectedCategory) {
+    const showPartNoCategories = new Set(['Parts', 'Supplies', 'Miscellaneous', 'Tools']);
+    const showPartNo = showPartNoCategories.has(selectedCategory);
+    document.querySelectorAll('#mechexpenseitem_set-forms .part-no-field').forEach(field => {
+        field.style.display = showPartNo ? 'block' : 'none';
+        const input = field.querySelector('input');
+        if (input) {
+            input.required = showPartNo;
+            if (!showPartNo) {
+                input.value = '';
+            }
+        }
+    });
+}
+
+// Function to toggle Odometer Reading field
+function toggleOdometerField(selectedCategory) {
+    const odometerField = document.getElementById('odometer-reading-field');
+    const odometerInput = document.getElementById('id_odometer_reading');
+    const unitNumberInput = document.getElementById('id_unit_number');
+    if (!odometerField) {
+        return;
+    }
+    if (selectedCategory === 'Fuel') {
+        odometerField.style.display = 'block';
+        if (odometerInput) {
+            odometerInput.required = true;
+        }
+        if (unitNumberInput) {
+            unitNumberInput.required = false;
+        }
+    } else {
+        odometerField.style.display = 'none';
+        if (odometerInput) {
+            odometerInput.required = false;
+            odometerInput.value = ''; // Clear the input if hiding
+        }
+        if (unitNumberInput) {
+            unitNumberInput.required = false;
+            unitNumberInput.value = '';
+        }
+    }
+}
+
+// Function to toggle Date Range fields
+function toggleDateRangeField(selectedCategory) {
+    const dateRangeField = document.getElementById('date-range-field');
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    if (!dateRangeField) {
+        return;
+    }
+    if (['Rent', 'Insurance'].includes(selectedCategory)) {
+        dateRangeField.style.display = 'block';
+        if (startDateInput && endDateInput) {
+            startDateInput.required = true;
+            endDateInput.required = true;
+        }
+    } else {
+        dateRangeField.style.display = 'none';
+        if (startDateInput && endDateInput) {
+            startDateInput.required = false;
+            endDateInput.required = false;
+            startDateInput.value = ''; // Clear the inputs if hiding
+            endDateInput.value = '';
+        }
+    }
+}
+
+// Function to toggle frequency field based on is_recurring checkbox
+function toggleFrequencyField() {
+    const isRecurringField = document.getElementById('id_is_recurring');
+    if (!isRecurringField) {
+        return;
+    }
+    const isRecurring = isRecurringField.checked;
+    const frequencyField = document.getElementById('frequency-field');
+    const frequencyInput = document.getElementById('id_frequency');
+    if (isRecurring) {
+        frequencyField.style.display = 'block';
+        if (frequencyInput) {
+            frequencyInput.required = true;
+        }
+    } else {
+        frequencyField.style.display = 'none';
+        if (frequencyInput) {
+            frequencyInput.required = false;
+            frequencyInput.value = ''; // Clear the input if hiding
+        }
+    }
+}
+
+function toggleCustomTaxField() {
+    const provinceField = document.getElementById('id_province');
+    const customTaxContainer = document.getElementById('custom-tax-container');
+    const customTaxInput = document.getElementById('id_custom_tax_rate');
+    if (!provinceField || !customTaxContainer) {
+        return;
+    }
+    if (provinceField.value === 'CU') {
+        customTaxContainer.style.display = 'block';
+    } else {
+        customTaxContainer.style.display = 'none';
+        if (customTaxInput) {
+            customTaxInput.value = '';
+        }
+    }
+}
+
+function updateProvinceTaxRate() {
+    const provinceField = document.getElementById('id_province');
+    const taxDisplay = document.getElementById('province-tax-rate');
+    const customTaxInput = document.getElementById('id_custom_tax_rate');
+    if (!provinceField || !taxDisplay) {
+        return;
+    }
+    const selectedProvince = provinceField.value;
+    if (selectedProvince === 'CU') {
+        const customValue = customTaxInput && customTaxInput.value ? customTaxInput.value : '';
+        taxDisplay.textContent = customValue ? `Custom tax rate: ${customValue}%` : 'Custom tax rate selected.';
+    } else {
+        const rate = provinceTaxRates[selectedProvince];
+        if (typeof rate !== 'undefined') {
+            taxDisplay.textContent = `Tax rate: ${(rate * 100).toFixed(2)}%`;
+        } else {
+            taxDisplay.textContent = '';
+        }
+    }
+}
+
+function toggleInventoryFields(selectedCategory) {
+    const recordInventoryCheckbox = document.getElementById('id_record_in_inventory');
+    if (!recordInventoryCheckbox) {
+        return;
+    }
+    const shouldShow = shouldAutoEnableInventory(selectedCategory);
+    recordInventoryCheckbox.checked = shouldShow;
+    const lineItemsPanel = document.getElementById('line-items-panel');
+    if (lineItemsPanel) {
+        lineItemsPanel.classList.toggle('inventory-mode', shouldShow);
+    }
+    document.querySelectorAll('#mechexpenseitem_set-forms .inventory-fields').forEach(field => {
+        field.style.display = shouldShow ? 'block' : 'none';
+        if (!shouldShow) {
+            const select = field.querySelector('select');
+            if (select) {
+                select.value = '';
+                filterInventoryOptions(select, '');
+            }
+            const searchInput = field.querySelector('.inventory-product-search');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            const dropdownToggle = field.querySelector('.inventory-dropdown-toggle');
+            if (dropdownToggle) {
+            const placeholder = dropdownToggle.dataset.placeholder || 'Select product';
+                const textElement = dropdownToggle.querySelector('.inventory-selected-text');
+                if (textElement) {
+                    textElement.textContent = placeholder;
+                }
+                dropdownToggle.classList.remove('has-selection');
+            }
+        }
+    });
+    updateDetailsModeText(shouldShow);
+}
+
+function updateDetailsModeText(isInventoryMode) {
+    const title = document.getElementById('details-mode-title');
+    const subtitle = document.getElementById('details-mode-subtitle');
+    const normalizedCategory = normalizeCategory(getSelectedCategory());
+    if (title) {
+        title.textContent = 'Line items';
+    }
+    if (subtitle) {
+        if (isInventoryMode) {
+            subtitle.textContent = 'Select inventory items, quantities, and prices. Stock updates on save.';
+        } else if (normalizedCategory === 'fuel') {
+            subtitle.textContent = 'Record fuel purchases and enter the unit number and odometer above.';
+        } else if (['rent', 'insurance'].includes(normalizedCategory)) {
+            subtitle.textContent = 'Add line items and include the coverage dates above.';
+        } else {
+            subtitle.textContent = 'Enter descriptions, quantities, and prices for this expense.';
+        }
+    }
+}
+
+function syncDetailsToggleButtons(isInventoryMode) {
+    const toggle = document.querySelector('[data-details-toggle]');
+    if (!toggle) {
+        return;
+    }
+    toggle.querySelectorAll('.details-option').forEach(button => {
+        const isItem = button.dataset.mode === 'item';
+        const isActive = isInventoryMode ? isItem : !isItem;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+}
+
+function initializeDetailsToggle() {
+    const toggle = document.querySelector('[data-details-toggle]');
+    const recordInventoryCheckbox = document.getElementById('id_record_in_inventory');
+    if (!toggle || !recordInventoryCheckbox) {
+        return;
+    }
+    toggle.querySelectorAll('.details-option').forEach(button => {
+        button.addEventListener('click', () => {
+            recordInventoryCheckbox.checked = button.dataset.mode === 'item';
+            recordInventoryCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    });
+    syncDetailsToggleButtons(recordInventoryCheckbox.checked);
+    updateDetailsModeText(recordInventoryCheckbox.checked);
+}
+
+function isInEmptyFormTemplate(element) {
+    return !!(element && element.closest('#empty-form-template'));
+}
+
+function attachInventoryProductListeners() {
+    document.querySelectorAll('#mechexpenseitem_set-forms .inventory-product-select').forEach(select => {
+        if (isInEmptyFormTemplate(select)) {
+            return;
+        }
+        if (select.dataset.listenerAttached === 'true') {
+            return;
+        }
+        select.addEventListener('change', handleInventorySelection);
+        select.dataset.listenerAttached = 'true';
+    });
+}
+
+function closeAllInventoryDropdowns(exceptMenu = null) {
+    document.querySelectorAll('.inventory-dropdown-menu.show').forEach(menu => {
+        if (menu === exceptMenu) {
+            return;
+        }
+        menu.classList.remove('show');
+        const toggle = menu.parentElement.querySelector('.inventory-dropdown-toggle');
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', 'false');
+        }
+    });
+}
+
+function initializeSupplierDropdown() {
+    const container = document.querySelector('[data-supplier-dropdown]');
+    if (!container) return;
+
+    const toggle = container.querySelector('.inventory-dropdown-toggle');
+    const menu = container.querySelector('.inventory-dropdown-menu');
+    const searchInput = container.querySelector('.supplier-search');
+    const options = Array.from(container.querySelectorAll('.supplier-option'));
+    const hiddenInput = document.getElementById('id_vendor');
+    const placeholder = toggle ? (toggle.dataset.placeholder || 'Start typing a supplier name') : 'Start typing a supplier name';
+
+    const updateToggleText = (value) => {
+        const textEl = toggle.querySelector('.inventory-selected-text');
+        if (!textEl) return;
+        textEl.textContent = value || placeholder;
+        toggle.classList.toggle('has-selection', !!value);
+    };
+
+    const closeMenu = () => {
+        if (menu) {
+            menu.classList.remove('show');
+            toggle.setAttribute('aria-expanded', 'false');
+        }
+    };
+
+    const openMenu = () => {
+        closeAllInventoryDropdowns(menu);
+        if (menu) {
+            menu.classList.add('show');
+            toggle.setAttribute('aria-expanded', 'true');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.focus();
+            }
+            options.forEach(btn => btn.style.display = 'block');
+        }
+    };
+
+    const applySelection = (value) => {
+        setVendorValue(value);
+        applyVendorFilter();
+        updateToggleText(value);
+        closeMenu();
+    };
+
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            if (menu && menu.classList.contains('show')) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const q = (e.target.value || '').toLowerCase();
+            options.forEach(btn => {
+                const text = (btn.dataset.value || btn.textContent || '').toLowerCase();
+                btn.style.display = text.includes(q) ? 'block' : 'none';
+            });
+        });
+    }
+
+    options.forEach(btn => {
+        btn.addEventListener('click', () => applySelection(btn.dataset.value || btn.textContent.trim()));
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!container.contains(event.target)) {
+            closeMenu();
+        }
+    });
+
+    const initialValue = hiddenInput ? hiddenInput.value : '';
+    updateToggleText(initialValue);
+}
+
+function initializeInventoryDropdowns(root) {
+    const base = root || document;
+    let containers = [];
+    if (base instanceof Element && base.classList && base.classList.contains('inventory-dropdown')) {
+        containers = [base];
+    } else if (
+        base instanceof Element ||
+        base instanceof Document ||
+        (typeof DocumentFragment !== 'undefined' && base instanceof DocumentFragment)
+    ) {
+        containers = Array.from(base.querySelectorAll('.inventory-dropdown'));
+    } else {
+        containers = Array.from(document.querySelectorAll('.inventory-dropdown'));
+    }
+
+    containers.forEach(container => {
+        if (isInEmptyFormTemplate(container)) {
+            return;
+        }
+        const select = container.querySelector('.inventory-product-select');
+        const toggle = container.querySelector('.inventory-dropdown-toggle');
+        const menu = container.querySelector('.inventory-dropdown-menu');
+        const searchInput = container.querySelector('.inventory-product-search');
+        const optionsContainer = container.querySelector('.inventory-dropdown-options');
+
+        if (!select || !toggle || !menu || !searchInput || !optionsContainer) {
+            return;
+        }
+
+        const placeholder = toggle.dataset.placeholder || 'Select product';
+        const initialText = toggle.dataset.selectedText;
+
+        const updateToggleText = () => {
+            const selectedOption = select.options[select.selectedIndex];
+            const textElement = toggle.querySelector('.inventory-selected-text');
+            const selectedText = selectedOption && selectedOption.value ? selectedOption.textContent.trim() : placeholder;
+            if (textElement) {
+                textElement.textContent = selectedText;
+            }
+            toggle.classList.toggle('has-selection', !!(selectedOption && selectedOption.value));
+        };
+
+        const filterAndDisplayOptions = query => {
+            const normalizedQuery = (query || '').trim().toLowerCase();
+            Array.from(optionsContainer.querySelectorAll('.inventory-dropdown-option')).forEach(optionButton => {
+                const matches = !normalizedQuery || optionButton.textContent.toLowerCase().includes(normalizedQuery);
+                optionButton.style.display = matches ? 'block' : 'none';
+                const index = optionButton.dataset.optionIndex;
+                if (typeof index !== 'undefined') {
+                    const linkedOption = select.options[parseInt(index, 10)];
+                    if (linkedOption && linkedOption.value) {
+                        linkedOption.hidden = !matches;
+                    }
+                }
+            });
+        };
+
+        const closeMenu = () => {
+            menu.classList.remove('show');
+            toggle.setAttribute('aria-expanded', 'false');
+        };
+
+        const openMenu = () => {
+            closeAllInventoryDropdowns(menu);
+            if (!menu.classList.contains('show')) {
+                menu.classList.add('show');
+            }
+            toggle.setAttribute('aria-expanded', 'true');
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                searchInput.value = selectedOption.textContent.trim();
+                searchInput.select();
+            } else {
+                searchInput.value = '';
+            }
+            filterAndDisplayOptions(searchInput.value);
+            setTimeout(() => searchInput.focus(), 0);
+        };
+
+        const renderOptions = () => {
+        optionsContainer.innerHTML = '';
+            Array.from(select.options).forEach((option, index) => {
+                if (!option.value) {
+                    option.hidden = false;
+                    return;
+                }
+                const optionButton = document.createElement('button');
+                optionButton.type = 'button';
+                optionButton.className = 'inventory-dropdown-option';
+                optionButton.textContent = option.textContent.trim();
+                optionButton.dataset.optionIndex = index;
+                optionButton.setAttribute('tabindex', '-1');
+                optionButton.addEventListener('click', () => {
+                    select.value = option.value;
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                    closeMenu();
+                });
+                optionsContainer.appendChild(optionButton);
+            });
+        };
+
+        if (container.dataset.dropdownInitialized === 'true') {
+            renderOptions();
+            if (initialText && !select.value) {
+                const textElement = toggle.querySelector('.inventory-selected-text');
+                if (textElement) {
+                    textElement.textContent = initialText;
+                }
+            } else {
+                updateToggleText();
+            }
+            filterAndDisplayOptions(searchInput.value || '');
+            return;
+        }
+
+        toggle.addEventListener('click', event => {
+            event.preventDefault();
+            if (menu.classList.contains('show')) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+
+        searchInput.addEventListener('input', () => {
+            filterAndDisplayOptions(searchInput.value);
+        });
+
+        searchInput.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const visibleOptions = Array.from(optionsContainer.querySelectorAll('.inventory-dropdown-option')).filter(option => option.style.display !== 'none');
+                if (visibleOptions.length === 1) {
+                    visibleOptions[0].click();
+                }
+            } else if (event.key === 'Escape') {
+                closeMenu();
+                toggle.focus();
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                const firstVisible = Array.from(optionsContainer.querySelectorAll('.inventory-dropdown-option')).find(option => option.style.display !== 'none');
+                if (firstVisible) {
+                    firstVisible.focus();
+                }
+            }
+        });
+
+        optionsContainer.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                closeMenu();
+                toggle.focus();
+                return;
+            }
+            if (event.target.classList && event.target.classList.contains('inventory-dropdown-option')) {
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    const visibleOptions = Array.from(optionsContainer.querySelectorAll('.inventory-dropdown-option')).filter(option => option.style.display !== 'none');
+                    if (!visibleOptions.length) {
+                        return;
+                    }
+                    const currentIndex = visibleOptions.indexOf(event.target);
+                    const nextIndex = event.key === 'ArrowDown'
+                        ? (currentIndex + 1) % visibleOptions.length
+                        : (currentIndex - 1 + visibleOptions.length) % visibleOptions.length;
+                    visibleOptions[nextIndex].focus();
+                } else if (event.key === 'Enter') {
+                    event.preventDefault();
+                    event.target.click();
+                }
+            }
+        });
+
+        select.addEventListener('change', () => {
+            updateToggleText();
+            filterAndDisplayOptions('');
+            toggle.dataset.selectedText = '';
+        });
+
+        renderOptions();
+        if (initialText && !select.value) {
+            const textElement = toggle.querySelector('.inventory-selected-text');
+            if (textElement) {
+                textElement.textContent = initialText;
+            }
+        } else {
+            updateToggleText();
+        }
+        filterAndDisplayOptions('');
+
+        container.dataset.dropdownInitialized = 'true';
+        toggle.dataset.selectedText = '';
+    });
+}
+
+document.addEventListener('click', event => {
+    if (!event.target.closest('.inventory-dropdown')) {
+        closeAllInventoryDropdowns();
+    }
+});
+
+function filterInventoryOptions(select, query) {
+    const normalizedQuery = (query || '').trim().toLowerCase();
+    Array.from(select.options).forEach(option => {
+        if (!option.value) {
+            option.hidden = false;
+            return;
+        }
+        const text = option.textContent.toLowerCase();
+        const matches = !normalizedQuery || text.includes(normalizedQuery);
+        option.hidden = !matches;
+    });
+
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.hidden) {
+        select.value = '';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    const dropdown = select.closest('.inventory-dropdown');
+    if (dropdown) {
+        const optionsContainer = dropdown.querySelector('.inventory-dropdown-options');
+        if (optionsContainer) {
+            Array.from(optionsContainer.querySelectorAll('.inventory-dropdown-option')).forEach(optionButton => {
+                const matches = !normalizedQuery || optionButton.textContent.toLowerCase().includes(normalizedQuery);
+                optionButton.style.display = matches ? 'block' : 'none';
+            });
+        }
+        const toggle = dropdown.querySelector('.inventory-dropdown-toggle');
+        if (toggle && !select.value) {
+            const placeholder = toggle.dataset.placeholder || 'Select product';
+            const textElement = toggle.querySelector('.inventory-selected-text');
+            if (textElement) {
+                textElement.textContent = placeholder;
+            }
+            toggle.classList.remove('has-selection');
+        }
+    }
+}
+
+function initializePaymentModal() {
+    const paidCheckbox = document.getElementById('id_paid');
+    const paymentModal = $('#paymentModal');
+    const paymentForm = document.getElementById('inline-payment-form');
+    const paymentAmountInput = document.getElementById('payment-amount');
+    const paymentMethodSelect = document.getElementById('payment-method');
+    const paymentNotesInput = document.getElementById('payment-notes');
+    const chequeFields = document.getElementById('cheque-fields');
+    const chequeNumberInput = document.getElementById('payment-cheque-number');
+    const chequeDateInput = document.getElementById('payment-cheque-date');
+    const bankAccountSelect = document.getElementById('payment-bank-account');
+    const chequeMemoInput = document.getElementById('payment-cheque-memo');
+    const addBankAccountBtn = document.getElementById('add-bank-account-btn');
+    const recordPaymentFlag = document.getElementById('record-payment-flag');
+    const hiddenAmount = document.getElementById('payment-amount-hidden');
+    const hiddenMethod = document.getElementById('payment-method-hidden');
+    const hiddenNotes = document.getElementById('payment-notes-hidden');
+    const hiddenCreateCheque = document.getElementById('payment-create-cheque');
+    const hiddenChequeNumber = document.getElementById('payment-cheque-number-hidden');
+    const hiddenChequeDate = document.getElementById('payment-cheque-date-hidden');
+    const hiddenBankAccount = document.getElementById('payment-bank-account-hidden');
+    const hiddenChequeMemo = document.getElementById('payment-cheque-memo-hidden');
+    const paymentSummary = document.getElementById('payment-summary');
+    const paymentSummaryAmount = document.getElementById('payment-summary-amount');
+    const paymentSummaryMethod = document.getElementById('payment-summary-method');
+    const paymentSummaryNotes = document.getElementById('payment-summary-notes');
+    const paymentError = document.getElementById('payment-error');
+    const bankAccountsUrl = '{% url "accounts:bank_account_add" %}';
+    const bankAccountModalEl = document.getElementById('bankAccountModal');
+    const bankAccountForm = document.getElementById('bank-account-form');
+    const bankAccountError = document.getElementById('bank-account-error');
+    const bankAccountName = document.getElementById('bank-account-name');
+    const bankAccountNumber = document.getElementById('bank-account-number');
+
+    if (!paidCheckbox || !paymentModal || !paymentForm) {
+        return;
+    }
+
+    const resetSummary = () => {
+        if (paymentSummary) {
+            paymentSummary.classList.add('d-none');
+        }
+        if (paymentSummaryAmount) {
+            paymentSummaryAmount.textContent = '';
+        }
+        if (paymentSummaryMethod) {
+            paymentSummaryMethod.textContent = '';
+        }
+        if (paymentSummaryNotes) {
+            paymentSummaryNotes.textContent = '';
+        }
+    };
+
+    function clearPaymentError() {
+        if (!paymentError) {
+            return;
+        }
+        paymentError.classList.add('d-none');
+        paymentError.textContent = '';
+    }
+
+    const clearPaymentData = () => {
+        if (recordPaymentFlag) {
+            recordPaymentFlag.value = 'false';
+        }
+        if (hiddenAmount) {
+            hiddenAmount.value = '';
+        }
+        if (hiddenMethod) {
+            hiddenMethod.value = '';
+        }
+        if (hiddenNotes) {
+            hiddenNotes.value = '';
+        }
+        if (hiddenCreateCheque) {
+            hiddenCreateCheque.value = 'false';
+        }
+        if (hiddenChequeNumber) {
+            hiddenChequeNumber.value = '';
+        }
+        if (hiddenChequeDate) {
+            hiddenChequeDate.value = '';
+        }
+        if (hiddenBankAccount) {
+            hiddenBankAccount.value = '';
+        }
+        if (hiddenChequeMemo) {
+            hiddenChequeMemo.value = '';
+        }
+        resetSummary();
+        clearPaymentError();
+    };
+
+    const showPaymentError = (message) => {
+        if (!paymentError) {
+            return;
+        }
+        paymentError.textContent = message || 'Please enter a valid payment amount.';
+        paymentError.classList.remove('d-none');
+    };
+
+    function populateDefaultAmount() {
+        const totalElement = document.getElementById('total-amount');
+        const numericTotal = totalElement ? parseFloat(totalElement.innerText.replace(/[^0-9.]/g, '')) : 0;
+        const defaultAmount = isNaN(numericTotal) ? 0 : numericTotal;
+        if (paymentAmountInput) {
+            paymentAmountInput.value = defaultAmount.toFixed(2);
+        }
+    }
+
+    function updateSummary(amountValue, methodValue, notesValue) {
+        if (!paymentSummary) {
+            return;
+        }
+        if (paymentSummaryAmount) {
+            paymentSummaryAmount.textContent = `$${Number(amountValue).toFixed(2)}`;
+        }
+        if (paymentSummaryMethod) {
+            paymentSummaryMethod.textContent = methodValue || 'Cash';
+        }
+        if (paymentSummaryNotes) {
+            paymentSummaryNotes.textContent = notesValue ? `Note: ${notesValue}` : '';
+        }
+        paymentSummary.classList.remove('d-none');
+    }
+
+    function toggleChequeFields() {
+        if (!paymentMethodSelect || !chequeFields) {
+            return;
+        }
+        const isCheque = paymentMethodSelect.value === 'Cheque';
+        chequeFields.classList.toggle('d-none', !isCheque);
+        if (chequeNumberInput) {
+            chequeNumberInput.required = isCheque;
+        }
+        if (isCheque && chequeDateInput && !chequeDateInput.value) {
+            chequeDateInput.value = new Date().toISOString().slice(0, 10);
+        }
+    }
+
+    paidCheckbox.addEventListener('change', function(event) {
+        if (event.target.checked) {
+            populateDefaultAmount();
+            if (paymentMethodSelect) {
+                paymentMethodSelect.value = paymentMethodSelect.options[0].value;
+            }
+            if (paymentNotesInput) {
+                paymentNotesInput.value = '';
+            }
+            if (chequeNumberInput) {
+                chequeNumberInput.value = '';
+            }
+            if (chequeDateInput) {
+                chequeDateInput.value = '';
+            }
+            if (bankAccountSelect) {
+                bankAccountSelect.value = '';
+            }
+            if (chequeMemoInput) {
+                chequeMemoInput.value = '';
+            }
+            toggleChequeFields();
+            clearPaymentError();
+            paymentModal.modal('show');
+        } else {
+            clearPaymentData();
+        }
+    });
+
+    paymentForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        clearPaymentError();
+        const amountValue = paymentAmountInput ? parseFloat(paymentAmountInput.value) : 0;
+        if (isNaN(amountValue) || amountValue <= 0) {
+            showPaymentError('Payment amount must be greater than zero.');
+            return;
+        }
+        const methodValue = paymentMethodSelect ? paymentMethodSelect.value : 'Cash';
+        const notesValue = paymentNotesInput ? paymentNotesInput.value.trim() : '';
+        const isCheque = methodValue === 'Cheque';
+        let chequeSummary = '';
+
+        if (isCheque) {
+            const chequeNumberValue = chequeNumberInput ? chequeNumberInput.value.trim() : '';
+            if (!chequeNumberValue) {
+                showPaymentError('Cheque number is required.');
+                return;
+            }
+            if (hiddenCreateCheque) {
+                hiddenCreateCheque.value = 'true';
+            }
+            if (hiddenChequeNumber) {
+                hiddenChequeNumber.value = chequeNumberValue;
+            }
+            if (hiddenChequeDate) {
+                hiddenChequeDate.value = chequeDateInput ? chequeDateInput.value : '';
+            }
+            if (hiddenBankAccount) {
+                hiddenBankAccount.value = bankAccountSelect ? bankAccountSelect.value : '';
+            }
+            if (hiddenChequeMemo) {
+                hiddenChequeMemo.value = chequeMemoInput ? chequeMemoInput.value.trim() : '';
+            }
+            chequeSummary = `Cheque #${chequeNumberValue}`;
+        } else if (hiddenCreateCheque) {
+            hiddenCreateCheque.value = 'false';
+        }
+
+        if (hiddenAmount) {
+            hiddenAmount.value = amountValue.toFixed(2);
+        }
+        if (hiddenMethod) {
+            hiddenMethod.value = methodValue;
+        }
+        if (hiddenNotes) {
+            hiddenNotes.value = notesValue;
+        }
+        if (recordPaymentFlag) {
+            recordPaymentFlag.value = 'true';
+        }
+        const summaryNotes = [chequeSummary, notesValue].filter(Boolean).join(' - ');
+        updateSummary(amountValue, methodValue, summaryNotes);
+        paymentModal.modal('hide');
+    });
+
+    if (paymentMethodSelect) {
+        paymentMethodSelect.addEventListener('change', toggleChequeFields);
+    }
+
+    paymentModal.on('hidden.bs.modal', function() {
+        const hasPayment = recordPaymentFlag && recordPaymentFlag.value === 'true';
+        if (paidCheckbox && paidCheckbox.checked && !hasPayment) {
+            paidCheckbox.checked = false;
+        }
+    });
+
+    if (addBankAccountBtn && bankAccountModalEl) {
+        addBankAccountBtn.addEventListener('click', () => {
+            if (bankAccountError) {
+                bankAccountError.classList.add('d-none');
+                bankAccountError.textContent = '';
+            }
+            if (bankAccountName) bankAccountName.value = '';
+            if (bankAccountNumber) bankAccountNumber.value = '';
+            const modal = new bootstrap.Modal(bankAccountModalEl);
+            modal.show();
+        });
+    }
+
+    if (bankAccountForm) {
+        bankAccountForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const token = bankAccountForm.querySelector('input[name="csrfmiddlewaretoken"]').value;
+            const payload = new URLSearchParams({
+                name: bankAccountName ? bankAccountName.value.trim() : '',
+                account_number: bankAccountNumber ? bankAccountNumber.value.trim() : '',
+            });
+
+            fetch(bankAccountsUrl, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': token },
+                body: payload,
+            })
+                .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok || data.status !== 'success') {
+                        const message = data.message || 'Unable to add bank account.';
+                        if (bankAccountError) {
+                            bankAccountError.textContent = message;
+                            bankAccountError.classList.remove('d-none');
+                        }
+                        return;
+                    }
+                    if (bankAccountSelect) {
+                        const exists = Array.from(bankAccountSelect.options).some(option => option.value === data.value);
+                        if (!exists) {
+                            const option = document.createElement('option');
+                            option.value = data.value;
+                            option.textContent = data.label;
+                            bankAccountSelect.appendChild(option);
+                        }
+                        bankAccountSelect.value = data.value;
+                    }
+                    const modal = bootstrap.Modal.getInstance(bankAccountModalEl);
+                    if (modal) modal.hide();
+                })
+                .catch(() => {
+                    if (bankAccountError) {
+                        bankAccountError.textContent = 'Unable to add bank account.';
+                        bankAccountError.classList.remove('d-none');
+                    }
+                });
+        });
+    }
+}
+
+function handleInventorySelection(event) {
+    const productId = event.target.value;
+    if (!productId || !inventoryProducts[productId]) {
+        return;
+    }
+    const productData = inventoryProducts[productId];
+    const formRow = event.target.closest('.expense-item-form');
+    if (!formRow) {
+        return;
+    }
+    const partNoInput = formRow.querySelector('input[name$="-part_no"]');
+    if (partNoInput) {
+        partNoInput.value = productData.sku || '';
+    }
+    const descriptionField = formRow.querySelector('textarea[name$="-description"]')
+        || formRow.querySelector('input[name$="-description"]');
+    if (descriptionField) {
+        descriptionField.value = productData.description || productData.name || '';
+    }
+    const priceInput = formRow.querySelector('input[name$="-price"]');
+    if (priceInput) {
+        const cost = parseFloat(productData.cost_price || 0);
+        priceInput.value = cost ? cost.toFixed(2) : '';
+    }
+    const searchInput = formRow.querySelector('.inventory-product-search');
+    if (searchInput) {
+        const selectedOption = event.target.options[event.target.selectedIndex];
+        searchInput.value = selectedOption && selectedOption.value ? selectedOption.text.trim() : '';
+    }
+    calculateTotalAmount();
+    updatePartInfoForRow(formRow);
+}
+
+function attachDeleteRowButtons() {
+    document.querySelectorAll('#mechexpenseitem_set-forms .delete-row-btn').forEach(button => {
+        if (button.dataset.listenerAttached === 'true') {
+            return;
+        }
+        button.addEventListener('click', function() {
+            const targetId = this.dataset.deleteTarget;
+            const checkbox = targetId ? document.getElementById(targetId) : null;
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+        button.dataset.listenerAttached = 'true';
+    });
+}
+
+function attachCreateInventoryCheckboxListeners() {
+    document.querySelectorAll('#mechexpenseitem_set-forms .create-inventory-checkbox').forEach(checkbox => {
+        if (isInEmptyFormTemplate(checkbox)) {
+            return;
+        }
+        if (checkbox.dataset.listenerAttached === 'true') {
+            return;
+        }
+        checkbox.addEventListener('change', function(event) {
+            if (!event.target.checked) {
+                const confirmed = confirm('Disabling this option will skip creating or updating the inventory product for this line. Continue?');
+                if (!confirmed) {
+                    event.target.checked = true;
+                }
+            }
+        });
+        checkbox.dataset.listenerAttached = 'true';
+    });
+}
+
+function attachQuickAddProductButtons() {
+    document.querySelectorAll('#mechexpenseitem_set-forms .open-quick-product-modal').forEach(button => {
+        if (button.dataset.listenerAttached === 'true') {
+            return;
+        }
+        button.addEventListener('click', function() {
+            activeInventorySelectId = this.dataset.selectId;
+            const quickCategoryField = document.getElementById('quick_product_category');
+            const expenseCategoryField = document.getElementById('id_categorie');
+            if (quickCategoryField && expenseCategoryField) {
+                const selectedCategoryName = expenseCategoryField.value;
+                if (selectedCategoryName) {
+                    const matchingOption = Array.from(quickCategoryField.options).find(option => option.text.trim().toLowerCase() === selectedCategoryName.trim().toLowerCase());
+                    if (matchingOption) {
+                        quickCategoryField.value = matchingOption.value;
+                    }
+                }
+            }
+            const select = document.getElementById(this.dataset.selectId);
+            const productId = this.dataset.productId || (select ? select.value : '');
+            prepareQuickProductForm(productId || null);
+        });
+        button.dataset.listenerAttached = 'true';
+    });
+}
+
+function updateQuickAddButtonTargets() {
+    getExpenseFormRows().forEach(formRow => {
+        const select = formRow.querySelector('.inventory-product-select');
+        const button = formRow.querySelector('.open-quick-product-modal');
+        if (select && button) {
+            button.dataset.selectId = select.id;
+        }
+    });
+}
+
+function initializeQuickProductForm() {
+    quickProductFormElement = quickProductFormElement || document.getElementById('quick-add-product-form');
+    if (!quickProductFormElement) {
+        return;
+    }
+    quickProductIdInput = quickProductIdInput || document.getElementById('quick_product_id');
+    quickProductModalElement = quickProductModalElement || $('#quickAddProductModal');
+    const submitButton = document.getElementById('quick-product-submit');
+    const errorContainer = document.getElementById('quick-product-errors');
+    const feedbackBanner = document.getElementById('quick-product-feedback');
+    const originalButtonText = submitButton ? submitButton.innerHTML : '';
+
+    quickProductFormElement.addEventListener('submit', function(event) {
+        event.preventDefault();
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.innerHTML = 'Saving...';
+        }
+        if (errorContainer) {
+            errorContainer.classList.add('d-none');
+            errorContainer.innerHTML = '';
+        }
+
+        const supplierInput = document.getElementById('quick_product_supplier_name');
+        if (supplierInput) {
+            supplierInput.value = getCurrentVendorValue();
+        }
+
+        const editing = Boolean(quickProductEditingProductId);
+        const formData = new FormData(quickProductFormElement);
+        fetch(quickProductFormElement.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+            .then(response => response.json().then(data => ({ ok: response.ok, data })))
+            .then(({ ok, data }) => {
+                if (!ok) {
+                    displayQuickProductErrors(data.errors);
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalButtonText;
+                    }
+                    return;
+                }
+
+                handleQuickProductCreated(data.product);
+                quickProductFormElement.reset();
+                if (quickProductIdInput) {
+                    quickProductIdInput.value = '';
+                }
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonText;
+                }
+                if (quickProductModalElement) {
+                    quickProductModalElement.modal('hide');
+                }
+                if (feedbackBanner) {
+                    const actionVerb = editing ? 'updated' : 'added';
+                    feedbackBanner.textContent = `${data.product.display_name} ${actionVerb} to inventory.`;
+                    feedbackBanner.classList.remove('d-none');
+                    feedbackBanner.classList.add('alert', 'alert-success');
+                    setTimeout(() => {
+                        feedbackBanner.classList.add('d-none');
+                    }, 5000);
+                }
+            })
+            .catch(() => {
+                displayQuickProductErrors();
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonText;
+                }
+            });
+    });
+
+    if (quickProductModalElement) {
+        quickProductModalElement.on('shown.bs.modal', function() {
+            const nameInput = document.getElementById('quick_product_name');
+            if (nameInput) {
+                nameInput.focus();
+            }
+        });
+
+        quickProductModalElement.on('hidden.bs.modal', function() {
+            activeInventorySelectId = null;
+            quickProductEditingProductId = null;
+            if (quickProductIdInput) {
+                quickProductIdInput.value = '';
+            }
+            if (errorContainer) {
+                errorContainer.classList.add('d-none');
+                errorContainer.innerHTML = '';
+            }
+        });
+    }
+}
+
+function displayQuickProductErrors(errors) {
+    const errorContainer = document.getElementById('quick-product-errors');
+    if (!errorContainer) {
+        return;
+    }
+    let messages = [];
+    if (errors) {
+        Object.values(errors).forEach(fieldErrors => {
+            messages = messages.concat(fieldErrors);
+        });
+    }
+    if (!messages.length) {
+        messages = ['Unable to save product. Please check the form and try again.'];
+    }
+    errorContainer.innerHTML = messages.map(message => `<div>${message}</div>`).join('');
+    errorContainer.classList.remove('d-none');
+}
+
+function handleQuickProductCreated(product) {
+    const productId = String(product.id);
+    inventoryProducts[productId] = {
+        name: product.name,
+        sku: product.sku || '',
+        description: product.description || '',
+        cost_price: parseFloat(product.cost_price) || 0.0,
+        sale_price: parseFloat(product.sale_price) || 0.0,
+        supplier: product.supplier || '',
+        category_id: product.category_id || '',
+        category_name: product.category_name || '',
+        display_name: product.display_name || product.name
+    };
+
+    if (!allInventoryProductIds.includes(productId)) {
+        allInventoryProductIds.push(productId);
+    }
+
+    const normalizedSupplier = (product.supplier || '').trim().toLowerCase();
+    const targetKey = normalizedSupplier || UNASSIGNED_VENDOR_KEY;
+    vendorProductMap[UNASSIGNED_VENDOR_KEY] = vendorProductMap[UNASSIGNED_VENDOR_KEY] || [];
+    Object.keys(vendorProductMap).forEach(key => {
+        const existing = vendorProductMap[key] || [];
+        vendorProductMap[key] = existing.filter(id => id !== productId);
+    });
+    vendorProductMap[targetKey] = vendorProductMap[targetKey] || [];
+    if (!vendorProductMap[targetKey].includes(productId)) {
+        vendorProductMap[targetKey].push(productId);
+    }
+
+    filterInventoryProductsByVendor(getCurrentVendorValue());
+    refreshInventoryDropdownForProduct(productId);
+
+    if (activeInventorySelectId) {
+        const targetSelect = document.getElementById(activeInventorySelectId);
+        if (targetSelect) {
+            targetSelect.value = productId;
+            const changeEvent = new Event('change', { bubbles: true });
+            targetSelect.dispatchEvent(changeEvent);
+        }
+    }
+    if (quickProductEditingProductId) {
+        quickProductEditingProductId = null;
+    }
+    if (quickProductIdInput) {
+        quickProductIdInput.value = '';
+    }
+}
+
+</script>
+{% endblock %}

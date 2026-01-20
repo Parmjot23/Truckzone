@@ -1,0 +1,986 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if is_edit %}Edit Supplier Credit{% else %}New Supplier Credit{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+  <div class="compact-wrap">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --ink: #111827;
+        --muted: #6b7280;
+        --border: #d6dbe1;
+        --panel-bg: #ffffff;
+        --panel-border: #d7dde5;
+        --panel-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+        --primary: #2563eb;
+        --primary-strong: #1d4ed8;
+        --accent: #2563eb;
+        --accent-strong: #1d4ed8;
+        --soft: #f8fafc;
+      }
+
+      .page-shell {
+        background:
+          radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 55%),
+          linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+        padding: 1.25rem 0 5rem;
+      }
+
+      .compact-wrap {
+        max-width: 100%;
+        width: 100%;
+        margin: 0 auto 2rem;
+        padding: 0 clamp(1rem, 2vw, 2rem);
+        font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
+        color: var(--ink);
+      }
+
+      .qb-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.75rem;
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+      }
+
+      .qb-title-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .qb-title {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        color: #0f172a;
+      }
+
+      .qb-doc-pill {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .qb-subtitle { margin: 0.2rem 0 0; color: var(--muted); }
+
+      .qb-header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-left: auto;
+      }
+
+      .qb-balance {
+        text-align: right;
+      }
+
+      .qb-balance span {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: #94a3b8;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.1rem;
+      }
+
+      .qb-balance strong {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--primary);
+        letter-spacing: -0.02em;
+      }
+
+      .btn {
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 0.55rem 0.95rem;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        border: 1px solid var(--accent);
+        color: #fff;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-strong);
+        border-color: var(--accent-strong);
+      }
+
+      .btn-outline-secondary {
+        border: 1px solid var(--border);
+        background: #fff;
+        color: #4b5563;
+      }
+
+      .btn-outline-secondary:hover {
+        border-color: #c0c7d2;
+        color: var(--ink);
+      }
+
+      .ui-panel {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: var(--panel-shadow);
+        margin-bottom: 1rem;
+        width: 100%;
+      }
+
+      .panel-title { font-weight: 800; margin-bottom: 0.35rem; }
+      .panel-sub { color: var(--muted); margin-bottom: 1rem; }
+
+      .grid-layout {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+      }
+
+      .line-items-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .credit-item {
+        display: grid;
+        grid-template-columns: 2fr 1.2fr 0.6fr 0.8fr 2fr 40px;
+        gap: 0.5rem;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 0.4rem;
+      }
+
+      .line-item-header {
+        display: grid;
+        grid-template-columns: 2fr 1.2fr 0.6fr 0.8fr 2fr 40px;
+        gap: 0.5rem;
+        padding: 0 0.75rem;
+        font-weight: 700;
+        font-size: 0.65rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+      }
+
+      .field-group {
+        min-width: 0;
+        width: 100%;
+      }
+
+      /* Force uniform look on all possible input elements */
+      .field-group input,
+      .field-group select,
+      .field-group textarea,
+      .field-group .form-control,
+      .field-group .form-select {
+        display: block !important;
+        width: 100% !important;
+        height: 36px !important;
+        padding: 0.4rem 0.6rem !important;
+        font-size: 0.85rem !important;
+        line-height: 1.4 !important;
+        color: #1e293b !important;
+        background-color: #fff !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 6px !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        transition: border-color 0.15s ease-in-out !important;
+      }
+
+      .field-group textarea {
+        resize: none !important;
+        white-space: nowrap !important;
+      }
+
+      .field-group input:focus,
+      .field-group select:focus,
+      .field-group textarea:focus {
+        border-color: var(--primary) !important;
+        outline: 0 !important;
+        background-color: #f8fafc !important;
+      }
+
+      .remove-btn {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .remove-btn:hover {
+        color: #ef4444;
+        background: #fef2f2;
+        border-color: #fecaca;
+      }
+
+      .btn-add-line {
+        background: #fff;
+        border: 1px dashed #cbd5e1;
+        color: #64748b;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      .btn-add-line:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: #f0f7ff;
+        border-style: solid;
+      }
+
+      .summary-box {
+        display: flex;
+        justify-content: flex-end;
+        gap: 2.5rem;
+        padding: 1.25rem 2rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+      }
+
+      .summary-item {
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .summary-label {
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: #94a3b8;
+        letter-spacing: 0.1em;
+      }
+
+      .summary-rate {
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: none;
+        letter-spacing: 0;
+        color: #94a3b8;
+        margin-left: 0.25rem;
+      }
+
+      .summary-value {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #0f172a;
+      }
+
+      #total-amount {
+        color: var(--primary);
+      }
+
+      .toggle-switch {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .toggle-switch input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .toggle-track {
+        width: 44px;
+        height: 22px;
+        border-radius: 999px;
+        background: #e5e7eb;
+        position: relative;
+        transition: background 0.2s ease;
+      }
+
+      .toggle-thumb {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+      }
+
+      .toggle-switch input:checked + .toggle-track {
+        background: var(--accent);
+      }
+
+      .toggle-switch input:checked + .toggle-track .toggle-thumb {
+        transform: translateX(22px);
+      }
+
+      .pill-action {
+        border-radius: 8px;
+        padding: 0.45rem 0.85rem;
+        font-weight: 600;
+        border: 1px solid var(--border);
+        background: #fff;
+        color: #374151;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .pill-action-primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+
+      .pill-action:hover {
+        border-color: #c0c7d2;
+      }
+
+      .pill-action-primary:hover {
+        background: var(--accent-strong);
+      }
+
+      @media (max-width: 1200px) {
+        .line-item-header { display: none; }
+        .credit-item {
+          grid-template-columns: 1fr 1fr;
+          gap: 0.75rem;
+          padding: 1rem;
+        }
+        .credit-item .field-group:nth-child(5) { grid-column: span 2; }
+        .credit-item .field-group:last-child { 
+          grid-column: span 2;
+          align-items: flex-end;
+        }
+        .credit-item .form-label-mobile { display: block; }
+      }
+
+      @media (max-width: 768px) {
+        .qb-header { flex-direction: column; align-items: flex-start; }
+        .qb-header-actions { width: 100%; justify-content: space-between; }
+        .qb-balance { text-align: left; }
+        .credit-item { grid-template-columns: 1fr; }
+        .credit-item .field-group { grid-column: span 1 !important; }
+      }
+    </style>
+
+    <div class="qb-header">
+      <div>
+        <div class="qb-title-row">
+          <h1 class="qb-title">{% if is_edit %}Edit Supplier Credit{% else %}Supplier Credit{% endif %}</h1>
+          <span class="qb-doc-pill">Credit</span>
+        </div>
+        <p class="qb-subtitle">Return items or price adjustments that reduce what you owe a supplier.</p>
+      </div>
+      <div class="qb-header-actions">
+        <div class="qb-balance">
+          <span>Amount</span>
+          <strong id="header-total-amount">$0.00</strong>
+        </div>
+        <div class="qb-header-buttons">
+          <button type="submit" form="supplier-credit-form" class="btn btn-primary">
+            <i class="fas fa-save"></i>{% if is_edit %}Update Credit{% else %}Save Credit{% endif %}
+          </button>
+          <a href="{% url 'accounts:supplier_credit_list' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </div>
+    </div>
+
+    <form method="post" id="supplier-credit-form" novalidate>
+      {% csrf_token %}
+      <div class="ui-panel">
+        <div class="panel-title">Credit Details</div>
+        <div class="panel-sub">Capture the supplier and reference details.</div>
+        <div class="grid-layout">
+          {{ supplier_credit_form.date|as_crispy_field }}
+          {{ supplier_credit_form.supplier|as_crispy_field }}
+          {{ supplier_credit_form.credit_no|as_crispy_field }}
+          {{ supplier_credit_form.memo|as_crispy_field }}
+          {{ supplier_credit_form.province|as_crispy_field }}
+          {{ supplier_credit_form.custom_tax_rate|as_crispy_field }}
+        </div>
+      </div>
+
+      <div class="ui-panel">
+        <div class="panel-title">Credit From Receipt</div>
+        <div class="panel-sub">Pick a purchase receipt from this supplier and select the items you are returning.</div>
+        <div class="row g-3 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label" for="receipt-select">Receipt</label>
+            <select class="form-select" id="receipt-select">
+              <option value="">Select a receipt</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+             <div class="mb-2"><span class="badge bg-light text-primary border"><i class="fas fa-info-circle me-1"></i>Choose items then add to credit</span></div>
+          </div>
+        </div>
+        <div class="mt-3" id="receipt-items" hidden>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Item</th>
+                  <th style="width: 100px;">Qty</th>
+                  <th style="width: 120px;">Price</th>
+                </tr>
+              </thead>
+              <tbody id="receipt-items-body"></tbody>
+            </table>
+          </div>
+          <button type="button" class="pill-action pill-action-primary mt-2" id="add-receipt-items">
+            <i class="fas fa-plus me-1"></i>Add Selected Items
+          </button>
+        </div>
+      </div>
+
+      <div class="ui-panel">
+        <div class="panel-title">Credit Line Items</div>
+        <div class="panel-sub">Add the products you are returning or crediting.</div>
+
+        {{ supplier_credit_item_formset.management_form }}
+        
+        <div class="line-item-header">
+          <div>Product</div>
+          <div>Part No</div>
+          <div>Qty</div>
+          <div>Price</div>
+          <div>Description</div>
+          <div></div>
+        </div>
+
+        <div id="credit-items" class="line-items-container">
+          {% for form in supplier_credit_item_formset %}
+            <div class="credit-item" data-form-index="{{ forloop.counter0 }}">
+              {{ form.id }}
+              <div class="field-group">
+                <label class="form-label-mobile">Product</label>
+                {{ form.product }}
+              </div>
+              <div class="field-group">
+                <label class="form-label-mobile">Part No</label>
+                {{ form.part_no }}
+              </div>
+              <div class="field-group">
+                <label class="form-label-mobile">Qty</label>
+                {{ form.qty }}
+              </div>
+              <div class="field-group">
+                <label class="form-label-mobile">Price</label>
+                {{ form.price }}
+              </div>
+              <div class="field-group">
+                <label class="form-label-mobile">Description</label>
+                {{ form.description }}
+              </div>
+              <div class="field-group">
+                <button type="button" class="remove-btn remove-line" title="Remove line">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+              <div class="d-none">
+                {{ form.source_expense }}
+                {{ form.source_expense_item }}
+                {{ form.create_inventory_product }}
+                {{ form.DELETE }}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="mt-3">
+          <button type="button" class="btn-add-line" id="add-line">
+            <i class="fas fa-plus"></i>Add Line
+          </button>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+            <div class="text-muted small">Totals update automatically as you edit lines.</div>
+            <div class="summary-box">
+                <div class="summary-item">
+                    <div class="summary-label">Subtotal</div>
+                    <div id="subtotal-amount" class="summary-value">$0.00</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Tax <span id="tax-rate-label" class="summary-rate"></span></div>
+                    <div id="tax-amount" class="summary-value">$0.00</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Total</div>
+                    <div id="total-amount" class="summary-value">$0.00</div>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <div class="ui-panel">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-4 flex-wrap">
+                <div class="paid-toggle-row d-flex align-items-center gap-2">
+                    <span class="fw-semibold">Tax Inclusive</span>
+                    <label class="toggle-switch mb-0">
+                        {{ supplier_credit_form.tax_included }}
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    </label>
+                </div>
+                <div class="paid-toggle-row d-flex align-items-center gap-2">
+                    <span class="fw-semibold">Update Inventory</span>
+                    <label class="toggle-switch mb-0">
+                        {{ supplier_credit_form.record_in_inventory }}
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    </label>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end gap-2">
+                {% if not is_edit %}
+                    <button type="submit" name="save_continue" class="pill-action">Save & Add Another</button>
+                {% endif %}
+                <button type="submit" name="submit_credit" class="pill-action pill-action-primary">{% if is_edit %}Update Credit{% else %}Save Credit{% endif %}</button>
+            </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script id="empty-form-template" type="text/template">
+  <div class="credit-item" data-form-index="__prefix__">
+    <div class="field-group">
+      <label class="form-label-mobile">Product</label>
+      {{ supplier_credit_item_formset.empty_form.product }}
+    </div>
+    <div class="field-group">
+      <label class="form-label-mobile">Part No</label>
+      {{ supplier_credit_item_formset.empty_form.part_no }}
+    </div>
+    <div class="field-group">
+      <label class="form-label-mobile">Qty</label>
+      {{ supplier_credit_item_formset.empty_form.qty }}
+    </div>
+    <div class="field-group">
+      <label class="form-label-mobile">Price</label>
+      {{ supplier_credit_item_formset.empty_form.price }}
+    </div>
+    <div class="field-group">
+      <label class="form-label-mobile">Description</label>
+      {{ supplier_credit_item_formset.empty_form.description }}
+    </div>
+    <div class="field-group">
+      <button type="button" class="remove-btn remove-line" title="Remove line">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+    </div>
+    <div class="d-none">
+      {{ supplier_credit_item_formset.empty_form.source_expense }}
+      {{ supplier_credit_item_formset.empty_form.source_expense_item }}
+      {{ supplier_credit_item_formset.empty_form.create_inventory_product }}
+      {{ supplier_credit_item_formset.empty_form.DELETE }}
+    </div>
+  </div>
+</script>
+
+<script>
+  const supplierSelect = document.getElementById('id_supplier');
+  const receiptSelect = document.getElementById('receipt-select');
+  const receiptItems = document.getElementById('receipt-items');
+  const receiptItemsBody = document.getElementById('receipt-items-body');
+  const addReceiptItemsBtn = document.getElementById('add-receipt-items');
+  const supplierReceiptsUrl = '{{ supplier_receipts_url }}';
+  const vendorProductMap = JSON.parse('{{ vendor_product_map|default:"{}"|escapejs }}');
+  const inventoryProductsData = JSON.parse('{{ inventory_products_data|default:"{}"|escapejs }}');
+  const provinceTaxRates = JSON.parse('{{ province_tax_rates|default:"{}"|escapejs }}');
+
+  function getTaxRateAndLabel() {
+    const provinceField = document.getElementById('id_province');
+    const customTaxInput = document.getElementById('id_custom_tax_rate');
+    const province = provinceField ? provinceField.value : '';
+    const selectedOption = provinceField ? provinceField.options[provinceField.selectedIndex] : null;
+    const optionLabel = selectedOption ? selectedOption.text.trim() : '';
+    let rate = 0;
+    let label = '';
+
+    if (province === 'CU' || province.toLowerCase() === 'custom') {
+      const customValue = parseFloat(customTaxInput && customTaxInput.value ? customTaxInput.value : 0);
+      if (!isNaN(customValue) && customValue > 0) {
+        rate = customValue / 100;
+        label = `Custom ${customValue.toFixed(2)}%`;
+      } else {
+        label = optionLabel || 'Custom';
+      }
+    } else if (province) {
+      const mappedRate = provinceTaxRates[province];
+      if (typeof mappedRate !== 'undefined') {
+        rate = parseFloat(mappedRate) || 0;
+        label = optionLabel || `${province.toUpperCase()} ${(rate * 100).toFixed(2)}%`;
+      }
+    }
+
+    return { rate, label };
+  }
+
+  function roundCurrency(value) {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
+  }
+
+  function formatCurrency(value) {
+    return "$" + value.toFixed(2);
+  }
+
+  function calculateTotalAmount() {
+    let subtotalAmount = 0;
+    let taxAmount = 0;
+    let totalAmount = 0;
+
+    const provinceInfo = getTaxRateAndLabel();
+    const taxRate = provinceInfo.rate;
+    const taxLabel = document.getElementById('tax-rate-label');
+    const taxIncludedInput = document.getElementById('id_tax_included');
+    const taxIncluded = taxIncludedInput ? taxIncludedInput.checked : false;
+
+    if (taxLabel) {
+      taxLabel.textContent = provinceInfo.label || '';
+      taxLabel.style.display = provinceInfo.label ? 'inline' : 'none';
+    }
+
+    document.querySelectorAll('.credit-item').forEach(row => {
+      const deleteInput = row.querySelector('input[name$="-DELETE"]');
+      if (row.style.display === 'none' || (deleteInput && deleteInput.checked)) {
+        return;
+      }
+      const qtyInput = row.querySelector('input[name$="-qty"]');
+      const priceInput = row.querySelector('input[name$="-price"]');
+      const qty = parseFloat(qtyInput && qtyInput.value ? qtyInput.value : 0) || 0;
+      const price = parseFloat(priceInput && priceInput.value ? priceInput.value : 0) || 0;
+      
+      const lineGross = roundCurrency(qty * price);
+      let lineNet = lineGross;
+      let lineTax = 0;
+
+      if (taxRate > 0) {
+        if (taxIncluded) {
+          lineNet = roundCurrency(lineGross / (1 + taxRate));
+          lineTax = roundCurrency(lineGross - lineNet);
+        } else {
+          lineTax = roundCurrency(lineNet * taxRate);
+        }
+      }
+
+      const displayGross = taxIncluded ? lineGross : roundCurrency(lineNet + lineTax);
+
+      subtotalAmount = roundCurrency(subtotalAmount + lineNet);
+      taxAmount = roundCurrency(taxAmount + lineTax);
+      totalAmount = roundCurrency(totalAmount + displayGross);
+    });
+
+    const subtotalDisplay = document.getElementById('subtotal-amount');
+    if (subtotalDisplay) subtotalDisplay.innerText = formatCurrency(subtotalAmount);
+    
+    const taxDisplay = document.getElementById('tax-amount');
+    if (taxDisplay) taxDisplay.innerText = formatCurrency(taxAmount);
+    
+    const totalDisplay = document.getElementById('total-amount');
+    if (totalDisplay) totalDisplay.innerText = formatCurrency(totalAmount);
+    
+    const headerTotal = document.getElementById('header-total-amount');
+    if (headerTotal) headerTotal.innerText = formatCurrency(totalAmount);
+  }
+
+  function attachAmountListeners(container) {
+    container.querySelectorAll('input[name$="-qty"], input[name$="-price"]').forEach(input => {
+      input.addEventListener('input', calculateTotalAmount);
+    });
+  }
+
+  function getSupplierKey() {
+    if (!supplierSelect) {
+      return '';
+    }
+    const selectedText = supplierSelect.options[supplierSelect.selectedIndex]?.text || '';
+    return selectedText.trim().toLowerCase();
+  }
+
+  function applySupplierFilter() {
+    const supplierKey = getSupplierKey();
+    const allowedIds = vendorProductMap[supplierKey] || vendorProductMap.__unassigned__ || [];
+    document.querySelectorAll('.credit-product-select').forEach(select => {
+      const currentValue = select.value;
+      Array.from(select.options).forEach(option => {
+        if (!option.value) {
+          option.hidden = false;
+          return;
+        }
+        if (!allowedIds.length) {
+          option.hidden = false;
+        } else {
+          option.hidden = !allowedIds.includes(option.value);
+        }
+      });
+      if (currentValue && allowedIds.length && !allowedIds.includes(currentValue)) {
+        select.value = '';
+      }
+    });
+  }
+
+  function attachProductListeners(container) {
+    container.querySelectorAll('.credit-product-select').forEach(select => {
+      select.addEventListener('change', event => {
+        const productId = event.target.value;
+        if (!productId || !inventoryProductsData[productId]) {
+          return;
+        }
+        const row = event.target.closest('.credit-item');
+        const data = inventoryProductsData[productId];
+        const partField = row.querySelector('input[name$="-part_no"]');
+        const descField = row.querySelector('textarea[name$="-description"]');
+        const priceField = row.querySelector('input[name$="-price"]');
+        if (partField && !partField.value) {
+          partField.value = data.sku || '';
+        }
+        if (descField && !descField.value) {
+          descField.value = data.description || data.name || '';
+        }
+        if (priceField && !priceField.value) {
+          priceField.value = data.cost_price || '';
+        }
+      });
+    });
+  }
+
+  function addLine(itemData) {
+    const totalFormsInput = document.getElementById('id_credit_items-TOTAL_FORMS');
+    const index = parseInt(totalFormsInput.value, 10);
+    const template = document.getElementById('empty-form-template').innerHTML.replace(/__prefix__/g, index);
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = template;
+    const row = wrapper.firstElementChild;
+    document.getElementById('credit-items').appendChild(row);
+    totalFormsInput.value = index + 1;
+
+    if (itemData) {
+      const productSelect = row.querySelector('select[name$="-product"]');
+      const partField = row.querySelector('input[name$="-part_no"]');
+      const descField = row.querySelector('textarea[name$="-description"]');
+      const qtyField = row.querySelector('input[name$="-qty"]');
+      const priceField = row.querySelector('input[name$="-price"]');
+      const sourceExpense = row.querySelector('input[name$="-source_expense"]');
+      const sourceExpenseItem = row.querySelector('input[name$="-source_expense_item"]');
+
+      if (productSelect && itemData.product_id) {
+        productSelect.value = itemData.product_id;
+      }
+      if (partField) { partField.value = itemData.part_no || ''; }
+      if (descField) { descField.value = itemData.description || ''; }
+      if (qtyField) { qtyField.value = itemData.qty || 0; }
+      if (priceField) { priceField.value = itemData.price || 0; }
+      if (sourceExpense) { sourceExpense.value = itemData.expense_id || ''; }
+      if (sourceExpenseItem) { sourceExpenseItem.value = itemData.id || ''; }
+    }
+
+    attachProductListeners(row);
+    attachAmountListeners(row);
+    applySupplierFilter();
+    calculateTotalAmount();
+  }
+
+  document.getElementById('add-line').addEventListener('click', () => addLine());
+
+  document.addEventListener('click', event => {
+    const removeBtn = event.target.closest('.remove-line');
+    if (removeBtn) {
+      const row = removeBtn.closest('.credit-item');
+      const deleteField = row.querySelector('input[name$="-DELETE"]');
+      if (deleteField) {
+        deleteField.checked = true;
+      }
+      row.style.display = 'none';
+      calculateTotalAmount();
+    }
+  });
+
+  if (supplierSelect) {
+    supplierSelect.addEventListener('change', () => {
+      applySupplierFilter();
+      const supplierId = supplierSelect.value;
+      receiptSelect.innerHTML = '<option value="">Select a receipt</option>';
+      receiptItemsBody.innerHTML = '';
+      receiptItems.hidden = true;
+      if (!supplierId) {
+        return;
+      }
+      fetch(`${supplierReceiptsUrl}?supplier_id=${supplierId}`)
+        .then(response => response.json())
+        .then(data => {
+          data.receipts.forEach(receipt => {
+            const option = document.createElement('option');
+            option.value = receipt.id;
+            option.textContent = `${receipt.receipt_no} (${receipt.date})`;
+            option.dataset.items = JSON.stringify(receipt.items || []);
+            receiptSelect.appendChild(option);
+          });
+        })
+        .catch(() => {
+          receiptSelect.innerHTML = '<option value="">Unable to load receipts</option>';
+        });
+    });
+  }
+
+  receiptSelect.addEventListener('change', () => {
+    receiptItemsBody.innerHTML = '';
+    const selectedOption = receiptSelect.options[receiptSelect.selectedIndex];
+    const items = selectedOption && selectedOption.dataset.items ? JSON.parse(selectedOption.dataset.items) : [];
+    if (!items.length) {
+      receiptItems.hidden = true;
+      return;
+    }
+    items.forEach(item => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><input type="checkbox" class="receipt-item-check" data-item='${JSON.stringify(item)}'></td>
+        <td>${item.part_no || ''} ${item.description || ''}</td>
+        <td><input type="number" min="0" step="1" class="form-control form-control-sm receipt-qty" value="${item.qty || 0}"></td>
+        <td><input type="number" min="0" step="0.01" class="form-control form-control-sm receipt-price" value="${item.price || 0}"></td>
+      `;
+      receiptItemsBody.appendChild(row);
+    });
+    receiptItems.hidden = false;
+  });
+
+  addReceiptItemsBtn.addEventListener('click', () => {
+    const checks = receiptItemsBody.querySelectorAll('.receipt-item-check:checked');
+    checks.forEach(check => {
+      const item = JSON.parse(check.dataset.item || '{}');
+      const row = check.closest('tr');
+      const qtyInput = row.querySelector('.receipt-qty');
+      const priceInput = row.querySelector('.receipt-price');
+      item.qty = qtyInput ? parseFloat(qtyInput.value || 0) : item.qty;
+      item.price = priceInput ? parseFloat(priceInput.value || 0) : item.price;
+      addLine(item);
+      check.checked = false;
+    });
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    attachProductListeners(document);
+    attachAmountListeners(document);
+    applySupplierFilter();
+
+    // Toggle custom tax rate visibility
+    const provinceSelect = document.getElementById('id_province');
+    const customTaxRateDiv = document.getElementById('div_id_custom_tax_rate');
+    const taxIncludedInput = document.getElementById('id_tax_included');
+
+    function toggleCustomTaxRate() {
+      if (!provinceSelect || !customTaxRateDiv) return;
+      // Check for "custom" in value or text
+      const selectedValue = provinceSelect.value.toLowerCase();
+      const selectedText = provinceSelect.options[provinceSelect.selectedIndex]?.text.toLowerCase() || '';
+      
+      if (selectedValue === 'custom' || selectedText === 'custom' || selectedValue === 'cu') {
+        customTaxRateDiv.style.display = 'block';
+      } else {
+        customTaxRateDiv.style.display = 'none';
+      }
+      calculateTotalAmount();
+    }
+
+    if (provinceSelect) {
+      provinceSelect.addEventListener('change', toggleCustomTaxRate);
+      toggleCustomTaxRate();
+    }
+
+    if (customTaxRateDiv) {
+      const customTaxInput = document.getElementById('id_custom_tax_rate');
+      if (customTaxInput) {
+        customTaxInput.addEventListener('input', calculateTotalAmount);
+      }
+    }
+
+    if (taxIncludedInput) {
+        taxIncludedInput.addEventListener('change', calculateTotalAmount);
+    }
+
+    // Initial calculation
+    calculateTotalAmount();
+
+    // Polishing: Add placeholders to line item fields
+    function polishLineItems() {
+      document.querySelectorAll('#credit-items .credit-item, #empty-form-template .credit-item').forEach(row => {
+        const partNo = row.querySelector('input[name$="-part_no"]');
+        const qty = row.querySelector('input[name$="-qty"]');
+        const price = row.querySelector('input[name$="-price"]');
+        const desc = row.querySelector('textarea[name$="-description"], input[name$="-description"]');
+        
+        if (partNo) partNo.placeholder = "Part #";
+        if (qty) qty.placeholder = "Qty";
+        if (price) price.placeholder = "0.00";
+        if (desc) desc.placeholder = "Description";
+        
+        row.querySelectorAll('input, select, textarea').forEach(el => {
+            // Remove any existing Bootstrap/Django error classes that might break layout
+            el.classList.remove('is-invalid', 'is-valid');
+            el.style.marginBottom = '0';
+        });
+      });
+    }
+    polishLineItems();
+
+    // Update placeholders when a new line is added
+    const originalAddLine = window.addLine;
+    const addLineBtn = document.getElementById('add-line');
+    if (addLineBtn) {
+        addLineBtn.addEventListener('click', () => {
+            setTimeout(polishLineItems, 50);
+        });
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ group.name }} - {{ business_name|default:default_business_name }}{% endblock %}
+{% block body_class %}public-page-road-bg page-without-hero topbar-light storefront-page no-scroll-animations{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/storefront_public.css' %}">
+<link rel="stylesheet" href="{% static 'css/storefront_live_search.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="storefront-shell">
+    <section class="storefront-hero">
+        <div class="container">
+            <nav class="storefront-breadcrumbs" aria-label="Breadcrumb">
+                {% for crumb in breadcrumbs %}
+                    {% if crumb.url %}
+                    <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+                    {% else %}
+                    <span>{{ crumb.label }}</span>
+                    {% endif %}
+                    {% if not forloop.last %}
+                    <span class="crumb-sep">/</span>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+            <div class="storefront-hero-inner">
+                <div class="storefront-hero-copy">
+                    <div class="storefront-eyebrow">
+                        <i class="fas fa-layer-group"></i>
+                        Category Group
+                    </div>
+                    <h1>{{ group.name }}</h1>
+                    {% if group.description %}
+                    <p>{{ group.description }}</p>
+                    {% else %}
+                    <p>Explore every category under {{ group.name|lower }}.</p>
+                    {% endif %}
+                </div>
+                <div class="storefront-hero-actions">
+                    {% if storefront_selected_profile %}
+                        {% if storefront_has_multiple_locations %}
+                        <div class="dropdown">
+                            <button class="btn btn-light dropdown-toggle storefront-store-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-store"></i>
+                                <span class="store-label">My Store:</span>
+                                <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end storefront-store-menu">
+                                {% for profile in storefront_locations %}
+                                <form method="post" action="{% url 'accounts:storefront_location_set' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button class="dropdown-item{% if storefront_selected_profile and profile.user_id == storefront_selected_profile.user_id %} active{% endif %}"
+                                        type="submit" name="storefront_location" value="{{ profile.user_id }}">
+                                        {{ profile.storefront_label }}
+                                    </button>
+                                </form>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="btn btn-light storefront-store-toggle storefront-store-static">
+                            <i class="fas fa-store"></i>
+                            <span class="store-label">My Store:</span>
+                            <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                    {% if customer_account %}
+                    <a href="{% url 'accounts:customer_dashboard' %}" class="btn btn-light">My Account</a>
+                    <a href="{% url 'accounts:store_cart' %}" class="btn btn-primary">View Cart</a>
+                    {% else %}
+                    <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_group_detail' group.id %}" class="btn btn-light">Sign In</a>
+                    <a href="{% url 'accounts:customer_signup' %}?next={% url 'accounts:store_group_detail' group.id %}" class="btn btn-primary">Create Account</a>
+                    {% endif %}
+                </div>
+            </div>
+            <form class="storefront-search" method="get" action="{% url 'accounts:store_search' %}"
+                data-storefront-search-form data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}">
+                <input type="search" name="q" value="{{ search_query }}" placeholder="Search parts, SKUs, or keywords"
+                    data-storefront-search-input autocomplete="off">
+                <button type="submit">Search</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="storefront-section">
+        <div class="container storefront-layout">
+            <aside class="storefront-sidebar">
+                <div class="sidebar-card">
+                    <div class="sidebar-title">Categories</div>
+                    <input type="search" class="category-filter-input" placeholder="Search categories" aria-label="Search categories">
+                    <div class="category-tree-all">
+                        <a class="category-tree-link-all" href="{% url 'accounts:store_product_list' %}">All Categories</a>
+                    </div>
+                    {% if category_tree %}
+                    <ul class="category-tree-list">
+                        {% for node in category_tree %}
+                        <li class="category-tree-item{% if node.is_current %} is-current{% elif node.is_active %} is-active{% endif %}{% if node.has_children %} has-children{% endif %}" style="--depth: {{ node.depth }};" data-category-name="{{ node.category.name|lower }}">
+                            <a class="category-tree-link" href="{% url 'accounts:store_category_detail' node.category.id %}">
+                                {{ node.category.name }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="empty-state">No categories available yet.</div>
+                    {% endif %}
+                </div>
+            </aside>
+
+            <main class="storefront-main">
+                {% if categories %}
+                <div class="category-grid">
+                    {% for category in categories %}
+                    <a href="{% url 'accounts:store_category_detail' category.id %}" class="category-card" data-category-name="{{ category.name|lower }}">
+                        <div class="category-card-media">
+                            {% if category.image %}
+                            <img src="{{ category.image.url }}" alt="{{ category.name }}" loading="lazy">
+                            {% else %}
+                            <i class="fas fa-box-open fa-2x text-muted"></i>
+                            {% endif %}
+                        </div>
+                        <div class="category-card-body">
+                            <div class="category-card-title">{{ category.name }}</div>
+                            {% if category.description %}
+                            <div class="category-card-meta">{{ category.description|truncatewords:12 }}</div>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">No categories added to this group yet.</div>
+                {% endif %}
+            </main>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (() => {
+        const input = document.querySelector('.category-filter-input');
+        if (!input) {
+            return;
+        }
+        const targets = Array.from(document.querySelectorAll('[data-category-name]'));
+        const filter = () => {
+            const term = input.value.trim().toLowerCase();
+            targets.forEach((el) => {
+                const name = (el.getAttribute('data-category-name') || '').toLowerCase();
+                el.style.display = !term || name.includes(term) ? '' : 'none';
+            });
+        };
+        input.addEventListener('input', filter);
+    })();
+</script>
+<script src="{% static 'js/storefront_search.js' %}" defer></script>
+{% endblock %}

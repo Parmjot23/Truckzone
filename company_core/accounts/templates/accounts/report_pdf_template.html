@@ -1,0 +1,198 @@
+<!-- company_core/accounts/templates/accounts/report_pdf_template.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Report PDF</title>
+    <style>
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 12px;
+            margin: 24px;
+            color: #0f172a;
+        }
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+        }
+        .report-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+        }
+        .report-subtitle {
+            margin: 0;
+            color: #64748b;
+            font-size: 11px;
+        }
+        .report-meta {
+            text-align: right;
+            font-size: 10px;
+            color: #64748b;
+            line-height: 1.4;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin: 18px 0 8px;
+            color: #0f172a;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 6px 8px;
+        }
+        th {
+            background-color: #f8fafc;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            color: #475569;
+        }
+        td:not(:first-child),
+        th:not(:first-child) {
+            text-align: right;
+        }
+        tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        .total-row {
+            font-weight: 700;
+            background-color: #eef2f7;
+        }
+    </style>
+</head>
+<body>
+    {% load custom_filters %}
+    {% now "M j, Y" as generated_on %}
+    <div class="report-header">
+        <div>
+            <h2 class="report-title">{{ business_name|default:default_business_name|default:"Report" }}</h2>
+            <p class="report-subtitle">Accounting report for {{ formatted_month }}</p>
+        </div>
+        <div class="report-meta">
+            <div>Generated {{ generated_on }}</div>
+            {% if request.user %}
+                <div>Prepared for {{ request.user.get_full_name|default:request.user.username }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if 'income_expense' in report_types %}
+    <!-- Income & Expenses Table -->
+    <div class="section-title">Income & Expenses</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Month</th>
+                <th>Total Income</th>
+                <th>Total Expenses</th>
+                <th>Net Income</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in monthly_data %}
+            <tr>
+                <td>{{ data.month }}</td>
+                <td>{{ data.total_mach_income }}</td>
+                <td>{{ data.total_mach_expense }}</td>
+                <td>{{ data.margin_mach }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if 'tax_report' in report_types %}
+    <!-- Tax Reports Table -->
+    <div class="section-title">Tax Reports</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Month</th>
+                <th>Tax Collected</th>
+                <th>Tax Paid</th>
+                <th>Difference</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in monthly_data %}
+            <tr>
+                <td>{{ data.month }}</td>
+                <td>{{ data.total_tax_collected_mach }}</td>
+                <td>{{ data.total_tax_paid_mach }}</td>
+                <td>{{ data.tax_difference_mach }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if 'detailed_income' in report_types %}
+    <!-- Detailed Incomes Table -->
+    <div class="section-title">Detailed Incomes</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Paid Date</th>
+                <th>Number of Invoices</th>
+                <th>Total Tax</th>
+                <th>Total Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for income in grouped_incomes %}
+            <tr>
+                <td>{{ income.date_fully_paid|date:"Y-m-d" }}</td>
+                <td>{{ income.total_invoices }}</td>
+                <td>{{ income.total_tax_collected|floatformat:2 }}</td>
+                <td>{{ income.total_amount|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% endif %}
+
+    {% if 'detailed_expense' in report_types %}
+    <div class="section-title">Detailed Expenses</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Number of Entries</th>
+                <th>Total Tax</th>
+                <th>Total Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in grouped_expenses %}
+            <tr>
+                <td>{{ expense.mech_expense__date|date:"Y-m-d" }}</td>
+                <td>{{ expense.total_entries }}</td>
+                <td>{{ expense.total_tax_paid|currency }}</td>
+                <td>{{ expense.total_amount|currency }}</td>
+            </tr>
+            {% endfor %}
+            <!-- Total Row -->
+            <tr class="total-row">
+                <td>Total</td>
+                <td>{{ mach_total_expenses.total_qty }}</td> <!-- Changed from total_qty to total_entries -->
+                <td>{{ mach_total_expenses.total_tax_paid|currency }}</td> <!-- Applied currency filter -->
+                <td>{{ mach_total_expenses.total_amount|currency }}</td> <!-- Applied currency filter -->
+            </tr>
+        </tbody>
+    </table>
+    {% endif %}
+
+</body>
+</html>

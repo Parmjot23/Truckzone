@@ -1,0 +1,1003 @@
+{% extends 'customer_portal_base.html' %}
+{% block title %}Attributes{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+    {% include 'inventory/partials/_inventory_nav.html' %}
+    <div class="page-header">
+        <div>
+            <h2 class="mb-1">Attributes</h2>
+            <p class="text-muted mb-0">Define category attributes for filters and comparisons.</p>
+        </div>
+    </div>
+
+    <div class="surface-card p-4" id="addAttributeCard">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+            <div>
+                <h2 class="h5 mb-1">Add a new attribute</h2>
+                <p class="text-muted mb-0">Attributes appear on product forms for the selected category.</p>
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-lg-3">
+                <label for="newAttributeName" class="form-label">Attribute name</label>
+                <input type="text" class="form-control" id="newAttributeName" placeholder="e.g. Brake Type">
+            </div>
+            <div class="col-lg-3">
+                <label for="newAttributeCategory" class="form-label">Category</label>
+                <select class="form-select" id="newAttributeCategory">
+                    <option value="">Select category</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label for="newAttributeType" class="form-label">Type</label>
+                <select class="form-select" id="newAttributeType">
+                    {% for value, label in attribute_types %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label for="newAttributeOrder" class="form-label">Sort order</label>
+                <input type="number" class="form-control" id="newAttributeOrder" min="0" placeholder="0">
+            </div>
+            <div class="col-lg-2 d-flex align-items-end">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="newAttributeActive" checked>
+                    <label class="form-check-label" for="newAttributeActive">Active</label>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <label for="newAttributeDescription" class="form-label">Description</label>
+                <textarea class="form-control" id="newAttributeDescription" rows="2" placeholder="Add helper text for staff"></textarea>
+            </div>
+            <div class="col-lg-4">
+                <label for="newAttributeUnit" class="form-label">Value unit</label>
+                <input type="text" class="form-control" id="newAttributeUnit" placeholder="e.g. inch, psi">
+            </div>
+            <div class="col-lg-4" id="newAttributeOptionsGroup">
+                <label for="newAttributeOptions" class="form-label">Options</label>
+                <textarea class="form-control" id="newAttributeOptions" rows="2" placeholder="Option 1, Option 2"></textarea>
+                <div class="form-text text-muted">Use commas or new lines to separate values.</div>
+            </div>
+            <div class="col-lg-4 d-flex align-items-end">
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="newAttributeFilterable" checked>
+                        <label class="form-check-label" for="newAttributeFilterable">Filterable</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="newAttributeComparable">
+                        <label class="form-check-label" for="newAttributeComparable">Comparable</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mt-3">
+            <button type="button" class="btn btn-primary" id="addAttributeButton">Add attribute</button>
+            <div id="newAttributeStatus" class="text-muted small">New entries save automatically when you add them.</div>
+        </div>
+    </div>
+
+    <div class="surface-card p-4">
+        <div class="row align-items-end gy-3 mb-2">
+            <div class="col-md-7 col-lg-6">
+                <label for="attributeSearchInput" class="form-label fw-semibold">Search attributes</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="search" class="form-control" id="attributeSearchInput" placeholder="Search name, category, or description" value="{{ search_query }}">
+                </div>
+            </div>
+        </div>
+
+        <div id="attributesEmptyState" class="alert alert-info mt-4{% if attributes_count %} d-none{% endif %}">
+            No attributes yet. Add one to power your product filters.
+        </div>
+
+        <div class="table-responsive mt-3{% if not attributes_count %} d-none{% endif %}" id="attributesTableWrapper">
+            <table class="table table-striped align-middle" id="attributesTable"
+                   data-save-url="{% url 'accounts:inventory_attribute_inline_save' %}"
+                   data-delete-url-template="{% url 'accounts:inventory_attribute_delete' 0 %}">
+                <thead>
+                    <tr>
+                        <th scope="col" style="width: 22%;">Attribute</th>
+                        <th scope="col" style="width: 18%;">Category</th>
+                        <th scope="col" style="width: 22%;">Type &amp; Options</th>
+                        <th scope="col" style="width: 16%;">Flags</th>
+                        <th scope="col" style="width: 10%;">Status</th>
+                        <th scope="col" class="text-end" style="width: 12%;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="attributesTableBody">
+                    {% for attribute in attributes %}
+                    <tr class="attribute-row"
+                        data-attribute-id="{{ attribute.id }}"
+                        data-attribute-name="{{ attribute.name|default_if_none:''|escape }}"
+                        data-attribute-description="{{ attribute.description|default_if_none:''|escape }}"
+                        data-attribute-unit="{{ attribute.value_unit|default_if_none:''|escape }}"
+                        data-attribute-category-id="{{ attribute.category_id|default_if_none:'' }}"
+                        data-attribute-category-name="{{ attribute.category.name|default_if_none:''|escape }}"
+                        data-attribute-type="{{ attribute.attribute_type|default_if_none:'select' }}"
+                        data-attribute-sort-order="{{ attribute.sort_order|default_if_none:'' }}"
+                        data-attribute-is-filterable="{{ attribute.is_filterable|yesno:'true,false' }}"
+                        data-attribute-is-comparable="{{ attribute.is_comparable|yesno:'true,false' }}"
+                        data-attribute-is-active="{{ attribute.is_active|yesno:'true,false' }}"
+                        data-attribute-options="{{ attribute.active_options|join:', ' }}">
+                        <td>
+                            <div class="attribute-display attribute-name-display fw-semibold"></div>
+                            <div class="attribute-display attribute-description-display text-muted small"></div>
+                            <div class="attribute-edit d-none">
+                                <input type="text" class="form-control form-control-sm attribute-name-input" placeholder="Attribute name">
+                                <textarea class="form-control form-control-sm mt-2 attribute-description-input" rows="2" placeholder="Description"></textarea>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="attribute-display attribute-category-display text-muted small"></div>
+                            <div class="attribute-edit d-none">
+                                <select class="form-select form-select-sm attribute-category-input">
+                                    <option value="">Select category</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category.id }}">{{ category.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="attribute-display">
+                                <div class="attribute-type-display text-muted small"></div>
+                                <div class="attribute-options-display text-muted small"></div>
+                                <div class="attribute-unit-display text-muted small"></div>
+                                <div class="attribute-order-display text-muted small"></div>
+                            </div>
+                            <div class="attribute-edit d-none">
+                                <select class="form-select form-select-sm attribute-type-input">
+                                    {% for value, label in attribute_types %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="attribute-options-wrapper mt-2">
+                                    <textarea class="form-control form-control-sm attribute-options-input" rows="2" placeholder="Option 1, Option 2"></textarea>
+                                    <div class="form-text text-muted small">Use commas or new lines to separate values.</div>
+                                </div>
+                                <input type="text" class="form-control form-control-sm mt-2 attribute-unit-input" placeholder="Value unit (e.g. inch)">
+                                <input type="number" class="form-control form-control-sm mt-2 attribute-order-input" min="0" placeholder="Sort order">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="attribute-display attribute-flags-display text-muted small"></div>
+                            <div class="attribute-edit d-none">
+                                <div class="form-check">
+                                    <input class="form-check-input attribute-filterable-input" type="checkbox">
+                                    <label class="form-check-label">Filterable</label>
+                                </div>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input attribute-comparable-input" type="checkbox">
+                                    <label class="form-check-label">Comparable</label>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="attribute-display attribute-status-display text-muted small"></div>
+                            <div class="attribute-edit d-none">
+                                <div class="form-check">
+                                    <input class="form-check-input attribute-active-input" type="checkbox">
+                                    <label class="form-check-label">Active</label>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-end align-top">
+                            <div class="btn-group btn-group-sm attribute-view-actions" role="group" aria-label="Attribute actions">
+                                <button type="button" class="btn btn-outline-secondary attribute-edit-btn">Edit</button>
+                                <button type="button" class="btn btn-outline-danger attribute-delete-btn">Delete</button>
+                            </div>
+                            <div class="btn-group btn-group-sm attribute-edit-actions d-none" role="group" aria-label="Edit actions">
+                                <button type="button" class="btn btn-primary attribute-save-btn">Save</button>
+                                <button type="button" class="btn btn-outline-secondary attribute-cancel-btn">Cancel</button>
+                            </div>
+                            <div class="row-status text-muted small mt-2" aria-live="polite"></div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="attributesNoResults" class="alert alert-secondary d-none mt-4 mb-0">
+            No attributes match your search. Try a different term.
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="inlineCsrfToken" value="{{ csrf_token }}">
+
+<template id="attributeRowTemplate">
+    <tr class="attribute-row"
+        data-attribute-id=""
+        data-attribute-name=""
+        data-attribute-description=""
+        data-attribute-unit=""
+        data-attribute-category-id=""
+        data-attribute-category-name=""
+        data-attribute-type="select"
+        data-attribute-sort-order=""
+        data-attribute-is-filterable="true"
+        data-attribute-is-comparable="false"
+        data-attribute-is-active="true"
+        data-attribute-options="">
+        <td>
+            <div class="attribute-display attribute-name-display fw-semibold"></div>
+            <div class="attribute-display attribute-description-display text-muted small"></div>
+            <div class="attribute-edit d-none">
+                <input type="text" class="form-control form-control-sm attribute-name-input" placeholder="Attribute name">
+                <textarea class="form-control form-control-sm mt-2 attribute-description-input" rows="2" placeholder="Description"></textarea>
+            </div>
+        </td>
+        <td>
+            <div class="attribute-display attribute-category-display text-muted small"></div>
+            <div class="attribute-edit d-none">
+                <select class="form-select form-select-sm attribute-category-input">
+                    <option value="">Select category</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </td>
+        <td>
+            <div class="attribute-display">
+                <div class="attribute-type-display text-muted small"></div>
+                <div class="attribute-options-display text-muted small"></div>
+                <div class="attribute-unit-display text-muted small"></div>
+                <div class="attribute-order-display text-muted small"></div>
+            </div>
+            <div class="attribute-edit d-none">
+                <select class="form-select form-select-sm attribute-type-input">
+                    {% for value, label in attribute_types %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <div class="attribute-options-wrapper mt-2">
+                    <textarea class="form-control form-control-sm attribute-options-input" rows="2" placeholder="Option 1, Option 2"></textarea>
+                    <div class="form-text text-muted small">Use commas or new lines to separate values.</div>
+                </div>
+                <input type="text" class="form-control form-control-sm mt-2 attribute-unit-input" placeholder="Value unit (e.g. inch)">
+                <input type="number" class="form-control form-control-sm mt-2 attribute-order-input" min="0" placeholder="Sort order">
+            </div>
+        </td>
+        <td>
+            <div class="attribute-display attribute-flags-display text-muted small"></div>
+            <div class="attribute-edit d-none">
+                <div class="form-check">
+                    <input class="form-check-input attribute-filterable-input" type="checkbox">
+                    <label class="form-check-label">Filterable</label>
+                </div>
+                <div class="form-check mt-2">
+                    <input class="form-check-input attribute-comparable-input" type="checkbox">
+                    <label class="form-check-label">Comparable</label>
+                </div>
+            </div>
+        </td>
+        <td>
+            <div class="attribute-display attribute-status-display text-muted small"></div>
+            <div class="attribute-edit d-none">
+                <div class="form-check">
+                    <input class="form-check-input attribute-active-input" type="checkbox">
+                    <label class="form-check-label">Active</label>
+                </div>
+            </div>
+        </td>
+        <td class="text-end align-top">
+            <div class="btn-group btn-group-sm attribute-view-actions" role="group" aria-label="Attribute actions">
+                <button type="button" class="btn btn-outline-secondary attribute-edit-btn">Edit</button>
+                <button type="button" class="btn btn-outline-danger attribute-delete-btn">Delete</button>
+            </div>
+            <div class="btn-group btn-group-sm attribute-edit-actions d-none" role="group" aria-label="Edit actions">
+                <button type="button" class="btn btn-primary attribute-save-btn">Save</button>
+                <button type="button" class="btn btn-outline-secondary attribute-cancel-btn">Cancel</button>
+            </div>
+            <div class="row-status text-muted small mt-2" aria-live="polite"></div>
+        </td>
+    </tr>
+</template>
+
+<style>
+    #attributesTable {
+        min-width: 900px;
+    }
+
+    #attributesTable td {
+        vertical-align: top;
+    }
+
+    .status-saving {
+        color: var(--bs-primary, #0d6efd) !important;
+    }
+
+    .status-error {
+        color: var(--bs-danger, #dc3545) !important;
+    }
+
+    .status-success {
+        color: var(--bs-success, #198754) !important;
+    }
+</style>
+
+<script>
+(function () {
+    let currentSearchQuery = '';
+
+    const TYPE_LABELS = {
+        select: 'Select',
+        text: 'Text',
+        number: 'Number',
+        boolean: 'Yes/No',
+    };
+
+    function getTable() {
+        return document.getElementById('attributesTable');
+    }
+
+    function getCsrfToken() {
+        const inlineTokenInput = document.getElementById('inlineCsrfToken');
+        if (inlineTokenInput && inlineTokenInput.value && inlineTokenInput.value !== 'NOTPROVIDED') {
+            return inlineTokenInput.value;
+        }
+        const name = 'csrftoken';
+        const cookies = document.cookie ? document.cookie.split('; ') : [];
+        for (let i = 0; i < cookies.length; i += 1) {
+            const parts = cookies[i].split('=');
+            const key = decodeURIComponent(parts[0]);
+            if (key === name) {
+                return decodeURIComponent(parts[1] || '');
+            }
+        }
+        return '';
+    }
+
+    function buildUrl(template, id) {
+        return template.replace(/\/0\//, '/' + id + '/');
+    }
+
+    function valueOrEmpty(value) {
+        if (value === null || value === undefined) {
+            return '';
+        }
+        return String(value);
+    }
+
+    function normalizeBool(value, fallback) {
+        if (typeof value === 'boolean') {
+            return value;
+        }
+        if (value === null || value === undefined) {
+            return fallback;
+        }
+        const normalized = String(value).trim().toLowerCase();
+        if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+            return true;
+        }
+        if (['0', 'false', 'no', 'off'].includes(normalized)) {
+            return false;
+        }
+        return fallback;
+    }
+
+    function parseOptions(value) {
+        if (!value) {
+            return [];
+        }
+        if (Array.isArray(value)) {
+            return value.map((entry) => String(entry).trim()).filter(Boolean);
+        }
+        return String(value)
+            .split(/[\n,]+/)
+            .map((entry) => entry.trim())
+            .filter(Boolean);
+    }
+
+    function formatOptions(options) {
+        return options.join(', ');
+    }
+
+    function normalizeSortOrder(value) {
+        const trimmed = (value || '').toString().trim();
+        if (!trimmed) {
+            return '0';
+        }
+        const numeric = Number(trimmed);
+        if (!Number.isInteger(numeric) || numeric < 0) {
+            return null;
+        }
+        return String(numeric);
+    }
+
+    function normalizeAttribute(raw) {
+        const category = raw.category || {};
+        const options = parseOptions(raw.options || raw.option_values || raw.attribute_options);
+        return {
+            id: valueOrEmpty(raw.id),
+            name: valueOrEmpty(raw.name),
+            description: valueOrEmpty(raw.description),
+            value_unit: valueOrEmpty(raw.value_unit),
+            category_id: valueOrEmpty(raw.category_id || category.id),
+            category_name: valueOrEmpty(raw.category_name || category.name),
+            attribute_type: valueOrEmpty(raw.attribute_type || 'select'),
+            sort_order: valueOrEmpty(raw.sort_order),
+            is_filterable: normalizeBool(raw.is_filterable, true),
+            is_comparable: normalizeBool(raw.is_comparable, false),
+            is_active: normalizeBool(raw.is_active, true),
+            options: options,
+        };
+    }
+
+    function showStatus(target, message, state) {
+        if (!target) {
+            return;
+        }
+        target.textContent = message || '';
+        target.classList.remove('status-saving', 'status-error', 'status-success');
+        if (state) {
+            target.classList.add('status-' + state);
+        }
+    }
+
+    function setOptionsVisibility(attributeType, wrapper, textarea) {
+        const showOptions = attributeType === 'select';
+        if (wrapper) {
+            wrapper.classList.toggle('d-none', !showOptions);
+        }
+        if (textarea) {
+            textarea.disabled = !showOptions;
+            if (!showOptions) {
+                textarea.value = '';
+            }
+        }
+    }
+
+    function getAttributeFromRow(row) {
+        return normalizeAttribute({
+            id: row.dataset.attributeId,
+            name: row.dataset.attributeName,
+            description: row.dataset.attributeDescription,
+            value_unit: row.dataset.attributeUnit,
+            category_id: row.dataset.attributeCategoryId,
+            category_name: row.dataset.attributeCategoryName,
+            attribute_type: row.dataset.attributeType,
+            sort_order: row.dataset.attributeSortOrder,
+            is_filterable: row.dataset.attributeIsFilterable,
+            is_comparable: row.dataset.attributeIsComparable,
+            is_active: row.dataset.attributeIsActive,
+            attribute_options: row.dataset.attributeOptions,
+        });
+    }
+
+    function applyAttributeToRow(row, rawAttribute) {
+        if (!row) {
+            return;
+        }
+        const attribute = normalizeAttribute(rawAttribute || {});
+        const optionsText = formatOptions(attribute.options);
+        const typeLabel = TYPE_LABELS[attribute.attribute_type] || attribute.attribute_type || 'Select';
+
+        row.dataset.attributeId = attribute.id || '';
+        row.dataset.attributeName = attribute.name || '';
+        row.dataset.attributeDescription = attribute.description || '';
+        row.dataset.attributeUnit = attribute.value_unit || '';
+        row.dataset.attributeCategoryId = attribute.category_id || '';
+        row.dataset.attributeCategoryName = attribute.category_name || '';
+        row.dataset.attributeType = attribute.attribute_type || 'select';
+        row.dataset.attributeSortOrder = attribute.sort_order || '0';
+        row.dataset.attributeIsFilterable = attribute.is_filterable ? 'true' : 'false';
+        row.dataset.attributeIsComparable = attribute.is_comparable ? 'true' : 'false';
+        row.dataset.attributeIsActive = attribute.is_active ? 'true' : 'false';
+        row.dataset.attributeOptions = optionsText;
+
+        const nameDisplay = row.querySelector('.attribute-name-display');
+        const descriptionDisplay = row.querySelector('.attribute-description-display');
+        const categoryDisplay = row.querySelector('.attribute-category-display');
+        const typeDisplay = row.querySelector('.attribute-type-display');
+        const optionsDisplay = row.querySelector('.attribute-options-display');
+        const unitDisplay = row.querySelector('.attribute-unit-display');
+        const orderDisplay = row.querySelector('.attribute-order-display');
+        const flagsDisplay = row.querySelector('.attribute-flags-display');
+        const statusDisplay = row.querySelector('.attribute-status-display');
+
+        if (nameDisplay) {
+            nameDisplay.textContent = attribute.name || 'Untitled attribute';
+        }
+        if (descriptionDisplay) {
+            descriptionDisplay.textContent = attribute.description || 'No description';
+        }
+        if (categoryDisplay) {
+            categoryDisplay.textContent = attribute.category_name || 'Unassigned';
+        }
+        if (typeDisplay) {
+            typeDisplay.textContent = 'Type: ' + typeLabel;
+        }
+        if (optionsDisplay) {
+            if (attribute.attribute_type === 'select') {
+                optionsDisplay.textContent = optionsText ? 'Options: ' + optionsText : 'Options: none';
+            } else {
+                optionsDisplay.textContent = 'Options: not required';
+            }
+        }
+        if (unitDisplay) {
+            unitDisplay.textContent = attribute.value_unit ? 'Unit: ' + attribute.value_unit : 'Unit: none';
+        }
+        if (orderDisplay) {
+            const order = attribute.sort_order || '0';
+            orderDisplay.textContent = 'Order: ' + order;
+        }
+        if (flagsDisplay) {
+            const flags = [];
+            if (attribute.is_filterable) {
+                flags.push('Filterable');
+            }
+            if (attribute.is_comparable) {
+                flags.push('Comparable');
+            }
+            flagsDisplay.textContent = flags.length ? flags.join(' / ') : 'No flags';
+        }
+        if (statusDisplay) {
+            statusDisplay.textContent = attribute.is_active ? 'Active' : 'Inactive';
+        }
+
+        const nameInput = row.querySelector('.attribute-name-input');
+        const descriptionInput = row.querySelector('.attribute-description-input');
+        const categoryInput = row.querySelector('.attribute-category-input');
+        const typeInput = row.querySelector('.attribute-type-input');
+        const optionsInput = row.querySelector('.attribute-options-input');
+        const optionsWrapper = row.querySelector('.attribute-options-wrapper');
+        const unitInput = row.querySelector('.attribute-unit-input');
+        const orderInput = row.querySelector('.attribute-order-input');
+        const filterableInput = row.querySelector('.attribute-filterable-input');
+        const comparableInput = row.querySelector('.attribute-comparable-input');
+        const activeInput = row.querySelector('.attribute-active-input');
+
+        if (nameInput) {
+            nameInput.value = attribute.name || '';
+        }
+        if (descriptionInput) {
+            descriptionInput.value = attribute.description || '';
+        }
+        if (categoryInput) {
+            categoryInput.value = attribute.category_id || '';
+        }
+        if (typeInput) {
+            typeInput.value = attribute.attribute_type || 'select';
+        }
+        if (optionsInput) {
+            optionsInput.value = attribute.options.join('\n');
+        }
+        if (unitInput) {
+            unitInput.value = attribute.value_unit || '';
+        }
+        if (orderInput) {
+            orderInput.value = attribute.sort_order || '0';
+        }
+        if (filterableInput) {
+            filterableInput.checked = !!attribute.is_filterable;
+        }
+        if (comparableInput) {
+            comparableInput.checked = !!attribute.is_comparable;
+        }
+        if (activeInput) {
+            activeInput.checked = !!attribute.is_active;
+        }
+
+        setOptionsVisibility(attribute.attribute_type, optionsWrapper, optionsInput);
+
+        const searchText = [
+            attribute.name,
+            attribute.description,
+            attribute.value_unit,
+            attribute.category_name,
+            typeLabel,
+            optionsText,
+        ].filter(Boolean).join(' ').toLowerCase();
+        row.dataset.searchText = searchText;
+    }
+
+    function toggleRowMode(row, isEditing) {
+        row.querySelectorAll('.attribute-display').forEach(function (el) {
+            el.classList.toggle('d-none', isEditing);
+        });
+        row.querySelectorAll('.attribute-edit').forEach(function (el) {
+            el.classList.toggle('d-none', !isEditing);
+        });
+        const viewActions = row.querySelector('.attribute-view-actions');
+        const editActions = row.querySelector('.attribute-edit-actions');
+        if (viewActions) {
+            viewActions.classList.toggle('d-none', isEditing);
+        }
+        if (editActions) {
+            editActions.classList.toggle('d-none', !isEditing);
+        }
+    }
+
+    function enterEditMode(row) {
+        toggleRowMode(row, true);
+    }
+
+    function exitEditMode(row, revertChanges) {
+        if (revertChanges) {
+            applyAttributeToRow(row, getAttributeFromRow(row));
+        }
+        toggleRowMode(row, false);
+    }
+
+    function toggleEmptyState() {
+        const rows = document.querySelectorAll('.attribute-row');
+        const emptyState = document.getElementById('attributesEmptyState');
+        const tableWrapper = document.getElementById('attributesTableWrapper');
+        const hasRows = rows.length > 0;
+        if (emptyState) {
+            emptyState.classList.toggle('d-none', hasRows);
+        }
+        if (tableWrapper) {
+            tableWrapper.classList.toggle('d-none', !hasRows);
+        }
+        if (!hasRows) {
+            const noResults = document.getElementById('attributesNoResults');
+            if (noResults) {
+                noResults.classList.add('d-none');
+            }
+        }
+    }
+
+    function filterAttributes(query) {
+        const normalized = (query || '').trim().toLowerCase();
+        const rows = document.querySelectorAll('.attribute-row');
+        let visibleCount = 0;
+        rows.forEach(function (row) {
+            const searchText = row.dataset.searchText || '';
+            const matchesText = !normalized || searchText.includes(normalized);
+            if (matchesText) {
+                row.classList.remove('d-none');
+                visibleCount += 1;
+            } else {
+                row.classList.add('d-none');
+            }
+        });
+        const noResults = document.getElementById('attributesNoResults');
+        if (noResults) {
+            if (normalized && visibleCount === 0 && rows.length > 0) {
+                noResults.classList.remove('d-none');
+            } else {
+                noResults.classList.add('d-none');
+            }
+        }
+    }
+
+    function createRowElement(attribute) {
+        const template = document.getElementById('attributeRowTemplate');
+        if (!template || !template.content || !template.content.firstElementChild) {
+            return null;
+        }
+        const row = template.content.firstElementChild.cloneNode(true);
+        attachRowEvents(row);
+        applyAttributeToRow(row, attribute);
+        return row;
+    }
+
+    function insertAttributeRow(attribute) {
+        const tbody = document.getElementById('attributesTableBody');
+        if (!tbody) {
+            return;
+        }
+        const row = createRowElement(attribute);
+        if (!row) {
+            return;
+        }
+        tbody.insertBefore(row, tbody.firstChild);
+        toggleEmptyState();
+        filterAttributes(currentSearchQuery);
+    }
+
+    function validatePayload(payload, statusTarget) {
+        if (!payload.name) {
+            showStatus(statusTarget, 'Attribute name is required.', 'error');
+            return false;
+        }
+        if (!payload.category_id) {
+            showStatus(statusTarget, 'Select a category for this attribute.', 'error');
+            return false;
+        }
+        if (payload.sort_order === null) {
+            showStatus(statusTarget, 'Sort order must be a non-negative whole number.', 'error');
+            return false;
+        }
+        return true;
+    }
+
+    function saveRow(row) {
+        const table = getTable();
+        if (!table) {
+            return;
+        }
+        const statusTarget = row.querySelector('.row-status');
+        const sortOrder = normalizeSortOrder(row.querySelector('.attribute-order-input')?.value);
+        const attributeType = row.querySelector('.attribute-type-input')?.value || 'select';
+        const payload = {
+            id: row.dataset.attributeId || null,
+            name: (row.querySelector('.attribute-name-input')?.value || '').trim(),
+            description: (row.querySelector('.attribute-description-input')?.value || '').trim(),
+            value_unit: (row.querySelector('.attribute-unit-input')?.value || '').trim(),
+            category_id: row.querySelector('.attribute-category-input')?.value || '',
+            attribute_type: attributeType,
+            sort_order: sortOrder,
+            is_filterable: row.querySelector('.attribute-filterable-input')?.checked ?? true,
+            is_comparable: row.querySelector('.attribute-comparable-input')?.checked ?? false,
+            is_active: row.querySelector('.attribute-active-input')?.checked ?? true,
+            options: attributeType === 'select'
+                ? (row.querySelector('.attribute-options-input')?.value || '')
+                : '',
+        };
+        if (!validatePayload(payload, statusTarget)) {
+            return;
+        }
+        showStatus(statusTarget, 'Saving...', 'saving');
+        fetch(table.dataset.saveUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(payload),
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().then(function (data) {
+                        throw data;
+                    });
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                applyAttributeToRow(row, data.attribute);
+                exitEditMode(row, false);
+                showStatus(statusTarget, 'Saved.', 'success');
+                filterAttributes(currentSearchQuery);
+            })
+            .catch(function (errorData) {
+                const message = errorData && errorData.errors
+                    ? Object.values(errorData.errors).flat().join(' ')
+                    : 'Could not save this attribute.';
+                showStatus(statusTarget, message, 'error');
+            });
+    }
+
+    function deleteRow(row) {
+        const table = getTable();
+        if (!table) {
+            return;
+        }
+        const statusTarget = row.querySelector('.row-status');
+        const attributeId = row.dataset.attributeId;
+        if (!attributeId) {
+            row.remove();
+            toggleEmptyState();
+            filterAttributes(currentSearchQuery);
+            return;
+        }
+        if (!confirm('Remove this attribute?')) {
+            return;
+        }
+        showStatus(statusTarget, 'Deleting...', 'saving');
+        fetch(buildUrl(table.dataset.deleteUrlTemplate, attributeId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Failed to delete attribute.');
+                }
+                row.remove();
+                toggleEmptyState();
+                filterAttributes(currentSearchQuery);
+            })
+            .catch(function () {
+                showStatus(statusTarget, 'Could not delete this attribute. Try again.', 'error');
+            });
+    }
+
+    function attachRowEvents(row) {
+        if (!row || row.dataset.initialized === 'true') {
+            return;
+        }
+        row.dataset.initialized = 'true';
+        const editButton = row.querySelector('.attribute-edit-btn');
+        const cancelButton = row.querySelector('.attribute-cancel-btn');
+        const saveButton = row.querySelector('.attribute-save-btn');
+        const deleteButton = row.querySelector('.attribute-delete-btn');
+        const typeInput = row.querySelector('.attribute-type-input');
+        const optionsWrapper = row.querySelector('.attribute-options-wrapper');
+        const optionsInput = row.querySelector('.attribute-options-input');
+
+        if (editButton) {
+            editButton.addEventListener('click', function () {
+                enterEditMode(row);
+            });
+        }
+        if (cancelButton) {
+            cancelButton.addEventListener('click', function () {
+                exitEditMode(row, true);
+                showStatus(row.querySelector('.row-status'), '', null);
+            });
+        }
+        if (saveButton) {
+            saveButton.addEventListener('click', function () {
+                saveRow(row);
+            });
+        }
+        if (deleteButton) {
+            deleteButton.addEventListener('click', function () {
+                deleteRow(row);
+            });
+        }
+        if (typeInput) {
+            typeInput.addEventListener('change', function () {
+                setOptionsVisibility(typeInput.value, optionsWrapper, optionsInput);
+            });
+        }
+    }
+
+    function updateNewOptionsVisibility() {
+        const typeInput = document.getElementById('newAttributeType');
+        const optionsGroup = document.getElementById('newAttributeOptionsGroup');
+        const optionsInput = document.getElementById('newAttributeOptions');
+        if (!typeInput) {
+            return;
+        }
+        setOptionsVisibility(typeInput.value, optionsGroup, optionsInput);
+    }
+
+    function handleNewAttribute() {
+        const nameInput = document.getElementById('newAttributeName');
+        const descriptionInput = document.getElementById('newAttributeDescription');
+        const unitInput = document.getElementById('newAttributeUnit');
+        const categoryInput = document.getElementById('newAttributeCategory');
+        const typeInput = document.getElementById('newAttributeType');
+        const optionsInput = document.getElementById('newAttributeOptions');
+        const orderInput = document.getElementById('newAttributeOrder');
+        const activeInput = document.getElementById('newAttributeActive');
+        const filterableInput = document.getElementById('newAttributeFilterable');
+        const comparableInput = document.getElementById('newAttributeComparable');
+        const statusTarget = document.getElementById('newAttributeStatus');
+        const table = getTable();
+        if (!nameInput || !statusTarget || !table) {
+            return;
+        }
+
+        const sortOrder = normalizeSortOrder(orderInput?.value);
+        const attributeType = typeInput?.value || 'select';
+        const payload = {
+            name: (nameInput.value || '').trim(),
+            description: (descriptionInput?.value || '').trim(),
+            value_unit: (unitInput?.value || '').trim(),
+            category_id: categoryInput?.value || '',
+            attribute_type: attributeType,
+            sort_order: sortOrder,
+            is_filterable: filterableInput?.checked ?? true,
+            is_comparable: comparableInput?.checked ?? false,
+            is_active: activeInput?.checked ?? true,
+            options: attributeType === 'select' ? (optionsInput?.value || '') : '',
+        };
+        if (!validatePayload(payload, statusTarget)) {
+            return;
+        }
+        showStatus(statusTarget, 'Saving...', 'saving');
+        fetch(table.dataset.saveUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(payload),
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().then(function (data) {
+                        throw data;
+                    });
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                insertAttributeRow(data.attribute);
+                nameInput.value = '';
+                if (descriptionInput) {
+                    descriptionInput.value = '';
+                }
+                if (unitInput) {
+                    unitInput.value = '';
+                }
+                if (categoryInput) {
+                    categoryInput.value = '';
+                }
+                if (typeInput) {
+                    typeInput.value = 'select';
+                }
+                if (optionsInput) {
+                    optionsInput.value = '';
+                }
+                if (orderInput) {
+                    orderInput.value = '';
+                }
+                if (activeInput) {
+                    activeInput.checked = true;
+                }
+                if (filterableInput) {
+                    filterableInput.checked = true;
+                }
+                if (comparableInput) {
+                    comparableInput.checked = false;
+                }
+                updateNewOptionsVisibility();
+                nameInput.focus();
+                showStatus(statusTarget, 'Saved. Add another attribute when you are ready.', 'success');
+            })
+            .catch(function (errorData) {
+                const message = errorData && errorData.errors
+                    ? Object.values(errorData.errors).flat().join(' ')
+                    : 'Could not save this attribute.';
+                showStatus(statusTarget, message, 'error');
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const rows = document.querySelectorAll('.attribute-row');
+        rows.forEach(function (row) {
+            attachRowEvents(row);
+            applyAttributeToRow(row, getAttributeFromRow(row));
+        });
+        toggleEmptyState();
+
+        const searchInput = document.getElementById('attributeSearchInput');
+        if (searchInput) {
+            currentSearchQuery = searchInput.value || '';
+            searchInput.addEventListener('input', function () {
+                currentSearchQuery = searchInput.value || '';
+                filterAttributes(currentSearchQuery);
+            });
+        }
+
+        const addButton = document.getElementById('addAttributeButton');
+        if (addButton) {
+            addButton.addEventListener('click', function () {
+                handleNewAttribute();
+            });
+        }
+
+        const typeInput = document.getElementById('newAttributeType');
+        if (typeInput) {
+            typeInput.addEventListener('change', updateNewOptionsVisibility);
+        }
+        updateNewOptionsVisibility();
+
+        ['newAttributeName', 'newAttributeOrder'].forEach(function (id) {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        handleNewAttribute();
+                    }
+                });
+            }
+        });
+
+        filterAttributes(currentSearchQuery);
+    });
+})();
+</script>
+
+{% endblock %}

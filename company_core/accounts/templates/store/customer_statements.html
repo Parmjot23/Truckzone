@@ -1,0 +1,200 @@
+{% extends portal_base_template|default:"store/customer_portal_base.html" %}
+{% block title %}Statements &amp; Exports{% endblock %}
+{% block extra_css %}
+{{ block.super }}
+<style>
+  .statement-form-controls {
+    display: flex;
+    align-items: end;
+    gap: 1rem;
+  }
+
+  .statement-form-controls > div {
+    flex: 1;
+  }
+
+  .statement-form-controls .col-md-5 {
+    flex: 0 0 auto;
+    width: 40%;
+  }
+
+  .statement-form-controls .col-md-4 {
+    flex: 0 0 auto;
+    width: 35%;
+  }
+
+  .statement-form-controls .col-md-3 {
+    flex: 0 0 auto;
+    width: 25%;
+  }
+
+  @media (max-width: 768px) {
+    .statement-form-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .statement-form-controls .col-md-5,
+    .statement-form-controls .col-md-4,
+    .statement-form-controls .col-md-3 {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+{% block portal_content %}
+<div class="customer-portal-section">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+      <h2 class="h4 mb-1">Statements &amp; exports</h2>
+      <p class="text-muted mb-0">Download accountant-ready summaries of fully paid invoices.</p>
+    </div>
+    <a href="{% url 'accounts:customer_invoice_list' %}" class="btn btn-outline-secondary btn-sm mt-3 mt-md-0">
+      <i class="fas fa-file-invoice-dollar me-1"></i> Back to invoices
+    </a>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <form method="get" class="statement-form-controls mb-3">
+            <div class="col-md-5">
+              <label class="form-label" for="id_period">{{ form.period.label }}</label>
+              {{ form.period }}
+              {% if form.period.help_text %}
+                <small class="form-text text-muted">{{ form.period.help_text }}</small>
+              {% endif %}
+              {% for error in form.period.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="id_reference_date">{{ form.reference_date.label }}</label>
+              {{ form.reference_date }}
+              {% if form.reference_date.help_text %}
+                <small class="form-text text-muted">{{ form.reference_date.help_text }}</small>
+              {% endif %}
+              {% for error in form.reference_date.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label invisible">Update</label>
+              <button type="submit" class="btn btn-primary w-100">Update preview</button>
+            </div>
+          </form>
+
+          {% if period_label %}
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+              <div>
+                <h2 class="h5 mb-1">{{ period_label }}</h2>
+                <p class="text-muted mb-0">Paid invoices from {{ start_date|date:"M d, Y" }} to {{ end_date|date:"M d, Y" }}.</p>
+                <p class="text-muted small mb-0">Business: {{ business_name|default:default_business_name }}</p>
+              </div>
+              <div class="text-md-right mt-3 mt-md-0">
+                <p class="mb-0"><strong>Total invoices:</strong> {{ totals.count }}</p>
+                <p class="mb-0"><strong>Total collected:</strong> ${{ totals.paid|floatformat:2 }}</p>
+              </div>
+            </div>
+          {% endif %}
+
+          {% if invoices %}
+            <div class="table-responsive">
+              <table class="table table-striped mb-0 align-middle">
+                <thead class="thead-light">
+                  <tr>
+                    <th scope="col">Invoice #</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Subtotal</th>
+                    <th scope="col">Tax</th>
+                    <th scope="col">Total</th>
+                    <th scope="col">Paid on</th>
+                    <th scope="col">Method</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for invoice in invoices %}
+                    <tr>
+                      <td data-label="Invoice">{{ invoice.invoice_number }}</td>
+                      <td data-label="Date">{{ invoice.date|date:"M d, Y" }}</td>
+                      <td data-label="Subtotal">${{ invoice.subtotal|floatformat:2 }}</td>
+                      <td data-label="Tax">${{ invoice.tax_total|floatformat:2 }}</td>
+                      <td data-label="Total">${{ invoice.total_amount|floatformat:2 }}</td>
+                      <td data-label="Paid on">
+                        {% if invoice.latest_payment %}
+                          {{ invoice.latest_payment.date|date:"M d, Y" }}
+                        {% else %}-{% endif %}
+                      </td>
+                      <td data-label="Method">
+                        {% if invoice.latest_payment %}
+                          {{ invoice.latest_payment.method|default:"" }}
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="2" class="text-end"><strong>Totals</strong></td>
+                    <td>${{ totals.subtotal|floatformat:2 }}</td>
+                    <td>${{ totals.tax|floatformat:2 }}</td>
+                    <td>${{ totals.total|floatformat:2 }}</td>
+                    <td colspan="2">${{ totals.paid|floatformat:2 }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div class="d-flex flex-column flex-md-row gap-2 justify-content-end mt-3">
+              <form method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="period" value="{{ current_period }}">
+                <input type="hidden" name="reference_date" value="{{ current_reference_date|date:"Y-m-d" }}">
+                <input type="hidden" name="export_format" value="pdf">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-file-pdf me-1"></i> Download PDF statement
+                </button>
+              </form>
+              <form method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="period" value="{{ current_period }}">
+                <input type="hidden" name="reference_date" value="{{ current_reference_date|date:"Y-m-d" }}">
+                <input type="hidden" name="export_format" value="excel">
+                <button type="submit" class="btn btn-outline-secondary">
+                  <i class="fas fa-file-excel me-1"></i> Download Excel statement
+                </button>
+              </form>
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <p class="lead mb-1">No paid invoices found for this period.</p>
+              <p class="text-muted mb-0">Adjust the filters above to review a different timeframe.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        {% if logo_url %}
+        <div class="card-img-top p-4 text-center border-bottom">
+          <img src="{{ logo_url }}" alt="Company logo" class="img-fluid" style="max-height: 80px;">
+        </div>
+        {% endif %}
+        <div class="card-body">
+          <h2 class="h5">Tips for your accountant</h2>
+          <ul class="small text-muted mb-3">
+            <li>Each statement lists only invoices that are fully paid.</li>
+            <li>Totals include subtotals, tax collected, and payment details.</li>
+            <li>Use the PDF for record keeping and the Excel version for importing totals.</li>
+            <li>Switch between weekly, monthly, quarterly, semiannual, or annual views as needed.</li>
+          </ul>
+          <p class="small mb-0">Need help reconciling a period? Share the PDF statement along with the Excel export to give your accountant everything required for tax filing.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

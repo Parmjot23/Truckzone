@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invoice Email</title>
+</head>
+<body>
+    <p>Dear {{ email }},</p>
+    <p>Please find attached your invoice with the details below:</p>
+    <p>Invoice Number: {{ invoice_number }}</p>
+    {% if invoice and invoice.is_subscription %}
+    <p>Payment Type: Subscription – {{ invoice.get_subscription_frequency_display }}</p>
+    {% elif invoice %}
+    <p>Payment Type: One-time</p>
+    {% endif %}
+    <div>{{ body|safe }}</div>
+    <p>Best regards,<br>{{ site_name }}</p>
+</body>
+</html>

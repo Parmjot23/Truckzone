@@ -1,0 +1,68 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+
+{% block title %}Banking Review Queue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <h4 class="mb-1"><i class="fa-solid fa-inbox me-2"></i>Banking Review Queue</h4>
+            <p class="text-muted mb-0">Approve transactions to create bills, or ignore them.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'accounts:banking_settings' %}" class="pill-secondary btn-sm">Banking settings</a>
+        </div>
+    </div>
+
+    {% if not banking_settings or not banking_settings.enabled %}
+        <div class="alert alert-warning">
+            Banking integration is currently disabled. Enable it from the settings page to sync transactions.
+        </div>
+    {% endif %}
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Merchant</th>
+                            <th>Description</th>
+                            <th>Account</th>
+                            <th class="text-end">Amount</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.posted_at|date:"Y-m-d" }}</td>
+                                <td>{{ transaction.merchant_name|default:transaction.description|default:"-" }}</td>
+                                <td>{{ transaction.description|default:"-" }}</td>
+                                <td>{{ transaction.institution_name|default:transaction.account_name|default:"-" }}</td>
+                                <td class="text-end">{{ transaction.amount|currency }}</td>
+                                <td class="text-end">
+                                    <form method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="transaction_id" value="{{ transaction.id }}">
+                                        <button type="submit" name="action" value="approve" class="btn btn-sm btn-success">Approve</button>
+                                        <button type="submit" name="action" value="ignore" class="btn btn-sm btn-outline-secondary">Ignore</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    No transactions waiting for review.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

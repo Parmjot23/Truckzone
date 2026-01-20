@@ -1,0 +1,319 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+
+{% block title %}
+    Supplier Details - {{ supplier_name }}
+{% endblock %}
+
+{% block content %}
+<style>
+    .supplier-shell {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+        padding: 1rem;
+    }
+    .table-modern th {
+        font-weight: 700;
+        color: #64748b;
+        font-size: 0.9rem;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    .table-modern td {
+        vertical-align: middle;
+        border-top: none;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.95rem;
+    }
+    .table-modern tr:nth-child(even) td { background: #f8fafc; }
+    .table-search {
+        max-width: 320px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.35rem 0.65rem;
+        background: #f8fafc;
+    }
+    .table-search input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        outline: none;
+    }
+    .date-range-custom {
+        display: none;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .date-range-custom.show { display: flex; }
+    .nav-pills .nav-link {
+        border-radius: 999px;
+        padding: 0.35rem 0.85rem;
+        font-weight: 600;
+    }
+    .nav-pills .nav-link.active {
+        background: #1d4ed8;
+    }
+    .status-pill {
+        border-radius: 999px;
+        padding: 0.25rem 0.75rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 92px;
+        text-align: center;
+    }
+    .status-paid { background: #dcfce7; color: #166534; border-color: #dcfce7; }
+    .status-partial { background: #fef9c3; color: #854d0e; border-color: #fef9c3; }
+    .status-unpaid { background: #eef2ff; color: #4338ca; border-color: #eef2ff; }
+    .status-credit { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+    .amount-negative { color: #dc2626; font-weight: 700; }
+</style>
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-start flex-column flex-lg-row mb-4 gap-3">
+        <div>
+            <h1 class="text-primary mb-2"><i class="fas fa-truck-moving"></i> Supplier: {{ supplier_name }}</h1>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge bg-success fs-6">Total Amount: {{ total_amount|currency }}</span>
+                <span class="badge bg-info fs-6">Total Paid: {{ total_paid|currency }}</span>
+                <span class="badge bg-warning text-dark fs-6">Total Credited: {{ credit_total|currency }}</span>
+                <span class="badge bg-primary fs-6">Balance Due: {{ balance_total|currency }}</span>
+            </div>
+        </div>
+        <a href="{% url 'accounts:supplier_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Suppliers
+        </a>
+    </div>
+
+    <div class="supplier-shell">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <form method="GET" action="{% url 'accounts:supplier_detail' supplier_name %}" id="supplier-detail-form" class="flex-grow-1">
+                <input type="hidden" name="view" value="{{ active_view }}">
+                <div class="d-flex align-items-center table-search">
+                    <i class="fa fa-search text-muted me-2"></i>
+                    <input type="text" name="q" value="{{ query }}" id="search-input" placeholder="Search receipts or credits...">
+                </div>
+                <div class="mt-2 d-flex gap-2 align-items-center flex-wrap">
+                    <label class="text-muted small mb-0">Period:</label>
+                    <select id="dateRangeFilter" name="date_range" class="form-select form-select-sm" style="max-width: 200px;" data-select2-skip="true">
+                        {% for value,label in date_range_options %}
+                            <option value="{{ value }}"{% if current_date_range == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <div id="custom-date-range" class="date-range-custom{% if current_date_range == 'custom' %} show{% endif %}">
+                        <input type="date" class="form-control form-control-sm" name="start_date" id="start-date" value="{{ selected_start_date|date:'Y-m-d' }}">
+                        <span class="text-muted small">to</span>
+                        <input type="date" class="form-control form-control-sm" name="end_date" id="end-date" value="{{ selected_end_date|date:'Y-m-d' }}">
+                    </div>
+                    {% if active_view == 'receipts' %}
+                        <label class="text-muted small mb-0">Status:</label>
+                        <select name="status" class="form-select form-select-sm" style="max-width: 180px;" data-select2-skip="true">
+                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+                            <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+                            <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+                            <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial</option>
+                            <option value="unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                        </select>
+                    {% endif %}
+                </div>
+            </form>
+            <div class="nav nav-pills">
+                <a class="nav-link{% if active_view == 'receipts' %} active{% endif %}" href="{% url 'accounts:supplier_detail' supplier_name %}?{{ receipts_query }}">Receipts</a>
+                <a class="nav-link{% if active_view == 'credits' %} active{% endif %}" href="{% url 'accounts:supplier_detail' supplier_name %}?{{ credits_query }}">Credits</a>
+                <a class="nav-link{% if active_view == 'all' %} active{% endif %}" href="{% url 'accounts:supplier_detail' supplier_name %}?{{ all_query }}">All entries</a>
+                <a class="nav-link" href="{% url 'accounts:supplier_entries' supplier_name %}">Line items</a>
+            </div>
+        </div>
+
+        {% if active_view == 'credits' %}
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Credit #</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Memo</th>
+                            <th scope="col" class="text-end">Amount</th>
+                            <th scope="col" class="text-end">Applied</th>
+                            <th scope="col" class="text-end">Available</th>
+                            <th scope="col" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if credit_entries %}
+                            {% for entry in credit_entries %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'accounts:supplier_credit_detail' entry.credit.pk %}">
+                                            {{ entry.credit.credit_no }}
+                                        </a>
+                                    </td>
+                                    <td>{{ entry.credit.date|date:"M d, Y" }}</td>
+                                    <td>{{ entry.credit.memo|default:"-" }}</td>
+                                    <td class="text-end">{{ entry.total_incl_tax|currency }}</td>
+                                    <td class="text-end">{{ entry.credit.applied_amount|currency }}</td>
+                                    <td class="text-end">{{ entry.credit.available_amount|currency }}</td>
+                                    <td class="text-center">
+                                        <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:supplier_credit_detail' entry.credit.pk %}">
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">No supplier credits found.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        {% elif active_view == 'all' %}
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Type</th>
+                            <th scope="col">Reference</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Category / Memo</th>
+                            <th scope="col" class="text-end">Amount</th>
+                            <th scope="col" class="text-end">Balance / Available</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if combined_entries %}
+                            {% for entry in combined_entries %}
+                                <tr>
+                                    <td>
+                                        {% if entry.type == 'credit' %}Credit{% else %}Receipt{% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ entry.url }}">{{ entry.ref }}</a>
+                                    </td>
+                                    <td>{{ entry.date|date:"M d, Y" }}</td>
+                                    <td>{{ entry.category }}</td>
+                                    <td class="text-end{% if entry.type == 'credit' %} amount-negative{% endif %}">
+                                        {{ entry.amount|currency }}
+                                    </td>
+                                    <td class="text-end">{{ entry.balance|currency }}</td>
+                                    <td>
+                                        {% if entry.type == 'credit' %}
+                                            <span class="status-pill status-credit">Credit</span>
+                                        {% else %}
+                                            <span class="status-pill {% if entry.status == 'paid' %}status-paid{% elif entry.status == 'partial' %}status-partial{% else %}status-unpaid{% endif %}">
+                                                {% if entry.status == 'paid' %}Paid{% elif entry.status == 'partial' %}Partial{% else %}Unpaid{% endif %}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <a class="btn btn-sm btn-outline-primary" href="{{ entry.url }}">View</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center">No entries found for this supplier.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="table-responsive">
+                <table class="table table-modern align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Receipt</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Category</th>
+                            <th scope="col" class="text-end">Total</th>
+                            <th scope="col" class="text-end">Balance</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if receipt_rows %}
+                            {% for row in receipt_rows %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'accounts:mechexpense_detail' row.expense.pk %}">
+                                            {{ row.expense.receipt_no }}
+                                        </a>
+                                    </td>
+                                    <td>{{ row.expense.date|date:"M d, Y" }}</td>
+                                    <td>{{ row.expense.categorie|default:"N/A" }}</td>
+                                    <td class="text-end">{{ row.total_incl_tax|currency }}</td>
+                                    <td class="text-end">{{ row.expense.remaining_balance|currency }}</td>
+                                    <td>
+                                        <span class="status-pill {% if row.status == 'paid' %}status-paid{% elif row.status == 'partial' %}status-partial{% else %}status-unpaid{% endif %}">
+                                            {% if row.status == 'paid' %}Paid{% elif row.status == 'partial' %}Partial{% else %}Unpaid{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:mechexpense_detail' row.expense.pk %}">
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">No receipts found for this supplier.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('supplier-detail-form');
+    const searchInput = document.getElementById('search-input');
+    const dateRange = document.getElementById('dateRangeFilter');
+    const customRange = document.getElementById('custom-date-range');
+    const startDate = document.getElementById('start-date');
+    const endDate = document.getElementById('end-date');
+    const statusSelect = form ? form.querySelector('select[name="status"]') : null;
+
+    function toggleCustomRange() {
+        if (!customRange || !dateRange) return;
+        customRange.classList.toggle('show', dateRange.value === 'custom');
+    }
+
+    if (dateRange) {
+        dateRange.addEventListener('change', () => {
+            toggleCustomRange();
+            form.submit();
+        });
+    }
+    if (startDate) {
+        startDate.addEventListener('change', () => form.submit());
+    }
+    if (endDate) {
+        endDate.addEventListener('change', () => form.submit());
+    }
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchInput._timer);
+            searchInput._timer = setTimeout(() => form.submit(), 300);
+        });
+    }
+    if (statusSelect) {
+        statusSelect.addEventListener('change', () => form.submit());
+    }
+    toggleCustomRange();
+});
+</script>
+{% endblock %}

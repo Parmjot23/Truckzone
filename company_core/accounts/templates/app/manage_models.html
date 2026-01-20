@@ -1,0 +1,23 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+{% block title %}
+    Manage Models
+{% endblock %}
+{% block content %} 
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-3 col-sm-6 mb-4">
+            <a href="{% url 'accounts:groupedinvoice_list' %}" class="btn btn-outline-primary w-100 py-4 d-flex flex-column align-items-center border rounded shadow">
+                <i class="fas fa-file-invoice fa-3x mb-2"></i>
+                <span class="text-uppercase font-weight-bold">Manage Invoices</span>
+            </a>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-4">
+            <a href="{% url 'accounts:mechexpense_list' %}" class="btn btn-outline-primary w-100 py-4 d-flex flex-column align-items-center border rounded shadow">
+                <i class="fas fa-tools fa-3x mb-2"></i>
+                <span class="text-uppercase font-weight-bold">Manage Expenses</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

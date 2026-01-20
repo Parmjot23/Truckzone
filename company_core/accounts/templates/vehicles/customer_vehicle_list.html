@@ -1,0 +1,362 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+{% load custom_filters %} {# Assuming you have custom_filters for date/currency #}
+{% load humanize %}
+
+{% block title %}
+    Vehicles for {{ customer.name }}
+{% endblock %}
+
+{% block content %}
+<style>
+    .table th, .table td { vertical-align: middle; }
+    .action-buttons .btn { margin-right: 0.25rem; }
+    .modal-errors p { margin-bottom: 0.5rem; color: red; }
+    .form-group .invalid-feedback { display: block; color: #dc3545; font-size: 0.875em; }
+    .is-invalid { border-color: #dc3545 !important; }
+</style>
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h4 mb-0">Vehicles for {{ customer.name }}</h2>
+        <a href="{% url 'accounts:customer_list' %}" class="btn btn-outline-secondary btn-sm">Back to Customer List</a>
+    </div>
+
+    {% if vehicles %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0" id="vehicle-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Unit #</th>
+                            <th scope="col">VIN Number</th>
+                            <th scope="col">Make &amp; Model</th>
+                            <th scope="col" class="text-center">Mileage</th>
+                            <th scope="col">Maintenance</th>
+                            <th scope="col">Last Job</th>
+                            <th scope="col" class="text-center">Job History</th>
+                            <th scope="col" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vehicle in vehicles %}
+                        <tr id="vehicle-row-{{ vehicle.id }}">
+                            <td data-label="Unit #" class="vehicle-unit">{{ vehicle.unit_number|default:"N/A" }}</td>
+                            <td data-label="VIN" class="vehicle-vin">{{ vehicle.vin_number }}</td>
+                            <td data-label="Make &amp; Model" class="vehicle-make-model">{{ vehicle.make_model|default:"N/A" }}</td>
+                            <td data-label="Mileage" class="text-center vehicle-mileage">
+                                {% if vehicle.current_mileage is not None %}
+                                    {{ vehicle.current_mileage|intcomma }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td data-label="Maintenance" class="vehicle-maintenance">
+                                <div>
+                                    Upcoming: {{ vehicle.upcoming_maintenance }} due
+                                    {% if vehicle.overdue_maintenance %}
+                                        • Overdue: {{ vehicle.overdue_maintenance }}
+                                    {% else %}
+                                        • Overdue: 0
+                                    {% endif %}
+                                </div>
+                                <div class="small text-muted">
+                                    {% if vehicle.next_due_title %}
+                                        {{ vehicle.next_due_title }}{% if vehicle.next_due_date %} • {{ vehicle.next_due_date|date:"Y-m-d" }}{% endif %}
+                                    {% else %}
+                                        No upcoming maintenance scheduled
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td data-label="Last Job">
+                                {% if vehicle.last_job_date %}
+                                    {{ vehicle.last_job_date|date:"Y-m-d" }}
+                                {% else %}
+                                    No jobs recorded
+                                {% endif %}
+                            </td>
+                            <td data-label="Job History" class="text-center">
+                                <a href="{% url 'accounts:vehicle_job_history_list' vehicle_id=vehicle.id %}" class="btn btn-sm btn-outline-secondary" title="View Job History">
+                                    View ({{ vehicle.job_count }})
+                                </a>
+                            </td>
+                            <td data-label="Actions" class="text-center action-buttons">
+                                <a class="btn btn-sm btn-secondary" href="{% url 'accounts:vehicle_detail_dashboard' vehicle_id=vehicle.id %}">Dashboard</a>
+                                <button class="btn btn-sm btn-outline-primary edit-vehicle-btn"
+                                        data-vehicle-id="{{ vehicle.id }}"
+                                        data-unit="{{ vehicle.unit_number|default_if_none:'' }}"
+                                        data-vin="{{ vehicle.vin_number|default_if_none:'' }}"
+                                        data-make-model="{{ vehicle.make_model|default_if_none:'' }}"
+                                        data-year="{{ vehicle.year|default_if_none:'' }}"
+                                        data-mileage="{{ vehicle.current_mileage|default_if_none:'' }}"
+                                        title="Edit Vehicle">
+                                    Edit
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger delete-vehicle-btn" data-vehicle-id="{{ vehicle.id }}" data-vin="{{ vehicle.vin_number|default_if_none:'' }}" title="Delete Vehicle">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info" role="alert">
+        This customer has no vehicles registered.
+        <button type="button" class="btn btn-primary btn-sm mt-2" data-toggle="modal" data-target="#addVehicleModal">Add Vehicle</button>
+    </div>
+    {% endif %}
+</div>
+
+<div class="modal fade" id="editVehicleModal" tabindex="-1" role="dialog" aria-labelledby="editVehicleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <form id="edit-vehicle-form" method="POST"> {# method="POST" is good for semantics, JS handles actual submission #}
+            {% csrf_token %} {# Good practice for non-AJAX fallback, though JS sends X-CSRFToken header #}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editVehicleModalLabel">Edit Vehicle</h5>
+                    <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    {# This hidden input stores the ID of the vehicle being edited. Its name is not submitted with form data. #}
+                    <input type="hidden" id="edit-vehicle-id">
+
+                    <div class="form-group mb-3">
+                        <label for="edit-unit-number">Unit Number</label>
+                        <input type="text" class="form-control" id="edit-unit-number" name="unit_number" required>
+                        <div class="invalid-feedback" id="edit-unit-number-error"></div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="edit-vin-number">VIN Number</label>
+                        <input type="text" class="form-control" id="edit-vin-number" name="vin_number">
+                        <div class="invalid-feedback" id="edit-vin-number-error"></div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="edit-make-model">Make & Model</label>
+                        <input type="text" class="form-control" id="edit-make-model" name="make_model">
+                        <div class="invalid-feedback" id="edit-make-model-error"></div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="edit-year">Year</label>
+                        <input type="number" class="form-control" id="edit-year" name="year" min="0">
+                        <div class="invalid-feedback" id="edit-year-error"></div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="edit-current-mileage">Current Mileage</label>
+                        <input type="number" class="form-control" id="edit-current-mileage" name="current_mileage" min="0">
+                    </div>
+                    <div id="edit-vehicle-form-errors" class="text-danger modal-errors mt-2"></div> {# For form-wide errors #}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="addVehicleModal" tabindex="-1" role="dialog" aria-labelledby="addVehicleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <form id="add-vehicle-form" method="POST">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addVehicleModalLabel">Add New Vehicle for {{customer.name}}</h5>
+                    <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    {# Add form fields for new vehicle here, similar to edit modal #}
+                    {# You'd need a VehicleForm without an instance for adding #}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Add Vehicle</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrftoken = getCookie('csrftoken'); // Ensure this function is defined or use Django's
+
+    // Edit Vehicle Logic
+    const editVehicleModalElement = document.getElementById('editVehicleModal');
+    const editVehicleModal = editVehicleModalElement ? new bootstrap.Modal(editVehicleModalElement) : null; // Ensure element exists
+    const editVehicleForm = document.getElementById('edit-vehicle-form');
+    const editVehicleIdInput = document.getElementById('edit-vehicle-id');
+    const editUnitNumberInput = document.getElementById('edit-unit-number');
+    const editVinNumberInput = document.getElementById('edit-vin-number');
+    const editMakeModelInput = document.getElementById('edit-make-model');
+    const editYearInput = document.getElementById('edit-year');
+    const editMileageInput = document.getElementById('edit-current-mileage');
+    const editVehicleFormErrors = document.getElementById('edit-vehicle-form-errors');
+
+    document.querySelectorAll('.edit-vehicle-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            if (!editVehicleModal) return; // Guard if modal element not found
+
+            const vehicleId = this.dataset.vehicleId;
+            console.log("Edit button clicked for vehicle ID:", vehicleId);
+            editVehicleIdInput.value = vehicleId;
+            editUnitNumberInput.value = this.dataset.unit;
+            editVinNumberInput.value = this.dataset.vin;
+            editMakeModelInput.value = this.dataset.makeModel;
+            if (editYearInput) {
+                editYearInput.value = this.dataset.year || '';
+            }
+            if (editMileageInput) {
+                editMileageInput.value = this.dataset.mileage || '';
+            }
+
+            console.log("Populating modal for VIN:", this.dataset.vin);
+
+            if(editVehicleFormErrors) editVehicleFormErrors.innerHTML = '';
+            clearFormValidationErrors(editVehicleForm);
+            editVehicleModal.show();
+        });
+    });
+
+    if (editVehicleForm) { // Ensure form exists before adding listener
+        editVehicleForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const vehicleId = editVehicleIdInput.value;
+            const currentFormData = new FormData(editVehicleForm);
+
+            console.log(`--- Submitting Edit Form for Vehicle ID: ${vehicleId} ---`);
+            for (var pair of currentFormData.entries()) {
+                console.log(`FormData Field: ${pair[0]}, Value: '${pair[1]}'`);
+            }
+            const requestBody = new URLSearchParams(currentFormData).toString();
+            console.log("Request body being sent:", requestBody);
+
+            fetch(`/vehicles/${vehicleId}/edit/`, { // Ensure this URL is correct
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-Type': 'application/x-www-form-urlencoded', // Explicitly set
+                },
+                body: requestBody
+            })
+            .then(response => {
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return response.json().then(data => ({ status: response.status, ok: response.ok, body: data }));
+                } else {
+                    return response.text().then(text => {
+                        console.error("Server did not return JSON. Status:", response.status, "Response text:", text);
+                        const titleMatch = text.match(/<title>(.*?)<\/title>/);
+                        const errorTitle = titleMatch ? titleMatch[1] : `Server Error ${response.status} (Non-JSON Response)`;
+                        return { status: response.status, ok: response.ok, body: { error: errorTitle, _rawResponse: text } };
+                    });
+                }
+            })
+            .then(result => {
+                let data = result.body;
+                console.log("Server response status:", result.status);
+                console.log("Server response data:", data);
+
+                clearFormValidationErrors(editVehicleForm); // Clear previous field highlights
+
+                if (result.ok && data.success) {
+                    if (editVehicleModal) editVehicleModal.hide();
+                    window.location.reload();
+                } else {
+                    let errorHtml = '';
+                    if (data.errors) {
+                        for (const field in data.errors) {
+                            const prettyField = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                            errorHtml += `<p>${data.errors[field]}</p>`; // Simpler error display
+                            const inputField = document.getElementById(`edit-${field.replace(/_/g, '-')}`);
+                            if (inputField) {
+                                inputField.classList.add('is-invalid');
+                                const errorDiv = document.getElementById(`edit-${field.replace(/_/g, '-')}-error`);
+                                if (errorDiv) errorDiv.textContent = data.errors[field];
+                            }
+                        }
+                    } else if (data.error) {
+                         errorHtml = `<p>${data.error}</p>`;
+                         if (data._rawResponse && result.status === 500) {
+                            console.error("Raw HTML response for 500 error:", data._rawResponse);
+                            errorHtml = '<p>An internal server error occurred. Please check server logs or contact support.</p>';
+                         }
+                    } else {
+                        errorHtml = '<p>An unknown error occurred. Please try again.</p>';
+                    }
+                    if(editVehicleFormErrors) editVehicleFormErrors.innerHTML = errorHtml;
+                }
+            })
+            .catch(error => {
+                console.error('Fetch Error:', error);
+                if(editVehicleFormErrors) editVehicleFormErrors.innerHTML = '<p>A network error or an unexpected issue occurred. Please check your connection and try again.</p>';
+            });
+        });
+    }
+
+
+    // Delete Vehicle Logic
+    document.querySelectorAll('.delete-vehicle-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const vehicleId = this.dataset.vehicleId;
+            const vehicleVin = this.dataset.vin;
+            if (confirm(`Are you sure you want to delete vehicle VIN: ${vehicleVin || 'N/A'} (ID: ${vehicleId})? This action cannot be undone.`)) {
+                fetch(`/vehicles/${vehicleId}/delete/`, { // Ensure this URL is correct
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const row = document.getElementById(`vehicle-row-${vehicleId}`);
+                        if(row) row.remove();
+                        alert(data.message || 'Vehicle deleted successfully!'); // Replace with nicer notification
+                    } else {
+                        alert('Error: ' + (data.error || 'Could not delete vehicle.'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Delete Error:', error);
+                    alert('An unexpected error occurred while deleting the vehicle.');
+                });
+            }
+        });
+    });
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Helper function to clear form validation error styling
+    function clearFormValidationErrors(formElement) {
+        if (!formElement) return;
+        formElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        formElement.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+        const formWideErrorsContainer = formElement.querySelector('.modal-errors');
+        if (formWideErrorsContainer) formWideErrorsContainer.innerHTML = '';
+    }
+});
+</script>
+{% endblock %}

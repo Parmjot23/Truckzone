@@ -1,0 +1,19 @@
+ <!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Your Invoice</title>
+</head>
+<body>
+    <p>Dear {{ invoice.bill_to }},</p>
+    <p>Please find attached the invoice <strong>{{ invoice.invoice_number }}</strong> dated <strong>{{ invoice.date }}</strong>.</p>
+    <p>Total Due: <strong>${{ total_due }}</strong></p>
+    <p>Thank you for your business!</p>
+    <p>Best regards,</p>
+    <p>{{ invoice.user.profile.company_name }}</p>
+    <p>{{ invoice.user.profile.company_address }}</p>
+    <p>Email: {{ invoice.user.profile.company_email }}</p>
+    <p>Phone: {{ invoice.user.profile.company_phone }}</p>
+    <p>GST/HST No: {{ invoice.user.profile.gst_hst_number }}</p>
+</body>
+</html>

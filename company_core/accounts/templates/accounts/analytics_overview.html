@@ -1,0 +1,270 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+
+{% block title %}Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analytics-hero {
+        background: radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.15), transparent 25%),
+                    radial-gradient(circle at 90% 0%, rgba(14, 165, 233, 0.18), transparent 22%),
+                    linear-gradient(135deg, #0f172a, #111827 60%, #0b1220);
+        color: #e5e7eb;
+        border-radius: 22px;
+        padding: 1.75rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.45);
+    }
+    .analytics-hero::after {
+        content: "";
+        position: absolute;
+        inset: 1.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 18px;
+        pointer-events: none;
+    }
+    .analytics-hero h1 {
+        font-weight: 700;
+        margin-bottom: 0.4rem;
+        letter-spacing: -0.02em;
+    }
+    .analytics-hero .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.8rem;
+        color: #93c5fd;
+    }
+    .status-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin: 0.9rem 0 1.1rem;
+    }
+    .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.45rem 0.75rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #e5e7eb;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .status-chip.text-bad {
+        color: #fecdd3;
+        background: rgba(248, 113, 113, 0.18);
+    }
+    .analytics-hero .hero-card {
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+    .analytics-hero .hero-card h4 {
+        color: #f8fafc;
+        margin-bottom: 0.5rem;
+    }
+    .analytics-hero .hero-card ul {
+        margin: 0;
+        padding-left: 1rem;
+        color: #cbd5e1;
+    }
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-top: 1.25rem;
+    }
+    .panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 1.25rem;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+    .panel h3 {
+        font-weight: 700;
+        font-size: 1.05rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .panel .subtitle {
+        color: #6b7280;
+        margin-bottom: 1rem;
+    }
+    .checklist {
+        display: grid;
+        gap: 0.65rem;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+    }
+    .checklist li {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.6rem;
+        align-items: start;
+    }
+    .badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
+        padding: 0.35rem 0.7rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    .badge-pill.success { background: #ecfdf3; color: #15803d; }
+    .badge-pill.warning { background: #fff7ed; color: #c2410c; }
+    .badge-pill.info { background: #eef2ff; color: #4338ca; }
+    .embed-shell {
+        background: linear-gradient(135deg, #f0f5ff, #eef2ff);
+        border: 1px dashed #c7d2fe;
+        border-radius: 16px;
+        padding: 0.75rem;
+    }
+    .embed-shell iframe {
+        border: none;
+        width: 100%;
+        height: 520px;
+        border-radius: 12px;
+        background: #0f172a;
+    }
+    .empty-embed {
+        border: 1px dashed #cbd5e1;
+        border-radius: 14px;
+        padding: 1.1rem;
+        background: #f8fafc;
+    }
+    .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    .cta-row .btn {
+        border-radius: 12px;
+        font-weight: 700;
+    }
+    @media (max-width: 991.98px) {
+        .analytics-hero {
+            padding: 1.25rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-hero mb-3">
+    <div class="row g-4 align-items-center">
+        <div class="col-lg-7">
+            <div class="eyebrow"><i class="fa-solid fa-bolt"></i> Growth &amp; intelligence</div>
+            <h1>Analytics</h1>
+            <p class="mb-3">Traffic, leads, and performance dashboards — all in one place.</p>
+            <div class="status-chips">
+                {% if analytics_enabled %}
+                    <span class="status-chip"><i class="fa-solid fa-signal"></i> Measurement ID: {{ google_analytics_measurement_id }}</span>
+                {% else %}
+                    <span class="status-chip text-bad"><i class="fa-solid fa-plug-circle-xmark"></i> Measurement ID missing</span>
+                {% endif %}
+                <span class="status-chip"><i class="fa-solid fa-bug"></i> Debug mode: {{ google_analytics_debug|yesno:"On,Off" }}</span>
+                <span class="status-chip"><i class="fa-solid fa-earth-americas"></i> Test URL: {{ site_url_for_testing }}</span>
+            </div>
+            <div class="cta-row">
+                <a href="https://analytics.google.com/analytics/web/" class="btn btn-primary" target="_blank" rel="noopener">
+                    <i class="fa-solid fa-chart-pie me-2"></i>Open Google Analytics
+                </a>
+                {% if looker_studio_embed_url %}
+                    <a href="{{ looker_studio_embed_url }}" class="btn btn-outline-light text-white border-white" target="_blank" rel="noopener">
+                        <i class="fa-solid fa-display me-2"></i>Open dashboard
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="hero-card h-100">
+                <h4 class="d-flex align-items-center gap-2 mb-3"><i class="fa-solid fa-display text-success"></i> Portal dashboard</h4>
+                <ul class="mb-3">
+                    <li>View your analytics dashboard inside the portal.</li>
+                    <li>Use Google Analytics for deeper reporting &amp; realtime checks.</li>
+                </ul>
+                {% if not analytics_enabled %}
+                    <div class="badge-pill warning"><i class="fa-solid fa-circle-exclamation"></i> Add your Measurement ID to env</div>
+                {% else %}
+                    <div class="badge-pill success"><i class="fa-solid fa-circle-check"></i> Tag ready for traffic</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel mt-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <div>
+            <h3 class="mb-0"><i class="fa-solid fa-display text-primary"></i> In-portal dashboards</h3>
+            <p class="subtitle mb-0">Your team can check performance without leaving the portal.</p>
+        </div>
+        {% if analytics_enabled %}
+            <span class="badge-pill success"><i class="fa-solid fa-circle-check"></i> Tag live</span>
+        {% else %}
+            <span class="badge-pill warning"><i class="fa-solid fa-circle-exclamation"></i> Add Measurement ID to start streaming data</span>
+        {% endif %}
+    </div>
+
+    {% if looker_studio_embed_url %}
+        <div class="embed-shell mb-3">
+            <iframe src="{{ looker_studio_embed_url }}" allowfullscreen title="Analytics dashboard"></iframe>
+        </div>
+        <div class="text-muted small">Embed source: {{ looker_studio_embed_url }}</div>
+    {% else %}
+        <div class="empty-embed">
+            <div class="d-flex align-items-start gap-3">
+                <div class="flex-shrink-0">
+                    <div class="badge-pill info"><i class="fa-solid fa-display"></i> No embed connected yet</div>
+                </div>
+                <div>
+                    <p class="mb-2">To show analytics inside the portal, add your Looker Studio embed URL to <code>LOOKER_STUDIO_EMBED_URL</code>. Until then, use the “Open Google Analytics” button above.</p>
+                    <div class="cta-row">
+                        <a class="btn btn-outline-primary" href="https://lookerstudio.google.com" target="_blank" rel="noopener"><i class="fa-regular fa-square-plus me-2"></i>Create dashboard</a>
+                        <a class="btn btn-outline-secondary" href="https://support.google.com/looker-studio/answer/9053467" target="_blank" rel="noopener"><i class="fa-regular fa-circle-question me-2"></i>How to embed</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Provide a quick copy helper for the Measurement ID if present.
+    (function() {
+        const id = "{{ google_analytics_measurement_id }}";
+        if (!id) return;
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-sm btn-outline-light ms-2';
+        btn.innerHTML = '<i class="fa-regular fa-copy me-1"></i>Copy ID';
+        btn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(id);
+                btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Copied';
+                setTimeout(() => btn.innerHTML = '<i class="fa-regular fa-copy me-1"></i>Copy ID', 2000);
+            } catch (err) {
+                btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i>Error';
+            }
+        });
+        const chipRow = document.querySelector('.status-chips');
+        if (chipRow) {
+            chipRow.appendChild(btn);
+        }
+    })();
+</script>
+{% endblock %}

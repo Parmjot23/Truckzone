@@ -1,0 +1,39 @@
+﻿{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Timesheet Import/Export</h2>
+            <div class="text-muted small">Upload or download timesheet entries in CSV or Excel.</div>
+        </div>
+        <div class="page-toolbar d-flex gap-2">
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:timesheet_export' %}?format=csv">Export CSV</a>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:timesheet_export' %}?format=xlsx">Export Excel</a>
+        </div>
+    </div>
+
+    {% include 'payroll/_nav.html' %}
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="mb-2">Import timesheets</h5>
+            <p class="text-muted small">Accepted columns: employee_id or employee_email, employee_name, work_date, start_time, end_time, hours, notes, period_start, period_end, status.</p>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label">CSV or Excel file</label>
+                        <input type="file" name="file" class="form-control" accept=".csv,.xlsx">
+                    </div>
+                    <div class="col-md-6">
+                        <button type="submit" class="btn btn-primary">Import timesheets</button>
+                        <a href="{% url 'accounts:timesheet_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

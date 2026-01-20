@@ -1,0 +1,48 @@
+{% extends "customer_portal_base.html" %} {# Or your app's base template #}
+{% load static %}
+
+{% block title %}Work Order Completed{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card text-center shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">Work Order Completed</h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead mt-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-lock-fill text-warning me-2" viewBox="0 0 16 16">
+                          <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                        </svg>
+                        Work Order #{{ workorder.id }} is marked as 'Completed'.
+                    </p>
+                    <p>Completed work orders cannot be edited directly to maintain historical accuracy.</p>
+
+                    {% if invoice_info %}
+                        <hr>
+                        <p>If changes are required (e.g., pricing adjustments), please modify the associated invoice:</p>
+                        <p class="fw-bold">
+                            {% if invoice_url %}
+                                <a href="{{ invoice_url }}" class="btn btn-primary">{{ invoice_info }}</a>
+                            {% else %}
+                                {{ invoice_info }} (Could not generate link)
+                            {% endif %}
+                        </p>
+                    {% else %}
+                         <hr>
+                         <p class="text-muted">No associated invoice was found for this work order.</p>
+                    {% endif %}
+
+                    <div class="mt-4">
+                         <a href="{% url 'accounts:workorder_list' %}" class="btn btn-secondary">Back to Work Orders</a>
+                         {# Optionally add a link to the detail view #}
+                         <a href="{% url 'accounts:workorder_detail' workorder.pk %}" class="btn btn-outline-secondary">View Details</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

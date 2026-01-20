@@ -1,0 +1,248 @@
+{% extends 'customer_portal_base.html' %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block title %}QuickBooks Integration{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between">
+                    <div>
+                        <h4 class="mb-0"><i class="fa-brands fa-quickbooks text-success me-2"></i>QuickBooks Integration</h4>
+                        <p class="text-muted mb-0">Connect your {{ business_name|default:default_business_name }} account to Intuit QuickBooks Online or Desktop and keep invoices in sync.</p>
+                    </div>
+                    {% if quickbooks_settings and quickbooks_settings.last_synced_at %}
+                        <small class="text-muted mt-3 mt-md-0">Last synced {{ quickbooks_settings.last_synced_at|naturaltime }}</small>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if quickbooks_sync_summary %}
+                        <div class="alert alert-success" role="alert">
+                            <strong>Sync complete.</strong>
+                            <div class="small mb-0">
+                                Exported: {{ quickbooks_sync_summary.exported_new }} new / {{ quickbooks_sync_summary.exported_updated }} updated invoices.<br>
+                                Imported: {{ quickbooks_sync_summary.imported_new }} new / {{ quickbooks_sync_summary.imported_updated }} updated invoices.
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <form method="post" class="quickbooks-settings-form">
+                        {% csrf_token %}
+                        {{ form.non_field_errors }}
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="id_integration_type">Integration type</label>
+                                {{ form.integration_type }}
+                                <div class="form-text">Select QuickBooks Online for direct API synchronisation or QuickBooks Desktop for IIF file-based exchange.</div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 integration-section" data-integration="online">
+                            <div class="col-md-6">
+                                <label class="form-label" for="id_client_id">Client ID</label>
+                                {{ form.client_id }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="id_client_secret">Client Secret</label>
+                                {{ form.client_secret }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="id_realm_id">Realm (Company) ID</label>
+                                {{ form.realm_id }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="id_redirect_uri">Redirect URI</label>
+                                {{ form.redirect_uri }}
+                                <div class="form-text">Optional if you are using the default OAuth playground redirect URI.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="id_environment">Environment</label>
+                                {{ form.environment }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="id_refresh_token">Refresh Token</label>
+                                {{ form.refresh_token }}
+                                <div class="form-text">Paste the refresh token generated in the QuickBooks developer portal.</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    {{ form.auto_sync_enabled }}
+                                    <label class="form-check-label" for="id_auto_sync_enabled">Automatically sync invoices when scheduled jobs run.</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 integration-section" data-integration="desktop">
+                            <div class="col-12">
+                                <label class="form-label" for="id_desktop_company_name">QuickBooks Desktop company name</label>
+                                {{ form.desktop_company_name }}
+                                <div class="form-text">Use the exact company name shown in QuickBooks Desktop. It helps us map imported invoices to the right account.</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="alert alert-secondary small mb-0">
+                                    Exporting will generate an <strong>.IIF</strong> file you can import using QuickBooks Desktop's <em>File → Utilities → Import</em> workflow. Importing expects the same format exported from QuickBooks.
+                                </div>
+                            </div>
+                            {% if quickbooks_settings and quickbooks_settings.desktop_last_export_filename %}
+                                <div class="col-12">
+                                    <div class="alert alert-info small mb-0">
+                                        <strong>Last export:</strong> {{ quickbooks_settings.desktop_last_export_filename }}
+                                        {% if quickbooks_settings.desktop_last_exported_at %}
+                                            ({{ quickbooks_settings.desktop_last_exported_at|naturaltime }})
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if quickbooks_settings and quickbooks_settings.desktop_last_import_filename %}
+                                <div class="col-12">
+                                    <div class="alert alert-info small mb-0">
+                                        <strong>Last import:</strong> {{ quickbooks_settings.desktop_last_import_filename }}
+                                        {% if quickbooks_settings.desktop_last_imported_at %}
+                                            ({{ quickbooks_settings.desktop_last_imported_at|naturaltime }})
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Save settings
+                            </button>
+                            <button type="submit" name="action" value="refresh_tokens" class="btn btn-outline-success integration-action" data-integration="online">
+                                <i class="fas fa-sync-alt me-1"></i> Save &amp; refresh access token
+                            </button>
+                            {% if quickbooks_settings and quickbooks_settings.access_token %}
+                                <button type="submit" name="action" value="clear_tokens" class="btn btn-outline-danger integration-action" data-integration="online">
+                                    <i class="fas fa-eraser me-1"></i> Clear cached tokens
+                                </button>
+                            {% endif %}
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="quickbooks-status d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                        <div>
+                            <h6 class="mb-1">Connection status</h6>
+                            {% if quickbooks_settings %}
+                                {% if quickbooks_settings.integration_type == 'desktop' %}
+                                    {% if quickbooks_settings.is_configured %}
+                                        <span class="badge bg-success">Desktop workflow ready</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Desktop setup incomplete</span>
+                                    {% endif %}
+                                {% else %}
+                                    {% if quickbooks_settings.is_configured %}
+                                        {% if quickbooks_settings.has_valid_access_token %}
+                                            <span class="badge bg-success">Connected</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">Configured – refresh required</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not configured</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary">Not configured</span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            {% if quickbooks_settings and quickbooks_settings.integration_type == 'desktop' %}
+                                <span class="badge bg-light text-dark"><i class="fas fa-info-circle me-1"></i>Tokens not required</span>
+                                <form method="post" action="{% url 'accounts:quickbooks_sync' %}" enctype="multipart/form-data" class="d-flex flex-column flex-sm-row gap-2 align-items-stretch">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="import">
+                                    <input type="hidden" name="next" value="{% url 'accounts:quickbooks_settings' %}">
+                                    <input type="file" name="import_file" accept=".iif,.txt" class="form-control form-control-sm" required>
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-cloud-download-alt me-1"></i> Import invoices
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'accounts:quickbooks_sync' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="export">
+                                    <input type="hidden" name="next" value="{% url 'accounts:quickbooks_settings' %}">
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-cloud-upload-alt me-1"></i> Export invoices (.IIF)
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'accounts:quickbooks_sync' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="sync">
+                                    <input type="hidden" name="next" value="{% url 'accounts:quickbooks_settings' %}">
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="fas fa-exchange-alt me-1"></i> Full sync package
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form method="post" action="{% url 'accounts:quickbooks_sync' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="refresh">
+                                    <input type="hidden" name="next" value="{% url 'accounts:quickbooks_settings' %}">
+                                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-bolt me-1"></i> Refresh token
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'accounts:quickbooks_sync' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="import">
+                                    <input type="hidden" name="next" value="{% url 'accounts:quickbooks_settings' %}">
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-cloud-download-alt me-1"></i> Import invoices
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'accounts:quickbooks_sync' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="export">
+                                    <input type="hidden" name="next" value="{% url 'accounts:quickbooks_settings' %}">
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-cloud-upload-alt me-1"></i> Export invoices
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'accounts:quickbooks_sync' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="sync">
+                                    <input type="hidden" name="next" value="{% url 'accounts:quickbooks_settings' %}">
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="fas fa-exchange-alt me-1"></i> Full sync
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const integrationSelect = document.getElementById('id_integration_type');
+        if (!integrationSelect) {
+            return;
+        }
+
+        const toggleSections = () => {
+            const active = integrationSelect.value || 'online';
+            document.querySelectorAll('.integration-section').forEach((section) => {
+                const allowed = section.getAttribute('data-integration');
+                section.classList.toggle('d-none', allowed !== active);
+            });
+            document.querySelectorAll('.integration-action').forEach((button) => {
+                const allowed = button.getAttribute('data-integration') || 'online';
+                button.classList.toggle('d-none', allowed !== active);
+            });
+        };
+
+        integrationSelect.addEventListener('change', toggleSections);
+        toggleSections();
+    });
+</script>
+{% endblock %}

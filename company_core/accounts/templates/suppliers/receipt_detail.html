@@ -1,0 +1,145 @@
+{% extends "suppliers/portal_base.html" %}
+{% load humanize %}
+{% block extra_css %}{{ block.super }}
+  <style>
+    .receipt-header-card {
+      border-radius: 20px;
+      padding: 1.75rem;
+      background: #fff;
+      border: 1px solid rgba(14, 165, 233, 0.2);
+      box-shadow: 0 18px 38px rgba(14, 165, 233, 0.18);
+    }
+
+    .receipt-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .receipt-meta .meta-item {
+      background: rgba(15, 118, 110, 0.05);
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+    }
+
+    .receipt-meta .meta-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: rgba(15, 23, 42, 0.65);
+    }
+
+    .receipt-meta .meta-value {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #0f172a;
+      margin-top: 0.25rem;
+    }
+
+    .items-table thead {
+      background: rgba(14, 165, 233, 0.1);
+    }
+
+    .items-table thead th {
+      border: 0;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+
+    .totals-card {
+      border-radius: 16px;
+      border: 1px solid rgba(13, 148, 136, 0.18);
+      box-shadow: 0 14px 30px rgba(13, 148, 136, 0.18);
+    }
+  </style>
+{% endblock %}
+{% block portal_content %}
+  <div class="receipt-header-card mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+      <div>
+        <span class="badge {% if receipt.paid %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %} text-uppercase fw-semibold">{{ receipt.paid|yesno:"Paid,Pending" }}</span>
+        <h2 class="h4 mt-2 mb-1">Invoice {{ receipt.receipt_no }}</h2>
+        <p class="text-muted mb-0">Issued on {{ receipt.date|date:"F d, Y" }} for {{ receipt.vendor }}</p>
+      </div>
+      <div class="align-self-start">
+        <a class="btn btn-outline-info" href="{% url 'accounts:supplier_receipts' %}"><i class="fas fa-arrow-left me-2"></i>Back to invoices</a>
+      </div>
+    </div>
+
+    <div class="receipt-meta">
+      <div class="meta-item">
+        <div class="meta-label">Status</div>
+        <div class="meta-value">{% if receipt.paid %}Paid{% else %}Awaiting payment{% endif %}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Pending balance</div>
+        <div class="meta-value">${{ totals.pending_balance|floatformat:2|intcomma }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Total amount</div>
+        <div class="meta-value">${{ totals.total_amount|floatformat:2|intcomma }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Category</div>
+        <div class="meta-value">{{ receipt.categorie|default:"—" }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <h3 class="h5 mb-3">Invoice line items</h3>
+      {% if line_items %}
+        <div class="table-responsive">
+          <table class="table align-middle items-table">
+            <thead>
+              <tr>
+                <th scope="col">Description</th>
+                <th scope="col" class="text-center">Qty</th>
+                <th scope="col" class="text-end">Unit price</th>
+                <th scope="col" class="text-end">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in line_items %}
+                <tr>
+                  <td>
+                    <div class="fw-semibold">{{ item.description|default:"Line item" }}</div>
+                    {% if item.part_no %}<div class="text-muted small">Part #: {{ item.part_no }}</div>{% endif %}
+                  </td>
+                  <td class="text-center">{{ item.qty|floatformat:2|intcomma }}</td>
+                  <td class="text-end">${{ item.price|floatformat:2|intcomma }}</td>
+                  <td class="text-end fw-semibold">${{ item.amount|floatformat:2|intcomma }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="alert alert-info mb-0">No line items were recorded for this invoice.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row justify-content-end mt-4">
+    <div class="col-md-5">
+      <div class="card totals-card">
+        <div class="card-body">
+          <h4 class="h6 text-uppercase text-muted mb-3">Totals</h4>
+          <dl class="row mb-0">
+            <dt class="col-6">Subtotal</dt>
+            <dd class="col-6 text-end">${{ totals.subtotal|floatformat:2|intcomma }}</dd>
+            <dt class="col-6">Tax</dt>
+            <dd class="col-6 text-end">${{ totals.tax_total|floatformat:2|intcomma }}</dd>
+            <dt class="col-6">Total</dt>
+            <dd class="col-6 text-end fw-semibold">${{ totals.total_amount|floatformat:2|intcomma }}</dd>
+            <dt class="col-6">Pending balance</dt>
+            <dd class="col-6 text-end text-{% if receipt.paid %}success{% else %}warning{% endif %} fw-semibold">${{ totals.pending_balance|floatformat:2|intcomma }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

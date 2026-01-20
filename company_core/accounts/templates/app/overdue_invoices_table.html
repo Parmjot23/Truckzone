@@ -1,0 +1,232 @@
+﻿{% load custom_filters %}
+<div class="table-responsive">
+    {% if view_mode == 'customer' %}
+    <table class="table table-hover table-bordered overdue-table">
+        <thead class="table-light">
+            <tr>
+                <th>
+                    <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=customer_name&order={% if sort_by == 'customer_name' and order != 'desc' %}desc{% else %}asc{% endif %}">
+                        Customer
+                        {% if sort_by == 'customer_name' %}
+                            <span class="sort-indicator">{% if order == 'desc' %}v{% else %}^{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=last_statement&order={% if sort_by == 'last_statement' and order != 'desc' %}desc{% else %}asc{% endif %}">
+                        Last Statement
+                        {% if sort_by == 'last_statement' %}
+                            <span class="sort-indicator">{% if order == 'desc' %}v{% else %}^{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th class="text-end">
+                    <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=total_amount&order={% if sort_by == 'total_amount' and order != 'desc' %}desc{% else %}asc{% endif %}">
+                        Total Amount
+                        {% if sort_by == 'total_amount' %}
+                            <span class="sort-indicator">{% if order == 'desc' %}v{% else %}^{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th class="text-end">
+                    <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=total_paid&order={% if sort_by == 'total_paid' and order != 'desc' %}desc{% else %}asc{% endif %}">
+                        Total Paid
+                        {% if sort_by == 'total_paid' %}
+                            <span class="sort-indicator">{% if order == 'desc' %}v{% else %}^{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th class="text-end">
+                    <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=balance_due&order={% if sort_by == 'balance_due' and order != 'desc' %}desc{% else %}asc{% endif %}">
+                        Balance Due
+                        {% if sort_by == 'balance_due' %}
+                            <span class="sort-indicator">{% if order == 'desc' %}v{% else %}^{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th class="text-end">Payment</th>
+                <th class="text-end">Reminder</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in overdue_customers %}
+            <tr>
+                <td>{{ row.customer__name }}</td>
+                <td>
+                    {% if row.last_statement %}
+                        {% if row.last_statement|date:"Y-m-d" == today_date|date:"Y-m-d" %}
+                            Today
+                        {% else %}
+                            {{ row.last_statement|date:"M d, Y" }}
+                        {% endif %}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                <td class="text-end">{{ row.total_amount|currency }}</td>
+                <td class="text-end">{{ row.total_paid|currency }}</td>
+                <td class="text-end text-danger">{{ row.balance_due|currency }}</td>
+                <td class="text-end">
+                    <button
+                        type="button"
+                        class="btn btn-outline-primary btn-sm js-customer-payment"
+                        data-bs-toggle="modal"
+                        data-bs-target="#customerPaymentModal"
+                        data-customer-id="{{ row.customer_id }}"
+                        data-customer-name="{{ row.customer__name }}"
+                        data-balance="{{ row.balance_due }}">
+                        Record
+                    </button>
+                </td>
+                <td class="text-end">
+                    {% if row.last_statement and row.last_statement|date:"Y-m-d" == today_date|date:"Y-m-d" %}
+                        <button
+                            type="button"
+                            class="btn btn-success btn-sm js-send-reminder"
+                            data-customer-id="{{ row.customer_id }}"
+                            data-customer-name="{{ row.customer__name }}"
+                            disabled>
+                            Sent
+                        </button>
+                    {% else %}
+                        <button
+                            type="button"
+                            class="btn btn-danger btn-sm js-send-reminder"
+                            data-customer-id="{{ row.customer_id }}"
+                            data-customer-name="{{ row.customer__name }}">
+                            Send
+                        </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">No overdue customers found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <table class="table table-hover table-bordered overdue-table">
+        <thead class="table-light">
+            <tr>
+                <th>
+                    <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=date&order={% if sort_by == 'date' and order != 'desc' %}desc{% else %}asc{% endif %}">
+                        Date Created
+                        {% if sort_by == 'date' %}
+                            <span class="sort-indicator">{% if order == 'desc' %}v{% else %}^{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=invoice_number&order={% if sort_by == 'invoice_number' and order != 'desc' %}desc{% else %}asc{% endif %}">
+                        Invoice #
+                        {% if sort_by == 'invoice_number' %}
+                            <span class="sort-indicator">{% if order == 'desc' %}v{% else %}^{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=bill_to&order={% if sort_by == 'bill_to' and order != 'desc' %}desc{% else %}asc{% endif %}">
+                        Bill To
+                        {% if sort_by == 'bill_to' %}
+                            <span class="sort-indicator">{% if order == 'desc' %}v{% else %}^{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th class="text-end">
+                    <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=total_amount&order={% if sort_by == 'total_amount' and order != 'desc' %}desc{% else %}asc{% endif %}">
+                        Total Amount
+                        {% if sort_by == 'total_amount' %}
+                            <span class="sort-indicator">{% if order == 'desc' %}v{% else %}^{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th class="text-end">
+                    <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=total_paid&order={% if sort_by == 'total_paid' and order != 'desc' %}desc{% else %}asc{% endif %}">
+                        Total Paid
+                        {% if sort_by == 'total_paid' %}
+                            <span class="sort-indicator">{% if order == 'desc' %}v{% else %}^{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th class="text-end">
+                    <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=balance_due&order={% if sort_by == 'balance_due' and order != 'desc' %}desc{% else %}asc{% endif %}">
+                        Balance Due
+                        {% if sort_by == 'balance_due' %}
+                            <span class="sort-indicator">{% if order == 'desc' %}v{% else %}^{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for invoice in overdue_invoices %}
+            <tr>
+                <td>{{ invoice.grouped_invoice.date|date:"M j, Y" }}</td>
+                <td>
+                    <a href="{% url 'accounts:groupedinvoice_detail' invoice.grouped_invoice.pk %}" class="text-decoration-none">
+                        {{ invoice.grouped_invoice.invoice_number }}
+                    </a>
+                </td>
+                <td>{{ invoice.grouped_invoice.bill_to }}</td>
+                <td class="text-end">{{ invoice.grouped_invoice.total_amount|currency }}</td>
+                <td class="text-end">{{ invoice.total_paid|currency }}</td>
+                <td class="text-end text-danger">{{ invoice.balance_due|currency }}</td>
+                <td class="text-center">
+                    {% if invoice.grouped_invoice.customer_id %}
+                    <button
+                        type="button"
+                        class="btn btn-danger btn-sm js-send-reminder"
+                        data-customer-id="{{ invoice.grouped_invoice.customer_id }}"
+                        data-customer-name="{{ invoice.grouped_invoice.customer.name|default:invoice.grouped_invoice.bill_to }}">
+                        Send Reminder
+                    </button>
+                    {% else %}
+                    <span class="text-muted small">Customer missing</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">No overdue invoices found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+
+{% if page_obj.paginator.count %}
+<nav class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3" aria-label="Overdue invoices pagination">
+    <div class="text-muted small">
+        {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+    </div>
+    <ul class="pagination mb-0">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page=1">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">First</span></li>
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Last</a>
+            </li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+            <li class="page-item disabled"><span class="page-link">Last</span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}

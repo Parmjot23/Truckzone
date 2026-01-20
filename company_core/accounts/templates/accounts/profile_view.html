@@ -1,0 +1,38 @@
+<!-- templates/accounts/profile_view.html -->
+{% extends 'customer_portal_base.html' %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Profile</h2>
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4>{{ profile.user.username }}</h4>
+            <a href="{% url 'accounts:edit_profile' %}" class="btn btn-primary ml-2">Edit Profile</a>
+        </div>
+        <div class="card-body">
+            {% if profile.company_logo %}
+                <p><strong>Company Logo:</strong></p>
+                <img src="{{ profile.company_logo.url }}" alt="{{ profile.company_name }}" style="width: 150px; height: auto;">
+            {% endif %}
+            <p><strong>Company Name:</strong> {{ profile.company_name }}</p>
+            <p><strong>Company Address:</strong></p>
+            <pre>{{ profile.company_address }}</pre>
+            <p><strong>Company Email:</strong> {{ profile.company_email }}</p>
+            <p><strong>Company Phone:</strong><pre>{{ profile.company_phone|linebreaksbr }}</pre></p>
+            <p><strong>GST/HST Number:</strong> {{ profile.gst_hst_number }}</p>
+            <p><strong>Occupation:</strong> {{ profile.get_occupation_display }}</p>
+            
+            {% if profile.interact_email %}
+                <p><strong>Interact Email:</strong> {{ profile.interact_email }}</p>
+            {% endif %}
+            
+            {# Show QST Number if province == 'QC' and the field is not empty #}
+            {% if profile.province == 'QC' and profile.qst_number %}
+                <p><strong>QST Number:</strong> {{ profile.qst_number }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>New website message</h2>
+  <p><strong>Name:</strong> {{ message_obj.full_name }}</p>
+  <p><strong>Email:</strong> {{ message_obj.email }}</p>
+  {% if message_obj.phone %}<p><strong>Phone:</strong> {{ message_obj.phone }}</p>{% endif %}
+  <p><strong>Message:</strong><br>{{ message_obj.message|linebreaksbr }}</p>
+  <p>Submitted on {{ message_obj.created_at }}</p>
+</body>
+ </html>
+

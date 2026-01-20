@@ -1,0 +1,15 @@
+{% extends 'customer_portal_base.html' %}
+{% block title %}
+    Delete Estimate
+{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Delete Estimate</h2>
+    <p>Are you sure you want to delete the estimate <strong>{{ object.estimate_number }}</strong>?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Delete</button>
+        <a href="{% url 'accounts:estimate_detail' object.pk %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

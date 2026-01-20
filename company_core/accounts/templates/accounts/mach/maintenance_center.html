@@ -1,0 +1,237 @@
+{% extends 'customer_portal_base.html' %}
+{% load humanize %}
+{% block title %}Maintenance Center{% endblock %}
+{% block content %}
+<style>
+    .mc-card { border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; box-shadow: 0 12px 30px rgba(15,23,42,0.06); padding: 1rem; }
+    .mc-tabs { display: inline-flex; gap: 0.35rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.35rem; }
+    .mc-tab { border: none; background: transparent; padding: 0.45rem 0.9rem; border-radius: 10px; font-weight: 700; color: #6b7280; }
+    .mc-tab.active { background: #e0e7ff; color: #1d4ed8; }
+    .mc-filters { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+    .mc-filters .form-select, .mc-filters .form-control { min-width: 180px; }
+    .pill-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: #fff; border-radius: 12px; padding: 0.45rem 0.95rem; font-weight: 700; font-size: 0.92rem; box-shadow: 0 12px 24px rgba(37,99,235,0.18); }
+    .pill-secondary { border-radius: 12px; padding: 0.42rem 0.9rem; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; font-weight: 700; font-size: 0.92rem; box-shadow: 0 10px 18px rgba(15,23,42,0.06); }
+    .mc-table-wrapper { overflow-x: auto; }
+    .mc-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    .mc-table th { text-align: left; padding: 0.75rem; color: #64748b; background: #f1f5f9; font-weight: 700; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    .mc-table td { padding: 0.75rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .mc-table tr:nth-child(even) td { background: #f8fafc; }
+    .badge-soft { border-radius: 999px; padding: 0.25rem 0.7rem; font-weight: 700; font-size: 0.85rem; }
+    .status-upcoming { background: #e0e7ff; color: #1d4ed8; }
+    .status-completed { background: #dcfce7; color: #166534; }
+    .status-cancelled { background: #e5e7eb; color: #374151; }
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #0f172a; }
+    .empty-state .icon { font-size: 3rem; color: #2563eb; margin-bottom: 0.5rem; }
+    .mc-filter-toggle { border: 1px solid #e5e7eb; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); color: #0f172a; border-radius: 12px; padding: 0.55rem 0.9rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 10px 20px rgba(15,23,42,0.06); }
+    .mc-filter-toggle .caret { transition: transform 0.2s ease; }
+    .mc-filter-toggle[aria-expanded="false"] .caret { transform: rotate(180deg); }
+</style>
+
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Maintenance Center</h2>
+            <p class="text-muted mb-0">Track reminders, filter by customer or vehicle, and send notices.</p>
+        </div>
+        <div class="page-toolbar">
+            <div class="mc-tabs" role="tablist">
+                <button class="mc-tab active" data-target="upcoming" type="button">Upcoming</button>
+                <button class="mc-tab" data-target="completed" type="button">Completed</button>
+                <button class="mc-tab" data-target="cancelled" type="button">Cancelled</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mc-card mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <button id="toggle-filter-panel" class="mc-filter-toggle" type="button" aria-expanded="true">
+            <i class="fas fa-sliders-h"></i>
+            Filters
+            <i class="fas fa-chevron-up caret"></i>
+        </button>
+    </div>
+    <div id="filter-panel">
+        <form id="maintenance-filters" method="get" class="mc-filters">
+            <select name="customer" class="form-select">
+                <option value="">All Customers</option>
+                {% for cust in customers %}
+                <option value="{{ cust.id }}" {% if active_customer_id == cust.id %}selected{% endif %}>{{ cust.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="vehicle" class="form-select">
+                <option value="">All Vehicles</option>
+                {% for v in vehicles %}
+                <option value="{{ v.id }}" {% if active_vehicle_id == v.id %}selected{% endif %}>{{ v.unit_number|default:"Unit" }} - {{ v.make_model|default:v.vin_number }}</option>
+                {% endfor %}
+            </select>
+            <button class="pill-secondary" type="submit">Apply Filters</button>
+            <a class="pill-secondary text-decoration-none" href="{% url 'accounts:maintenance_center' %}">Reset</a>
+            <div class="ms-auto d-flex align-items-center gap-2">
+                <form id="maintenance-reminders" class="d-flex align-items-center gap-2" method="post" action="{% url 'accounts:maintenance_send' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="customer" value="{{ active_customer_id|default_if_none:'' }}">
+                    <input type="hidden" name="vehicle" value="{{ active_vehicle_id|default_if_none:'' }}">
+                    <input type="number" name="days" class="form-control" style="width:90px;" min="1" max="30" value="7" aria-label="Days ahead">
+                    <button class="pill-primary btn-sm" type="submit">Send Reminders</button>
+                </form>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="mc-card">
+    <div class="mc-table-wrapper" id="tab-upcoming">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0">Upcoming Maintenance</h5>
+            <span class="text-muted small">{{ upcoming_tasks|length }} items</span>
+        </div>
+        <table class="mc-table">
+            <thead>
+                <tr>
+                    <th>Due</th>
+                    <th>Vehicle</th>
+                    <th>Customer</th>
+                    <th>Task</th>
+                    <th>Priority</th>
+                    <th>Mileage</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if upcoming_tasks %}
+                {% for task in upcoming_tasks %}
+                <tr>
+                    <td>{{ task.due_date|date:"M j, Y"|default:"N/A" }}</td>
+                    <td>
+                        <div class="fw-semibold">{{ task.vehicle.make_model|default:task.vehicle.vin_number }}</div>
+                        <div class="text-muted small">Unit {{ task.vehicle.unit_number|default:"N/A" }}</div>
+                    </td>
+                    <td>{{ task.vehicle.customer.name }}</td>
+                    <td>{{ task.title }}</td>
+                    <td><span class="badge-soft status-upcoming">{{ task.get_priority_display }}</span></td>
+                    <td>
+                        {% if task.due_mileage %}<div>{{ task.due_mileage|intcomma }} km</div>{% endif %}
+                        {% if task.mileage_interval %}<div class="text-muted small">Every {{ task.mileage_interval|intcomma }} km</div>{% endif %}
+                    </td>
+                    <td><span class="badge-soft status-upcoming">Active</span></td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <div class="icon"><i class="fa-regular fa-calendar-check"></i></div>
+                            <h5 class="fw-semibold mb-1">No upcoming maintenance found.</h5>
+                            <p class="text-muted mb-0">Schedule maintenance to get started.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mc-table-wrapper d-none" id="tab-completed">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0">Completed Maintenance</h5>
+            <span class="text-muted small">{{ completed_tasks|length }} items</span>
+        </div>
+        <table class="mc-table">
+            <thead>
+                <tr>
+                    <th>Completed</th>
+                    <th>Vehicle</th>
+                    <th>Customer</th>
+                    <th>Task</th>
+                    <th>Workorder</th>
+                    <th>Priority</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if completed_tasks %}
+                {% for task in completed_tasks %}
+                <tr>
+                    <td>{{ task.completed_date|date:"M j, Y"|default:"N/A" }}</td>
+                    <td>
+                        <div class="fw-semibold">{{ task.vehicle.make_model|default:task.vehicle.vin_number }}</div>
+                        <div class="text-muted small">Unit {{ task.vehicle.unit_number|default:"N/A" }}</div>
+                    </td>
+                    <td>{{ task.vehicle.customer.name }}</td>
+                    <td>{{ task.title }}</td>
+                    <td>{% if task.work_order_id %}<a href="{% url 'accounts:workorder_detail' task.work_order_id %}">WO #{{ task.work_order_id }}</a>{% else %}-{% endif %}</td>
+                    <td><span class="badge-soft status-completed">{{ task.get_priority_display }}</span></td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No completed maintenance recorded.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mc-table-wrapper d-none" id="tab-cancelled">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0">Cancelled Maintenance</h5>
+            <span class="text-muted small">{{ cancelled_tasks|length }} items</span>
+        </div>
+        <table class="mc-table">
+            <thead>
+                <tr>
+                    <th>Updated</th>
+                    <th>Vehicle</th>
+                    <th>Customer</th>
+                    <th>Task</th>
+                    <th>Priority</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if cancelled_tasks %}
+                {% for task in cancelled_tasks %}
+                <tr>
+                    <td>{{ task.updated_at|date:"M j, Y"|default:"N/A" }}</td>
+                    <td>
+                        <div class="fw-semibold">{{ task.vehicle.make_model|default:task.vehicle.vin_number }}</div>
+                        <div class="text-muted small">Unit {{ task.vehicle.unit_number|default:"N/A" }}</div>
+                    </td>
+                    <td>{{ task.vehicle.customer.name }}</td>
+                    <td>{{ task.title }}</td>
+                    <td><span class="badge-soft status-cancelled">{{ task.get_priority_display }}</span></td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No cancelled maintenance.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.mc-tab');
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            ['upcoming','completed','cancelled'].forEach(key => {
+                const el = document.getElementById(`tab-${key}`);
+                if (el) el.classList.add('d-none');
+            });
+            const target = document.getElementById(`tab-${btn.dataset.target}`);
+            if (target) target.classList.remove('d-none');
+        });
+    });
+
+    const togglePanel = document.getElementById('toggle-filter-panel');
+    const filterPanel = document.getElementById('filter-panel');
+    if (togglePanel && filterPanel) {
+        togglePanel.addEventListener('click', () => {
+            const isExpanded = togglePanel.getAttribute('aria-expanded') === 'true';
+            togglePanel.setAttribute('aria-expanded', (!isExpanded).toString());
+            filterPanel.classList.toggle('d-none', isExpanded);
+        });
+    }
+});
+</script>
+{% endblock %}

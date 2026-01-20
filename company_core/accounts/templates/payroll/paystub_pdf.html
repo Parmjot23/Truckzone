@@ -1,0 +1,269 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Pay Statement</title>
+    <style>
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 12px;
+            margin: 24px;
+            color: #0f172a;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+        }
+        .title {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+        }
+        .subtitle {
+            font-size: 11px;
+            color: #64748b;
+        }
+        .logo {
+            height: 44px;
+            max-width: 180px;
+            object-fit: contain;
+        }
+        .meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #475569;
+            margin-bottom: 12px;
+        }
+        .section {
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin: 12px 0 6px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 6px 8px;
+        }
+        th {
+            background: #f8fafc;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            color: #475569;
+            text-align: left;
+        }
+        td.amount, th.amount {
+            text-align: right;
+        }
+        .meta-table td {
+            border: none;
+            padding: 2px 0;
+        }
+        .total-row {
+            font-weight: 700;
+            background: #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <div class="title">Pay Statement</div>
+            <div class="subtitle">{{ business_name|default:default_business_name }}</div>
+        </div>
+        {% if company_logo_url %}
+        <img src="{{ company_logo_url }}" alt="Company logo" class="logo">
+        {% endif %}
+    </div>
+
+    <div class="meta">
+        <div>Pay period: {{ payroll_run.period_start }} - {{ payroll_run.period_end }}</div>
+        <div>Pay date: {{ payroll_run.pay_date|default:"-" }}</div>
+        <div>Generated: {{ generated_on }}</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Employee</div>
+        <table class="meta-table">
+            <tr>
+                <td><strong>Name:</strong> {{ employee.full_name }}</td>
+                <td><strong>Role:</strong> {{ employee.get_role_display }}</td>
+            </tr>
+            <tr>
+                <td><strong>Email:</strong> {{ employee.email|default:"-" }}</td>
+                <td><strong>Hourly rate:</strong> {{ employee.hourly_rate|currency }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Earnings and Deductions</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th class="amount">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Total hours</td>
+                    <td class="amount">{{ paystub.hours }}</td>
+                </tr>
+                <tr>
+                    <td>Regular hours</td>
+                    <td class="amount">{{ paystub.regular_hours }}</td>
+                </tr>
+                {% if paystub.overtime_hours > 0 %}
+                <tr>
+                    <td>Overtime hours</td>
+                    <td class="amount">{{ paystub.overtime_hours }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td>Regular pay</td>
+                    <td class="amount">{{ paystub.regular_pay|currency }}</td>
+                </tr>
+                {% if paystub.overtime_pay > 0 %}
+                <tr>
+                    <td>Overtime pay</td>
+                    <td class="amount">{{ paystub.overtime_pay|currency }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td>Gross pay</td>
+                    <td class="amount">{{ paystub.gross_pay|currency }}</td>
+                </tr>
+                <tr>
+                    <td>Taxable income</td>
+                    <td class="amount">{{ paystub.taxable_income|currency }}</td>
+                </tr>
+                <tr>
+                    <td>Federal tax</td>
+                    <td class="amount">-{{ paystub.federal_tax|currency }}</td>
+                </tr>
+                <tr>
+                    <td>Provincial tax</td>
+                    <td class="amount">-{{ paystub.provincial_tax|currency }}</td>
+                </tr>
+                <tr>
+                    <td>CPP</td>
+                    <td class="amount">-{{ paystub.cpp_employee|currency }}</td>
+                </tr>
+                <tr>
+                    <td>CPP2</td>
+                    <td class="amount">-{{ paystub.cpp2_employee|currency }}</td>
+                </tr>
+                <tr>
+                    <td>EI</td>
+                    <td class="amount">-{{ paystub.ei_employee|currency }}</td>
+                </tr>
+                <tr>
+                    <td>Other deductions</td>
+                    <td class="amount">-{{ paystub.other_deductions|currency }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td>Net pay</td>
+                    <td class="amount">{{ paystub.net_pay|currency }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    {% if time_entries %}
+    <div class="section">
+        <div class="section-title">Time Entries</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Start</th>
+                    <th>Finish</th>
+                    <th class="amount">Hours</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in time_entries %}
+                <tr>
+                    <td>{{ entry.work_date }}</td>
+                    <td>{{ entry.start_time|time:"H:i"|default:"-" }}</td>
+                    <td>{{ entry.end_time|time:"H:i"|default:"-" }}</td>
+                    <td class="amount">{{ entry.hours }}</td>
+                    <td>{{ entry.notes|default:"" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <div class="section-title">Employer Contributions</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th class="amount">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>CPP (employer)</td>
+                    <td class="amount">{{ paystub.cpp_employer|currency }}</td>
+                </tr>
+                <tr>
+                    <td>CPP2 (employer)</td>
+                    <td class="amount">{{ paystub.cpp2_employer|currency }}</td>
+                </tr>
+                <tr>
+                    <td>EI (employer)</td>
+                    <td class="amount">{{ paystub.ei_employer|currency }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td>Employer total</td>
+                    <td class="amount">{{ paystub.employer_total|currency }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    {% if line_items %}
+    <div class="section">
+        <div class="section-title">Line Items</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th class="amount">Employee amount</th>
+                    <th class="amount">Employer amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in line_items %}
+                <tr>
+                    <td>{{ item.get_line_type_display }}</td>
+                    <td>{{ item.name }}</td>
+                    <td class="amount">{{ item.amount|currency }}</td>
+                    <td class="amount">{{ item.employer_amount|currency }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</body>
+</html>

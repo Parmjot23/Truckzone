@@ -1,0 +1,1249 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Contact Us - {{ business_name|default:default_business_name }}{% endblock %}
+
+
+{% block body_class %}page-contact{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  /* =============================================
+       CONTACT PAGE - Premium Modern Design
+       ============================================= */
+
+  /* Hero Section */
+  .contact-hero {
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.92), rgba(0, 71, 171, 0.85)),
+    url("{% static 'images/hero_contact_background.png' %}");
+    background-size: cover;
+    background-position: center;
+    padding: clamp(5rem, 10vw, 8rem) 0 clamp(4rem, 8vw, 6rem);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .contact-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(0, 71, 171, 0.15), transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(26, 26, 26, 0.12), transparent 50%);
+    pointer-events: none;
+  }
+
+  .contact-hero-content {
+    position: relative;
+    z-index: 2;
+  }
+
+  .contact-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0, 71, 171, 0.15);
+    border: 1px solid rgba(0, 71, 171, 0.3);
+    color: #74a5e6;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+  }
+
+  .contact-hero h1 {
+    font-size: clamp(2.25rem, 5vw, 3.5rem);
+    font-weight: 800;
+    color: white;
+    margin-bottom: 1rem;
+    line-height: 1.15;
+  }
+
+  .contact-hero .lead {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    max-width: 600px;
+    margin: 0 auto 2rem;
+  }
+
+  .hero-quick-contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  .hero-contact-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 0.75rem 1.25rem;
+    border-radius: 999px;
+    color: white;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(8px);
+  }
+
+  .hero-contact-chip:hover {
+    background: rgba(0, 71, 171, 0.3);
+    border-color: rgba(0, 71, 171, 0.5);
+    transform: translateY(-2px);
+    color: white;
+  }
+
+  .hero-contact-chip i {
+    color: var(--brand-blue, #0047AB);
+    font-size: 1.1rem;
+  }
+
+  /* Locations Section */
+  .locations-section {
+    padding: clamp(4rem, 8vw, 6rem) 0;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .locations-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("{% static 'images/contact_locations_bg.png' %}");
+    background-size: cover;
+    background-position: center;
+    opacity: 0.5;
+    z-index: 0;
+  }
+
+  .locations-section>.container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .section-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(0, 71, 171, 0.08));
+    color: var(--brand-blue, #0047AB);
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 800;
+    color: var(--brand-navy, #0F172A);
+    margin-bottom: 0.75rem;
+  }
+
+  .section-subtitle {
+    color: var(--neutral-600, #475569);
+    font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Location Cards */
+  .location-card {
+    background: white;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow:
+      0 4px 6px rgba(0, 0, 0, 0.02),
+      0 12px 40px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 100%;
+    position: relative;
+  }
+
+  .location-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--brand-blue, #0047AB), #2563EB);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+
+  .location-card:hover {
+    transform: translateY(-8px);
+    box-shadow:
+      0 8px 16px rgba(0, 0, 0, 0.04),
+      0 24px 60px rgba(0, 0, 0, 0.1);
+  }
+
+  .location-card:hover::before {
+    transform: scaleX(1);
+  }
+
+  .location-highlight-section {
+    padding: clamp(3rem, 6vw, 4.5rem) 0;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  }
+
+  .location-highlight-card {
+    background: white;
+    border-radius: 24px;
+    padding: 2rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow:
+      0 10px 30px rgba(15, 23, 42, 0.05);
+  }
+
+  .location-highlight-card .highlight-body h2 {
+    font-size: clamp(1.75rem, 3vw, 2.25rem);
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: var(--brand-navy, #0F172A);
+  }
+
+  .location-highlight-card .highlight-body p {
+    color: var(--neutral-600, #475569);
+    margin: 0.1rem 0;
+    font-size: 1rem;
+  }
+
+  .highlight-actions .highlight-btn {
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 0.9rem;
+    background: #0047AB;
+    border-radius: 999px;
+    color: white;
+    padding: 0.65rem 1.25rem;
+    border: none;
+    box-shadow: 0 5px 15px rgba(0, 71, 171, 0.25);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .highlight-actions .highlight-btn:hover {
+    background: #003080;
+    color: white;
+  }
+
+  .location-card-header {
+    padding: 1.75rem 1.75rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .location-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(0, 71, 171, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .location-icon i {
+    font-size: 1.5rem;
+    color: var(--brand-blue, #0047AB);
+  }
+
+  .location-info h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--brand-navy, #0F172A);
+    margin-bottom: 0.25rem;
+  }
+
+  .location-info .province-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #0F172A, #1E293B);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .location-card-body {
+    padding: 1.5rem 1.75rem;
+  }
+
+  .location-detail {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+  }
+
+  .location-detail i {
+    width: 20px;
+    color: var(--brand-blue, #0047AB);
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+
+  .location-detail span {
+    color: var(--neutral-700, #334155);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .location-detail a {
+    color: var(--brand-navy, #0F172A);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .location-detail a:hover {
+    color: var(--brand-blue, #0047AB);
+  }
+
+  .location-card-footer {
+    padding: 1rem 1.75rem 1.75rem;
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .btn-directions {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.25rem;
+    background: linear-gradient(135deg, var(--brand-blue, #0047AB), #2563EB);
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 14px rgba(0, 71, 171, 0.3);
+  }
+
+  .btn-directions:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 71, 171, 0.4);
+    color: white;
+  }
+
+  .btn-call {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: rgba(15, 23, 42, 0.08);
+    color: var(--brand-navy, #0F172A);
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+
+  .btn-call:hover {
+    background: var(--brand-navy, #0F172A);
+    color: white;
+  }
+
+  /* Interactive Map Section */
+  .map-section {
+    padding: 0 0 clamp(4rem, 8vw, 6rem);
+  }
+
+  .map-container {
+    background: white;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow:
+      0 4px 6px rgba(0, 0, 0, 0.02),
+      0 20px 50px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+  }
+
+  .map-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, #fafafa, #f5f5f5);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .map-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    color: var(--brand-navy, #0F172A);
+    font-size: 1rem;
+  }
+
+  .map-title i {
+    color: var(--brand-blue, #0047AB);
+  }
+
+  .map-legend {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--neutral-600, #475569);
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .legend-dot.cornwall {
+    background: #0047AB;
+  }
+
+  .legend-dot.vaudreuil {
+    background: #3B82F6;
+  }
+
+  #locations-map {
+    height: 450px;
+    width: 100%;
+  }
+
+  /* Contact Form Section */
+  .contact-form-section {
+    padding: clamp(4rem, 8vw, 6rem) 0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .contact-form-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("{% static 'images/contact_form_bg.png' %}");
+    background-size: cover;
+    background-position: center;
+    opacity: 0.5;
+    z-index: 0;
+  }
+
+  .contact-form-section>.container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .contact-form-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 3rem;
+    align-items: start;
+  }
+
+  @media (max-width: 991px) {
+    .contact-form-wrapper {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .contact-info-panel {
+    background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+    border-radius: 24px;
+    padding: 2.5rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .contact-info-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(0, 71, 171, 0.15), transparent 70%);
+    pointer-events: none;
+  }
+
+  .contact-info-panel h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .contact-info-panel .lead {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+
+  .info-item {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .info-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(37, 99, 235, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .info-icon i {
+    color: var(--brand-blue, #0047AB);
+    font-size: 1.2rem;
+  }
+
+  .info-content h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.35rem;
+  }
+
+  .info-content p,
+  .info-content a {
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    margin: 0;
+  }
+
+  .info-content a:hover {
+    color: var(--brand-blue, #0047AB);
+  }
+
+  /* Form Card */
+  .form-card {
+    background: white;
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow:
+      0 4px 6px rgba(0, 0, 0, 0.02),
+      0 20px 50px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+  }
+
+  .form-card h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--brand-navy, #0F172A);
+    margin-bottom: 0.5rem;
+  }
+
+  .form-card .lead {
+    color: var(--neutral-600, #475569);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-label {
+    display: block;
+    font-weight: 600;
+    color: var(--neutral-700, #334155);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .form-control,
+  .form-select {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    background: #fafafa;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    outline: none;
+    border-color: var(--brand-blue, #0047AB);
+    background: white;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  }
+
+  textarea.form-control {
+    resize: vertical;
+    min-height: 120px;
+  }
+
+  .btn-submit {
+    width: 100%;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, var(--brand-blue, #0047AB), #2563EB);
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 14px rgba(0, 71, 171, 0.3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 71, 171, 0.4);
+  }
+
+  /* FAQ Section */
+  .faq-section {
+    padding: clamp(4rem, 8vw, 6rem) 0;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .faq-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("{% static 'images/contact_faq_bg.png' %}");
+    background-size: cover;
+    background-position: center;
+    opacity: 0.5;
+    z-index: 0;
+  }
+
+  .faq-section>.container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .faq-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 767px) {
+    .faq-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .faq-item {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+  }
+
+  .faq-item:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    transform: translateY(-4px);
+  }
+
+  .faq-question {
+    font-weight: 700;
+    color: var(--brand-navy, #0F172A);
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .faq-question i {
+    color: var(--brand-blue, #0047AB);
+    margin-top: 2px;
+  }
+
+  .faq-answer {
+    color: var(--neutral-600, #475569);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    padding-left: 1.75rem;
+  }
+
+  /* Custom Leaflet Popup */
+  .custom-popup .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    padding: 0;
+  }
+
+  .custom-popup .leaflet-popup-content {
+    margin: 0;
+    min-width: 200px;
+  }
+
+  .popup-content {
+    padding: 1rem;
+  }
+
+  .popup-content h4 {
+    font-weight: 700;
+    color: #0F172A;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .popup-content p {
+    color: #64748B;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .popup-content a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #0047AB;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+  }
+
+  .popup-content a:hover {
+    text-decoration: underline;
+  }
+
+  /* Animations */
+  .animate-fade-up {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .animate-fade-up.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* === SATELLITE MAP SECTION === */
+  .satellite-map-section {
+    padding: clamp(4rem, 8vw, 6rem) 0;
+    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    position: relative;
+  }
+
+  .satellite-map-section .section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .satellite-map-section .section-title {
+    color: var(--brand-navy, #0F172A);
+  }
+
+  .satellite-map-section .section-subtitle {
+    color: var(--neutral-600, #475569);
+  }
+
+  .satellite-map-container {
+    background: white;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow:
+      0 4px 6px rgba(0, 0, 0, 0.02),
+      0 25px 60px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .map-glass-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, rgba(0, 71, 171, 0.95), rgba(37, 99, 235, 0.9));
+    backdrop-filter: blur(10px);
+  }
+
+  .map-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .map-pin-icon {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+  }
+
+  .map-address-info h4 {
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin: 0 0 0.25rem 0;
+  }
+
+  .map-address-info p {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  .map-header-right {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .map-directions-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: white;
+    color: var(--brand-blue, #0047AB);
+    font-weight: 700;
+    font-size: 0.9rem;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  }
+
+  .map-directions-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    color: var(--brand-blue, #0047AB);
+  }
+
+  .map-iframe-wrapper {
+    position: relative;
+    width: 100%;
+    line-height: 0;
+  }
+
+  .map-iframe-wrapper iframe {
+    width: 100%;
+    height: 500px;
+    display: block;
+  }
+
+  .map-info-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+    padding: 1.25rem 2rem;
+    background: linear-gradient(135deg, #1A1A1A, #2D2D2D);
+  }
+
+  .map-info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.9rem;
+  }
+
+  .map-info-item i {
+    color: var(--brand-blue, #0047AB);
+    font-size: 1rem;
+  }
+
+  .map-info-item a {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+  }
+
+  .map-info-item a:hover {
+    color: var(--brand-blue, #2563EB);
+  }
+
+  @media (max-width: 768px) {
+    .map-glass-header {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 1.25rem;
+    }
+
+    .map-header-left {
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .map-iframe-wrapper iframe {
+      height: 350px;
+    }
+
+    .map-info-bar {
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1.25rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="contact-hero text-center">
+  <div class="container">
+    <div class="contact-hero-content">
+      <div class="contact-hero-badge">
+        <i class="fas fa-headset"></i>
+        <span>We're Here to Help</span>
+      </div>
+      <h1>Get in Touch With Us</h1>
+      <p class="lead">Reach out for parts inquiries, quotes, or fleet pricing from our parts desk.</p>
+      <div class="hero-quick-contacts">
+        <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}" class="hero-contact-chip">
+          <i class="fas fa-phone"></i>
+          <span>{{ business_contact_phone }}</span>
+        </a>
+        <a href="mailto:{{ business_contact_email }}" class="hero-contact-chip">
+          <i class="fas fa-envelope"></i>
+          <span>{{ business_contact_email }}</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Location Highlight Section -->
+<section class="location-highlight-section">
+  <div class="container">
+    <div class="location-highlight-card animate-fade-up">
+      <div class="highlight-body">
+        <h2>Visit {{ business_name|default:default_business_name }}</h2>
+        <p>{{ business_contact_address|linebreaksbr }}</p>
+        <p>Business Hours: {{ business_hours|default:default_business_hours }}</p>
+      </div>
+      <div class="highlight-actions">
+        <a href="https://www.google.com/maps/dir/?api=1&destination={{ business_contact_address|urlencode }}"
+          target="_blank" class="btn-directions highlight-btn">
+          <i class="fas fa-directions"></i> Get Directions
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- Contact Form Section -->
+<section class="contact-form-section">
+  <div class="container">
+    <div class="contact-form-wrapper">
+      <!-- Info Panel -->
+      <div class="contact-info-panel animate-fade-up">
+        <h3>Let's Connect</h3>
+        <p class="lead">Have a question or need a quote? We're here to help with parts sourcing and fitment.</p>
+
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="fas fa-map-marker-alt"></i>
+          </div>
+          <div class="info-content">
+            <h4>Address</h4>
+            <p>{{ business_contact_address|linebreaksbr }}</p>
+          </div>
+        </div>
+
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="fas fa-phone"></i>
+          </div>
+          <div class="info-content">
+            <h4>Contact Numbers</h4>
+            <p><a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}">{{ business_contact_phone
+                }}</a></p>
+          </div>
+        </div>
+
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="fas fa-envelope"></i>
+          </div>
+          <div class="info-content">
+            <h4>Email</h4>
+            <p><a href="mailto:{{ business_contact_email }}">{{ business_contact_email }}</a></p>
+          </div>
+        </div>
+
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="info-content">
+            <h4>Hours</h4>
+            <p>{{ business_hours|default:default_business_hours }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Card -->
+      <div class="form-card animate-fade-up">
+        <h3>Send Us a Message</h3>
+        <p class="lead">Fill out the form below and we'll get back to you within 24 hours.</p>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label for="full_name" class="form-label">Full Name *</label>
+            <input type="text" name="full_name" id="full_name" class="form-control" required
+              value="{{ form.full_name.value|default:'' }}" autocomplete="name" placeholder="John Doe">
+            {% if form.full_name.errors %}
+            <small class="text-danger">{{ form.full_name.errors|striptags }}</small>
+            {% endif %}
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="email" class="form-label">Email *</label>
+                <input type="email" name="email" id="email" class="form-control" required
+                  value="{{ form.email.value|default:'' }}" autocomplete="email" placeholder="john@example.com">
+                {% if form.email.errors %}
+                <small class="text-danger">{{ form.email.errors|striptags }}</small>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="phone" class="form-label">Phone</label>
+                <input type="tel" name="phone" id="phone" class="form-control" value="{{ form.phone.value|default:'' }}"
+                  autocomplete="tel" placeholder="(555) 123-4567">
+                {% if form.phone.errors %}
+                <small class="text-danger">{{ form.phone.errors|striptags }}</small>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="message" class="form-label">Message *</label>
+            <textarea name="message" id="message" class="form-control" required
+              placeholder="How can we help you today?">{{ form.message.value|default:'' }}</textarea>
+            {% if form.message.errors %}
+            <small class="text-danger">{{ form.message.errors|striptags }}</small>
+            {% endif %}
+          </div>
+
+          <button type="submit" class="btn-submit">
+            <i class="fas fa-paper-plane"></i> Send Message
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="faq-section">
+  <div class="container">
+    <div class="section-header animate-fade-up">
+      <div class="section-badge">
+        <i class="fas fa-question-circle"></i>
+        FAQ
+      </div>
+      <h2 class="section-title">Frequently Asked Questions</h2>
+      <p class="section-subtitle">Quick answers to common questions about ordering parts.</p>
+    </div>
+
+    <div class="faq-grid">
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          What are your hours of operation?
+        </div>
+        <p class="faq-answer">We are open {{ business_hours|default:default_business_hours }}.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Do you carry OEM and aftermarket parts?
+        </div>
+        <p class="faq-answer">Yes. We stock trusted OEM-grade and aftermarket options to meet different fleet budgets
+          and timelines.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Can you help confirm part fitment?
+        </div>
+        <p class="faq-answer">Absolutely. Share your VIN, unit number, or part number and our team will verify the
+          correct match.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Do you offer delivery or pickup?
+        </div>
+        <p class="faq-answer">Yes. We offer same-day pickup and can arrange local delivery based on availability.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          How do I set up a fleet account?
+        </div>
+        <p class="faq-answer">Register online or contact the parts desk to set up account pricing and ordering access.
+        </p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          What payment methods do you accept?
+        </div>
+        <p class="faq-answer">We accept cash, all major credit cards, debit, and offer fleet account billing for
+          qualified businesses with approved credit.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Satellite Map Section -->
+<section class="satellite-map-section">
+  <div class="container">
+    <div class="section-header animate-fade-up">
+      <div class="section-badge">
+        <i class="fas fa-satellite"></i>
+        Our Location
+      </div>
+      <h2 class="section-title">Find Us Here</h2>
+      <p class="section-subtitle">Visit our parts desk for fast pickup and expert support.</p>
+    </div>
+
+    <div class="satellite-map-container animate-fade-up">
+      <div class="map-glass-header">
+        <div class="map-header-left">
+          <div class="map-pin-icon">
+            <i class="fas fa-map-marker-alt"></i>
+          </div>
+          <div class="map-address-info">
+            <h4>{{ business_name|default:default_business_name }}</h4>
+            <p>{{ business_contact_address|linebreaksbr }}</p>
+          </div>
+        </div>
+        <div class="map-header-right">
+          <a href="https://www.google.com/maps/dir/?api=1&destination={{ business_contact_address|urlencode }}"
+            target="_blank" class="map-directions-btn">
+            <i class="fas fa-directions"></i>
+            Get Directions
+          </a>
+        </div>
+      </div>
+      <div class="map-iframe-wrapper">
+        <iframe src="https://www.google.com/maps?q={{ business_contact_address|urlencode }}&output=embed" width="100%"
+          height="500" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+      </div>
+      <div class="map-info-bar">
+        <div class="map-info-item">
+          <i class="fas fa-clock"></i>
+          <span>{{ business_hours|default:default_business_hours }}</span>
+        </div>
+        <div class="map-info-item">
+          <i class="fas fa-envelope"></i>
+          <a href="mailto:{{ business_contact_email }}">{{ business_contact_email }}</a>
+        </div>
+        <div class="map-info-item">
+          <i class="fas fa-phone"></i>
+          <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}">{{ business_contact_phone }}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Scroll animation
+    const animatedElements = document.querySelectorAll('.animate-fade-up');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, index) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            entry.target.classList.add('is-visible');
+          }, index * 100);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    animatedElements.forEach(el => observer.observe(el));
+  });
+</script>
+{% endblock %}

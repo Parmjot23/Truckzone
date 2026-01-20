@@ -1,0 +1,704 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+
+{% block title %}
+    Manage Expenses
+{% endblock %}
+
+{% block content %}
+<style>
+    .expense-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .expense-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+        padding: 1rem;
+    }
+    .expense-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+        width: 100%;
+    }
+    .search-box {
+        flex: 1;
+        min-width: 260px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.45rem 0.65rem;
+        background: #f8fafc;
+    }
+    .search-box input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        outline: none;
+    }
+    .pill-btn {
+        border-radius: 12px;
+        padding: 0.42rem 0.9rem;
+        font-weight: 700;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #0f172a;
+        font-size: 0.92rem;
+        box-shadow: 0 10px 18px rgba(15,23,42,0.06);
+    }
+    .pill-primary {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        border: none;
+        color: #fff;
+        border-radius: 12px;
+        padding: 0.45rem 0.95rem;
+        font-weight: 700;
+        font-size: 0.92rem;
+        box-shadow: 0 12px 24px rgba(37,99,235,0.18);
+    }
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+        width: 100%;
+    }
+    .filter-item {
+        min-width: 160px;
+        flex: 1 1 180px;
+    }
+    .filter-item label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #94a3b8;
+        margin-bottom: 0.2rem;
+        display: block;
+    }
+    .filter-item select {
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        padding: 0.45rem 0.6rem;
+        font-size: 0.92rem;
+        background: #fff;
+    }
+    #expense-feedback { margin-top: 0.5rem; }
+</style>
+
+<div class="page-shell expense-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Expenses</h2>
+            <div class="text-muted small">Track and manage your spending in one place.</div>
+        </div>
+        <div class="page-toolbar">
+            <a href="{% url 'accounts:add_records' %}" class="pill-primary btn btn-sm">
+                <i class="fas fa-plus-circle me-1"></i>Add expense
+            </a>
+            <a href="{% url 'accounts:supplier_credit_list' %}" class="pill-btn btn btn-sm">
+                <i class="fas fa-undo-alt me-1"></i>Supplier credits
+            </a>
+            <a href="{% url 'accounts:supplier_cheque_list' %}" class="pill-btn btn btn-sm">
+                <i class="fas fa-money-check me-1"></i>Cheques
+            </a>
+            <a href="{% url 'accounts:category_list' %}" class="pill-btn btn btn-sm">
+                <i class="fas fa-tags me-1"></i>Categories
+            </a>
+            <button type="button" id="mark-all-paid-btn" class="pill-btn btn btn-sm" data-mark-all-url="{% url 'accounts:mechexpense_mark_paid' %}">
+                <i class="fas fa-check-circle me-1"></i>Mark all paid
+            </button>
+        </div>
+    </div>
+
+    <div class="expense-card">
+        <form method="GET" id="search-form" class="expense-toolbar" action="{% url 'accounts:mechexpense_list' %}">
+            <div class="search-box">
+                <i class="fa fa-search text-muted"></i>
+                <input type="text" name="search" id="search-input" class="form-control" placeholder="Search by any field..." aria-label="Search" value="{{ search_query }}">
+            </div>
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label for="period-filter">Period</label>
+                    <select name="period" id="period-filter" class="expense-filter-control">
+                        <option value="">All time</option>
+                        <option value="today" {% if selected_period == 'today' %}selected{% endif %}>Today</option>
+                        <option value="yesterday" {% if selected_period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                        <option value="this_week" {% if selected_period == 'this_week' %}selected{% endif %}>This week</option>
+                        <option value="last_week" {% if selected_period == 'last_week' %}selected{% endif %}>Last week</option>
+                        <option value="this_month" {% if selected_period == 'this_month' %}selected{% endif %}>This month</option>
+                        <option value="last_month" {% if selected_period == 'last_month' %}selected{% endif %}>Last month</option>
+                        <option value="1y" {% if selected_period == '1y' %}selected{% endif %}>Last 12 months</option>
+                        <option value="this_year" {% if selected_period == 'this_year' %}selected{% endif %}>This year</option>
+                        <option value="last_year" {% if selected_period == 'last_year' %}selected{% endif %}>Last year</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="supplier-filter">Supplier</label>
+                    <select name="supplier" id="supplier-filter" class="expense-filter-control">
+                        <option value="">All suppliers</option>
+                        {% for supplier in supplier_options %}
+                            <option value="{{ supplier }}" {% if selected_supplier == supplier %}selected{% endif %}>{{ supplier }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="status-filter">Status</label>
+                    <select name="status" id="status-filter" class="expense-filter-control">
+                        <option value="">All statuses</option>
+                        <option value="paid" {% if selected_status == 'paid' %}selected{% endif %}>Paid</option>
+                        <option value="partial" {% if selected_status == 'partial' %}selected{% endif %}>Partial</option>
+                        <option value="unpaid" {% if selected_status == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                    </select>
+                </div>
+            </div>
+            <input type="hidden" name="sort" id="sort-input" value="{{ sort }}">
+            <input type="hidden" name="direction" id="direction-input" value="{{ direction }}">
+        </form>
+
+        <div id="expense-feedback" aria-live="polite"></div>
+        <div id="expense-list">
+            {% include 'app/mechexpense_list_content.html' %}
+        </div>
+    </div>
+</div>
+
+<!-- Record Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content shadow-lg">
+            <form id="payment-form">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="paymentModalLabel"><i class="fas fa-credit-card"></i> Record Payment</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">Updating payment for <strong id="payment-expense-label"></strong></p>
+                    <div class="alert alert-danger d-none" id="payment-error" role="alert"></div>
+                    <div class="form-group">
+                        <label for="payment-amount">Payment Amount</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">$</span>
+                            </div>
+                            <input type="number" step="0.01" min="0" class="form-control" id="payment-amount" required>
+                        </div>
+                        <small class="form-text text-muted">Defaults to the remaining balance for this expense.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-method">Payment Method</label>
+                        <select class="form-control" id="payment-method" required>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Credit Card">Credit Card</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label for="payment-notes">Notes (optional)</label>
+                        <textarea class="form-control" id="payment-notes" rows="3" placeholder="Add a note about this payment..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Alert Modal for Reverting Payments -->
+<div class="modal fade custom-alert-modal" id="revertAlertModal" tabindex="-1" aria-labelledby="revertAlertLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body text-center p-4">
+                <div class="alert-icon mb-3">
+                    <i class="fas fa-exclamation-triangle text-warning fa-2x"></i>
+                </div>
+                <h5 class="mb-2" id="revertAlertLabel">Move to Unpaid?</h5>
+                <p class="text-muted mb-4">
+                    Reversing payment for <strong id="revert-expense-label"></strong> will delete its payment history.
+                    This action cannot be undone.
+                </p>
+                <div class="d-flex justify-content-center align-items-center">
+                    <button type="button" class="btn btn-outline-secondary mr-2" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="confirm-revert"><i class="fas fa-undo-alt mr-1"></i> Yes, Remove Payments</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .custom-alert-modal .modal-content {
+        border-radius: 16px;
+        border: none;
+    }
+
+    .custom-alert-modal .alert-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #fff5e6, #ffe8cc);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .custom-alert-modal .btn-warning {
+        color: #fff;
+        box-shadow: 0 6px 16px rgba(255, 193, 7, 0.35);
+    }
+
+    .custom-alert-modal .btn-outline-secondary {
+        border-width: 2px;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search-input');
+        const searchForm = document.getElementById('search-form');
+        const expenseList = document.getElementById('expense-list');
+        const feedbackContainer = document.getElementById('expense-feedback');
+        const sortInput = document.getElementById('sort-input');
+        const directionInput = document.getElementById('direction-input');
+        const filterControls = document.querySelectorAll('.expense-filter-control');
+         const paymentModalEl = document.getElementById('paymentModal');
+         const revertModalEl = document.getElementById('revertAlertModal');
+         const paymentModal = paymentModalEl ? new bootstrap.Modal(paymentModalEl) : null;
+         const revertModal = revertModalEl ? new bootstrap.Modal(revertModalEl) : null;
+        const paymentForm = document.getElementById('payment-form');
+        const paymentAmountInput = document.getElementById('payment-amount');
+        const paymentMethodSelect = document.getElementById('payment-method');
+        const paymentNotesInput = document.getElementById('payment-notes');
+        const paymentExpenseLabel = document.getElementById('payment-expense-label');
+        const paymentError = document.getElementById('payment-error');
+        const revertExpenseLabel = document.getElementById('revert-expense-label');
+        const revertConfirmButton = document.getElementById('confirm-revert');
+        const markAllPaidButton = document.getElementById('mark-all-paid-btn');
+
+        let timeout = null;
+        let activeStatusButton = null;
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function displayFeedback(message, level = 'success') {
+            if (!feedbackContainer) {
+                return;
+            }
+
+            const levelClassMap = {
+                success: 'alert-success',
+                error: 'alert-danger',
+                warning: 'alert-warning',
+                info: 'alert-info'
+            };
+            const alertClass = levelClassMap[level] || levelClassMap.info;
+
+            const alert = document.createElement('div');
+            alert.className = `alert ${alertClass} alert-dismissible fade show`;
+            alert.setAttribute('role', 'alert');
+
+            const messageText = document.createTextNode(message);
+            alert.appendChild(messageText);
+
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.className = 'btn-close';
+            closeButton.setAttribute('data-bs-dismiss', 'alert');
+            closeButton.setAttribute('aria-label', 'Close');
+            alert.appendChild(closeButton);
+
+            feedbackContainer.innerHTML = '';
+            feedbackContainer.appendChild(alert);
+        }
+
+        function updateStatusButtonAppearance(button, statusValue) {
+            if (!button) {
+                return;
+            }
+
+            button.classList.remove('btn-success', 'btn-outline-warning', 'btn-warning', 'status-paid', 'status-partial', 'status-unpaid');
+            const normalizedStatus = (() => {
+                if (typeof statusValue === 'boolean') {
+                    return statusValue ? 'paid' : 'unpaid';
+                }
+                if (typeof statusValue === 'string') {
+                    const trimmed = statusValue.trim().toLowerCase();
+                    if (trimmed === 'true') return 'paid';
+                    if (trimmed === 'false') return 'unpaid';
+                    return trimmed || 'unpaid';
+                }
+                return 'unpaid';
+            })();
+            const isPartial = normalizedStatus === 'partial';
+            const paidBool = normalizedStatus === 'paid';
+
+            if (paidBool) {
+                button.classList.add('status-paid');
+                button.textContent = 'Paid';
+                button.setAttribute('aria-pressed', 'true');
+                button.dataset.status = 'paid';
+            } else if (isPartial) {
+                button.classList.add('status-partial');
+                button.textContent = 'Partial Paid';
+                button.setAttribute('aria-pressed', 'false');
+                button.dataset.status = 'partial';
+            } else {
+                button.classList.add('status-unpaid');
+                button.textContent = 'Unpaid';
+                button.setAttribute('aria-pressed', 'false');
+                button.dataset.status = 'unpaid';
+            }
+            button.dataset.paid = paidBool ? 'true' : 'false';
+        }
+
+        function showPaymentError(message) {
+            if (paymentError) {
+                paymentError.textContent = message;
+                paymentError.classList.remove('d-none');
+            }
+        }
+
+        function clearPaymentError() {
+            if (paymentError) {
+                paymentError.textContent = '';
+                paymentError.classList.add('d-none');
+            }
+        }
+
+        function openPaymentModal(button) {
+            activeStatusButton = button;
+            const receipt = button.dataset.receipt || 'this expense';
+            const vendor = button.dataset.vendor || '';
+            const remaining = parseFloat(button.dataset.remaining || button.dataset.totalAmount || '0');
+            const defaultAmount = isNaN(remaining) ? 0 : remaining;
+
+            paymentExpenseLabel.textContent = `${vendor} (${receipt})`;
+            paymentAmountInput.value = defaultAmount > 0 ? defaultAmount.toFixed(2) : (parseFloat(button.dataset.totalAmount || '0') || 0).toFixed(2);
+            paymentMethodSelect.value = 'Cash';
+            paymentNotesInput.value = '';
+            paymentForm.dataset.toggleUrl = button.dataset.toggleUrl;
+            clearPaymentError();
+             if (paymentModal) paymentModal.show();
+        }
+
+        function openRevertModal(button) {
+            activeStatusButton = button;
+            const receipt = button.dataset.receipt || 'this expense';
+            revertExpenseLabel.textContent = receipt;
+             if (revertModal) revertModal.show();
+        }
+
+        function handleStatusClick(button) {
+            const status = button.dataset.status || (button.dataset.paid === 'true' ? 'paid' : 'unpaid');
+            if (status === 'paid') {
+                openRevertModal(button);
+            } else {
+                openPaymentModal(button);
+            }
+        }
+
+        function sendStatusUpdate(url, payload, button, options = {}) {
+            if (!url || !button) {
+                return;
+            }
+
+            const originalContent = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = `
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span class="sr-only">Updating...</span>
+            `;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok || !data.success) {
+                        const message = data && data.message ? data.message : 'Unable to update expense status.';
+                        throw new Error(message);
+                    }
+
+                    const status = data.payment_status || (data.paid ? 'paid' : 'unpaid');
+                    updateStatusButtonAppearance(button, status);
+                    button.dataset.totalPaid = data.total_paid || '0';
+                    button.dataset.remaining = data.remaining_balance || '0';
+
+                    displayFeedback(data.message || 'Expense status updated.');
+
+                     if (options.hidePaymentModal && paymentModal) paymentModal.hide();
+                     if (options.hideRevertModal && revertModal) revertModal.hide();
+                    clearPaymentError();
+                })
+                .catch(error => {
+                    console.error('Error updating expense status:', error);
+                    if (options.showErrorInModal) {
+                        showPaymentError(error.message || 'Unable to update expense status.');
+                    } else {
+                        displayFeedback(error.message || 'An unexpected error occurred while updating the expense status.', 'error');
+                    }
+                    button.innerHTML = originalContent;
+                })
+                .finally(() => {
+                    button.disabled = false;
+                });
+        }
+
+        function fetchExpenseList(options = {}) {
+            if (!searchForm || !expenseList) {
+                return;
+            }
+
+            const formData = new FormData(searchForm);
+            const params = new URLSearchParams(formData);
+            const keepPage = options.keepPage === true;
+            if (keepPage) {
+                const currentParams = new URLSearchParams(window.location.search);
+                if (currentParams.has('page') && !params.has('page')) {
+                    params.set('page', currentParams.get('page'));
+                }
+            }
+
+            const actionUrl = searchForm.action || window.location.pathname;
+            const queryString = params.toString();
+            const requestUrl = queryString ? `${actionUrl}?${queryString}` : actionUrl;
+
+            expenseList.innerHTML = `
+                <div class="d-flex justify-content-center my-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+            `;
+
+            fetch(requestUrl, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load expenses.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    expenseList.innerHTML = data.html;
+                    initializeStatusButtons();
+                    window.history.replaceState({}, '', requestUrl);
+                })
+                .catch(error => {
+                    console.error('Error fetching expenses:', error);
+                    expenseList.innerHTML = `
+                        <div class="alert alert-danger" role="alert">
+                            An error occurred while fetching expenses. Please try again.
+                        </div>
+                    `;
+                });
+        }
+
+        function initializeStatusButtons() {
+            if (!expenseList) {
+                return;
+            }
+
+            const statusButtons = expenseList.querySelectorAll('.status-toggle');
+            const deleteForms = expenseList.querySelectorAll('.delete-expense-form');
+
+            statusButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    handleStatusClick(button);
+                });
+
+                const isPaid = button.dataset.paid === 'true';
+                updateStatusButtonAppearance(button, button.dataset.status || isPaid);
+            });
+
+            deleteForms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const url = form.getAttribute('action');
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                    }
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': getCookie('csrftoken'),
+                        },
+                        body: new FormData(form)
+                    }).then(resp => {
+                        if (!resp.ok) throw new Error('Delete failed');
+                        return resp.text();
+                    }).then(() => {
+                        const modalEl = form.closest('.modal');
+                        const bsModal = modalEl ? bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl) : null;
+                        if (bsModal) bsModal.hide();
+                        fetchExpenseList({ keepPage: true });
+                        displayFeedback('Expense deleted and inventory reversed.');
+                    }).catch(() => {
+                        displayFeedback('Unable to delete expense right now.', 'error');
+                    }).finally(() => {
+                        if (submitButton) submitButton.disabled = false;
+                    });
+                });
+            });
+        }
+
+        if (markAllPaidButton) {
+            markAllPaidButton.addEventListener('click', function() {
+                const markAllUrl = markAllPaidButton.dataset.markAllUrl;
+                if (!markAllUrl) {
+                    return;
+                }
+                const confirmed = window.confirm('Mark all expenses as paid? This will update every expense in your account.');
+                if (!confirmed) {
+                    return;
+                }
+
+                const originalContent = markAllPaidButton.innerHTML;
+                markAllPaidButton.disabled = true;
+                markAllPaidButton.innerHTML = `
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span class="sr-only">Marking...</span>
+                `;
+
+                fetch(markAllUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ mark_all: true, record_payments: true })
+                })
+                    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                    .then(({ ok, data }) => {
+                        if (!ok || !data.success) {
+                            const message = data && data.message ? data.message : 'Unable to mark expenses as paid.';
+                            throw new Error(message);
+                        }
+                        displayFeedback(data.message || 'Expenses marked as paid.');
+                        fetchExpenseList({ keepPage: true });
+                    })
+                    .catch(error => {
+                        console.error('Error marking expenses as paid:', error);
+                        displayFeedback(error.message || 'An unexpected error occurred while updating expenses.', 'error');
+                    })
+                    .finally(() => {
+                        markAllPaidButton.disabled = false;
+                        markAllPaidButton.innerHTML = originalContent;
+                    });
+            });
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(fetchExpenseList, 300);
+            });
+        }
+
+        if (searchForm) {
+            searchForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                fetchExpenseList();
+            });
+        }
+
+        if (filterControls.length) {
+            filterControls.forEach(control => {
+                control.addEventListener('change', function() {
+                    fetchExpenseList();
+                });
+            });
+        }
+
+        if (expenseList) {
+            expenseList.addEventListener('click', function(event) {
+                const toggle = event.target.closest('.sort-toggle');
+                if (!toggle || !sortInput || !directionInput) {
+                    return;
+                }
+                event.preventDefault();
+                const sortValue = toggle.dataset.sort;
+                let nextDirection = 'asc';
+                if (sortInput.value === sortValue) {
+                    nextDirection = directionInput.value === 'asc' ? 'desc' : 'asc';
+                }
+                sortInput.value = sortValue;
+                directionInput.value = nextDirection;
+                fetchExpenseList();
+            });
+        }
+
+        initializeStatusButtons();
+
+        if (paymentForm) {
+            paymentForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                if (!activeStatusButton) {
+                    return;
+                }
+                const toggleUrl = paymentForm.dataset.toggleUrl || activeStatusButton.dataset.toggleUrl;
+                const payload = {
+                    set_to: 'paid',
+                    amount: paymentAmountInput.value,
+                    method: paymentMethodSelect.value,
+                    notes: paymentNotesInput.value
+                };
+                sendStatusUpdate(toggleUrl, payload, activeStatusButton, { hidePaymentModal: true, showErrorInModal: true });
+            });
+        }
+
+        if (revertConfirmButton) {
+            revertConfirmButton.addEventListener('click', function() {
+                if (!activeStatusButton) {
+                    return;
+                }
+                const toggleUrl = activeStatusButton.dataset.toggleUrl;
+                const payload = { set_to: 'unpaid', delete_history: true };
+                sendStatusUpdate(toggleUrl, payload, activeStatusButton, { hideRevertModal: true });
+            });
+        }
+
+         if (paymentModalEl) {
+             paymentModalEl.addEventListener('hidden.bs.modal', clearPaymentError);
+         }
+    });
+</script>
+{% endblock %}

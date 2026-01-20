@@ -1,0 +1,2800 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+
+{% block title %}Homepage Hero{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap"
+  rel="stylesheet">
+<style>
+  .hero-form-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  }
+
+  .hero-form-card .card-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 700;
+  }
+
+  .hero-section-title {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .hero-preview-panel {
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    position: sticky;
+    top: calc(var(--navbar-height, 80px) + 1rem);
+    z-index: 1020;
+    background: #ffffff;
+  }
+
+  .hero-preview-header {
+    padding: 0.85rem 1.25rem;
+    background: #0f172a;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .hero-preview-body {
+    padding: 0;
+    background: #f8fafc;
+  }
+
+  .hero-preview-panel.is-hidden {
+    display: none;
+  }
+
+  .hero-preview-toggle .btn {
+    font-weight: 600;
+    background: #ffffff;
+    color: #0f172a;
+    border-color: #cbd5e1;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+
+  .hero-preview-toggle .btn:hover,
+  .hero-preview-toggle .btn:focus {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #94a3b8;
+  }
+
+  .hero-preview-toggle .btn.is-active {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #ffffff;
+  }
+
+  .hero-preview-shell {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .hero-preview-shell .hero-message-banner {
+    background: var(--banner-gradient);
+    padding: 0.65rem 0;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-preview-shell .hero-message-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  .hero-preview-shell .hero-message-banner--sky {
+    --banner-gradient: linear-gradient(135deg, #e0f2fe 0%, #e0f7ff 45%, #dbeafe 100%);
+  }
+
+  .hero-preview-shell .hero-message-banner--sunrise {
+    --banner-gradient: linear-gradient(135deg, #ffedd5 0%, #fde68a 45%, #fecdd3 100%);
+  }
+
+  .hero-preview-shell .hero-message-banner--mint {
+    --banner-gradient: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 45%, #ccfbf1 100%);
+  }
+
+  .hero-preview-shell .hero-message-banner--sand {
+    --banner-gradient: linear-gradient(135deg, #fef9c3 0%, #fde68a 45%, #f5d0c5 100%);
+  }
+
+  .hero-preview-shell .hero-message-banner--ice {
+    --banner-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
+  }
+
+  .hero-preview-shell .hero-message-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    font-weight: 600;
+    color: #0f172a;
+    text-align: center;
+  }
+
+  .hero-preview-shell .hero-message-text {
+    font-size: 0.95rem;
+  }
+
+  .hero-preview-shell .hero-message-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.8rem;
+    color: #0f172a;
+    text-decoration: none;
+  }
+
+  .hero-preview-shell .hero-message-link:hover {
+    text-decoration: underline;
+    color: #0f172a;
+  }
+
+  .hero-preview-shell .hero-showcase {
+    padding: 6rem 0 5rem;
+    background: var(--hero-gradient);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-preview-shell .hero-showcase::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.7), transparent 55%);
+    opacity: 0.7;
+  }
+
+  .hero-preview-shell .hero-showcase--sky {
+    --hero-gradient: linear-gradient(135deg, #e0f2fe 0%, #e0f7ff 45%, #dbeafe 100%);
+  }
+
+  .hero-preview-shell .hero-showcase--sunrise {
+    --hero-gradient: linear-gradient(135deg, #ffedd5 0%, #fde68a 45%, #fecdd3 100%);
+  }
+
+  .hero-preview-shell .hero-showcase--mint {
+    --hero-gradient: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 45%, #ccfbf1 100%);
+  }
+
+  .hero-preview-shell .hero-showcase--sand {
+    --hero-gradient: linear-gradient(135deg, #fef9c3 0%, #fde68a 45%, #f5d0c5 100%);
+  }
+
+  .hero-preview-shell .hero-showcase--ice {
+    --hero-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
+  }
+
+  .hero-preview-shell .hero-showcase .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-preview-shell .hero-showcase-inner {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2.5rem;
+    align-items: center;
+  }
+
+  .hero-preview-shell .hero-showcase-content {
+    max-width: 540px;
+  }
+
+  .hero-preview-shell .hero-showcase-eyebrow {
+    display: inline-block;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+    color: #0f172a;
+  }
+
+  .hero-preview-shell .hero-showcase-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(2.2rem, 4vw, 3.4rem);
+    font-weight: 800;
+    margin-bottom: 1rem;
+    color: #0f172a;
+  }
+
+  .hero-preview-shell .hero-showcase-subtitle {
+    font-size: 1.05rem;
+    color: #334155;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+  }
+
+  .hero-preview-shell .hero-showcase-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .hero-preview-shell .btn-hero-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.8rem;
+    background: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 10px;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.9rem;
+    border: none;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hero-preview-shell .btn-hero-primary:hover {
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.25);
+  }
+
+  .hero-preview-shell .btn-hero-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.8rem;
+    background: rgba(255, 255, 255, 0.7);
+    color: #0f172a;
+    font-weight: 700;
+    border-radius: 10px;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.9rem;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+  }
+
+  .hero-preview-shell .hero-showcase-carousel {
+    position: relative;
+    min-height: 320px;
+  }
+
+  .hero-preview-shell .hero-showcase-slide {
+    display: none;
+  }
+
+  .hero-preview-shell .hero-showcase-slide.is-active {
+    display: block;
+  }
+
+  .hero-preview-shell .hero-showcase-card {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 22px;
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 1.5rem;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+    align-items: center;
+    position: relative;
+  }
+
+  .hero-preview-shell .hero-showcase-card--package {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+
+  .hero-preview-shell .hero-showcase-media {
+    width: 120px;
+    height: 120px;
+    border-radius: 18px;
+    background: #f1f5f9;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 2rem;
+  }
+
+  .hero-preview-shell .hero-showcase-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hero-preview-shell .hero-showcase-name {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    color: #0f172a;
+  }
+
+  .hero-preview-shell .hero-showcase-price {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    margin-bottom: 1rem;
+  }
+
+  .hero-preview-shell .hero-showcase-discount {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #0f172a;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    z-index: 1;
+  }
+
+  .hero-preview-shell .hero-showcase-link {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.8rem;
+    color: #0f172a;
+    text-decoration: none;
+  }
+
+  .hero-preview-shell .hero-showcase-package-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .hero-preview-shell .hero-showcase-package-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+  }
+
+  .hero-preview-shell .hero-showcase-package-subtitle {
+    color: #475569;
+    margin-bottom: 1rem;
+  }
+
+  .hero-preview-shell .hero-showcase-package-products {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .hero-preview-shell .hero-showcase-package-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(248, 250, 252, 0.9);
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  .hero-preview-shell .hero-showcase-package-item img {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    object-fit: cover;
+  }
+
+  .hero-preview-shell .hero-showcase-package-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #0f172a;
+    color: #fff;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .hero-preview-shell .hero-showcase-dots {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+
+  .hero-preview-shell .hero-showcase-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(15, 23, 42, 0.25);
+  }
+
+  .hero-preview-shell .hero-showcase-dot.is-active {
+    background: #0f172a;
+  }
+
+  .hero-preview-empty {
+    color: rgba(15, 23, 42, 0.65);
+    font-weight: 600;
+    text-align: center;
+    padding-top: 1.5rem;
+  }
+
+  .flyer-preview-shell {
+    padding: 1.5rem;
+    background: #e9edf2;
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+  }
+
+  .flyer-preview-shell .flyer-preview-state {
+    border: 1px dashed #cbd5f5;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    text-align: center;
+    color: #64748b;
+    font-weight: 600;
+    background: #ffffff;
+    margin-bottom: 1rem;
+  }
+
+  .flyer-preview-shell .flyer-preview-empty {
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 0.6rem 0;
+  }
+
+  .flyer-preview-shell .flyer-sheet {
+    background-color: #f7f6f3;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.08) 1px, transparent 0),
+      radial-gradient(circle at 0 0, rgba(15, 23, 42, 0.04) 1px, transparent 0);
+    background-size: 12px 12px, 24px 24px;
+    border: 2px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1.75rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  }
+
+  .flyer-preview-shell .flyer-sheet::before {
+    content: '';
+    position: absolute;
+    top: -160px;
+    right: -160px;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(250, 204, 21, 0.35), transparent 70%);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .flyer-preview-shell .flyer-sheet::after {
+    content: '';
+    position: absolute;
+    bottom: -190px;
+    left: -150px;
+    width: 340px;
+    height: 340px;
+    background: radial-gradient(circle, rgba(30, 58, 138, 0.2), transparent 70%);
+    opacity: 0.75;
+    pointer-events: none;
+  }
+
+  .flyer-preview-shell .flyer-sheet > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .flyer-preview-shell .flyer-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: end;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+    position: relative;
+  }
+
+  .flyer-preview-shell .flyer-header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 140px;
+    height: 4px;
+    border-radius: 999px;
+    background: #facc15;
+  }
+
+  .flyer-preview-shell .flyer-title {
+    font-size: clamp(1.6rem, 2vw, 2.4rem);
+    font-weight: 800;
+    margin-bottom: 0.4rem;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+  }
+
+  .flyer-preview-shell .flyer-subtitle {
+    color: #475569;
+    font-size: 0.95rem;
+  }
+
+  .flyer-preview-shell .flyer-meta {
+    text-align: right;
+    font-size: 0.75rem;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .flyer-preview-shell .flyer-business {
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.35rem;
+  }
+
+  .flyer-preview-shell .flyer-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .flyer-preview-shell .flyer-section-title {
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.7rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  }
+
+  .flyer-preview-shell .flyer-section-title::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: #facc15;
+  }
+
+  .flyer-preview-shell .flyer-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    gap: 1.1rem;
+  }
+
+  .flyer-preview-shell .flyer-grid--packages {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+
+  .flyer-preview-shell .flyer-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 130px;
+    gap: 1rem;
+    position: relative;
+    background: rgba(255, 255, 255, 0.95);
+    align-items: center;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+    min-height: 150px;
+  }
+
+  .flyer-preview-shell .flyer-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #facc15 0%, #f97316 100%);
+  }
+
+  .flyer-preview-shell .flyer-card-media {
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 2rem;
+    flex: 0 0 120px;
+    border: 1px solid #e2e8f0;
+    justify-self: end;
+  }
+
+  .flyer-preview-shell .flyer-card-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 14px 18px rgba(15, 23, 42, 0.18));
+  }
+
+  .flyer-preview-shell .flyer-card-body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .flyer-preview-shell .flyer-card-brand {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #dc2626;
+  }
+
+  .flyer-preview-shell .flyer-card-title {
+    font-weight: 700;
+    margin: 0;
+    color: #0f172a;
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .flyer-preview-shell .flyer-card-meta {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .flyer-preview-shell .flyer-card-price {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    align-items: baseline;
+  }
+
+  .flyer-preview-shell .flyer-price-original {
+    color: #94a3b8;
+    text-decoration: line-through;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .flyer-preview-shell .flyer-price-main {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.1rem;
+    color: #1e3a8a;
+    font-weight: 800;
+  }
+
+  .flyer-preview-shell .flyer-price-currency {
+    font-size: 0.9rem;
+    margin-top: 0.4rem;
+  }
+
+  .flyer-preview-shell .flyer-price-dollars {
+    font-size: 2.1rem;
+    line-height: 1;
+  }
+
+  .flyer-preview-shell .flyer-price-cents {
+    font-size: 0.95rem;
+    line-height: 1;
+    margin-top: 0.2rem;
+  }
+
+  .flyer-preview-shell .flyer-price-call {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #475569;
+  }
+
+  .flyer-preview-shell .flyer-card-badge {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    background: #facc15;
+    color: #0f172a;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid #f59e0b;
+    box-shadow: 0 10px 16px rgba(15, 23, 42, 0.15);
+    transform: rotate(-3deg);
+  }
+
+  .flyer-preview-shell .flyer-package-card {
+    border: 2px dashed #e2e8f0;
+    border-radius: 16px;
+    padding: 1.1rem 1.1rem 1.1rem 1.35rem;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .flyer-preview-shell .flyer-package-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%);
+  }
+
+  .flyer-preview-shell .flyer-package-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+    color: #0f172a;
+  }
+
+  .flyer-preview-shell .flyer-package-subtitle {
+    color: #64748b;
+    margin-bottom: 0.75rem;
+  }
+
+  .flyer-preview-shell .flyer-package-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .flyer-preview-shell .flyer-package-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .flyer-preview-shell .flyer-package-item img {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
+  .flyer-preview-shell .flyer-package-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border: 1px solid #0f172a;
+    box-shadow: 0 10px 16px rgba(15, 23, 42, 0.2);
+  }
+
+  .flyer-preview-shell .flyer-footer {
+    border-top: 1px solid rgba(148, 163, 184, 0.3);
+    padding: 0.85rem 1rem;
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.72rem;
+    color: #64748b;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+  }
+
+  .flyer-preview-shell .flyer-feature-strip {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+
+  .flyer-preview-shell .flyer-feature-strip span {
+    background: #0f172a;
+    color: #ffffff;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 900px) {
+    .flyer-preview-shell .flyer-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .flyer-preview-shell .flyer-card {
+      grid-template-columns: 1fr;
+    }
+
+    .flyer-preview-shell .flyer-card-media {
+      width: 100%;
+      height: 140px;
+      justify-self: stretch;
+    }
+  }
+
+  .hero-preview-packages {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+
+  .hero-preview-package-card {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .hero-preview-package-title {
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+  }
+
+  .hero-preview-package-subtitle {
+    color: rgba(15, 23, 42, 0.7);
+    font-size: 0.85rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .hero-preview-package-products {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .hero-preview-package-product {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(248, 250, 252, 0.9);
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .hero-preview-package-product img {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
+  .hero-preview-package-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #0f172a;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+  }
+
+  .hero-preview-banner {
+    border-radius: 16px;
+    padding: 0.7rem 1.25rem;
+    margin-bottom: 1.25rem;
+    background: var(--banner-gradient);
+    color: #0f172a;
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+    display: none;
+  }
+
+  .hero-preview-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
+    opacity: 0.7;
+  }
+
+  .hero-preview-banner[data-theme="sky"] {
+    --banner-gradient: linear-gradient(135deg, #e0f2fe 0%, #e0f7ff 45%, #dbeafe 100%);
+  }
+
+  .hero-preview-banner[data-theme="sunrise"] {
+    --banner-gradient: linear-gradient(135deg, #ffedd5 0%, #fde68a 45%, #fecdd3 100%);
+  }
+
+  .hero-preview-banner[data-theme="mint"] {
+    --banner-gradient: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 45%, #ccfbf1 100%);
+  }
+
+  .hero-preview-banner[data-theme="sand"] {
+    --banner-gradient: linear-gradient(135deg, #fef9c3 0%, #fde68a 45%, #f5d0c5 100%);
+  }
+
+  .hero-preview-banner[data-theme="ice"] {
+    --banner-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
+  }
+
+  .hero-preview-banner-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    text-align: center;
+  }
+
+  .hero-preview-banner-link {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.8rem;
+    color: #0f172a;
+    text-decoration: none;
+  }
+
+  .hero-preview-banner-link:hover {
+    text-decoration: underline;
+    color: #0f172a;
+  }
+
+  .hero-preview {
+    border-radius: 16px;
+    padding: 2rem;
+    background: var(--hero-gradient);
+    color: #0f172a;
+    position: relative;
+    overflow: hidden;
+    min-height: 260px;
+  }
+
+  .hero-preview[data-theme="sky"] {
+    --hero-gradient: linear-gradient(135deg, #e0f2fe 0%, #e0f7ff 45%, #dbeafe 100%);
+  }
+
+  .hero-preview[data-theme="sunrise"] {
+    --hero-gradient: linear-gradient(135deg, #ffedd5 0%, #fde68a 45%, #fecdd3 100%);
+  }
+
+  .hero-preview[data-theme="mint"] {
+    --hero-gradient: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 45%, #ccfbf1 100%);
+  }
+
+  .hero-preview[data-theme="sand"] {
+    --hero-gradient: linear-gradient(135deg, #fef9c3 0%, #fde68a 45%, #f5d0c5 100%);
+  }
+
+  .hero-preview[data-theme="ice"] {
+    --hero-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
+  }
+
+  .hero-preview-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 0.35rem;
+  }
+
+  .hero-preview-subtitle {
+    margin-bottom: 1.5rem;
+    color: rgba(15, 23, 42, 0.75);
+    max-width: 520px;
+  }
+
+  .hero-preview-slides {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1rem;
+  }
+
+  .hero-preview-slide {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 14px;
+    padding: 0.9rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    position: relative;
+  }
+
+  .hero-preview-slide img {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #f1f5f9;
+  }
+
+  .hero-preview-slide h6 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 0.2rem;
+  }
+
+  .hero-preview-slide span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .hero-preview-discount {
+    position: absolute;
+    top: 0.65rem;
+    right: 0.65rem;
+    background: #0f172a;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.45rem;
+    border-radius: 999px;
+  }
+
+  .hero-preview-empty {
+    color: rgba(15, 23, 42, 0.65);
+    font-weight: 600;
+  }
+
+  .hero-product-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 160px auto;
+    gap: 1rem;
+    align-items: end;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .hero-product-row:last-child {
+    border-bottom: none;
+  }
+
+  .hero-product-dropdown {
+    position: relative;
+  }
+
+  .hero-product-select {
+    display: none;
+  }
+
+  .hero-product-dropdown-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    font-weight: 600;
+    color: #64748b;
+    text-align: left;
+  }
+
+  .hero-product-dropdown-toggle.has-selection {
+    color: #0f172a;
+  }
+
+  .hero-product-dropdown-toggle:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.2);
+  }
+
+  .hero-product-selected-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hero-product-dropdown-icon {
+    color: #64748b;
+    font-size: 0.85rem;
+  }
+
+  .hero-product-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+    z-index: 1050;
+    display: none;
+  }
+
+  .hero-product-dropdown-menu.show {
+    display: block;
+  }
+
+  .hero-product-search-wrapper {
+    padding: 0.6rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .hero-product-search-input {
+    font-size: 0.9rem;
+  }
+
+  .hero-product-dropdown-options {
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .hero-product-option {
+    width: 100%;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .hero-product-option:hover,
+  .hero-product-option:focus {
+    background: #f1f5f9;
+    outline: none;
+  }
+
+  .hero-product-option-image {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hero-product-option-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hero-product-option-placeholder {
+    font-size: 0.6rem;
+    color: #64748b;
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  .hero-product-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .hero-product-option-name {
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hero-product-option-category {
+    font-size: 0.75rem;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hero-product-dropdown-empty {
+    padding: 0.75rem;
+    font-size: 0.85rem;
+    color: #64748b;
+    display: none;
+  }
+
+  .hero-package-row {
+    padding: 1rem 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .hero-package-row:last-child {
+    border-bottom: none;
+  }
+
+  .hero-editor-form {
+    padding-bottom: 6rem;
+  }
+
+  .hero-save-floating {
+    position: fixed;
+    right: 2rem;
+    bottom: 2rem;
+    z-index: 1050;
+  }
+
+  .hero-save-floating .btn {
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.25);
+  }
+
+  @media (max-width: 991px) {
+    .hero-preview-panel {
+      position: static;
+    }
+
+    .hero-save-floating {
+      left: 1rem;
+      right: 1rem;
+      bottom: 1rem;
+    }
+
+    .hero-save-floating .btn {
+      width: 100%;
+    }
+
+    .hero-product-row {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-preview-shell .hero-showcase {
+      padding: 5rem 0 4rem;
+    }
+
+    .hero-preview-shell .hero-showcase-card {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+
+    .hero-preview-shell .hero-showcase-card--package {
+      text-align: center;
+    }
+
+    .hero-preview-shell .hero-showcase-package-header {
+      justify-content: center;
+    }
+
+    .hero-preview-shell .hero-showcase-package-products {
+      justify-content: center;
+    }
+
+    .hero-preview-shell .hero-showcase-media {
+      margin: 0 auto;
+    }
+
+    .hero-preview-shell .hero-showcase-actions {
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .hero-preview-shell .hero-showcase-carousel {
+      min-height: 360px;
+    }
+
+    .hero-preview-shell .hero-showcase-card {
+      padding: 1.5rem;
+    }
+
+    .hero-preview-shell .btn-hero-primary,
+    .hero-preview-shell .btn-hero-secondary {
+      width: 100%;
+      max-width: 280px;
+      justify-content: center;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  {% include 'store/partials/_manage_store_nav.html' %}
+
+  <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1">Homepage Hero</h1>
+      <p class="text-muted mb-0">Pick featured products and a gradient theme for the hero slideshow.</p>
+    </div>
+    <a class="btn btn-outline-primary" href="{{ public_home_url }}" target="_blank" rel="noopener">
+      <i class="fa-solid fa-up-right-from-square me-1"></i>
+      Preview Public Home
+    </a>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="hero-editor-form">
+    {% csrf_token %}
+
+    {% if hero_form.non_field_errors %}
+    <div class="alert alert-danger">{{ hero_form.non_field_errors }}</div>
+    {% endif %}
+    {% if hero_form.errors %}
+    <div class="alert alert-danger">
+      Please review the highlighted fields.
+      {{ hero_form.errors }}
+    </div>
+    {% endif %}
+    {% if banner_form.non_field_errors %}
+    <div class="alert alert-danger">{{ banner_form.non_field_errors }}</div>
+    {% endif %}
+    {% if banner_form.errors %}
+    <div class="alert alert-danger">
+      Please review the banner fields below.
+      {{ banner_form.errors }}
+    </div>
+    {% endif %}
+    {% if flyer_form.non_field_errors %}
+    <div class="alert alert-danger">{{ flyer_form.non_field_errors }}</div>
+    {% endif %}
+    {% if flyer_form.errors %}
+    <div class="alert alert-danger">
+      Please review the flyer fields below.
+      {{ flyer_form.errors }}
+    </div>
+    {% endif %}
+
+    <div class="hero-preview-toggle btn-group mb-3" role="group" aria-label="Preview selector">
+      <button type="button" class="btn btn-outline-light is-active" data-preview-target="hero" aria-pressed="true">
+        Hero Preview
+      </button>
+      <button type="button" class="btn btn-outline-light" data-preview-target="flyer" aria-pressed="false">
+        Flyer Preview
+      </button>
+    </div>
+
+    <div class="hero-preview-panel" data-preview-panel="hero" aria-hidden="false">
+      <div class="hero-preview-header">
+        <span>Live Preview</span>
+        <span class="text-white-50 small">Updates as you choose products.</span>
+      </div>
+      <div class="hero-preview-body hero-preview-shell" data-show-prices="{{ show_prices_hero|yesno:'true,false' }}">
+        <section class="hero-message-banner hero-message-banner--sunrise" data-preview-banner>
+          <div class="container">
+            <div class="hero-message-content">
+              <span class="hero-message-text" data-preview-banner-text>Announcement message</span>
+              <a class="hero-message-link" data-preview-banner-link href="#">
+                <span data-preview-banner-link-label>Learn more</span>
+                <i class="fas fa-arrow-right"></i>
+              </a>
+            </div>
+          </div>
+        </section>
+        <section class="hero-showcase hero-showcase--sky" data-hero-showcase data-hero-preview>
+          <div class="container">
+            <div class="hero-showcase-inner">
+              <div class="hero-showcase-content">
+                <span class="hero-showcase-eyebrow">Featured Products</span>
+                <h1 class="hero-showcase-title">{{ business_name|default:default_business_name }}</h1>
+                <p class="hero-showcase-subtitle">Hand-picked parts and supplies ready for fast pickup or delivery.</p>
+                <div class="hero-showcase-actions">
+                  <a href="{% url 'accounts:store_product_list' %}" class="btn-hero-primary">
+                    <i class="fas fa-store"></i>
+                    Shop All Parts
+                  </a>
+                  <a href="{% url 'accounts:public_contact' %}" class="btn-hero-secondary">
+                    <i class="fas fa-headset"></i>
+                    Contact Parts Desk
+                  </a>
+                  <a href="#flyer-preview" class="btn-hero-secondary" data-preview-flyer-button>
+                    <i class="fas fa-file-lines"></i>
+                    View Flyer
+                  </a>
+                </div>
+              </div>
+              <div class="hero-showcase-carousel" data-hero-carousel data-preview-carousel>
+                <div data-preview-slides></div>
+                <div class="hero-showcase-dots" data-preview-dots></div>
+                <div class="hero-preview-empty" data-preview-empty>Choose products below to see the preview.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="hero-preview-panel is-hidden" id="flyer-preview" data-preview-panel="flyer" aria-hidden="true">
+      <div class="hero-preview-header">
+        <span>Flyer Preview</span>
+        <span class="text-white-50 small">Updates as you edit flyer details.</span>
+      </div>
+      <div class="hero-preview-body flyer-preview-shell"
+           data-flyer-preview
+           data-show-prices="{{ show_prices_hero|yesno:'true,false' }}"
+           data-store-url="{% url 'accounts:store_product_list' %}"
+           data-contact-url="{% url 'accounts:public_contact' %}"
+           data-business-name="{{ business_name|default:default_business_name }}">
+        {% include 'store/partials/_storefront_flyer_preview.html' %}
+      </div>
+    </div>
+
+    <div class="card hero-form-card mb-4" id="banner-settings">
+      <div class="card-header">Announcement Banner</div>
+      <div class="card-body">
+        <div class="form-check form-switch mb-3">
+          {{ banner_form.is_active }}
+          <label class="form-check-label" for="{{ banner_form.is_active.id_for_label }}">Show banner on home</label>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label" for="{{ banner_form.message.id_for_label }}">Message</label>
+            {{ banner_form.message }}
+            {% if banner_form.message.errors %}
+            <div class="text-danger small">{{ banner_form.message.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="{{ banner_form.theme.id_for_label }}">Theme</label>
+            {{ banner_form.theme }}
+            {% if banner_form.theme.errors %}
+            <div class="text-danger small">{{ banner_form.theme.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="{{ banner_form.link_text.id_for_label }}">Link text</label>
+            {{ banner_form.link_text }}
+            {% if banner_form.link_text.errors %}
+            <div class="text-danger small">{{ banner_form.link_text.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="{{ banner_form.link_url.id_for_label }}">Link URL</label>
+            {{ banner_form.link_url }}
+            {% if banner_form.link_url.errors %}
+            <div class="text-danger small">{{ banner_form.link_url.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="form-text mt-2">Shown between the navigation bar and hero section. Link appears when both fields are filled.</div>
+      </div>
+    </div>
+
+    <div class="card hero-form-card mb-4">
+      <div class="card-header">Hero Setup</div>
+      <div class="card-body">
+        <div class="mb-4">
+          <label class="form-label" for="{{ hero_form.gradient_theme.id_for_label }}">Gradient theme</label>
+          {{ hero_form.gradient_theme }}
+          <div class="form-text">Pick a light gradient that fits your brand.</div>
+        </div>
+
+        <div class="hero-section-title">Products in slideshow</div>
+        <p class="text-muted small">Select the products you want to highlight. Empty rows are ignored.</p>
+
+        {{ slide_formset.management_form }}
+        {% if slide_formset.non_form_errors %}
+        <div class="alert alert-danger">{{ slide_formset.non_form_errors }}</div>
+        {% endif %}
+
+        {% for form in slide_formset %}
+        <div class="hero-product-row" data-hero-slide-row>
+          {{ form.id }}
+          <div>
+            <label class="form-label" for="{{ form.product.id_for_label }}">Product {{ forloop.counter }}</label>
+            {{ form.product }}
+            {% if form.product.errors %}
+            <div class="text-danger small">{{ form.product.errors }}</div>
+            {% endif %}
+          </div>
+          <div>
+            <label class="form-label" for="{{ form.discount_percent.id_for_label }}">Discount %</label>
+            {{ form.discount_percent }}
+            {% if form.discount_percent.errors %}
+            <div class="text-danger small">{{ form.discount_percent.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="form-check">
+            {{ form.DELETE }}
+            <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">Remove</label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card hero-form-card mb-4">
+      <div class="card-header">Hero Packages</div>
+      <div class="card-body">
+        <p class="text-muted small">Create bundle deals or free-item packages to feature in the hero slideshow.</p>
+        {{ package_formset.management_form }}
+        {% if package_formset.non_form_errors %}
+        <div class="alert alert-danger">{{ package_formset.non_form_errors }}</div>
+        {% endif %}
+
+        {% for form in package_formset %}
+        <div class="hero-package-row" data-hero-package-row>
+          {{ form.id }}
+          <div class="row g-3 align-items-end">
+            <div class="col-12 col-lg-4">
+              <label class="form-label" for="{{ form.title.id_for_label }}">Package title</label>
+              {{ form.title }}
+              {% if form.title.errors %}
+              <div class="text-danger small">{{ form.title.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-lg-8">
+              <label class="form-label" for="{{ form.subtitle.id_for_label }}">Subtitle</label>
+              {{ form.subtitle }}
+              {% if form.subtitle.errors %}
+              <div class="text-danger small">{{ form.subtitle.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label" for="{{ form.primary_product.id_for_label }}">Primary product</label>
+              {{ form.primary_product }}
+              {% if form.primary_product.errors %}
+              <div class="text-danger small">{{ form.primary_product.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label" for="{{ form.secondary_product.id_for_label }}">Secondary product</label>
+              {{ form.secondary_product }}
+              {% if form.secondary_product.errors %}
+              <div class="text-danger small">{{ form.secondary_product.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label" for="{{ form.free_product.id_for_label }}">Free product</label>
+              {{ form.free_product }}
+              {% if form.free_product.errors %}
+              <div class="text-danger small">{{ form.free_product.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="form-label" for="{{ form.discount_percent.id_for_label }}">Discount %</label>
+              {{ form.discount_percent }}
+              {% if form.discount_percent.errors %}
+              <div class="text-danger small">{{ form.discount_percent.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-3">
+              <div class="form-check mt-4">
+                {{ form.is_active }}
+                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+              </div>
+            </div>
+            <div class="col-12 col-md-3">
+              <div class="form-check mt-4">
+                {{ form.DELETE }}
+                <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">Remove</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card hero-form-card mb-4" id="flyer-settings">
+      <div class="card-header">Flyer</div>
+      <div class="card-body">
+        <div class="form-check form-switch mb-3">
+          {{ flyer_form.is_active }}
+          <label class="form-check-label" for="{{ flyer_form.is_active.id_for_label }}">Show flyer button on homepage hero</label>
+        </div>
+        <div class="row g-3">
+          <div class="col-12 col-lg-5">
+            <label class="form-label" for="{{ flyer_form.title.id_for_label }}">Flyer title</label>
+            {{ flyer_form.title }}
+            {% if flyer_form.title.errors %}
+            <div class="text-danger small">{{ flyer_form.title.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 col-lg-7">
+            <label class="form-label" for="{{ flyer_form.subtitle.id_for_label }}">Flyer subtitle</label>
+            {{ flyer_form.subtitle }}
+            {% if flyer_form.subtitle.errors %}
+            <div class="text-danger small">{{ flyer_form.subtitle.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="form-text mt-2">The flyer automatically uses the hero products and package deals above.</div>
+      </div>
+    </div>
+
+    <div class="hero-save-floating">
+      <button type="submit" class="btn btn-primary btn-lg">
+        <i class="fa-solid fa-save me-1"></i>
+        Save hero settings
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ hero_product_data|json_script:"hero-product-data" }}
+<script>
+  (() => {
+    const preview = document.querySelector('[data-hero-preview]');
+    const slidesContainer = document.querySelector('[data-preview-slides]');
+    const dotsContainer = document.querySelector('[data-preview-dots]');
+    const emptyState = document.querySelector('[data-preview-empty]');
+    const themeSelect = document.getElementById('id_gradient_theme');
+
+    const bannerSettings = document.getElementById('banner-settings');
+    const bannerToggle = bannerSettings ? bannerSettings.querySelector('input[type="checkbox"]') : null;
+    const bannerMessage = bannerSettings ? bannerSettings.querySelector('input[name="message"]') : null;
+    const bannerLinkText = bannerSettings ? bannerSettings.querySelector('input[name="link_text"]') : null;
+    const bannerLinkUrl = bannerSettings ? bannerSettings.querySelector('input[name="link_url"]') : null;
+    const bannerTheme = bannerSettings ? bannerSettings.querySelector('select[name="theme"]') : null;
+    const bannerPreview = document.querySelector('[data-preview-banner]');
+    const bannerPreviewText = document.querySelector('[data-preview-banner-text]');
+    const bannerPreviewLink = document.querySelector('[data-preview-banner-link]');
+    const bannerPreviewLinkLabel = document.querySelector('[data-preview-banner-link-label]');
+
+    const flyerSettings = document.getElementById('flyer-settings');
+    const flyerToggle = flyerSettings ? flyerSettings.querySelector('input[type="checkbox"]') : null;
+    const flyerTitleInput = flyerSettings ? flyerSettings.querySelector('input[name="title"]') : null;
+    const flyerSubtitleInput = flyerSettings ? flyerSettings.querySelector('input[name="subtitle"]') : null;
+
+    const flyerPreview = document.querySelector('[data-flyer-preview]');
+    const flyerSheet = flyerPreview ? flyerPreview.querySelector('[data-flyer-sheet]') : null;
+    const flyerDisabledState = flyerPreview ? flyerPreview.querySelector('[data-flyer-disabled]') : null;
+    const flyerTitle = flyerPreview ? flyerPreview.querySelector('[data-flyer-title]') : null;
+    const flyerSubtitle = flyerPreview ? flyerPreview.querySelector('[data-flyer-subtitle]') : null;
+    const flyerBusiness = flyerPreview ? flyerPreview.querySelector('[data-flyer-business]') : null;
+    const flyerDate = flyerPreview ? flyerPreview.querySelector('[data-flyer-date]') : null;
+    const flyerDiscountSection = flyerPreview ? flyerPreview.querySelector('[data-flyer-discounts-section]') : null;
+    const flyerDiscountGrid = flyerPreview ? flyerPreview.querySelector('[data-flyer-discount-grid]') : null;
+    const flyerDiscountEmpty = flyerPreview ? flyerPreview.querySelector('[data-flyer-discount-empty]') : null;
+    const flyerPackageSection = flyerPreview ? flyerPreview.querySelector('[data-flyer-packages-section]') : null;
+    const flyerPackageGrid = flyerPreview ? flyerPreview.querySelector('[data-flyer-package-grid]') : null;
+    const flyerPackageEmpty = flyerPreview ? flyerPreview.querySelector('[data-flyer-package-empty]') : null;
+    const flyerFooterBusiness = flyerPreview ? flyerPreview.querySelector('[data-flyer-footer-business]') : null;
+    const flyerFooterStore = flyerPreview ? flyerPreview.querySelector('[data-flyer-footer-store]') : null;
+    const flyerFooterContact = flyerPreview ? flyerPreview.querySelector('[data-flyer-footer-contact]') : null;
+    const flyerFeatureStrip = flyerPreview ? flyerPreview.querySelector('[data-flyer-feature-strip]') : null;
+    const flyerButton = document.querySelector('[data-preview-flyer-button]');
+    const previewPanels = Array.from(document.querySelectorAll('[data-preview-panel]'));
+    const previewToggleButtons = Array.from(document.querySelectorAll('[data-preview-target]'));
+
+    const packageRows = Array.from(document.querySelectorAll('[data-hero-package-row]'));
+    const slideRows = Array.from(document.querySelectorAll('[data-hero-slide-row]'));
+    const productSelects = Array.from(document.querySelectorAll('[data-hero-product]'));
+    const heroProductSelects = Array.from(document.querySelectorAll(
+      '[data-hero-product], [data-hero-package-primary], [data-hero-package-secondary], [data-hero-package-free]'
+    ));
+    const productDataTag = document.getElementById('hero-product-data');
+
+    if (!preview || !slidesContainer || !productDataTag) {
+      return;
+    }
+
+    let showPrices = false;
+    const showPricesContainer = preview.closest('[data-show-prices]');
+    if (showPricesContainer) {
+      showPrices = showPricesContainer.dataset.showPrices === 'true';
+    }
+
+    let flyerShowPrices = showPrices;
+    if (flyerPreview && flyerPreview.dataset.showPrices) {
+      flyerShowPrices = flyerPreview.dataset.showPrices === 'true';
+    }
+
+    let productData = [];
+    try {
+      productData = JSON.parse(productDataTag.textContent || '[]');
+    } catch (error) {
+      productData = [];
+    }
+
+    const productMap = new Map(productData.map((item) => [String(item.id), item]));
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let carouselTimer = null;
+    let carouselIndex = 0;
+
+    const closeAllHeroDropdowns = (exceptMenu = null) => {
+      document.querySelectorAll('.hero-product-dropdown-menu.show').forEach((menu) => {
+        if (menu === exceptMenu) {
+          return;
+        }
+        menu.classList.remove('show');
+        const toggle = menu.parentElement ? menu.parentElement.querySelector('.hero-product-dropdown-toggle') : null;
+        if (toggle) {
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+    };
+
+    const initHeroProductDropdown = (select) => {
+      if (!select || select.dataset.heroDropdownInitialized === 'true') {
+        return;
+      }
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'hero-product-dropdown';
+      select.parentNode.insertBefore(wrapper, select);
+      wrapper.appendChild(select);
+
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'hero-product-dropdown-toggle';
+      toggle.setAttribute('aria-haspopup', 'listbox');
+      toggle.setAttribute('aria-expanded', 'false');
+
+      const selectedText = document.createElement('span');
+      selectedText.className = 'hero-product-selected-text';
+      toggle.appendChild(selectedText);
+
+      const icon = document.createElement('span');
+      icon.className = 'hero-product-dropdown-icon';
+      icon.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
+      toggle.appendChild(icon);
+
+      const menu = document.createElement('div');
+      menu.className = 'hero-product-dropdown-menu';
+
+      const searchWrapper = document.createElement('div');
+      searchWrapper.className = 'hero-product-search-wrapper';
+
+      const searchInput = document.createElement('input');
+      searchInput.type = 'text';
+      searchInput.className = 'form-control hero-product-search-input';
+      searchInput.placeholder = 'Search products';
+      searchInput.setAttribute('aria-label', 'Search products');
+      searchWrapper.appendChild(searchInput);
+
+      const optionsContainer = document.createElement('div');
+      optionsContainer.className = 'hero-product-dropdown-options';
+      optionsContainer.setAttribute('role', 'listbox');
+
+      const emptyState = document.createElement('div');
+      emptyState.className = 'hero-product-dropdown-empty';
+      emptyState.textContent = 'No matching products';
+
+      menu.appendChild(searchWrapper);
+      menu.appendChild(optionsContainer);
+      menu.appendChild(emptyState);
+
+      wrapper.insertBefore(toggle, select);
+      wrapper.insertBefore(menu, select);
+
+      select.classList.add('hero-product-select');
+
+      const placeholderOption = Array.from(select.options).find((option) => !option.value);
+      let placeholder = select.dataset.placeholder || 'Select product';
+      if (placeholderOption) {
+        const optionText = placeholderOption.textContent.trim();
+        if (optionText && optionText !== '---------') {
+          placeholder = optionText;
+        }
+      }
+
+      const updateToggleText = () => {
+        const selectedOption = select.options[select.selectedIndex];
+        const label = selectedOption && selectedOption.value ? selectedOption.textContent.trim() : placeholder;
+        selectedText.textContent = label || placeholder;
+        toggle.classList.toggle('has-selection', !!(selectedOption && selectedOption.value));
+      };
+
+      const renderOptions = () => {
+        optionsContainer.innerHTML = '';
+        Array.from(select.options).forEach((option) => {
+          if (!option.value) {
+            return;
+          }
+
+          const product = productMap.get(String(option.value));
+          const productName = option.textContent.trim();
+          const category = product && product.category ? product.category : 'Uncategorized';
+          const imageUrl = product && product.image ? product.image : '';
+
+          const optionButton = document.createElement('button');
+          optionButton.type = 'button';
+          optionButton.className = 'hero-product-option';
+          optionButton.dataset.value = option.value;
+          optionButton.dataset.search = `${productName} ${category}`.toLowerCase();
+
+          const imageWrap = document.createElement('div');
+          imageWrap.className = 'hero-product-option-image';
+          if (imageUrl) {
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.alt = productName;
+            imageWrap.appendChild(img);
+          } else {
+            const placeholderEl = document.createElement('div');
+            placeholderEl.className = 'hero-product-option-placeholder';
+            placeholderEl.textContent = 'No image';
+            imageWrap.appendChild(placeholderEl);
+          }
+
+          const textWrap = document.createElement('div');
+          textWrap.className = 'hero-product-option-text';
+
+          const nameEl = document.createElement('div');
+          nameEl.className = 'hero-product-option-name';
+          nameEl.textContent = productName;
+
+          const categoryEl = document.createElement('div');
+          categoryEl.className = 'hero-product-option-category';
+          categoryEl.textContent = category;
+
+          textWrap.appendChild(nameEl);
+          textWrap.appendChild(categoryEl);
+
+          optionButton.appendChild(imageWrap);
+          optionButton.appendChild(textWrap);
+
+          optionButton.addEventListener('click', () => {
+            select.value = option.value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            closeAllHeroDropdowns();
+          });
+
+          optionsContainer.appendChild(optionButton);
+        });
+      };
+
+      const filterOptions = (query) => {
+        const normalizedQuery = (query || '').trim().toLowerCase();
+        let visibleCount = 0;
+        Array.from(optionsContainer.querySelectorAll('.hero-product-option')).forEach((option) => {
+          const matches = !normalizedQuery || option.dataset.search.includes(normalizedQuery);
+          option.style.display = matches ? 'flex' : 'none';
+          if (matches) {
+            visibleCount += 1;
+          }
+        });
+        emptyState.style.display = visibleCount ? 'none' : 'block';
+      };
+
+      const openMenu = () => {
+        closeAllHeroDropdowns(menu);
+        menu.classList.add('show');
+        toggle.setAttribute('aria-expanded', 'true');
+        searchInput.value = '';
+        filterOptions('');
+        setTimeout(() => searchInput.focus(), 0);
+      };
+
+      const closeMenu = () => {
+        menu.classList.remove('show');
+        toggle.setAttribute('aria-expanded', 'false');
+      };
+
+      toggle.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (menu.classList.contains('show')) {
+          closeMenu();
+        } else {
+          openMenu();
+        }
+      });
+
+      searchInput.addEventListener('input', () => {
+        filterOptions(searchInput.value);
+      });
+
+      searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeMenu();
+          toggle.focus();
+          return;
+        }
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          const firstVisible = Array.from(optionsContainer.querySelectorAll('.hero-product-option')).find(
+            (option) => option.style.display !== 'none'
+          );
+          if (firstVisible) {
+            firstVisible.focus();
+          }
+        }
+      });
+
+      optionsContainer.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeMenu();
+          toggle.focus();
+          return;
+        }
+        if (!event.target.classList || !event.target.classList.contains('hero-product-option')) {
+          return;
+        }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          const visibleOptions = Array.from(optionsContainer.querySelectorAll('.hero-product-option')).filter(
+            (option) => option.style.display !== 'none'
+          );
+          const currentIndex = visibleOptions.indexOf(event.target);
+          if (currentIndex === -1) {
+            return;
+          }
+          const nextIndex = event.key === 'ArrowDown'
+            ? (currentIndex + 1) % visibleOptions.length
+            : (currentIndex - 1 + visibleOptions.length) % visibleOptions.length;
+          visibleOptions[nextIndex].focus();
+        } else if (event.key === 'Enter') {
+          event.preventDefault();
+          event.target.click();
+        }
+      });
+
+      select.addEventListener('change', () => {
+        updateToggleText();
+        filterOptions('');
+      });
+
+      renderOptions();
+      updateToggleText();
+      filterOptions('');
+      select.dataset.heroDropdownInitialized = 'true';
+    };
+
+    const initHeroProductDropdowns = () => {
+      heroProductSelects.forEach((select) => initHeroProductDropdown(select));
+    };
+
+    initHeroProductDropdowns();
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.hero-product-dropdown')) {
+        closeAllHeroDropdowns();
+      }
+    });
+
+    const themeKeys = ['sky', 'sunrise', 'mint', 'sand', 'ice'];
+
+    const setPreviewPanel = (target) => {
+      if (!previewPanels.length) {
+        return;
+      }
+      previewPanels.forEach((panel) => {
+        const isTarget = panel.dataset.previewPanel === target;
+        panel.classList.toggle('is-hidden', !isTarget);
+        panel.setAttribute('aria-hidden', isTarget ? 'false' : 'true');
+      });
+      previewToggleButtons.forEach((button) => {
+        const isActive = button.dataset.previewTarget === target;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+    };
+
+    const updateTheme = () => {
+      if (!preview) {
+        return;
+      }
+      const themeValue = themeSelect ? themeSelect.value : 'sky';
+      themeKeys.forEach((theme) => {
+        preview.classList.remove(`hero-showcase--${theme}`);
+      });
+      preview.classList.add(`hero-showcase--${themeValue || 'sky'}`);
+    };
+
+    const updateBanner = () => {
+      if (!bannerPreview || !bannerToggle) {
+        return;
+      }
+
+      const messageValue = bannerMessage ? bannerMessage.value.trim() : '';
+      const isActive = bannerToggle.checked && !!messageValue;
+      if (!isActive) {
+        bannerPreview.style.display = 'none';
+        return;
+      }
+
+      bannerPreview.style.display = 'block';
+      const themeValue = bannerTheme ? bannerTheme.value : 'sunrise';
+      themeKeys.forEach((theme) => {
+        bannerPreview.classList.remove(`hero-message-banner--${theme}`);
+      });
+      bannerPreview.classList.add(`hero-message-banner--${themeValue || 'sunrise'}`);
+
+      if (bannerPreviewText) {
+        bannerPreviewText.textContent = messageValue;
+      }
+
+      const linkTextValue = bannerLinkText ? bannerLinkText.value.trim() : '';
+      const linkUrlValue = bannerLinkUrl ? bannerLinkUrl.value.trim() : '';
+      const showLink = !!(linkTextValue && linkUrlValue);
+
+      if (bannerPreviewLink) {
+        bannerPreviewLink.style.display = showLink ? 'inline-flex' : 'none';
+        if (showLink) {
+          bannerPreviewLink.setAttribute('href', linkUrlValue);
+        }
+      }
+      if (bannerPreviewLinkLabel) {
+        bannerPreviewLinkLabel.textContent = linkTextValue || 'Learn more';
+      }
+    };
+
+    const resolveDiscountLabel = (discountValue, product) => {
+      const cleaned = (discountValue || '').toString().trim();
+      if (cleaned) {
+        return `Save ${cleaned}%`;
+      }
+      if (product && product.has_promotion) {
+        if (product.promotion_discount_percent) {
+          return `Save ${product.promotion_discount_percent}%`;
+        }
+        return 'Promo';
+      }
+      return '';
+    };
+
+    const buildHeroPrice = (product) => {
+      if (!showPrices) {
+        return null;
+      }
+      const priceEl = document.createElement('div');
+      priceEl.className = 'hero-showcase-price';
+
+      if (product.has_promotion && product.promotion_price) {
+        if (product.sale_price) {
+          const saleSpan = document.createElement('span');
+          saleSpan.className = 'text-decoration-line-through text-muted';
+          saleSpan.textContent = `$${product.sale_price}`;
+          const promoSpan = document.createElement('span');
+          promoSpan.className = 'ms-2';
+          promoSpan.textContent = `$${product.promotion_price}`;
+          priceEl.appendChild(saleSpan);
+          priceEl.appendChild(promoSpan);
+        } else {
+          priceEl.textContent = `$${product.promotion_price}`;
+        }
+      } else if (product.sale_price) {
+        priceEl.textContent = `$${product.sale_price}`;
+      } else {
+        priceEl.textContent = 'Call for price';
+      }
+
+      return priceEl;
+    };
+
+    const splitFlyerPrice = (value) => {
+      const safeValue = value == null ? '' : String(value);
+      const [dollarsRaw, centsRaw] = safeValue.split('.');
+      const dollars = dollarsRaw || '0';
+      const cents = (centsRaw || '00').padEnd(2, '0').slice(0, 2);
+      return { dollars, cents };
+    };
+
+    const buildFlyerPriceMain = (value) => {
+      const main = document.createElement('span');
+      main.className = 'flyer-price-main';
+      const { dollars, cents } = splitFlyerPrice(value);
+
+      const currency = document.createElement('span');
+      currency.className = 'flyer-price-currency';
+      currency.textContent = '$';
+      main.appendChild(currency);
+
+      const dollarsSpan = document.createElement('span');
+      dollarsSpan.className = 'flyer-price-dollars';
+      dollarsSpan.textContent = dollars;
+      main.appendChild(dollarsSpan);
+
+      const centsSpan = document.createElement('span');
+      centsSpan.className = 'flyer-price-cents';
+      centsSpan.textContent = cents;
+      main.appendChild(centsSpan);
+
+      return main;
+    };
+
+    const buildFlyerPrice = (product) => {
+      if (!flyerShowPrices) {
+        return null;
+      }
+      const priceEl = document.createElement('div');
+      priceEl.className = 'flyer-card-price';
+
+      if (product.has_promotion && product.promotion_price) {
+        if (product.sale_price) {
+          const saleSpan = document.createElement('span');
+          saleSpan.className = 'flyer-price-original';
+          saleSpan.textContent = `$${product.sale_price}`;
+          priceEl.appendChild(saleSpan);
+        }
+        priceEl.appendChild(buildFlyerPriceMain(product.promotion_price));
+      } else if (product.sale_price) {
+        priceEl.appendChild(buildFlyerPriceMain(product.sale_price));
+      } else {
+        const callSpan = document.createElement('span');
+        callSpan.className = 'flyer-price-call';
+        callSpan.textContent = 'Call for price';
+        priceEl.appendChild(callSpan);
+      }
+
+      return priceEl;
+    };
+
+    const buildHeroProductSlide = (item) => {
+      const product = item.product;
+      const slide = document.createElement('article');
+      slide.className = 'hero-showcase-slide';
+      slide.setAttribute('data-hero-slide', '');
+
+      const card = document.createElement('div');
+      card.className = 'hero-showcase-card';
+
+      const media = document.createElement('div');
+      media.className = 'hero-showcase-media';
+
+      if (product.image) {
+        const img = document.createElement('img');
+        img.src = product.image;
+        img.alt = product.name || 'Product image';
+        img.loading = 'lazy';
+        media.appendChild(img);
+      } else {
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-box';
+        media.appendChild(icon);
+      }
+
+      const content = document.createElement('div');
+      const discountLabel = resolveDiscountLabel(item.discountPercent, product);
+      if (discountLabel) {
+        const badge = document.createElement('div');
+        badge.className = 'hero-showcase-discount';
+        badge.textContent = discountLabel;
+        content.appendChild(badge);
+      }
+
+      const name = document.createElement('div');
+      name.className = 'hero-showcase-name';
+      name.textContent = product.name || 'Product name';
+      content.appendChild(name);
+
+      const priceEl = buildHeroPrice(product);
+      if (priceEl) {
+        content.appendChild(priceEl);
+      }
+
+      const link = document.createElement('a');
+      link.className = 'hero-showcase-link';
+      link.href = product.detail_url || '#';
+      link.textContent = 'View product';
+      content.appendChild(link);
+
+      card.appendChild(media);
+      card.appendChild(content);
+      slide.appendChild(card);
+
+      return slide;
+    };
+
+    const buildHeroPackageSlide = (item, index) => {
+      const slide = document.createElement('article');
+      slide.className = 'hero-showcase-slide';
+      slide.setAttribute('data-hero-slide', '');
+
+      const card = document.createElement('div');
+      card.className = 'hero-showcase-card hero-showcase-card--package';
+
+      const header = document.createElement('div');
+      header.className = 'hero-showcase-package-header';
+
+      const title = document.createElement('h3');
+      title.className = 'hero-showcase-package-title';
+      title.textContent = item.title || `Package ${index + 1}`;
+      header.appendChild(title);
+
+      const badge = document.createElement('span');
+      badge.className = 'hero-showcase-package-badge';
+      const discountValue = (item.discountPercent || '').toString().trim();
+      let badgeLabel = 'Bundle deal';
+      if (item.freeProduct && discountValue) {
+        badgeLabel = `Free ${item.freeProduct.name} + ${discountValue}% off`;
+      } else if (item.freeProduct) {
+        badgeLabel = `Free ${item.freeProduct.name}`;
+      } else if (discountValue) {
+        badgeLabel = `Save ${discountValue}%`;
+      }
+      badge.textContent = badgeLabel;
+      header.appendChild(badge);
+      card.appendChild(header);
+
+      const subtitle = document.createElement('p');
+      subtitle.className = 'hero-showcase-package-subtitle';
+      subtitle.textContent = item.subtitle || 'Bundle savings for fleet-ready orders.';
+      card.appendChild(subtitle);
+
+      const productsWrap = document.createElement('div');
+      productsWrap.className = 'hero-showcase-package-products';
+
+      const addPackageItem = (product, fallbackIcon) => {
+        if (!product) {
+          return;
+        }
+        const itemEl = document.createElement('div');
+        itemEl.className = 'hero-showcase-package-item';
+
+        if (product.image) {
+          const img = document.createElement('img');
+          img.src = product.image;
+          img.alt = product.name || 'Product image';
+          img.loading = 'lazy';
+          itemEl.appendChild(img);
+        } else {
+          const icon = document.createElement('i');
+          icon.className = fallbackIcon;
+          itemEl.appendChild(icon);
+        }
+
+        const label = document.createElement('span');
+        label.textContent = product.name || 'Product';
+        itemEl.appendChild(label);
+        productsWrap.appendChild(itemEl);
+      };
+
+      addPackageItem(item.primaryProduct, 'fas fa-box');
+      addPackageItem(item.secondaryProduct, 'fas fa-box');
+      addPackageItem(item.freeProduct, 'fas fa-gift');
+
+      card.appendChild(productsWrap);
+
+      const link = document.createElement('a');
+      link.className = 'hero-showcase-link';
+      link.href = item.primaryProduct && item.primaryProduct.detail_url ? item.primaryProduct.detail_url : '#';
+      link.textContent = 'View deal';
+      card.appendChild(link);
+
+      slide.appendChild(card);
+      return slide;
+    };
+
+    const buildHeroCarousel = (slides, packages) => {
+      if (!slidesContainer || !dotsContainer) {
+        return;
+      }
+
+      slidesContainer.innerHTML = '';
+      dotsContainer.innerHTML = '';
+      dotsContainer.style.display = 'flex';
+
+      if (carouselTimer) {
+        window.clearInterval(carouselTimer);
+        carouselTimer = null;
+      }
+      carouselIndex = 0;
+
+      const cards = [];
+      slides.forEach((item) => cards.push({ kind: 'product', data: item }));
+      packages.forEach((item) => cards.push({ kind: 'package', data: item }));
+
+      if (!cards.length) {
+        if (emptyState) {
+          emptyState.style.display = 'block';
+        }
+        dotsContainer.style.display = 'none';
+        return;
+      }
+
+      if (emptyState) {
+        emptyState.style.display = 'none';
+      }
+
+      const slideEls = [];
+      const dotEls = [];
+
+      const setActive = (index) => {
+        slideEls.forEach((slideEl, slideIndex) => {
+          slideEl.classList.toggle('is-active', slideIndex === index);
+        });
+        dotEls.forEach((dotEl, dotIndex) => {
+          dotEl.classList.toggle('is-active', dotIndex === index);
+          dotEl.setAttribute('aria-pressed', dotIndex === index ? 'true' : 'false');
+        });
+        carouselIndex = index;
+      };
+
+      const stopCarousel = () => {
+        if (carouselTimer) {
+          window.clearInterval(carouselTimer);
+          carouselTimer = null;
+        }
+      };
+
+      const startCarousel = () => {
+        if (prefersReducedMotion || slideEls.length <= 1) {
+          return;
+        }
+        carouselTimer = window.setInterval(() => {
+          const nextIndex = (carouselIndex + 1) % slideEls.length;
+          setActive(nextIndex);
+        }, 5000);
+      };
+
+      cards.forEach((card, index) => {
+        const slideEl = card.kind === 'product'
+          ? buildHeroProductSlide(card.data)
+          : buildHeroPackageSlide(card.data, index);
+
+        if (index === 0) {
+          slideEl.classList.add('is-active');
+        }
+        slidesContainer.appendChild(slideEl);
+        slideEls.push(slideEl);
+
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = `hero-showcase-dot${index === 0 ? ' is-active' : ''}`;
+        dot.dataset.heroDot = index;
+        dot.setAttribute('aria-label', `Go to slide ${index + 1}`);
+        dot.addEventListener('click', () => {
+          stopCarousel();
+          setActive(index);
+          startCarousel();
+        });
+        dotsContainer.appendChild(dot);
+        dotEls.push(dot);
+      });
+
+      if (cards.length <= 1) {
+        dotsContainer.style.display = 'none';
+        return;
+      }
+
+      const carousel = document.querySelector('[data-preview-carousel]');
+      if (carousel) {
+        carousel.onmouseenter = stopCarousel;
+        carousel.onmouseleave = startCarousel;
+      }
+
+      setActive(0);
+      startCarousel();
+    };
+
+    const formatPreviewDate = (date) => (
+      date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+    );
+
+    const buildFlyerProductCard = (item) => {
+      const product = item.product;
+      const card = document.createElement('div');
+      card.className = 'flyer-card';
+
+      const body = document.createElement('div');
+      body.className = 'flyer-card-body';
+
+      const brandLabel = (product.brand || product.source_name || '').trim();
+      if (brandLabel) {
+        const brand = document.createElement('div');
+        brand.className = 'flyer-card-brand';
+        brand.textContent = brandLabel;
+        body.appendChild(brand);
+      }
+
+      const title = document.createElement('div');
+      title.className = 'flyer-card-title';
+      title.textContent = product.name || 'Product';
+      body.appendChild(title);
+
+      const partLabel = (product.sku || product.source_product_id || '').trim();
+      if (partLabel) {
+        const meta = document.createElement('div');
+        meta.className = 'flyer-card-meta';
+        meta.textContent = `Part # ${partLabel}`;
+        body.appendChild(meta);
+      }
+
+      const priceEl = buildFlyerPrice(product);
+      if (priceEl) {
+        body.appendChild(priceEl);
+      }
+
+      const media = document.createElement('div');
+      media.className = 'flyer-card-media';
+      if (product.image) {
+        const img = document.createElement('img');
+        img.src = product.image;
+        img.alt = product.name || 'Product image';
+        img.loading = 'lazy';
+        media.appendChild(img);
+      } else {
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-box';
+        media.appendChild(icon);
+      }
+
+      card.appendChild(body);
+      card.appendChild(media);
+
+      const discountLabel = resolveDiscountLabel(item.discountPercent, product);
+      if (discountLabel) {
+        const badge = document.createElement('div');
+        badge.className = 'flyer-card-badge';
+        badge.textContent = discountLabel;
+        card.appendChild(badge);
+      }
+
+      return card;
+    };
+
+    const buildFlyerPackageCard = (item) => {
+      const card = document.createElement('div');
+      card.className = 'flyer-package-card';
+
+      const title = document.createElement('div');
+      title.className = 'flyer-package-title';
+      title.textContent = item.title || 'Package deal';
+      card.appendChild(title);
+
+      const subtitle = document.createElement('div');
+      subtitle.className = 'flyer-package-subtitle';
+      subtitle.textContent = item.subtitle || 'Bundle savings for fleet-ready orders.';
+      card.appendChild(subtitle);
+
+      const itemsWrap = document.createElement('div');
+      itemsWrap.className = 'flyer-package-items';
+
+      const addItem = (product, fallbackIcon) => {
+        if (!product) {
+          return;
+        }
+        const itemEl = document.createElement('div');
+        itemEl.className = 'flyer-package-item';
+
+        if (product.image) {
+          const img = document.createElement('img');
+          img.src = product.image;
+          img.alt = product.name || 'Product image';
+          img.loading = 'lazy';
+          itemEl.appendChild(img);
+        } else {
+          const icon = document.createElement('i');
+          icon.className = fallbackIcon;
+          itemEl.appendChild(icon);
+        }
+
+        const label = document.createElement('span');
+        label.textContent = product.name || 'Product';
+        itemEl.appendChild(label);
+        itemsWrap.appendChild(itemEl);
+      };
+
+      addItem(item.primaryProduct, 'fas fa-box');
+      addItem(item.secondaryProduct, 'fas fa-box');
+      addItem(item.freeProduct, 'fas fa-gift');
+
+      card.appendChild(itemsWrap);
+
+      const badge = document.createElement('div');
+      badge.className = 'flyer-package-badge';
+      const discountValue = (item.discountPercent || '').toString().trim();
+      let badgeLabel = 'Bundle deal';
+      if (item.freeProduct && discountValue) {
+        badgeLabel = `Free ${item.freeProduct.name} + ${discountValue}% off`;
+      } else if (item.freeProduct) {
+        badgeLabel = `Free ${item.freeProduct.name}`;
+      } else if (discountValue) {
+        badgeLabel = `Save ${discountValue}%`;
+      }
+      badge.textContent = badgeLabel;
+      card.appendChild(badge);
+
+      return card;
+    };
+
+    const updateFlyerPreview = (slides, packages) => {
+      if (!flyerPreview) {
+        return;
+      }
+
+      const isActive = flyerToggle ? flyerToggle.checked : false;
+
+      if (!isActive) {
+        if (flyerSheet) {
+          flyerSheet.style.display = 'none';
+        }
+        if (flyerDisabledState) {
+          flyerDisabledState.style.display = 'block';
+        }
+        if (flyerFeatureStrip) {
+          flyerFeatureStrip.style.display = 'none';
+        }
+        if (flyerButton) {
+          flyerButton.style.display = 'none';
+        }
+        return;
+      }
+
+      if (flyerDisabledState) {
+        flyerDisabledState.style.display = 'none';
+      }
+      if (flyerSheet) {
+        flyerSheet.style.display = 'block';
+      }
+      if (flyerFeatureStrip) {
+        flyerFeatureStrip.style.display = 'flex';
+      }
+
+      const titleValue = flyerTitleInput ? flyerTitleInput.value.trim() : '';
+      const subtitleValue = flyerSubtitleInput ? flyerSubtitleInput.value.trim() : '';
+      const businessName = flyerPreview.dataset.businessName || 'Business Name';
+      const storeUrl = flyerPreview.dataset.storeUrl || '';
+      const contactUrl = flyerPreview.dataset.contactUrl || '';
+
+      if (flyerTitle) {
+        flyerTitle.textContent = titleValue || 'Package Deals & Discounts';
+      }
+      if (flyerSubtitle) {
+        flyerSubtitle.textContent = subtitleValue || 'Featured hero products and bundle savings.';
+      }
+      if (flyerBusiness) {
+        flyerBusiness.textContent = businessName;
+      }
+      if (flyerFooterBusiness) {
+        flyerFooterBusiness.textContent = businessName;
+      }
+      if (flyerFooterStore) {
+        flyerFooterStore.textContent = storeUrl;
+      }
+      if (flyerFooterContact) {
+        flyerFooterContact.textContent = contactUrl;
+      }
+      if (flyerDate) {
+        flyerDate.textContent = `Updated ${formatPreviewDate(new Date())}`;
+      }
+
+      if (flyerDiscountGrid) {
+        flyerDiscountGrid.innerHTML = '';
+      }
+      if (slides.length) {
+        slides.forEach((item) => {
+          if (flyerDiscountGrid) {
+            flyerDiscountGrid.appendChild(buildFlyerProductCard(item));
+          }
+        });
+      }
+      if (flyerDiscountSection) {
+        flyerDiscountSection.style.display = 'block';
+      }
+      if (flyerDiscountEmpty) {
+        flyerDiscountEmpty.style.display = slides.length ? 'none' : 'block';
+      }
+
+      if (flyerPackageGrid) {
+        flyerPackageGrid.innerHTML = '';
+      }
+      if (packages.length) {
+        packages.forEach((item) => {
+          if (flyerPackageGrid) {
+            flyerPackageGrid.appendChild(buildFlyerPackageCard(item));
+          }
+        });
+      }
+      if (flyerPackageSection) {
+        flyerPackageSection.style.display = 'block';
+      }
+      if (flyerPackageEmpty) {
+        flyerPackageEmpty.style.display = packages.length ? 'none' : 'block';
+      }
+
+      if (flyerButton) {
+        flyerButton.style.display = (slides.length || packages.length) ? 'inline-flex' : 'none';
+      }
+    };
+
+    const getSelectedSlides = () => {
+      const selections = [];
+      slideRows.forEach((row) => {
+        const select = row.querySelector('[data-hero-product]');
+        const deleteInput = row.querySelector('input[name$="-DELETE"]');
+        const discountInput = row.querySelector('[data-hero-discount]');
+
+        if (deleteInput && deleteInput.checked) {
+          return;
+        }
+
+        const productId = select ? select.value : '';
+        if (!productId) {
+          return;
+        }
+
+        const product = productMap.get(String(productId));
+        if (!product) {
+          return;
+        }
+
+        const discountValue = discountInput ? discountInput.value.trim() : '';
+        selections.push({ product, discountPercent: discountValue });
+      });
+      return selections;
+    };
+
+    const getSelectedPackages = () => {
+      const selections = [];
+      packageRows.forEach((row) => {
+        const titleInput = row.querySelector('[data-hero-package-title]');
+        const subtitleInput = row.querySelector('[data-hero-package-subtitle]');
+        const primarySelect = row.querySelector('[data-hero-package-primary]');
+        const secondarySelect = row.querySelector('[data-hero-package-secondary]');
+        const freeSelect = row.querySelector('[data-hero-package-free]');
+        const discountInput = row.querySelector('[data-hero-package-discount]');
+        const deleteInput = row.querySelector('input[name$="-DELETE"]');
+        const activeInput = row.querySelector('input[name$="-is_active"]');
+
+        if (deleteInput && deleteInput.checked) {
+          return;
+        }
+        if (activeInput && !activeInput.checked) {
+          return;
+        }
+
+        const title = titleInput ? titleInput.value.trim() : '';
+        const subtitle = subtitleInput ? subtitleInput.value.trim() : '';
+        const primaryId = primarySelect ? primarySelect.value : '';
+        const secondaryId = secondarySelect ? secondarySelect.value : '';
+        const freeId = freeSelect ? freeSelect.value : '';
+        const discountValue = discountInput ? discountInput.value.trim() : '';
+
+        if (!title && !subtitle && !primaryId && !secondaryId && !freeId && !discountValue) {
+          return;
+        }
+
+        selections.push({
+          title,
+          subtitle,
+          primaryProduct: primaryId ? productMap.get(String(primaryId)) : null,
+          secondaryProduct: secondaryId ? productMap.get(String(secondaryId)) : null,
+          freeProduct: freeId ? productMap.get(String(freeId)) : null,
+          discountPercent: discountValue,
+        });
+      });
+
+      return selections;
+    };
+
+    const updatePreview = () => {
+      updateTheme();
+      updateBanner();
+      const slides = getSelectedSlides();
+      const packages = getSelectedPackages();
+      buildHeroCarousel(slides, packages);
+      updateFlyerPreview(slides, packages);
+    };
+
+    previewToggleButtons.forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        setPreviewPanel(button.dataset.previewTarget);
+      });
+    });
+
+    if (flyerButton) {
+      flyerButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        setPreviewPanel('flyer');
+      });
+    }
+
+    const defaultPreviewPanel = window.location.hash === '#flyer-preview' ? 'flyer' : 'hero';
+    setPreviewPanel(defaultPreviewPanel);
+
+    if (themeSelect) {
+      themeSelect.addEventListener('change', updatePreview);
+    }
+
+    if (bannerToggle) {
+      bannerToggle.addEventListener('change', updateBanner);
+    }
+
+    if (bannerTheme) {
+      bannerTheme.addEventListener('change', updateBanner);
+    }
+
+    [bannerMessage, bannerLinkText, bannerLinkUrl].forEach((field) => {
+      if (field) {
+        field.addEventListener('input', updateBanner);
+      }
+    });
+
+    if (flyerToggle) {
+      flyerToggle.addEventListener('change', updatePreview);
+    }
+    [flyerTitleInput, flyerSubtitleInput].forEach((field) => {
+      if (field) {
+        field.addEventListener('input', updatePreview);
+      }
+    });
+
+    packageRows.forEach((row) => {
+      row.querySelectorAll('input, select').forEach((field) => {
+        const eventType = field.type === 'checkbox' ? 'change' : 'input';
+        field.addEventListener(eventType, updatePreview);
+        if (field.tagName === 'SELECT') {
+          field.addEventListener('change', updatePreview);
+        }
+      });
+    });
+
+    productSelects.forEach((select) => {
+      select.addEventListener('change', updatePreview);
+    });
+    slideRows.forEach((row) => {
+      const discountInput = row.querySelector('[data-hero-discount]');
+      if (discountInput) {
+        discountInput.addEventListener('input', updatePreview);
+      }
+      const deleteInput = row.querySelector('input[name$="-DELETE"]');
+      if (deleteInput) {
+        deleteInput.addEventListener('change', updatePreview);
+      }
+    });
+
+    updatePreview();
+  })();
+</script>
+{% endblock %}

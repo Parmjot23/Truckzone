@@ -1,0 +1,38 @@
+{% extends 'accounts/mach/mach_portal_base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Edit Daily Log{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Edit Invoice Details</h1>
+    <form method="post" novalidate>
+        {% csrf_token %} 
+        {{ grouped_invoice_form.hidden_fields }}
+        {{ grouped_invoice_form.date|as_crispy_field }}
+        {{ grouped_invoice_form.bill_to|as_crispy_field }}
+        <datalist id="bill_to_list">
+            {% for bill_to in bill_to_list %}
+            <option value="{{ bill_to }}">{{ bill_to }}</option>
+            {% endfor %}
+        </datalist>
+        {{ grouped_invoice_form.vin_no|as_crispy_field }}
+        {{ grouped_invoice_form.mileage|as_crispy_field }}
+        {{ grouped_invoice_form.unit_no|as_crispy_field }}
+        {{ grouped_invoice_form.invoice_number|as_crispy_field }}
+        {{ grouped_invoice_form.non_field_errors }}
+        <hr>
+        <h2 class="mb-4">Jobs</h2>
+        <div id="jobs">
+            {{ incomerecord2_formset.management_form }}
+            {% for form in incomerecord2_formset %}
+                {{ form.job|as_crispy_field }}
+                {{ form.qty|as_crispy_field }}
+                {{ form.rate|as_crispy_field }}
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary mr-2">Update Invoice</button>
+    </form>
+</div>
+{% endblock %}

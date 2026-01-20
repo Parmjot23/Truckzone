@@ -1,0 +1,52 @@
+<!-- templates/accounts/choose_plan.html -->
+
+{% extends 'accounts/mach/mach_portal_base.html' %}
+{% block title %} Choose Plan {% endblock %}
+{% block content %}
+<!-- Plans Section -->
+<section id="plans" class="container mt-5 fade-in">
+    <h2 class="text-center mb-4 fade-in display-4 font-weight-bold">Choose Your Plan</h2>
+    <br>
+    <div class="row justify-content-center">
+        <!-- Monthly Plan -->
+        <div class="col-lg-4 col-md-6 mb-4 fade-in">
+            <div class="card text-center shadow-sm border-0 plan-card h-100">
+                <div class="card-body d-flex flex-column">
+                    <i class="fas fa-calendar-alt fa-3x mb-3 text-primary"></i>
+                    <h5 class="card-title mt-2">Pay Monthly</h5>
+                    <p class="card-text flex-grow-1">$19/month</p>
+                    <form method="post" action="{% url 'accounts:choose_plan' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="plan_name" value="monthly">
+                        <button type="submit" class="btn btn-outline-primary mt-auto">Select</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- 4-Month Plan (Best Value) -->
+        <div class="col-lg-4 col-md-6 mb-4 fade-in">
+            <div class="card text-center shadow-sm border-0 plan-card h-100 plan-card-highlight position-relative">
+                <div class="card-body d-flex flex-column">
+                    <div class="badge-best-value position-absolute top-0 start-50 translate-middle badge rounded-pill bg-warning text-dark">
+                        Best Value
+                    </div>
+                    <div class="badge-discount position-absolute top-0 start-0 badge rounded-pill bg-danger text-white">
+                        35% OFF
+                    </div>
+                    <i class="fas fa-calendar-check fa-3x mb-3 text-primary"></i>
+                    <h5 class="card-title mt-2">Pay Every 4 Months</h5>
+                    <p class="card-text flex-grow-1">
+                        <del class="original-price">$76</del>
+                        <span class="discounted-price">$49.40</span>
+                    </p>
+                    <form method="post" action="{% url 'accounts:choose_plan' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="plan_name" value="4months">
+                        <button type="submit" class="btn btn-primary mt-auto">Select</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

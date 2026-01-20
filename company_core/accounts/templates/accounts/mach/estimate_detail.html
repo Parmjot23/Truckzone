@@ -1,0 +1,760 @@
+{% extends 'accounts/mach/mach_portal_base.html' %}
+{% load custom_filters %}
+{% load static %}
+
+{% block title %}
+    Estimate Detail
+{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        background-color: #e9ecef;
+        margin: 0;
+        padding: 0;
+    }
+    .btn-block {
+        width: auto;
+    }
+    .btn i {
+        margin-right: 5px;
+    }
+    @media (max-width: 576px) {
+        .btn-block {
+            width: 100%;
+        }
+    }
+    .button-group {
+        display: flex;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    /* Prevent page breaks inside these elements */
+    .card, .card-header, .card-body, .card-footer, .table, .table th, .table td, .subtotal-container, .fields-section, .bill-to-section {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    /* Ensure the entire container is handled as a block */
+    .estimate-wrapper {
+        page-break-inside: avoid;
+        position: relative;
+    }
+    /* Watermark styling for Estimate */
+    .watermark {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 120px;
+        color: rgba(0, 0, 0, 0.08);
+        z-index: 0;
+        pointer-events: none;
+    }
+    .alert-sending-email {
+        display: none;
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        padding: 10px;
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        border-radius: 5px;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .placeholder-logo {
+        font-size: 16px;
+        color: #999;
+        border: 1px solid #ddd;
+        width: 150px;
+        height: 100px;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .company-logo {
+        max-width: 150px;
+        height: auto;
+        display: block;
+        margin-left: auto;
+    }
+    .company-info {
+        text-align: right;
+        margin-top: 10px;
+        line-height: 1.6;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .table th, .table td {
+        vertical-align: middle;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .card-header.bg-primary {
+        background-color: #007bff !important;
+        color: white;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #0056b3;
+    }
+    @media (max-width: 576px) {
+        .company-logo, .company-info {
+            text-align: center;
+        }
+        .company-logo {
+            margin-left: 0;
+        }
+        .button-group {
+            flex-direction: column;
+            width: 100%;
+        }
+    }
+    /* Responsive layout for fields and bill to section */
+    .estimate-section {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+    .fields-section {
+        width: 60%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .bill-to-section {
+        width: 35%;
+        background-color: #f5f5f5;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .field-item {
+        width: 48%;
+        margin-bottom: 15px;
+    }
+    @media (max-width: 768px) {
+        .estimate-section {
+            flex-direction: column;
+        }
+        .fields-section, .bill-to-section {
+            width: 100%;
+        }
+        .field-item {
+            width: 100%;
+        }
+    }
+    /* Bill To Section Styling */
+    .bill-to-section p {
+        margin: 0;
+        font-size: 14px;
+    }
+    .bill-to-section .bill-to-title {
+        font-weight: bold;
+        font-size: 16px;
+        color: #333;
+    }
+    .bill-to-section .bill-to-name {
+        font-weight: bold;
+        font-size: 14px;
+        color: #007bff;
+    }
+    .bill-to-section .bill-to-address {
+        font-size: 14px;
+        color: #555;
+    }
+    .bill-to-section .bill-to-email {
+        font-size: 14px;
+        color: #555;
+        margin-top: 5px;
+    }
+</style>
+
+<!-- Estimate Detail HTML Structure -->
+<div class="container mt-5">
+    <div class="estimate-wrapper" id="estimatePDF">
+        <!-- Watermark -->
+        <div class="watermark">ESTIMATE</div>
+        <h2 class="mb-4">Estimate Detail</h2>
+
+        <!-- Estimate and Bill To Section -->
+        <div class="estimate-section">
+            <!-- Fields Section (Left Side) -->
+            <div class="fields-section">
+                <div class="field-item">
+                    <p><strong>Date:</strong> {{ object.date }}</p>
+                </div>
+                <div class="field-item">
+                    <p><strong>VIN No:</strong> {{ object.vin_no }}</p>
+                </div>
+                <div class="field-item">
+                    <p><strong>Mileage:</strong> {{ object.mileage }}</p>
+                </div>
+                <div class="field-item">
+                    <p><strong>Unit No:</strong> {{ object.unit_no }}</p>
+                </div>
+                <div class="field-item">
+                    <p><strong>Make/Model:</strong> {{ object.make_model }}</p>
+                </div>
+            </div>
+
+            <!-- Bill To Section (Right Side) -->
+            <div class="bill-to-section">
+                <p class="bill-to-title">Bill To:</p>
+                <p class="bill-to-name">{{ object.bill_to }}</p>
+                {% if object.bill_to_address %}
+                    <p class="bill-to-address">{{ object.bill_to_address|linebreaksbr }}</p>
+                {% endif %}
+                {% if object.bill_to_email %}
+                    <p class="bill-to-email"><i class="fas fa-envelope"></i> {{ object.bill_to_email }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Terms and Note Section -->
+        <div class="row mb-2">
+            {% if profile.show_note %}
+            <div class="col-md-6">
+                <div class="form-group form-check">
+                    <input type="checkbox" class="form-check-input" id="show_note" {% if profile.show_note %}checked{% endif %} onclick="toggleNoteField()">
+                    <label class="form-check-label" for="show_note"><strong>Show Note on Estimate</strong></label>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Note Field -->
+        <div class="row mb-4" id="note_field" style="display: {% if profile.show_note %}block{% else %}none{% endif %};">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label for="note"><strong>Estimate Note:</strong></label>
+                    <textarea id="note" class="form-control form-control-sm" rows="2">{{ profile.note }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Jobs Table -->
+        <h5 class="mb-3">Jobs</h5>
+        <table class="table table-bordered">
+            <thead class="thead-light">
+                <tr style="background-color: {{ profile.invoice_header_color }}; color: white;">
+                    <th>Job</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in object.estimate_records.all %}
+                <tr>
+                    <td>{{ job.job|linebreaksbr }}</td>
+                    <td>{{ job.qty }}</td>
+                    <td>{{ job.rate|currency }}</td>
+                    <td>{{ job.amount|currency }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Subtotals and Total Amount -->
+        <div class="row mt-4">
+            <div class="col-md-6" style="font-size:16px;margin:10px;">
+                <p><strong>Subtotal: </strong> {{ subtotal|currency }}</p>
+                <p><strong>{{ profile.get_tax_name }}: </strong> {{ tax|currency }}</p>
+                <p><strong>Total Amount: </strong> {{ total_amount|currency }}</p>
+                {% if profile.show_note and note %}
+                <p style="font-size: 12px; color: #d9534f;"><strong>Note:</strong> {{ note }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="card-footer text-right">
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center">
+                <div class="button-group mb-2 mb-sm-0">
+                    <button class="btn btn-primary mb-1 d-flex align-items-center justify-content-center" onclick="generatePDF()">
+                        <i class="fas fa-envelope"></i> Email ({{ object.bill_to_email }})
+                    </button>
+                    <a href="#" onclick="printInvoice()" class="btn btn-primary mb-1 d-flex align-items-center justify-content-center">
+                        <i class="fas fa-print"></i> Print
+                    </a>
+                    <a href="#" onclick="downloadInvoice()" class="btn btn-primary mb-1 d-flex align-items-center justify-content-center">
+                        <i class="fas fa-download"></i> Download
+                    </a>
+                </div>
+                <div class="button-group">
+                    <a href="{% url 'accounts:estimate_list' %}" class="btn btn-secondary mb-1 d-flex align-items-center justify-content-center">
+                        <i class="fas fa-arrow-left"></i> Back to Estimates
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Message for Sending Email -->
+    <div class="alert-sending-email" id="sendingEmailAlert">
+        Sending email, please wait...
+    </div>
+</div>
+
+<!-- Include html2pdf.js library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+<!-- Include FontAwesome CDN -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const profile = {
+        companyName: "{{ profile.company_name|escapejs }}",
+        companyAddress: "{{ profile.company_address|escapejs }}",
+        interactEmail: "{{ profile.interact_email|escapejs }}",
+        companyPhone: "{{ profile.company_phone|escapejs }}",
+        companyEmail: "{{ profile.company_email|escapejs }}",
+        gstHstNumber: "{{ profile.gst_hst_number|escapejs }}",
+        qstNumber: "{% if profile.province == 'QC' %}QST No:{{ profile.qst_number|escapejs }}{% else %}{% endif %}",
+        companyLogo: "{% if profile.company_logo %}{{ profile.company_logo.url|escapejs }}{% endif %}",
+        invoiceHeaderColor: "{{ profile.invoice_header_color|escapejs }}",
+        invoiceFontSize: "{{ profile.invoice_font_size }}",
+        taxName: "{{ profile.get_tax_name }}",
+        showNote: {{ profile.show_note|yesno:"true,false" }},
+        note: "{{ profile.note|escapejs }}"
+    };
+
+    function toggleNoteField() {
+        const showNoteCheckbox = document.getElementById('show_note');
+        const noteField = document.getElementById('note_field');
+        noteField.style.display = showNoteCheckbox.checked ? 'block' : 'none';
+    }
+
+    /*
+      Updated getInvoiceHTML to accept a boolean parameter (isPaid).
+      For Estimate, we always show the same header (ESTIMATE) and ignore isPaid.
+    */
+    function getInvoiceHTML(isPaid) {
+        const invoiceNumber = "{{ object.estimate_number }}";
+        const date = "{{ object.date }}";
+        const billTo = "{{ object.bill_to }}";
+        const subtotal = "{{ subtotal|currency }}";
+        const tax = "{{ tax|currency }}";
+        const totalAmount = "{{ total_amount|currency }}";
+        const vinNo = "{{ object.vin_no }}";
+        const unitNo = "{{ object.unit_no }}";
+        const mileage = "{{ object.mileage }}";
+        const makeModel = "{{ object.make_model }}";
+        const jobs = `{% for job in object.estimate_records.all %}<tr><td>{{ job.job|linebreaksbr }}</td><td style="text-align: right;">{{ job.qty }}</td><td style="text-align: right;">{{ job.rate|currency }}</td><td style="text-align: right;">{{ job.amount|currency }}</td></tr>{% endfor %}`;
+
+
+
+        const showNoteCheckbox = document.getElementById('show_note');
+        const showNote = showNoteCheckbox ? showNoteCheckbox.checked : false;
+        const note = showNote ? document.getElementById('note').value : '';
+
+        const invoiceTitle = "ESTIMATE";
+        const displayTotalAmount = totalAmount;
+        const balanceLabel = "Total Amount:";
+
+        return `
+            <div class="invoice-wrapper" style="max-width: 900px; margin: 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); page-break-inside: avoid; font-family: Arial, Helvetica, sans-serif; position: relative;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120px; color: rgba(0,0,0,0.08); z-index: 0; pointer-events: none;">
+                    ESTIMATE
+                </div>
+                <div class="invoice-header" style="padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid ${profile.invoiceHeaderColor}; position: relative; z-index: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="user-info" style="font-size: 14px; text-align: left;">
+                            <p style="margin: 0; font-weight: bold;">${profile.companyName}</p>
+                            <p style="margin: 5px 0;"><i class="fas fa-map-marker-alt"></i> ${profile.companyAddress}</p>
+                            <p style="margin: 5px 0;"><i class="fas fa-phone"></i> ${profile.companyPhone}</p>
+                            <p style="margin: 5px 0;"><i class="fas fa-envelope"></i> ${profile.companyEmail}</p>
+                            <p style="margin: 5px 0;">GST/HST No: ${profile.gstHstNumber}</p>
+                            <p style="margin: 5px 0;">${profile.qstNumber}</p>
+                        </div>
+                        <div class="invoice-logo" style="text-align: right;">
+                            ${profile.companyLogo ? `<img src="${profile.companyLogo}" alt="Company Logo" style="max-width: 100px; height: auto;">` : ''}
+                        </div>
+                    </div>
+                    <h1 style="margin: 10px 0 0 0; font-size: 28px; color: ${profile.invoiceHeaderColor}; letter-spacing: 1px; text-align: center; position: relative; z-index: 1;">${invoiceTitle}</h1>
+                </div>
+                <div class="invoice-details" style="display: flex; justify-content: space-between; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid ${profile.invoiceHeaderColor}; page-break-inside: avoid; position: relative; z-index: 1;">
+                    <div>
+                        <p style="margin: 0; font-size: 14px;"><strong>Estimate Number:</strong> ${invoiceNumber}</p>
+                        <p style="margin: 5px 0 0 0; font-size: 14px;"><strong>Date:</strong> ${date}</p>
+                        <p style="margin: 5px 0 0 0; font-size: 14px;"><strong>VIN No:</strong> ${vinNo}</p>
+                        <p style="margin: 5px 0 0 0; font-size: 14px;"><strong>Unit No:</strong> ${unitNo}</p>
+                        <p style="margin: 5px 0 0 0; font-size: 14px;"><strong>Mileage:</strong> ${mileage}</p>
+                        <p style="margin: 5px 0 0 0; font-size: 14px;"><strong>Make/Model:</strong> ${makeModel}</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="margin: 0; font-size: 14px;"><strong>Bill To:</strong></p>
+                        <p style="margin: 5px 0 0 0; font-size: 14px;">${billTo}</p>
+                        {% if object.bill_to_address %}
+                        <p style="margin: 5px 0 0 0; font-size: 14px;">{{ object.bill_to_address|linebreaksbr }}</p>
+                        {% endif %}
+                        
+                    </div>
+                </div>
+                <div class="subtotal-container" style="margin-bottom: 20px; text-align: center; page-break-inside: avoid; position: relative; z-index: 1;">
+                    <div style="display: inline-block; text-align: left; font-size: 14px; line-height: 1.6;">
+                        <div style="display: flex; justify-content: space-between; font-family: Arial, Helvetica, sans-serif; margin-bottom: 5px;">
+                            <p style="margin: 0; font-weight: 600; color: #34495e;">Subtotal:</p>
+                            <p style="margin: 0; color: #2c3e50;">${subtotal}</p>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-family: Arial, Helvetica, sans-serif; margin-bottom: 5px;">
+                            <p style="margin: 0; font-weight: 600; color: #34495e;">${profile.taxName}:</p>
+                            <p style="margin: 0; color: #2c3e50;">${tax}</p>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-family: Arial, Helvetica, sans-serif; margin-top: 10px; padding: 10px; background-color: #f0f4f8; border-radius: 5px;">
+                            <p style="margin: 0; font-size: 16px; font-weight: bold; color: #2c3e50; padding-right: 20px;">${balanceLabel}</p>
+                            <p style="margin: 0; font-size: 16px; font-weight: bold; color: #2c3e50;">${displayTotalAmount}</p>
+                        </div>
+                    </div>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; page-break-inside: avoid; position: relative; z-index: 1;">
+                    <thead>
+                        <tr style="background-color: ${profile.invoiceHeaderColor}; color: white;">
+                            <th style="padding: 10px; text-align: left; border-bottom: 1px solid ${profile.invoiceHeaderColor}; font-family: Arial, Helvetica, sans-serif;">Job</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid ${profile.invoiceHeaderColor}; font-family: Arial, Helvetica, sans-serif;">Quantity</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid ${profile.invoiceHeaderColor}; font-family: Arial, Helvetica, sans-serif;">Price</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 1px solid ${profile.invoiceHeaderColor}; font-family: Arial, Helvetica, sans-serif;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${jobs}
+                    </tbody>
+                </table>
+                ${note ? `
+                <div style="text-align: left; padding-top: 10px; margin-top: 10px; border-top: 1px solid ${profile.invoiceHeaderColor}; position: relative; z-index: 1;">
+                    <p style="margin: 0; font-size: 10px; color: #d9534f; font-family: Arial, Helvetica, sans-serif;"><strong>Note:</strong> ${note}</p>
+                </div>` : ''}
+                <div class="no-break" style="text-align: center; padding-top: 10px; margin-top: 10px; border-top: 1px solid ${profile.invoiceHeaderColor}; font-family: Arial, Helvetica, sans-serif; position: relative; z-index: 1;">
+                    <p style="margin: 0; font-size: 14px; color: #666;">Thank you for your business!</p>
+                </div>
+                <div class="invoice-footer" style="text-align: center; padding-top: 10px; margin-top: 10px; border-top: 1px solid ${profile.invoiceHeaderColor}; font-family: Arial, Helvetica, sans-serif; position: relative; z-index: 1;"></div>
+            </div>
+            <style>
+                @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
+                body {
+                    font-family: Arial, Helvetica, sans-serif !important;
+                    background-color: #e9ecef !important;
+                    margin: 0;
+                    padding: 0;
+                    color: #333 !important;
+                }
+                .bill-to-section p {
+                    margin: 0;
+                    font-size: 14px;
+                }
+                .bill-to-section .bill-to-title {
+                    font-weight: bold;
+                    font-size: 16px;
+                    color: #333 !important;
+                }
+                .bill-to-section .bill-to-name {
+                    font-weight: bold;
+                    font-size: 14px;
+                    color: #007bff !important;
+                }
+                .bill-to-section .bill-to-address {
+                    font-size: 14px;
+                    color: #555 !important;
+                }
+                .bill-to-section .bill-to-email {
+                    font-size: 14px;
+                    color: #555 !important;
+                    margin-top: 5px;
+                }
+                .invoice-wrapper {
+                    max-width: 900px;
+                    margin: 0;
+                    padding: 15px;
+                    background-color: #f8f9fa;
+                    border-radius: 5px;
+                    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                }
+                .invoice-wrapper, body {
+                    overflow: visible !important;
+                }
+                .invoice-header {
+                    text-align: center;
+                    padding-bottom: 10px;
+                    margin-bottom: 10px;
+                    border-bottom: 2px solid ${profile.invoiceHeaderColor};
+                }
+                .invoice-header h1 {
+                    font-size: 28px;
+                    color: ${profile.invoiceHeaderColor} !important;
+                    letter-spacing: 1px;
+                }
+                .invoice-details {
+                    display: flex;
+                    justify-content: space-between;
+                    padding-bottom: 10px;
+                    margin-bottom: 10px;
+                    border-bottom: 2px solid ${profile.invoiceHeaderColor};
+                    page-break-inside: avoid;
+                }
+                .user-info i {
+                    margin-right: 5px;
+                }
+                .subtotal-container {
+                    margin-bottom: 20px;
+                    text-align: center;
+                    page-break-inside: avoid;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 30px;
+                    page-break-inside: avoid;
+                }
+                table th, table td {
+                    border-bottom: 1px solid #ddd;
+                    padding: 10px;
+                    font-family: Arial, Helvetica, sans-serif !important;
+                }
+                table th {
+                    background-color: ${profile.invoiceHeaderColor};
+                    color: white;
+                }
+                table tbody tr:nth-child(even) {
+                    background-color: #f8f9fa;
+                }
+                .invoice-footer {
+                    text-align: center;
+                    padding-top: 10px;
+                    margin-top: 10px;
+                    border-top: 1px solid ${profile.invoiceHeaderColor};
+                    font-size: 10px;
+                    color: #666 !important;
+                    font-family: Arial, Helvetica, sans-serif;
+                }
+                table, tr, th, td, no-break {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    page-break-after: auto;
+                    break-after: auto;
+                    border-collapse: collapse;
+                    border-spacing: 0;
+                }
+                .no-break {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+            </style>
+        `;
+    }
+
+    function addFooterAndPageNumbers(pdf) {
+        const pageCount = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            pdf.setPage(i);
+            const pageWidth = pdf.internal.pageSize.width;
+            const pageHeight = pdf.internal.pageSize.height;
+            pdf.setFontSize(10);
+            pdf.text(`Page ${i} of ${pageCount} - www.smart-invoices.com`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        }
+    }
+
+    // Main function to generate PDF & send emails
+    window.generatePDF = function() {
+        const sendingEmailAlert = document.getElementById('sendingEmailAlert');
+        sendingEmailAlert.style.display = 'block';
+
+        // For Estimate, we ignore isPaid flag (always false)
+        const isPaid = false;
+        const invoiceHTML = getInvoiceHTML(isPaid);
+        const invoiceNumber = "{{ object.estimate_number }}";
+
+        html2pdf().from(invoiceHTML).set({
+            margin: 0.2,
+            filename: `Estimate_${invoiceNumber}.pdf`,
+            image: { type: 'jpeg', quality: 1 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        }).toPdf().get('pdf').then(function(pdf) {
+            addFooterAndPageNumbers(pdf);
+            return pdf.output('blob');
+        }).then(function(pdfBlob) {
+            function sendEmail(email, isInternal = false) {
+                const formData = new FormData();
+                if (isInternal) {
+                    formData.append(
+                        'subject',
+                        `Estimate #${invoiceNumber} has been sent to {{ object.bill_to_email }}`
+                    );
+                    formData.append('body', `
+                        <div style="font-family: Arial, Helvetica, sans-serif; padding: 20px; background-color: #fefefe; color: #333;">
+                            <h2 style="color: #007bff; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
+                                Internal Notification
+                            </h2>
+                            <p style="font-size: 16px; color: #333;">
+                                Hello ${profile.companyName},<br><br>
+                                This is to notify you that an estimate (Estimate #${invoiceNumber})
+                                was just sent to <strong>{{ object.bill_to_email }}</strong>.
+                            </p>
+                            <p style="font-size: 16px; color: #333;">
+                                Date: <strong>{{ object.date }}</strong>
+                            </p>
+                            <p style="font-size: 16px; color: #333;">
+                                For your records, the estimate PDF is attached.
+                            </p>
+                        </div>
+                    `);
+                } else {
+                    const subjectPrefix = 'Estimate from';
+                    formData.append(
+                        'subject',
+                        `[DO NOT REPLY] ${subjectPrefix} ${profile.companyName} - Estimate #${invoiceNumber}`
+                    );
+                    const invoiceTypeHeader = 'Estimate Summary';
+                    const messageForAmount = `<p style="font-size: 24px; color: #d9534f; font-weight: bold; margin: 20px 0;">Total Amount: {{ total_amount|currency }}</p>`;
+                    formData.append('body', `
+                        <div style="font-family: Arial, Helvetica, sans-serif; padding: 40px; background-color: #ffffff; color: #333; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); text-align: center;">
+                            {% if company_logo_url %}
+                                <img src="{{ company_logo_url }}" alt="Company Logo" style="max-width: 200px; margin-bottom: 30px;">
+                            {% endif %}
+                            <h2 style="color: #007bff; font-size: 28px; font-weight: bold; margin-bottom: 30px;">${invoiceTypeHeader}</h2>
+                            <p style="font-size: 20px; color: #333; margin: 10px 0;">
+                                <strong>Estimate Number :</strong> ${invoiceNumber}
+                            </p>
+                            <p style="font-size: 20px; color: #333; margin: 10px 0;">
+                                <strong>Date :</strong> {{ object.date }}
+                            </p>
+                            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                                ${messageForAmount}
+                            </div>
+                            <div style="text-align: left; font-size: 18px; color: #555; margin-top: 20px;">
+                                <p><strong>Bill To :</strong> {{ object.bill_to }}</p>
+                            </div>
+                            <div style="text-align: left; font-size: 18px; color: #555; margin-top: 30px;">
+                                <h3 style="color: #007bff; font-size: 22px; font-weight: bold;">Job Summary</h3>
+                                <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-family: Arial, Helvetica, sans-serif;">
+                                    <thead>
+                                        <tr style="background-color: #007bff; color: #ffffff;">
+                                            <th style="padding: 10px; border: 1px solid #ddd;">Description</th>
+                                            <th style="padding: 10px; border: 1px solid #ddd;">Quantity</th>
+                                            <th style="padding: 10px; border: 1px solid #ddd;">Price</th>
+                                            <th style="padding: 10px; border: 1px solid #ddd;">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for job in object.estimate_records.all %}
+                                            <tr>
+                                                <td style="padding: 10px; border: 1px solid #ddd;">{{ job.job|linebreaksbr }}</td>
+                                                <td style="padding: 10px; border: 1px solid #ddd;">{{ job.qty }}</td>
+                                                <td style="padding: 10px; border: 1px solid #ddd;">{{ job.rate|currency }}</td>
+                                                <td style="padding: 10px; border: 1px solid #ddd;">{{ job.amount|currency }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p style="font-size: 16px; color: #999; margin-top: 20px;">
+                                <strong>Please do not reply to this email.</strong>
+                                For any inquiries, contact us at
+                                <a href="mailto:${profile.companyEmail}" style="color: #007bff; text-decoration: none;">
+                                    ${profile.companyEmail}
+                                </a>.
+                            </p>
+                        </div>
+                        <style>
+                            a {
+                                color: #007bff !important;
+                                text-decoration: none;
+                            }
+                            a:hover {
+                                text-decoration: underline;
+                            }
+                            table th, table td {
+                                text-align: left;
+                            }
+                        </style>
+                    `);
+                }
+                const fileName = isInternal ? `Internal_Estimate_${invoiceNumber}.pdf` : `Estimate_${invoiceNumber}.pdf`;
+                formData.append('attachment', pdfBlob, fileName);
+                formData.append('invoice_number', invoiceNumber);
+                formData.append('email', email);
+                return fetch("{% url 'accounts:send_invoice_email' %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        console.log(`Email sent successfully to ${email}`);
+                    } else {
+                        console.error(`Failed to send email to ${email}: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error sending email to ${email}:`, error);
+                });
+            }
+            sendEmail('{{ object.bill_to_email }}', false)
+                .then(() => sendEmail('{{ profile.company_email }}', true))
+                .then(() => {
+                    sendingEmailAlert.style.display = 'none';
+                    alert('Emails sent successfully.');
+                })
+                .catch(error => {
+                    sendingEmailAlert.style.display = 'none';
+                    alert('Error sending emails.');
+                    console.error('Error in sending emails:', error);
+                });
+        }).catch(function(error) {
+            sendingEmailAlert.style.display = 'none';
+            console.error("Error generating PDF:", error);
+        });
+    };
+
+    window.downloadInvoice = function() {
+        const invoiceNumber = "{{ object.estimate_number }}";
+        const isPaid = false;
+        const invoiceHTML = getInvoiceHTML(isPaid);
+        html2pdf().from(invoiceHTML).set({
+            margin: 0.2,
+            filename: `Estimate_${invoiceNumber}.pdf`,
+            image: { type: 'jpeg', quality: 1 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        }).toPdf().get('pdf').then(function(pdf) {
+            addFooterAndPageNumbers(pdf);
+            pdf.save(`Estimate_${invoiceNumber}.pdf`);
+        }).catch(function(error) {
+            console.error("Error generating PDF:", error);
+        });
+    };
+
+    window.printInvoice = function() {
+        const invoiceNumber = "{{ object.estimate_number }}";
+        const isPaid = false;
+        const invoiceHTML = getInvoiceHTML(isPaid);
+        html2pdf().from(invoiceHTML).set({
+            margin: 0.2,
+            filename: `Estimate_${invoiceNumber}.pdf`,
+            image: { type: 'jpeg', quality: 1 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        }).toPdf().get('pdf').then(function(pdf) {
+            addFooterAndPageNumbers(pdf);
+            const pdfUrl = pdf.output('bloburl');
+            const printWindow = window.open(pdfUrl, '_blank');
+            printWindow.print();
+        }).catch(function(error) {
+            console.error("Error generating PDF:", error);
+        });
+    };
+});
+</script>
+{% endblock %}

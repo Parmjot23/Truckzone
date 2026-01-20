@@ -1,0 +1,162 @@
+{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Payroll Run</h2>
+            <div class="text-muted small">
+                {{ payroll_run.period_start }} - {{ payroll_run.period_end }}
+                {% if payroll_run.pay_date %} - Pay date {{ payroll_run.pay_date }}{% endif %}
+                - {{ payroll_run.get_status_display }}
+            </div>
+        </div>
+        <div class="page-toolbar d-flex gap-2">
+            {% if payroll_run.status == "draft" %}
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:payroll_run_paystubs_import' payroll_run.id %}">Import paystubs</a>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:payroll_run_update' payroll_run.id %}">Edit</a>
+            <form method="post" action="{% url 'accounts:payroll_run_delete' payroll_run.id %}" class="d-inline" onsubmit="return confirm('Delete this payroll run?');">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+            </form>
+            {% endif %}
+            {% if payroll_run.status != "draft" %}
+            <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#paystubActionsModal">Paystubs</button>
+            {% endif %}
+            <form method="post">
+                {% csrf_token %}
+                <button class="btn btn-outline-secondary btn-sm" name="action" value="recalculate">Recalculate</button>
+                {% if payroll_run.status != "approved" %}
+                <button class="btn btn-primary btn-sm" name="action" value="approve">Approve</button>
+                {% endif %}
+                {% if payroll_run.status != "paid" %}
+                <button class="btn btn-success btn-sm" name="action" value="mark_paid">Mark Paid</button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    {% include 'payroll/_nav.html' %}
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Total gross</div>
+                    <div class="fs-4">${{ totals.total_gross|default:"0.00" }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Total net</div>
+                    <div class="fs-4">${{ totals.total_net|default:"0.00" }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted small">Employer total</div>
+                    <div class="fs-4">${{ totals.total_employer|default:"0.00" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Hours</th>
+                        <th>Gross</th>
+                        <th>Net</th>
+                        <th>Employer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stub in paystubs %}
+                    <tr>
+                        <td>{{ stub.employee.full_name }}</td>
+                        <td>
+                            {{ stub.hours }}
+                            <div class="small text-muted">Reg {{ stub.regular_hours }} / OT {{ stub.overtime_hours }}</div>
+                        </td>
+                        <td>${{ stub.gross_pay }}</td>
+                        <td>${{ stub.net_pay }}</td>
+                        <td>${{ stub.employer_total }}</td>
+                    </tr>
+                    {% if stub.line_items.all|length %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="small text-muted">Employer taxes</div>
+                            <ul class="mb-0">
+                                {% for item in stub.line_items.all %}
+                                <li class="small">{{ item.name }}: ${{ item.employer_amount|default:item.amount }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">No paystubs generated.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="paystubActionsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Pay Statements</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Download or email pay statements for this payroll run.</p>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-outline-primary" href="{% url 'accounts:payroll_run_paystubs_download' payroll_run.id %}">
+                    Download PDFs (ZIP)
+                </a>
+                <a class="btn btn-outline-secondary" href="{% url 'accounts:payroll_run_paystubs_export' payroll_run.id %}?format=csv">
+                    Export CSV
+                </a>
+                <a class="btn btn-outline-secondary" href="{% url 'accounts:payroll_run_paystubs_export' payroll_run.id %}?format=xlsx">
+                    Export Excel
+                </a>
+                <form method="post" action="{% url 'accounts:payroll_run_paystubs_send' payroll_run.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">Send to employees</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('paystub_actions') !== '1') {
+            return;
+        }
+        const modalEl = document.getElementById('paystubActionsModal');
+        if (!modalEl || typeof bootstrap === 'undefined') {
+            return;
+        }
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+        params.delete('paystub_actions');
+        const next = params.toString();
+        const nextUrl = window.location.pathname + (next ? `?${next}` : '');
+        window.history.replaceState({}, '', nextUrl);
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,245 @@
+{% load custom_filters %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Estimate #{{ estimate.estimate_number }}</title>
+  <style>
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #333;
+      font-size: {{ profile.invoice_font_size }}px;
+    }
+    .estimate-wrapper {
+      position: relative;
+      margin: 25px;
+      padding: 20px;
+      background-color: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      page-break-inside: avoid;
+      overflow: hidden;
+    }
+    .estimate-watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 160px;
+      font-weight: 700;
+      color: rgba(0, 0, 0, 0.05);
+      text-transform: uppercase;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .estimate-content {
+      position: relative;
+      z-index: 1;
+    }
+    .estimate-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid {{ profile.invoice_header_color|default:'#444' }};
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+    .company-info p {
+      margin: 2px 0;
+      font-size: 14px;
+    }
+    .company-info p:first-child {
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .estimate-logo img {
+      max-height: 80px;
+      width: auto;
+    }
+    .estimate-title {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: {{ profile.invoice_header_color|default:'#444' }};
+      margin: 0 0 20px 0;
+    }
+    .estimate-details {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .estimate-details div {
+      width: 48%;
+    }
+    .estimate-details p {
+      margin: 4px 0;
+      font-size: 14px;
+    }
+    .bill-to-address {
+      white-space: pre-wrap;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+    .totals {
+      max-width: 300px;
+      margin-left: auto;
+      margin-bottom: 30px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .totals div {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 15px;
+      border-bottom: 1px solid #e0e0e0;
+      background-color: #fafafa;
+    }
+    .totals div:last-child {
+      background-color: #fff;
+      font-weight: bold;
+      color: #000;
+      border-top: 2px solid {{ profile.invoice_header_color|default:'#444' }};
+      border-bottom: none;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    table th, table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+      font-size: 14px;
+    }
+    table th {
+      background-color: {{ profile.invoice_header_color|default:'#444' }};
+      color: #fff;
+      font-weight: bold;
+      border-bottom: 1px solid {{ profile.invoice_header_color|default:'#444' }};
+    }
+    table th:nth-child(n+2), table td:nth-child(n+2) {
+      text-align: right;
+    }
+    .note {
+      font-size: 12px;
+      color: #555;
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-left: 4px solid {{ profile.invoice_header_color|default:'#444' }};
+      margin-bottom: 20px;
+    }
+    .closing {
+      text-align: center;
+      font-size: 14px;
+      margin-top: 20px;
+      color: #555;
+    }
+    @page {
+      margin-bottom: 35px;
+      @bottom-left {
+        content: "www.smart-invoices.com";
+        font-size: 9px;
+        color: #666;
+        border-top: 0.5px solid #ccc;
+        width: 100%;
+        padding-top: 5px;
+      }
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 9px;
+        color: #666;
+        border-top: 0.5px solid #ccc;
+        width: 100%;
+        padding-top: 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="estimate-wrapper">
+    <div class="estimate-watermark">Estimate</div>
+    <div class="estimate-content">
+      <div class="estimate-header">
+        <div class="company-info">
+          <p>{{ profile.company_name }}</p>
+          {% if profile.company_address %}<p><i class="fas fa-map-marker-alt"></i> {{ profile.company_address }}</p>{% endif %}
+          {% if profile.company_phone %}<p><i class="fas fa-phone"></i> {{ profile.company_phone }}</p>{% endif %}
+          {% if profile.company_fax %}<p><i class="fas fa-fax"></i> {{ profile.company_fax }}</p>{% endif %}
+          {% if profile.company_email %}<p><i class="fas fa-envelope"></i> {{ profile.company_email }}</p>{% endif %}
+          {% if profile.gst_hst_number %}<p>GST/HST No: {{ profile.gst_hst_number }}</p>{% endif %}
+          {% if profile.province == 'QC' and profile.qst_number %}<p>QST No: {{ profile.qst_number }}</p>{% endif %}
+        </div>
+        <div class="estimate-logo">
+          {% if company_logo_url %}<img src="{{ company_logo_url }}" alt="Logo">{% endif %}
+        </div>
+      </div>
+
+      <h2 class="estimate-title">Estimate #{{ estimate.estimate_number }}</h2>
+
+      <div class="estimate-details">
+        <div>
+          {% if estimate.po_number and estimate.po_number|lower != 'none' %}<p><strong>PO Number:</strong> {{ estimate.po_number }}</p>{% endif %}
+          {% if estimate.date %}<p><strong>Date:</strong> {{ estimate.date }}</p>{% endif %}
+          <p><strong>VIN No:</strong> {{ estimate.vin_no|default:'N/A' }}</p>
+          <p><strong>Unit No:</strong> {{ estimate.unit_no|default:'N/A' }}</p>
+          <p><strong>Mileage:</strong> {{ estimate.mileage|default:'N/A' }}</p>
+          <p><strong>Make/Model:</strong> {{ estimate.make_model|default:'N/A' }}</p>
+        </div>
+        <div>
+          <p><strong>Bill To:</strong></p>
+          <p>{{ estimate.bill_to }}</p>
+          {% if estimate.bill_to_address %}<div class="bill-to-address">{{ estimate.bill_to_address|linebreaksbr }}</div>{% endif %}
+          {% if profile.term %}<p><strong>Proposed Terms:</strong> {{ profile.get_term_display }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="totals">
+        <div><span>Subtotal</span><span>{{ subtotal|currency }}</span></div>
+        {% if estimate.tax_exempt %}
+          <div><span>{{ estimate.tax_exempt_reason|default:"Tax Exempt" }}</span><span></span></div>
+        {% else %}
+          <div><span>{{ profile.get_tax_name }}</span><span>{{ tax|currency }}</span></div>
+        {% endif %}
+        <div><span>Total Estimate</span><span>{{ total_amount|currency }}</span></div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Rate</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in estimate.estimate_records.all %}
+            <tr>
+              <td>{{ record.job|linebreaksbr }}</td>
+              <td>{{ record.qty }}</td>
+              <td>{{ record.rate|currency }}</td>
+              <td>{{ record.amount|currency }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" style="text-align:center;padding:20px;color:#8d96a6;">No estimate items.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if note %}
+        <div class="note"><strong>Note:</strong> {{ note|linebreaksbr }}</div>
+      {% endif %}
+
+      <p class="closing">We appreciate the opportunity to work with you. Please let us know if you have any questions about this estimate.</p>
+    </div>
+  </div>
+</body>
+</html>

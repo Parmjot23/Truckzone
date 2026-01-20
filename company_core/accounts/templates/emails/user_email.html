@@ -1,0 +1,31 @@
+<!-- templates/emails/user_email.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /* Email styles */
+        body { font-family: Arial, sans-serif; font-size: 14px; }
+        .email-content { max-width: 600px; margin: auto; }
+        .header { background-color: #28a745; color: #fff; padding: 20px; text-align: center; }
+        .body { padding: 20px; }
+        .footer { text-align: center; font-size: 12px; color: #777; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="email-content">
+        <div class="header">
+            <h1>Invoice Statement Sent</h1>
+        </div>
+        <div class="body">
+            <p>Hello,</p>
+            <p>The invoice statement for {{ customer.name }} has been successfully sent.</p>
+            <p>Best regards,</p>
+            <p>Smart-Invoices</p>
+        </div>
+        <div class="footer">
+            &copy; {{ current_year }} Smart-Invoices. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

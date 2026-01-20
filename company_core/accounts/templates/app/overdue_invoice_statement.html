@@ -1,0 +1,246 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Overdue Invoice Statement</title>
+    <style>
+        :root {
+            --alert: #b91c1c;
+            --alert-dark: #7f1d1d;
+            --border: #e5e7eb;
+            --muted: #6b7280;
+            --page-bg: #fff7f5;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #111827;
+            background: var(--page-bg);
+            margin: 0;
+            padding: 0;
+        }
+        .page {
+            background: #ffffff;
+            padding: 24px 28px 30px;
+            border: 1px solid var(--border);
+        }
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .header-left {
+            width: 60%;
+            vertical-align: top;
+        }
+        .header-right {
+            width: 40%;
+            text-align: right;
+            vertical-align: top;
+        }
+        .company-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+        .company-meta {
+            color: var(--muted);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        .statement-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--alert);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .statement-subtitle {
+            font-size: 12px;
+            color: var(--alert-dark);
+            margin-top: 6px;
+            font-weight: bold;
+        }
+        .meta-line {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .reminder-pill {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 4px 8px;
+            background: #fee2e2;
+            color: var(--alert-dark);
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .alert-box {
+            margin-top: 16px;
+            padding: 12px;
+            background: #fff1f2;
+            border-left: 4px solid var(--alert);
+            color: #7f1d1d;
+        }
+        .section {
+            margin-top: 18px;
+        }
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            border: 1px solid var(--border);
+        }
+        .summary-table td {
+            padding: 10px 12px;
+            border-right: 1px solid var(--border);
+        }
+        .summary-table td:last-child {
+            border-right: none;
+        }
+        .summary-label {
+            font-size: 10px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .summary-value {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 18px;
+            font-size: 11px;
+        }
+        .invoice-table th {
+            background: var(--alert);
+            color: #ffffff;
+            padding: 8px 6px;
+            text-align: left;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            font-size: 10px;
+        }
+        .invoice-table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid var(--border);
+        }
+        .invoice-table tr:nth-child(even) td {
+            background: #fef2f2;
+        }
+        .total-row td {
+            font-weight: bold;
+            background: #fee2e2;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .term-note {
+            margin-top: 12px;
+            font-size: 11px;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <table class="header-table">
+            <tr>
+                <td class="header-left">
+                    {% if profile.show_logo and company_logo_url %}
+                        <img src="{{ company_logo_url }}" alt="Company Logo" class="company-logo" style="max-width: 160px;">
+                    {% endif %}
+                    <div class="company-name">{{ profile.company_name|default:business_name|default:default_business_name }}</div>
+                    <div class="company-meta">
+                        {% if profile.show_address and profile.company_address %}
+                            <div>{{ profile.company_address|linebreaksbr }}</div>
+                        {% endif %}
+                        {% if profile.company_email %}<div>Email: {{ profile.company_email }}</div>{% endif %}
+                        {% if profile.company_phone %}<div>Phone: {{ profile.company_phone }}</div>{% endif %}
+                    </div>
+                </td>
+                <td class="header-right">
+                    <div class="statement-title">Overdue Invoice Statement</div>
+                    <div class="statement-subtitle">Immediate action required</div>
+                    <div class="meta-line">Period: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</div>
+                    <div class="meta-line">Generated: {% now "M d, Y" %}</div>
+                    {% if reminder_info and reminder_info.current_sequence %}
+                        <div class="reminder-pill">Reminder #{{ reminder_info.current_sequence }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+
+        <div class="alert-box">
+            Payment is overdue for the invoices listed below. Please remit payment to avoid additional fees or service interruptions.
+        </div>
+
+        <div class="section">
+            <div class="section-title">Customer</div>
+            <div><strong>{{ customer.name }}</strong></div>
+            <div>{{ customer.email }}</div>
+        </div>
+
+        <table class="summary-table" role="presentation">
+            <tr>
+                <td>
+                    <div class="summary-label">Total pending balance</div>
+                    <div class="summary-value">{{ total_pending_balance|currency }}</div>
+                </td>
+                <td>
+                    <div class="summary-label">Total overdue balance</div>
+                    <div class="summary-value">{{ total_overdue_balance|currency }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Invoice No</th>
+                    <th>Unit No</th>
+                    <th>Due Date</th>
+                    <th class="text-right">Total Amount</th>
+                    <th class="text-right">Total Paid</th>
+                    <th class="text-right">Balance Due</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr>
+                    <td>{{ invoice.date|date:"M d, Y" }}</td>
+                    <td>{{ invoice.invoice_number }}</td>
+                    <td>{{ invoice.unit_no|default:"-" }}</td>
+                    <td>{{ invoice.due_date|date:"M d, Y" }}</td>
+                    <td class="text-right">{{ invoice.total_amount|currency }}</td>
+                    <td class="text-right">{{ invoice.total_paid|currency }}</td>
+                    <td class="text-right">{{ invoice.balance_due|currency }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td colspan="6">Total overdue</td>
+                    <td class="text-right">{{ total_overdue_balance|currency }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="term-note">
+            Note: Payments are due within the agreed terms. Late payments may incur additional charges.
+        </div>
+    </div>
+</body>
+</html>

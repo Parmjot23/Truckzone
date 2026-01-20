@@ -1,0 +1,116 @@
+{% extends 'customer_portal_base.html' %}
+{% load humanize %}
+{% block title %}Inventory Transactions{% endblock %}
+{% block content %}
+<style>
+  .inv-card { border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; box-shadow: 0 12px 30px rgba(15,23,42,0.06); padding: 1rem; }
+  .inv-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .inv-search { flex: 1; min-width: 260px; display: flex; align-items: center; gap: 0.5rem; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.45rem 0.65rem; background: #f8fafc; }
+  .inv-search input { border: none; background: transparent; width: 100%; outline: none; }
+  .inv-table-wrapper { overflow-x: auto; }
+  .inv-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .inv-table th { text-align: left; padding: 0.75rem; color: #64748b; background: #f1f5f9; font-weight: 700; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+  .inv-table td { padding: 0.75rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  .inv-table tr:nth-child(even) td { background: #f8fafc; }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: #0f172a; }
+  .empty-state .icon { font-size: 3rem; color: #2563eb; margin-bottom: 0.5rem; }
+</style>
+<div class="page-shell">
+  {% include 'inventory/partials/_inventory_nav.html' %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-0">Inventory Transactions</h2>
+      <p class="text-muted mb-0">View stock movements across products.</p>
+    </div>
+  </div>
+  <div class="inv-card">
+    <div class="inv-toolbar">
+      <form class="inv-search" method="get" action="{% url 'accounts:inventory_transactions' %}" data-live-search-form>
+        <i class="fa fa-search text-muted"></i>
+        <input type="text" name="q" value="{{ query }}" placeholder="Search products, SKU, remarks, supplier, category">
+      </form>
+    </div>
+    <div class="inv-table-wrapper">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Product</th>
+            <th>Type</th>
+            <th class="text-end">Quantity</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if transactions_page %}
+          {% for tx in transactions_page %}
+          <tr>
+            <td>{{ tx.transaction_date|date:"M d, Y" }}</td>
+            <td>{{ tx.product.name }}</td>
+            <td>{{ tx.get_transaction_type_display|default:tx.transaction_type }}</td>
+            <td class="text-end">{{ tx.quantity|intcomma }}</td>
+            <td>{{ tx.remarks|default:"-" }}</td>
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <div class="icon"><i class="fa-regular fa-clipboard"></i></div>
+                <h5 class="fw-semibold mb-1">No transactions found.</h5>
+                <p class="text-muted mb-0">Add inventory activity to see it here.</p>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+    {% if transactions_page.paginator.count %}
+    <nav class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3" aria-label="Transactions pagination">
+      <div class="text-muted small">
+        {{ transactions_page.start_index }}-{{ transactions_page.end_index }} of {{ transactions_page.paginator.count }}
+      </div>
+      <ul class="pagination mb-0">
+        {% with qs=querystring %}
+        {% if transactions_page.has_previous %}
+          <li class="page-item"><a class="page-link" href="?{% if qs %}{{ qs }}&{% endif %}page=1">First</a></li>
+          <li class="page-item"><a class="page-link" href="?{% if qs %}{{ qs }}&{% endif %}page={{ transactions_page.previous_page_number }}">Previous</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">First</span></li>
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+
+        {% if transactions_page.has_next %}
+          <li class="page-item"><a class="page-link" href="?{% if qs %}{{ qs }}&{% endif %}page={{ transactions_page.next_page_number }}">Next</a></li>
+          <li class="page-item"><a class="page-link" href="?{% if qs %}{{ qs }}&{% endif %}page={{ transactions_page.paginator.num_pages }}">Last</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+          <li class="page-item disabled"><span class="page-link">Last</span></li>
+        {% endif %}
+        {% endwith %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-live-search-form]').forEach(function (form) {
+      var input = form.querySelector('input[name=\"q\"]');
+      if (!input) return;
+      var timer;
+      input.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+          if (form.requestSubmit) {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
+        }, 300);
+      });
+    });
+  });
+</script>
+{% endblock %}

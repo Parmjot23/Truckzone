@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Request staff access{% endblock %}
+
+{% block content %}
+<header class="hero-section hero-compact">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto text-center">
+                <div class="hero-content">
+                    <div class="hero-badge"><i class="fas fa-user-shield"></i><span>Staff access</span></div>
+                    <h1>Request approval</h1>
+                    <p class="hero-description">Submit your details to join the {{ business_name }} management team.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card service-detail-card p-4">
+                {% if signup_disabled %}
+                    <h3 class="text-center mb-3">Signup temporarily unavailable</h3>
+                    <p class="text-muted text-center mb-0">We are unable to accept new staff signups at this time. Please contact the superuser for assistance.</p>
+                {% else %}
+                    <h3 class="text-center mb-3">Staff signup</h3>
+                    <p class="text-muted text-center">All new staff accounts require approval by the superuser before they can access the dashboard.</p>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Submit request</button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

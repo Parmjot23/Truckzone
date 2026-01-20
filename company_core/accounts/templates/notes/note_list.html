@@ -1,0 +1,38 @@
+<ul class="list-group">
+    {% for note in notes %}
+    <li class="list-group-item">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                {% if note.pinned %}<i class="fas fa-thumbtack text-warning"></i>{% endif %}
+                <strong>{{ note.title }}</strong>
+                <p class="mb-1">{{ note.content|linebreaksbr }}</p>
+                <small class="text-muted">Created on: {{ note.created_at|date:"F j, Y, g:i a" }}</small>
+            </div>
+            <div>
+                <!-- Edit Icon -->
+                <a href="{% url 'accounts:notes_edit' note.id %}" title="Edit" class="text-secondary me-2"> 
+                    <i class="fas fa-edit"></i> <!-- Edit Icon -->
+                </a>
+
+                <!-- Delete Icon -->
+                <a href="{% url 'accounts:notes_delete' note.id %}" title="Delete" class="text-danger me-2">
+                    <i class="fas fa-trash"></i> <!-- Delete Icon -->
+                </a>
+
+                <!-- Pin/Unpin Icon -->
+                <a href="{% url 'accounts:notes_pin' note.id %}" title="{% if note.pinned %}Unpin{% else %}Pin{% endif %}" 
+                   class="text-warning">
+                    {% if note.pinned %}
+                    <i class="fas fa-thumbtack" style="transform: rotate(180deg);"></i> <!-- Pinned Icon -->
+                    {% else %}
+                    <i class="fas fa-thumbtack"></i> <!-- Unpinned Icon -->
+                    {% endif %}
+                </a>
+            </div>
+        </div>
+    </li>
+    {% endfor %}
+    {% if notes|length == 0 %}
+    <li class="list-group-item">No notes found.</li>
+    {% endif %}
+</ul>

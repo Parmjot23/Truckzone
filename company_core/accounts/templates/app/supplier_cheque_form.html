@@ -1,0 +1,346 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create Cheque{% endblock %}
+
+{% block content %}
+<style>
+  .cheque-wrap { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 12px 30px rgba(15,23,42,0.06); padding: 1.25rem; margin-bottom: 1rem; }
+  .panel-title { font-weight: 800; margin-bottom: 0.35rem; }
+  .panel-sub { color: #6b7280; margin-bottom: 1rem; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }
+  .expense-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .expense-table th { text-align: left; padding: 0.6rem; color: #64748b; background: #f1f5f9; font-weight: 700; }
+  .expense-table td { padding: 0.6rem; border-bottom: 1px solid #f1f5f9; }
+  .total-pill { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.75rem; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-weight: 700; }
+  .auto-apply-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 0.75rem; }
+  .auto-apply-row .form-text { margin-top: 0.25rem; }
+</style>
+
+<div class="cheque-wrap">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div>
+      <h2 class="mb-0">Create Cheque</h2>
+      <div class="text-muted">Select a supplier and pay multiple expenses with one cheque.</div>
+    </div>
+    <a href="{% url 'accounts:supplier_cheque_list' %}" class="btn btn-outline-secondary">Back to Cheques</a>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="panel">
+      <div class="panel-title">Cheque Details</div>
+      <div class="panel-sub">Add the cheque number, bank account, and supplier.</div>
+      <div class="grid-2">
+        {{ form.date|as_crispy_field }}
+        {{ form.cheque_number|as_crispy_field }}
+        <div>
+          <label for="bank-account-select" class="form-label">Bank Account</label>
+          <div class="input-group">
+            <select class="form-select" id="bank-account-select" name="bank_account">
+              {% with selected_bank=form.bank_account.value %}
+                {% for value,label in form.bank_account.field.choices %}
+                  <option value="{{ value }}"{% if value == selected_bank %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              {% endwith %}
+            </select>
+            <button class="btn btn-outline-secondary" type="button" id="add-bank-account-btn">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          {% if form.bank_account.errors %}
+            <div class="text-danger small mt-1">{{ form.bank_account.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        {{ form.supplier|as_crispy_field }}
+        {{ form.memo|as_crispy_field }}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <div class="panel-title">Outstanding Expenses</div>
+          <div class="panel-sub">Pick the receipts to include in this cheque.</div>
+        </div>
+        <div class="total-pill">Total: <span id="cheque-total">$0.00</span></div>
+      </div>
+      <div class="auto-apply-row">
+        <div>
+          <label for="cheque-total-amount" class="form-label fw-semibold">Auto-apply amount</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            id="cheque-total-amount"
+            name="total_amount"
+            placeholder="Enter amount to apply"
+          >
+          <div class="form-text text-muted">Leave receipts unchecked to apply to oldest unpaid receipts.</div>
+        </div>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="auto-apply-btn">
+          Apply to oldest receipts
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table class="expense-table" id="expense-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Receipt</th>
+              <th>Date</th>
+              <th class="text-end">Remaining</th>
+              <th class="text-end">Pay Amount</th>
+            </tr>
+          </thead>
+          <tbody id="expense-table-body">
+            <tr>
+              <td colspan="5" class="text-center text-muted">Select a supplier to load outstanding expenses.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+      <button type="submit" class="btn btn-primary">Create Cheque</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal fade" id="bankAccountModal" tabindex="-1" aria-labelledby="bankAccountModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="bank-account-form">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="bankAccountModalLabel"><i class="fas fa-university me-2"></i>Add Bank Account</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger d-none" id="bank-account-error" role="alert"></div>
+          <div class="mb-3">
+            <label for="bank-account-name" class="form-label">Account Name</label>
+            <input type="text" class="form-control" id="bank-account-name" name="name" placeholder="e.g. Operating account" required>
+          </div>
+          <div class="mb-0">
+            <label for="bank-account-number" class="form-label">Account Number (optional)</label>
+            <input type="text" class="form-control" id="bank-account-number" name="account_number" placeholder="Optional">
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  const supplierField = document.getElementById('id_supplier');
+  const expenseBody = document.getElementById('expense-table-body');
+  const totalLabel = document.getElementById('cheque-total');
+  const totalAmountInput = document.getElementById('cheque-total-amount');
+  const autoApplyBtn = document.getElementById('auto-apply-btn');
+  const expensesUrl = '{{ expenses_url }}';
+  const bankAccountsUrl = '{% url "accounts:bank_account_add" %}';
+  const bankAccountSelect = document.getElementById('bank-account-select');
+  const addBankAccountBtn = document.getElementById('add-bank-account-btn');
+  const bankAccountModalEl = document.getElementById('bankAccountModal');
+  const bankAccountForm = document.getElementById('bank-account-form');
+  const bankAccountError = document.getElementById('bank-account-error');
+  const bankAccountName = document.getElementById('bank-account-name');
+  const bankAccountNumber = document.getElementById('bank-account-number');
+
+  function formatCurrency(value) {
+    return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(value || 0);
+  }
+
+  function updateTotal() {
+    let total = 0;
+    document.querySelectorAll('.expense-amount-input').forEach(input => {
+      const row = input.closest('tr');
+      const check = row ? row.querySelector('.expense-check') : null;
+      if (!input.disabled && check && check.checked) {
+        total += parseFloat(input.value || 0);
+      }
+    });
+    totalLabel.textContent = formatCurrency(total);
+  }
+
+  function bindRowEvents() {
+    document.querySelectorAll('.expense-check').forEach(check => {
+      check.addEventListener('change', () => {
+        const amountInput = check.closest('tr').querySelector('.expense-amount-input');
+        if (amountInput) {
+          amountInput.disabled = !check.checked;
+          updateTotal();
+        }
+      });
+    });
+
+    document.querySelectorAll('.expense-amount-input').forEach(input => {
+      input.addEventListener('input', updateTotal);
+    });
+  }
+
+  function applyAutoAmount() {
+    if (!expenseBody || !totalAmountInput) {
+      return;
+    }
+    const targetAmount = parseFloat(totalAmountInput.value || 0);
+    if (!targetAmount || targetAmount <= 0) {
+      updateTotal();
+      return;
+    }
+
+    const rows = Array.from(expenseBody.querySelectorAll('tr[data-expense-row]'));
+    if (!rows.length) {
+      return;
+    }
+
+    rows.sort((a, b) => {
+      const dateA = new Date(a.dataset.date || 0);
+      const dateB = new Date(b.dataset.date || 0);
+      return dateA - dateB;
+    });
+
+    let remaining = targetAmount;
+    rows.forEach(row => {
+      const check = row.querySelector('.expense-check');
+      const amountInput = row.querySelector('.expense-amount-input');
+      const maxRemaining = parseFloat(row.dataset.remaining || 0);
+      if (!check || !amountInput) {
+        return;
+      }
+
+      if (remaining > 0 && maxRemaining > 0) {
+        const allocation = Math.min(remaining, maxRemaining);
+        check.checked = true;
+        amountInput.disabled = false;
+        amountInput.value = allocation.toFixed(2);
+        remaining -= allocation;
+      } else {
+        check.checked = false;
+        amountInput.disabled = true;
+        amountInput.value = maxRemaining.toFixed(2);
+      }
+    });
+
+    updateTotal();
+  }
+
+  function loadExpenses(supplierId) {
+    if (!supplierId) {
+      expenseBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Select a supplier to load outstanding expenses.</td></tr>';
+      updateTotal();
+      return;
+    }
+    fetch(`${expensesUrl}?supplier_id=${supplierId}`)
+      .then(response => response.json())
+      .then(data => {
+        const expenses = data.expenses || [];
+        if (!expenses.length) {
+          expenseBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No outstanding expenses for this supplier.</td></tr>';
+          updateTotal();
+          return;
+        }
+        expenseBody.innerHTML = '';
+        expenses.forEach(expense => {
+          const row = document.createElement('tr');
+          row.dataset.date = expense.date || '';
+          row.dataset.remaining = expense.remaining || 0;
+          row.dataset.expenseRow = 'true';
+          row.innerHTML = `
+            <td><input type="checkbox" class="expense-check" name="selected_expenses" value="${expense.id}"></td>
+            <td>${expense.receipt_no}</td>
+            <td>${expense.date}</td>
+            <td class="text-end">${formatCurrency(expense.remaining)}</td>
+            <td class="text-end"><input type="number" class="form-control expense-amount-input" name="amount_${expense.id}" min="0" step="0.01" value="${expense.remaining}" disabled></td>
+          `;
+          expenseBody.appendChild(row);
+        });
+        bindRowEvents();
+        updateTotal();
+      })
+      .catch(() => {
+        expenseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Unable to load expenses.</td></tr>';
+        updateTotal();
+      });
+  }
+
+  if (supplierField) {
+    supplierField.addEventListener('change', event => loadExpenses(event.target.value));
+  }
+  if (autoApplyBtn) {
+    autoApplyBtn.addEventListener('click', applyAutoAmount);
+  }
+  if (addBankAccountBtn && bankAccountModalEl) {
+    addBankAccountBtn.addEventListener('click', () => {
+      if (bankAccountError) {
+        bankAccountError.classList.add('d-none');
+        bankAccountError.textContent = '';
+      }
+      if (bankAccountName) bankAccountName.value = '';
+      if (bankAccountNumber) bankAccountNumber.value = '';
+      const modal = new bootstrap.Modal(bankAccountModalEl);
+      modal.show();
+    });
+  }
+  if (bankAccountForm) {
+    bankAccountForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const token = bankAccountForm.querySelector('input[name="csrfmiddlewaretoken"]').value;
+      const payload = new URLSearchParams({
+        name: bankAccountName ? bankAccountName.value.trim() : '',
+        account_number: bankAccountNumber ? bankAccountNumber.value.trim() : '',
+      });
+
+      fetch(bankAccountsUrl, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': token },
+        body: payload,
+      })
+        .then(response => response.json().then(data => ({ ok: response.ok, data })))
+        .then(({ ok, data }) => {
+          if (!ok || data.status !== 'success') {
+            const message = data.message || 'Unable to add bank account.';
+            if (bankAccountError) {
+              bankAccountError.textContent = message;
+              bankAccountError.classList.remove('d-none');
+            }
+            return;
+          }
+          if (bankAccountSelect) {
+            const exists = Array.from(bankAccountSelect.options).some(option => option.value === data.value);
+            if (!exists) {
+              const option = document.createElement('option');
+              option.value = data.value;
+              option.textContent = data.label;
+              bankAccountSelect.appendChild(option);
+            }
+            bankAccountSelect.value = data.value;
+          }
+          const modal = bootstrap.Modal.getInstance(bankAccountModalEl);
+          if (modal) modal.hide();
+        })
+        .catch(() => {
+          if (bankAccountError) {
+            bankAccountError.textContent = 'Unable to add bank account.';
+            bankAccountError.classList.remove('d-none');
+          }
+        });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (supplierField && supplierField.value) {
+      loadExpenses(supplierField.value);
+    }
+  });
+</script>
+{% endblock %}

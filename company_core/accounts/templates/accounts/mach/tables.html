@@ -1,0 +1,161 @@
+{% extends 'accounts/mach/mach_portal_base.html' %}
+{% block title %}Accounting{% endblock %}
+{% block content %}
+<style>
+    .account-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1.25rem;
+    }
+    .account-card {
+        border-radius: 16px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 25px 55px rgba(15, 23, 42, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+    .account-card .label {
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+    .account-card .value {
+        font-size: 1.7rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    .account-card .muted {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+    .account-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+        margin-top: 1.5rem;
+    }
+    .account-table thead th {
+        text-align: left;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #475467;
+        padding: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f8fafc;
+    }
+    .account-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .account-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    .pill-chip {
+        border-radius: 999px;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        background: #eef2ff;
+        color: #1d4ed8;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .account-toolbar .btn {
+        font-weight: 700;
+    }
+</style>
+
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Accounting</h2>
+            <div class="text-muted">Review profits, exports, and download statements.</div>
+        </div>
+        <div class="page-toolbar account-toolbar">
+            <a href="{% url 'accounts:download_report' %}?format=pdf" class="btn btn-outline-primary btn-sm">
+                <i class="fa-solid fa-file-pdf me-1"></i>PDF Report
+            </a>
+            <a href="{% url 'accounts:download_report' %}?format=csv" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-file-csv me-1"></i>CSV Export
+            </a>
+        </div>
+    </div>
+
+    <div class="account-summary-grid">
+        <div class="account-card">
+            <div class="label">Revenue</div>
+            <div class="value">$124,840</div>
+            <div class="muted">Last 30 days</div>
+        </div>
+        <div class="account-card">
+            <div class="label">Expenses</div>
+            <div class="value">$59,230</div>
+            <div class="muted">Capture vendor, payroll, and inventory costs</div>
+        </div>
+        <div class="account-card">
+            <div class="label">Net</div>
+            <div class="value">$65,610</div>
+            <div class="muted">Auto-calculated profit</div>
+        </div>
+        <div class="account-card">
+            <div class="label">Collections</div>
+            <div class="value">$34,800</div>
+            <div class="muted">Pending vs. received</div>
+        </div>
+    </div>
+
+    <div class="page-card mt-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <div>
+                <h5 class="mb-0">Recent entries</h5>
+                <p class="text-muted small mb-0">Quick glances of recent transactions.</p>
+            </div>
+            <span class="pill-chip">
+                <i class="fa-solid fa-clock"></i> Auto-updated
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="account-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th class="text-end">Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Nov 21, 2025</td>
+                        <td>Service revenue — App build</td>
+                        <td>Invoice</td>
+                        <td class="text-end">$4,400</td>
+                        <td><span class="pill-chip" style="background:#dcfce7;color:#166534;">Settled</span></td>
+                    </tr>
+                    <tr>
+                        <td>Nov 19, 2025</td>
+                        <td>Parts purchase — supplier A</td>
+                        <td>Bill</td>
+                        <td class="text-end text-danger">-$1,280</td>
+                        <td><span class="pill-chip" style="background:#fff1f2;color:#b91c1c;">Unpaid</span></td>
+                    </tr>
+                    <tr>
+                        <td>Nov 17, 2025</td>
+                        <td>Payroll</td>
+                        <td>Expense</td>
+                        <td class="text-end text-danger">-$3,500</td>
+                        <td><span class="pill-chip" style="background:#e0f2fe;color:#0c4a6e;">Recorded</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% load custom_filters %}
+{% for invoice in pending_invoices %}
+<tr
+    data-total-paid="{{ invoice.total_paid }}"
+    data-total-amount="{{ invoice.total_amount }}">
+    <td data-label="Date Created">{{ invoice.date|date:"M j, Y" }}</td>
+    <td data-label="Invoice No">
+        <a href="{% url 'accounts:groupedinvoice_detail' invoice.pk %}" class="btn btn-link">
+            {{ invoice.invoice_number }}
+        </a>
+    </td>
+    <td data-label="Bill To">{{ invoice.bill_to }}</td>
+    <td data-label="Total Amount">{{ invoice.total_amount|currency }}</td>
+    <td data-label="Total Paid">{{ invoice.total_paid|currency }}</td>
+    <td data-label="Balance Due">{{ invoice.balance_due|currency }}</td>
+    <td data-label="Payment Status" class="payment-status">Unknown</td>
+    <td data-label="Actions">
+        {% if invoice.balance_due > 0 %}
+        <button type="button" class="btn btn-primary btn-sm mb-1" data-toggle="modal" data-target="#paymentModal" data-invoice-id="{{ invoice.pk }}" data-balance-due="{{ invoice.balance_due }}">
+            Add Payment
+        </button>
+        {% endif %}
+        <button
+            type="button"
+            class="btn btn-info btn-sm mb-1"
+            data-toggle="modal"
+            data-target="#paymentHistoryModal"
+            data-invoice-id="{{ invoice.pk }}"
+            data-invoice-number="{{ invoice.invoice_number }}">
+            View Payment History
+        </button>
+    </td>
+</tr>
+{% endfor %}

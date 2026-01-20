@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Cookies Policy{% endblock %}
+
+{% block content %}
+<header class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto text-center">
+                <div class="hero-content">
+                    <div class="hero-badge"><i class="fas fa-cookie-bite"></i><span>Simple cookie practices</span></div>
+                    <h1>Cookies Policy</h1>
+                    <p class="hero-description">What cookies we use and how you can control them.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="container mt-5">
+    <p><strong>Last updated:</strong> August 5, 2025</p>
+
+    <h2 class="section-title">1. What Are Cookies?</h2>
+    <p>
+        Cookies are small text files placed on your device by a web server. They are widely used to make websites work more efficiently, as well as to provide information to the owners of the site.
+    </p>
+
+    <h2 class="section-title">2. How We Use Cookies</h2>
+    <p>We use cookies for the following purposes:</p>
+    <ul>
+        <li><strong>Essential Cookies:</strong> Necessary for core functionalities like user authentication, plan selection, signup, and payment processing.</li>
+    </ul>
+
+    <h2 class="section-title">3. Third-Party Cookies</h2>
+    <p>
+        During payment processing, payment providers may place cookies on your device. These cookies are governed by their own privacy policies. We do not have access to or control over these cookies.
+    </p>
+
+    <h2 class="section-title">4. Managing Cookies</h2>
+    <p>
+        You can set your browser to refuse or delete cookies. However, please note that disabling cookies may affect the functionality of our Services, making it difficult or impossible to use certain features.
+    </p>
+
+    <h2 class="section-title">5. Changes to This Cookies Policy</h2>
+    <p>
+        We may update this Cookies Policy periodically. Changes will be effective upon posting to the Website. We encourage you to review this policy regularly to stay informed about our use of cookies.
+    </p>
+
+    <h2 class="section-title">6. Contact Information</h2>
+    <p>
+        If you have any questions regarding this Cookies Policy, please contact us:
+    </p>
+    <ul>
+        <li><strong>Email:</strong>
+            <a href="mailto:{{ business_contact_email|default:default_business_email }}">{{ business_contact_email|default:default_business_email }}</a>
+        </li>
+        {% if business_contact_phone %}<li><strong>Phone:</strong> {{ business_contact_phone }}</li>{% endif %}
+        {% if business_contact_address %}<li><strong>Address:</strong> {{ business_contact_address }}</li>{% endif %}
+    </ul>
+</div>
+{% endblock %}

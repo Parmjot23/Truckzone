@@ -1,0 +1,50 @@
+name: transtex
+services:
+  - name: web
+    type: web
+    env:
+      - key: PORT
+        value: "8000"
+      - key: DJANGO_SETTINGS_MODULE
+        value: blank_template.settings
+      - key: DEBUG
+        value: "False"
+      # Set DATABASE_URL in Koyeb dashboard to your managed Postgres URL
+      # Example format:
+      # - key: DATABASE_URL
+      #   value: postgres://USER:PASSWORD@HOST:PORT/DBNAME
+      # Optional: enforce SSL for Postgres
+      - key: DB_SSL_REQUIRE
+        value: "True"
+    ports:
+      - port: 8000
+        http_options:
+          healthcheck:
+            path: /
+    build:
+      type: dockerless
+      run:
+        - pip install --upgrade pip setuptools wheel
+        - |
+          if [ -f requirements_koyeb.txt ]; then
+            pip install --prefer-binary -r requirements_koyeb.txt;
+          else
+            # Fallback: install a safe subset by filtering heavy/problematic packages
+            python - << 'PY'
+import re
+keep = re.compile(r'^(Django|django-|djangorestframework|crispy-bootstrap4|whitenoise|gunicorn|psycopg2-binary|dj-database-url|python-dotenv|Pillow|python-dateutil|pytz|qrcode|xlwt|stripe|openai|weasyprint|xhtml2pdf|cloudinary|django-cloudinary-storage)=', re.I)
+with open('requirements.txt', 'r', encoding='utf-8') as src, open('/tmp/req_safe.txt', 'w', encoding='utf-8') as dst:
+    for line in src:
+        l = line.strip()
+        if not l or l.startswith('#'):
+            continue
+        if keep.match(l):
+            dst.write(l + '\n')
+PY
+            pip install --prefer-binary -r /tmp/req_safe.txt;
+          fi
+        - python manage.py collectstatic --noinput
+        - python manage.py migrate --noinput
+    run:
+      cmd: sh -lc "python manage.py migrate --noinput && gunicorn blank_template.wsgi --bind 0.0.0.0:8000 --workers 3"
+

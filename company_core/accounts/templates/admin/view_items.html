@@ -1,0 +1,32 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}View Mech Expense Items{% endblock %}
+
+{% block content %}
+  <h1>{{ mech_expense.vendor }} - {{ mech_expense.date }}</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Part No</th>
+        <th>Description</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Amount</th>
+        <th>Tax Paid</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.part_no }}</td>
+        <td>{{ item.description }}</td>
+        <td>{{ item.qty }}</td>
+        <td>{{ item.price }}</td>
+        <td>{{ item.amount }}</td>
+        <td>{{ item.tax_paid }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

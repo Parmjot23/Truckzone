@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Timesheets</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8fafc; }
+        .card { box-shadow: 0 12px 30px -20px rgba(15, 23, 42, 0.35); }
+        .status-badge { font-size: 0.85rem; padding: 0.35rem 0.6rem; border-radius: 999px; }
+    </style>
+</head>
+<body>
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+        <div>
+            <h2 class="mb-0">My Timesheets</h2>
+            <div class="text-muted small">Log start and finish times each day for payroll.</div>
+        </div>
+        <div class="d-flex align-items-center flex-wrap">
+            <a href="{% url 'accounts:mechanic_portal_dashboard' %}" class="btn btn-outline-secondary mr-2 mb-2 mb-sm-0">Dashboard</a>
+            <a href="{% url 'accounts:mechanic_paystub_list' %}" class="btn btn-outline-secondary mr-2 mb-2 mb-sm-0">Paystubs</a>
+            <form action="{% url 'accounts:logout' %}" method="post" class="mb-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger btn-sm">Logout</button>
+            </form>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            {% if 'error' in message.tags %}
+                <div class="alert alert-danger">{{ message }}</div>
+            {% elif 'success' in message.tags %}
+                <div class="alert alert-success">{{ message }}</div>
+            {% else %}
+                <div class="alert alert-info">{{ message }}</div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% if not employee %}
+        <div class="alert alert-warning">
+            Your payroll profile is not linked yet. Ask your admin to connect your mechanic profile.
+        </div>
+    {% else %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h5 class="mb-1">Current Pay Period</h5>
+                        <div class="text-muted small">{{ current_period_start }} - {{ current_period_end }}</div>
+                        {% if current_timesheet %}
+                            <div class="text-muted small">Status: {{ current_timesheet.get_status_display }}</div>
+                            <div class="text-muted small">Total hours: {{ current_total_hours|default:"0" }}</div>
+                        {% else %}
+                            <div class="text-muted small">No entries yet.</div>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'accounts:mechanic_timesheet_current' %}" class="btn btn-primary btn-sm">
+                        {% if current_timesheet %}Update{% else %}Start{% endif %} current period
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th scope="col">Pay period</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Total hours</th>
+                                <th scope="col">Updated</th>
+                                <th scope="col" class="text-right pr-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sheet in timesheets %}
+                                <tr>
+                                    <td>{{ sheet.period_start }} - {{ sheet.period_end }}</td>
+                                    <td>
+                                        {% if sheet.status == 'approved' %}
+                                            <span class="status-badge bg-success text-white">{{ sheet.get_status_display }}</span>
+                                        {% elif sheet.status == 'submitted' %}
+                                            <span class="status-badge bg-warning text-dark">{{ sheet.get_status_display }}</span>
+                                        {% else %}
+                                            <span class="status-badge bg-secondary text-white">{{ sheet.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ sheet.total_hours|default:"0" }}</td>
+                                    <td>{{ sheet.updated_at|date:"M j, Y g:i A" }}</td>
+                                    <td class="text-right pr-4">
+                                        <a href="{% url 'accounts:mechanic_timesheet_detail' sheet.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">No timesheets yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+</body>
+</html>

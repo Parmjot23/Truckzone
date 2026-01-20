@@ -1,0 +1,24 @@
+{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">{{ mechanic.name }}</h4>
+            <div>
+                <a href="{% url 'accounts:mechanic_update' mechanic.id %}" class="btn btn-sm btn-warning">Edit</a>
+                <a href="{% url 'accounts:mechanic_delete' mechanic.id %}" class="btn btn-sm btn-danger">Delete</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <p><strong>Phone:</strong> {{ mechanic.phone|default:"-" }}</p>
+            <p><strong>Email:</strong> {{ mechanic.email|default:"-" }}</p>
+            {% if not mechanic.portal_user %}
+                <a href="{% url 'accounts:mechanic_register' mechanic.id %}" class="btn btn-info">Register Login</a>
+            {% endif %}
+            <a href="{% url 'accounts:password_change' %}" class="btn btn-secondary ml-2">Change Password</a>
+            <a href="{% url 'accounts:mechanic_list' %}" class="btn btn-link ml-2">Back to List</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

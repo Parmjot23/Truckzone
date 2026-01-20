@@ -1,0 +1,1991 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+{% load humanize %}
+{% load custom_filters %}
+
+{% block title %}Towing Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  .towing-shell { padding: 0.85rem 0.85rem 1.5rem; }
+  .towing-hero { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom: 0.9rem; }
+  .towing-hero h2 { margin: 0; }
+  .towing-sub { color:#64748b; margin: 0.15rem 0 0; }
+
+  /* Layout: keep invoice + calculator matched height */
+  .towing-grid { display:grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr); gap: 0.9rem; align-items:stretch; }
+  @media (max-width: 1100px) { .towing-grid { grid-template-columns: 1fr; } }
+  .towing-grid .panel { height: 100%; min-height: 640px; display:flex; flex-direction:column; }
+
+  .panel { border-radius: 16px; border: 1px solid rgba(15,23,42,0.10); background: #fff; box-shadow: 0 10px 28px rgba(15,23,42,0.08); padding: 0.95rem; }
+  .panel h5, .panel h6 { margin: 0; }
+  .panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; margin-bottom: 0.75rem; }
+  .panel-meta { color:#64748b; font-size: 0.9rem; margin-top: 0.15rem; }
+  .quick-invoice-form { display:flex; flex-direction:column; gap:0.9rem; }
+  .quick-invoice-section { border:1px solid rgba(15,23,42,0.12); border-radius:14px; padding:0.85rem; background:#f8fafc; }
+  .quick-invoice-section-header { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; margin-bottom:0.6rem; }
+  .quick-invoice-section-title { font-weight:800; font-size:0.95rem; letter-spacing:-0.01em; }
+  .quick-invoice-section-sub { color:#64748b; font-size:0.85rem; margin-top:0.15rem; }
+  .quick-invoice-actions { border-top:1px dashed rgba(15,23,42,0.14); padding-top:0.85rem; display:flex; justify-content:flex-end; gap:0.5rem; }
+  .quick-invoice-help { color:#64748b; font-size:0.85rem; }
+  .quick-invoice-lines { display:flex; flex-direction:column; gap:0.75rem; }
+
+  .pill-tabs { display:inline-flex; gap:0.4rem; padding:0.25rem; border-radius:999px; background: rgba(248,250,252,0.9); border:1px solid rgba(15,23,42,0.08); }
+  .pill-btn { border:none; background:transparent; padding:0.35rem 0.85rem; border-radius:999px; font-weight:800; font-size:0.82rem; color:#334155; }
+  .pill-btn.active { background:#0f172a; color:#fff; box-shadow: 0 12px 20px rgba(15,23,42,0.18); }
+
+  /* Invoice lines */
+  .invoice-lines { display:flex; flex-direction:column; gap:0.75rem; }
+  .invoice-line-row { border:1px solid rgba(15,23,42,0.12); border-radius: 14px; padding: 0.85rem; background: #fff; }
+
+  /* Snapshot cards (same vibe as mechanic dashboard) */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.65rem; margin: 0.75rem 0 1rem; }
+  .stat-card { border-radius: 14px; background: #fff; border: 1px solid #e6e9f2; padding: 0.8rem 0.9rem; display: flex; gap: 0.65rem; box-shadow: 0 8px 22px rgba(15,23,42,0.07); transition: transform 0.15s ease, box-shadow 0.15s ease; text-decoration: none; color: inherit; }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: 0 16px 38px rgba(37,99,235,0.12); }
+  .stat-icon { width: 46px; height: 46px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; color: #1d4ed8; background: #e0e9ff; font-size: 1.2rem; }
+  .stat-card:nth-child(2) .stat-icon { color: #1f2937; background: #f2f4f8; }
+  .stat-card:nth-child(3) .stat-icon { color: #0f766e; background: #d1fae5; }
+  .stat-card:nth-child(4) .stat-icon { color: #312e81; background: #e0e7ff; }
+  .stat-meta small { color: #6b7280; font-weight: 700; letter-spacing: 0.02em; }
+  .stat-value { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; }
+  .stat-trend { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem; }
+  .spark { flex: 1; height: 7px; background: linear-gradient(90deg, #dbeafe, #1d4ed8); border-radius: 999px; position: relative; overflow: hidden; }
+  .spark::after { content: ''; position: absolute; inset: 0; width: calc(min(100%, var(--fill, 40%))); background: linear-gradient(90deg, #60a5fa, #2563eb); border-radius: 999px; box-shadow: 0 6px 16px rgba(37,99,235,0.3); }
+  .pill { display: inline-flex; align-items: center; gap: 0.35rem; background: #f8fafc; color: #0f172a; border-radius: 999px; padding: 0.2rem 0.75rem; font-weight: 700; font-size: 0.82rem; border: 1px solid #e5e7eb; }
+
+  /* Bottom grids */
+  .bottom-grid { display:grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.9rem; align-items: stretch; margin-top: 0.9rem; }
+  @media (max-width: 1100px) { .bottom-grid { grid-template-columns: 1fr; } }
+  .queue-table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+  .queue-table th, .queue-table td { padding: 0.6rem 0.7rem; border-bottom: 1px solid #e5e7eb; vertical-align: middle; background: #fff; }
+  .queue-table th { color: #6b7280; font-weight: 800; font-size: 0.82rem; letter-spacing: 0.01em; }
+  .badge-soft { background: rgba(37, 99, 235, 0.14); color: #1d4ed8; border-radius: 999px; padding: 0.2rem 0.65rem; font-weight: 700; font-size: 0.78rem; }
+  .badge-status-completed { background: #dcfce7; color: #166534; border-radius: 999px; padding: 0.2rem 0.65rem; font-weight: 700; font-size: 0.78rem; }
+
+  /* Calculator */
+  .calc-surface { background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); border: 1px solid rgba(15,23,42,0.10); border-radius: 14px; padding: 0.85rem; }
+  .notes-surface { background: linear-gradient(180deg, #fff8c5 0%, #fff3b0 100%); border: 1px solid #f2d675; border-radius: 14px; padding: 0.85rem; }
+  .notes-grid { display:grid; gap:0.65rem; }
+  .note-card { border-radius: 12px; border: 1px solid rgba(120, 74, 0, 0.18); background: #fffdf0; padding: 0.8rem; box-shadow: 0 10px 22px rgba(120, 74, 0, 0.08); }
+
+  .towing-calc-grid { display: grid; gap: 0.65rem; }
+  .towing-row { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
+  .towing-row.inline-3 { grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; }
+  @media (max-width: 520px) { .towing-row.inline-3 { grid-template-columns: 1fr; } }
+  #towing-map { width: 100%; height: 320px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(15,23,42,0.12); background: rgba(255,255,255,0.6); }
+  .towing-metric { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; padding:0.65rem 0.75rem; border-radius: 14px; background: rgba(255,255,255,0.65); border: 1px solid rgba(15,23,42,0.1); }
+  .towing-metric .label { color: #64748b; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+  .towing-metric .value { font-weight: 900; letter-spacing: -0.01em; color: #0f172a; }
+  .towing-status { font-size: 0.85rem; color: #475569; }
+  .towing-status.error { color: #b91c1c; font-weight: 700; }
+  .towing-status.ok { color: #166534; font-weight: 700; }
+  .pac-container { z-index: 20000 !important; }
+
+  /* Processing overlay (prevents double-submit / accidental cancel) */
+  .processing-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.46);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 25000;
+  }
+  .processing-overlay .processing-card {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 16px;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 20px 55px rgba(15, 23, 42, 0.25);
+    min-width: min(420px, calc(100vw - 2rem));
+  }
+  .processing-overlay .processing-title { font-weight: 900; letter-spacing: -0.01em; }
+  .processing-overlay .processing-sub { color: #64748b; font-weight: 700; font-size: 0.92rem; }
+</style>
+
+<div class="towing-shell">
+  <div class="towing-hero">
+    <div>
+      <div class="text-uppercase small fw-bold text-muted" style="letter-spacing:.12em;">Towing</div>
+      <h2 class="mb-1">Dashboard</h2>
+      <p class="towing-sub">Fast towing estimates → instant invoices.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{% url 'accounts:groupedinvoice_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-receipt me-1"></i>Invoices
+      </a>
+      <a href="{% url 'accounts:add_dailylog' %}" class="ghost-btn text-decoration-none">
+        <i class="fa-regular fa-clock"></i> Invoice draft
+      </a>
+    </div>
+  </div>
+
+  <!-- Business snapshot (same style as mechanic dashboard) -->
+  <div class="summary-grid">
+    <a class="stat-card" href="{% url 'accounts:groupedinvoice_list' %}">
+      <div class="stat-icon"><i class="fa-solid fa-receipt"></i></div>
+      <div class="stat-meta">
+        <small>This week invoices</small>
+        <div class="stat-value">{{ this_week_invoices_count|default:0 }}</div>
+        <div class="stat-trend">
+          <div class="spark" style="--fill: {{ this_week_invoices_count|default:0 }}%;"></div>
+          <span class="panel-meta">New this week</span>
+        </div>
+      </div>
+    </a>
+    <a class="stat-card" href="{% url 'accounts:overdue_invoice_list' %}">
+      <div class="stat-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+      <div class="stat-meta">
+        <small>Overdue balance</small>
+        <div class="stat-value">{{ overdue_balance_last_365_days|currency }}</div>
+        <div class="stat-trend">
+          <div class="spark" style="--fill: 62%;"></div>
+          <span class="chart-meta">Last 365 days</span>
+        </div>
+      </div>
+    </a>
+    <a class="stat-card" href="{% url 'accounts:groupedinvoice_list' %}">
+      <div class="stat-icon"><i class="fa-solid fa-circle-dollar-to-slot"></i></div>
+      <div class="stat-meta">
+        <small>This week earnings</small>
+        <div class="stat-value">{{ this_week_earnings_paid|default:0|currency }}</div>
+        <div class="stat-trend">
+          <div class="spark" style="--fill: 60%;"></div>
+          <span class="panel-meta">Paid invoices</span>
+        </div>
+      </div>
+    </a>
+    <div class="stat-card">
+      <div class="stat-icon"><i class="fa-regular fa-calendar"></i></div>
+      <div class="stat-meta">
+        <small>Today's invoices</small>
+        <div class="d-flex align-items-center gap-2">
+          <div class="stat-value mb-0">{{ today|date:"M d" }}</div>
+          <span class="pill">{{ todays_invoices_count|default:0 }} Invoices</span>
+        </div>
+        <div class="stat-trend">
+          <div class="spark" style="--fill: 60%;"></div>
+          <span class="panel-meta">Created today</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="towing-grid">
+    <!-- Always-open Quick Invoice -->
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h5 class="mb-1">Quick Towing Invoice</h5>
+          <div class="panel-meta">Simple job lines (description, qty, rate). No product/service picker.</div>
+        </div>
+      </div>
+
+      <form method="post" action="{% url 'accounts:quick_invoice_create' %}" id="towing-invoice-form" class="quick-invoice-form">
+        {% csrf_token %}
+        <div class="quick-invoice-section">
+          <div class="quick-invoice-section-header">
+            <div>
+              <div class="quick-invoice-section-title">Customer & vehicle</div>
+              <div class="quick-invoice-section-sub">Select who the invoice is for.</div>
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Customer</label>
+              <div class="input-group">
+                <div class="dropdown flex-grow-1">
+                  <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button"
+                          id="quick-invoice-customer-picker" data-bs-toggle="dropdown" aria-expanded="false">
+                    Select customer
+                  </button>
+                  <div class="dropdown-menu p-2 w-100" aria-labelledby="quick-invoice-customer-picker" style="max-height: 320px; overflow: auto;">
+                    <input type="text" class="form-control form-control-sm mb-2" id="quick-invoice-customer-search" placeholder="Search name or email...">
+                    <div id="quick-invoice-customer-list"></div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-outline-secondary" id="quick-invoice-add-customer" title="Add new customer">
+                  <i class="fa-solid fa-plus"></i>
+                </button>
+              </div>
+              <input type="hidden" name="customer" id="quick-invoice-customer" value="" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Vehicle</label>
+              <div class="input-group">
+                <div class="dropdown flex-grow-1">
+                  <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button"
+                          id="quick-invoice-vehicle-picker" data-bs-toggle="dropdown" aria-expanded="false">
+                    Select vehicle
+                  </button>
+                  <div class="dropdown-menu p-2 w-100" aria-labelledby="quick-invoice-vehicle-picker" style="max-height: 320px; overflow: auto;">
+                    <input type="text" class="form-control form-control-sm mb-2" id="quick-invoice-vehicle-search" placeholder="Search vehicle...">
+                    <div class="small text-muted mb-2" id="quick-invoice-vehicle-hint">Select a customer to see vehicles.</div>
+                    <div id="quick-invoice-vehicle-list"></div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-outline-secondary d-none" id="quick-invoice-add-vehicle" title="Add new vehicle for selected customer">
+                  <i class="fa-solid fa-plus"></i>
+                </button>
+              </div>
+              <input type="hidden" name="vehicle" id="quick-invoice-vehicle" value="">
+              <div class="text-muted small mt-1">Selecting a vehicle will attach VIN / Unit / Plate / Mileage.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-invoice-section">
+          <div class="quick-invoice-section-header">
+            <div>
+              <div class="quick-invoice-section-title">Invoice details</div>
+              <div class="quick-invoice-section-sub">Date, contact, and tax status.</div>
+            </div>
+          </div>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label">Invoice date</label>
+              <input type="date" name="date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Bill-to email</label>
+              <input type="email" name="bill_to_email" class="form-control" id="quick-invoice-email" placeholder="customer@example.com" required>
+            </div>
+            <div class="col-md-3">
+              <div class="form-check mt-4">
+                <input class="form-check-input" type="checkbox" name="tax_exempt" id="towing-tax-exempt">
+                <label class="form-check-label" for="towing-tax-exempt">Tax exempt</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-invoice-section">
+          <div class="quick-invoice-section-header">
+            <div>
+              <div class="quick-invoice-section-title">Job entries</div>
+              <div class="quick-invoice-section-sub">Add line items for the towing job.</div>
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="quick-invoice-add-line">
+              <i class="fa-solid fa-plus me-1"></i>Add line
+            </button>
+          </div>
+          <div id="quick-invoice-lines" class="invoice-lines quick-invoice-lines">
+            <div class="invoice-line-row" data-index="0">
+              <div class="row g-2 align-items-end">
+                <div class="col-12">
+                  <label class="form-label">Job description</label>
+                  <textarea name="job" rows="2" class="form-control quick-invoice-job" placeholder="Towing service details, pickup/dropoff, notes..."></textarea>
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Qty</label>
+                  <input type="number" name="qty" class="form-control quick-invoice-qty" value="1" min="0" step="0.01">
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Rate</label>
+                  <input type="number" name="rate" class="form-control quick-invoice-rate" placeholder="0.00" min="0" step="0.01">
+                </div>
+                <div class="col-12 d-flex justify-content-end">
+                  <button type="button" class="btn btn-outline-danger btn-sm quick-invoice-remove-line" disabled>
+                    <i class="fa-solid fa-trash-can me-1"></i>Remove
+                  </button>
+                </div>
+              </div>
+              <input type="hidden" name="line_source" class="quick-invoice-line-source" value="custom">
+              <input type="hidden" name="product_id" class="quick-invoice-product-id" value="">
+              <input type="hidden" name="service_id" class="quick-invoice-service-id" value="">
+            </div>
+          </div>
+          <input type="hidden" name="post_action" id="quick-invoice-post-action" value="view">
+        </div>
+
+        <div class="quick-invoice-actions">
+          <button type="submit" class="btn btn-outline-secondary" id="quick-invoice-save-continue">
+            <i class="fa-solid fa-floppy-disk me-2"></i>Save & continue
+          </button>
+          <button type="submit" class="btn btn-primary" id="quick-invoice-save-view">
+            <i class="fa-solid fa-arrow-up-right-from-square me-2"></i>Save & view
+          </button>
+        </div>
+        <div class="quick-invoice-help mt-2">Save and view opens the invoice detail page to print, download, or email.</div>
+      </form>
+    </div>
+
+    <!-- Calculator + Notes -->
+    <div class="panel" id="dashboard-right-panel">
+      <div class="panel-head">
+        <div>
+          <h6 class="mb-0">Mileage & Price Calculator</h6>
+          <div class="panel-meta">Route A → B (+stops) with live rate & estimate</div>
+        </div>
+        <div class="pill-tabs" role="tablist" aria-label="Towing tools">
+          <button type="button" class="pill-btn active" id="dashboardTabCalc" aria-controls="towingCalcWrap" aria-selected="true">Miles/KM</button>
+          <button type="button" class="pill-btn" id="dashboardTabNotes" aria-controls="notesWrap" aria-selected="false">Notes</button>
+        </div>
+      </div>
+
+      <div id="towingCalcWrap">
+        <div class="calc-surface">
+          <div class="towing-calc-grid">
+            <div class="towing-row">
+              <label class="form-label mb-0" for="towing-origin">From (A)</label>
+              <input type="text" class="form-control" id="towing-origin" placeholder="Pickup address, city, or place">
+            </div>
+            <div class="towing-row">
+              <label class="form-label mb-0" for="towing-destination">To (B)</label>
+              <input type="text" class="form-control" id="towing-destination" placeholder="Dropoff address, city, or place">
+            </div>
+
+            <div class="towing-row">
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <label class="form-label mb-0">Stops (optional)</label>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="towing-add-stop">
+                  <i class="fa-solid fa-plus me-1"></i>Add stop
+                </button>
+              </div>
+              <div id="towing-stops"></div>
+            </div>
+
+            <div class="towing-row inline-3">
+              <div>
+                <label class="form-label mb-0" for="towing-unit">Unit</label>
+                <select class="form-select" id="towing-unit">
+                  <option value="km" selected>KM</option>
+                  <option value="mi">Miles</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label mb-0" for="towing-rate">Rate (per unit)</label>
+                <input type="number" class="form-control" id="towing-rate" placeholder="0.00" min="0" step="0.01" inputmode="decimal">
+              </div>
+              <div>
+                <label class="form-label mb-0" for="towing-base-fee">Base fee</label>
+                <input type="number" class="form-control" id="towing-base-fee" placeholder="0.00" min="0" step="0.01" inputmode="decimal">
+              </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-primary btn-sm" id="towing-calc-btn">
+                <i class="fa-solid fa-route me-1"></i>Calculate route
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="towing-clear-btn">
+                <i class="fa-regular fa-circle-xmark me-1"></i>Clear
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="towing-copy-btn">
+                <i class="fa-regular fa-copy me-1"></i>Copy summary
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="towing-to-invoice-btn">
+                <i class="fa-solid fa-file-invoice-dollar me-1"></i>Add to invoice
+              </button>
+            </div>
+
+            <div class="towing-row inline-3">
+              <div class="towing-metric">
+                <div class="label">Distance</div>
+                <div class="value" id="towing-distance">—</div>
+              </div>
+              <div class="towing-metric">
+                <div class="label">Duration</div>
+                <div class="value" id="towing-duration">—</div>
+              </div>
+              <div class="towing-metric">
+                <div class="label">Estimated price</div>
+                <div class="value" id="towing-price">—</div>
+              </div>
+            </div>
+
+            {% if not maps_enabled %}
+            <div class="alert alert-warning py-2 px-3 mb-2 small" role="alert">
+              Google Maps is disabled. Set <strong>GOOGLE_MAPS_API_KEY</strong> in your environment (Koyeb/Heroku “Environment Variables”),
+              and enable <strong>Maps JavaScript API</strong> + <strong>Places API</strong> for that key.
+            </div>
+            {% endif %}
+            <div class="towing-status" id="towing-status"></div>
+            <div id="towing-map" aria-label="Route map"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="notesWrap" class="d-none">
+        <div class="notes-surface">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <div>
+              <h6 class="mb-0">Notes</h6>
+              <div class="panel-meta">Quick dispatch reminders.</div>
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="clearNotesBtn">
+              <i class="fa-regular fa-trash-can me-1"></i>Clear all
+            </button>
+          </div>
+          <div class="mb-2">
+            <textarea class="form-control" id="noteQuickInput" rows="2" placeholder="Type a note and press Enter to save…"></textarea>
+            <div class="text-muted small mt-1">Shift+Enter for a new line.</div>
+          </div>
+          <div class="notes-grid" id="notesGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom: Recent invoices + Overdue customers (same features/columns as mechanic dashboard) -->
+  <div class="bottom-grid">
+    <div class="panel h-100">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+          <h6 class="mb-1">Recent invoices</h6>
+          <div class="panel-meta">Newest at the top</div>
+        </div>
+        <a href="{% url 'accounts:groupedinvoice_list' %}" class="text-decoration-none fw-semibold">Open list</a>
+      </div>
+      <div class="table-responsive">
+        <table class="queue-table">
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Bill to</th>
+              <th>Unit</th>
+              <th>Status</th>
+              <th class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% if recent_invoices %}
+            {% for inv in recent_invoices %}
+              <tr>
+                <td>{{ inv.invoice_number|default:inv.id }}</td>
+                <td>{{ inv.bill_to|default:inv.customer.name }}</td>
+                <td>{{ inv.unit_no|default:"—" }}</td>
+                <td>
+                  <span class="{% if inv.display_status == 'Paid' %}badge-status-completed{% else %}badge-soft{% endif %}">
+                    {{ inv.display_status }}
+                  </span>
+                </td>
+                <td class="text-end">{{ inv.total_amount|default:0|currency }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="5" class="text-muted text-center py-3">No invoices yet.</td></tr>
+          {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+      <div class="panel h-100" id="overdue-customers-panel"
+           data-reminder-url-template="{% url 'accounts:trigger_overdue_reminder' 0 %}"
+           data-record-payment-url-template="{% url 'accounts:record_customer_payment' 0 %}"
+           data-followup-url-template="{% url 'accounts:update_overdue_followup' 0 %}"
+           data-invoice-detail-url-template="{% url 'accounts:groupedinvoice_detail' 0 %}">
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <div>
+          <h6 class="mb-0">Overdue Customers</h6>
+          <div class="panel-meta">
+            <strong>{{ overdue_customers_count|default:0 }}</strong> customers •
+            Total overdue: <strong>{{ overdue_customers_total|default:0|currency }}</strong>
+          </div>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+          <input type="text" class="form-control form-control-sm" id="overdue-search" placeholder="Search customer…" style="min-width: 180px;">
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="overdue-expand-btn">
+            <i class="fa-solid fa-up-right-and-down-left-from-center me-1"></i>Expand
+          </button>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="queue-table" id="overdue-table">
+          <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Phone</th>
+                <th>Last statement</th>
+                <th class="text-end">Balance Due</th>
+                <th class="text-end">Payment</th>
+              <th class="text-end">Reminder</th>
+            </tr>
+          </thead>
+            <tbody id="overdue-tbody">
+              <tr><td colspan="6" class="text-muted text-center py-3">Loading…</td></tr>
+            </tbody>
+        </table>
+      </div>
+      <div class="d-flex justify-content-between align-items-center mt-2 gap-2 flex-wrap">
+        <div class="small text-muted" id="overdue-page-info"></div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary btn-sm" id="overdue-first">First</button>
+          <button class="btn btn-outline-secondary btn-sm" id="overdue-prev">Previous</button>
+          <button class="btn btn-outline-secondary btn-sm" id="overdue-next">Next</button>
+          <button class="btn btn-outline-secondary btn-sm" id="overdue-last">Last</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert d-none" id="form-status" role="alert"></div>
+</div>
+
+{# JSON payloads for JS (keeps JS valid for linters) #}
+{{ quick_customers_json|default:"[]"|json_script:"towing-quick-customers-data" }}
+{{ quick_vehicles_json|default:"[]"|json_script:"towing-quick-vehicles-data" }}
+{{ overdue_customers_json|default:"[]"|json_script:"towing-overdue-customers-data" }}
+
+<!-- Quick add modals (same endpoints as mechanic dashboard) -->
+<div class="modal fade" id="quickInvoiceAddCustomerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add customer</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label">Customer name</label>
+            <input type="text" class="form-control" id="quick-add-customer-name" placeholder="Customer name">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" id="quick-add-customer-email" placeholder="customer@example.com">
+          </div>
+          <div class="col-12">
+            <label class="form-label">CC emails</label>
+            <input type="text" class="form-control" id="quick-add-customer-cc" placeholder="cc1@example.com, cc2@example.com">
+            <div class="form-text">Optional: comma-separated billing emails.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Address</label>
+            <textarea class="form-control" id="quick-add-customer-address" rows="2" placeholder="Optional"></textarea>
+          </div>
+        </div>
+        <div class="alert alert-danger d-none mt-3" id="quick-add-customer-error" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="quick-add-customer-save">
+          <i class="fa-solid fa-plus me-1"></i>Save customer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="quickInvoiceAddVehicleModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add vehicle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label">Unit number</label>
+            <input type="text" class="form-control" id="quick-add-vehicle-unit" placeholder="Unit #">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Make / Model</label>
+            <input type="text" class="form-control" id="quick-add-vehicle-make-model" placeholder="e.g. Freightliner Cascadia">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Year</label>
+            <input type="number" class="form-control" id="quick-add-vehicle-year" placeholder="Year" min="0" step="1">
+          </div>
+          <div class="col-12">
+            <label class="form-label">License plate</label>
+            <input type="text" class="form-control" id="quick-add-vehicle-plate" placeholder="Plate">
+          </div>
+          <div class="col-12">
+            <label class="form-label">VIN</label>
+            <input type="text" class="form-control" id="quick-add-vehicle-vin" placeholder="VIN">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Current mileage</label>
+            <input type="number" class="form-control" id="quick-add-vehicle-mileage" placeholder="0" min="0" step="1">
+          </div>
+        </div>
+        <div class="alert alert-danger d-none mt-3" id="quick-add-vehicle-error" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="quick-add-vehicle-save">
+          <i class="fa-solid fa-plus me-1"></i>Save vehicle
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Customer Payment Modal (Overdue Customers grid) -->
+<div class="modal fade" id="customerPaymentModal" tabindex="-1" aria-labelledby="customerPaymentModalLabel" aria-hidden="true" data-today="{% now 'Y-m-d' %}">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="customerPaymentModalLabel">Record Customer Payment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="customer-payment-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="customer_id" id="customer-payment-customer-id" value="">
+        <div class="modal-body">
+          <div class="alert alert-info mb-3">
+            Record a payment and automatically apply it to invoices from oldest to newest.
+          </div>
+          <div class="mb-2">
+            <div class="fw-semibold" id="customer-payment-customer-name"></div>
+            <div class="text-muted small">Outstanding balance: <span id="customer-payment-outstanding"></span></div>
+          </div>
+          <div class="mb-3">
+            <label for="customer-payment-amount" class="form-label">Amount</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="customer-payment-amount" name="amount" required>
+          </div>
+          <div class="mb-3">
+            <label for="customer-payment-date" class="form-label">Payment Date</label>
+            <input type="date" class="form-control" id="customer-payment-date" name="payment_date">
+          </div>
+          <div class="mb-3">
+            <label for="customer-payment-method" class="form-label">Payment Method</label>
+            <select class="form-select" id="customer-payment-method" name="method">
+              {% for method in payment_methods %}
+                <option value="{{ method }}">{{ method }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-0">
+            <label for="customer-payment-notes" class="form-label">Notes</label>
+            <textarea class="form-control" id="customer-payment-notes" name="notes" rows="2" placeholder="Optional notes"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="customer-payment-submit">Record Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Customer Payment Success Modal -->
+<div class="modal fade" id="customerPaymentSuccessModal" tabindex="-1" aria-labelledby="customerPaymentSuccessModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="customerPaymentSuccessModalLabel">Payment recorded</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-success" id="customer-payment-success-message"></div>
+        <div class="mb-3">
+          <div class="small text-muted mb-2">Allocation (oldest → newest)</div>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Invoice #</th>
+                  <th class="text-end">Applied</th>
+                  <th>Status</th>
+                  <th class="text-end">Remaining</th>
+                </tr>
+              </thead>
+              <tbody id="customer-payment-success-rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mb-2 fw-semibold">Statements</div>
+        <div class="d-flex flex-wrap gap-2" id="customer-payment-statement-buttons"></div>
+        <div class="small text-muted mt-2">Download/print/email statements for paid, pending, all, or overdue invoices.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Global processing overlay -->
+<div id="processing-overlay" class="processing-overlay d-none" aria-hidden="true">
+  <div class="processing-card">
+    <div class="d-flex align-items-center gap-3">
+      <div class="spinner-border text-primary" role="status" aria-label="Processing"></div>
+      <div>
+        <div class="processing-title" id="processing-overlay-title">Processing…</div>
+        <div class="processing-sub">Please wait—don’t refresh or click back.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Processing overlay helpers
+    const processingOverlayEl = document.getElementById('processing-overlay');
+    const processingOverlayTitleEl = document.getElementById('processing-overlay-title');
+    let processingOverlayCount = 0;
+
+    function showProcessingOverlay(title) {
+      if (!processingOverlayEl) return () => {};
+      processingOverlayCount += 1;
+      if (processingOverlayTitleEl) processingOverlayTitleEl.textContent = title || 'Processing…';
+      processingOverlayEl.classList.remove('d-none');
+      return () => hideProcessingOverlay();
+    }
+    function hideProcessingOverlay() {
+      if (!processingOverlayEl) return;
+      processingOverlayCount = Math.max(0, processingOverlayCount - 1);
+      if (processingOverlayCount === 0) processingOverlayEl.classList.add('d-none');
+    }
+    function lockFormSubmits(form) {
+      if (!form) return () => {};
+      if (form.dataset.processingLocked === 'true') return () => {};
+      form.dataset.processingLocked = 'true';
+      const submits = Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"]'));
+      const prev = submits.map((el) => ({ el, disabled: el.disabled }));
+      submits.forEach((el) => { el.disabled = true; });
+      return () => {
+        prev.forEach((p) => { p.el.disabled = p.disabled; });
+        delete form.dataset.processingLocked;
+      };
+    }
+
+    // Tabs
+    const dashboardTabCalc = document.getElementById('dashboardTabCalc');
+    const dashboardTabNotes = document.getElementById('dashboardTabNotes');
+    const towingCalcWrap = document.getElementById('towingCalcWrap');
+    const notesWrap = document.getElementById('notesWrap');
+    function setTab(tab) {
+      const showCalc = tab !== 'notes';
+      towingCalcWrap?.classList.toggle('d-none', !showCalc);
+      notesWrap?.classList.toggle('d-none', showCalc);
+      dashboardTabCalc?.classList.toggle('active', showCalc);
+      dashboardTabNotes?.classList.toggle('active', !showCalc);
+      dashboardTabCalc?.setAttribute('aria-selected', showCalc ? 'true' : 'false');
+      dashboardTabNotes?.setAttribute('aria-selected', showCalc ? 'false' : 'true');
+    }
+    dashboardTabCalc?.addEventListener('click', () => setTab('calc'));
+    dashboardTabNotes?.addEventListener('click', () => setTab('notes'));
+    setTab('calc');
+
+    // Simple notes (local)
+    const notesGrid = document.getElementById('notesGrid');
+    const noteQuickInput = document.getElementById('noteQuickInput');
+    const clearNotesBtn = document.getElementById('clearNotesBtn');
+    const notesStoreKey = 'towingDashboardNotes';
+    let notes = [];
+    const saveNotes = () => { try { localStorage.setItem(notesStoreKey, JSON.stringify(notes)); } catch (e) {} };
+    const loadNotes = () => { try { notes = JSON.parse(localStorage.getItem(notesStoreKey) || '[]') || []; } catch (e) { notes = []; } };
+    const renderNotes = () => {
+      if (!notesGrid) return;
+      if (!notes.length) {
+        notesGrid.innerHTML = '<div class="note-card text-muted small">No notes yet.</div>';
+        return;
+      }
+      notesGrid.innerHTML = notes.map(n => `
+        <div class="note-card">
+          <div class="small text-muted">${new Date(n.ts).toLocaleString()}</div>
+          <div style="white-space:pre-wrap; font-weight:700;">${(n.text || '').replace(/</g,'&lt;')}</div>
+          <div class="d-flex justify-content-end mt-2">
+            <button type="button" class="btn btn-outline-danger btn-sm" data-note-id="${n.id}">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+      Array.from(notesGrid.querySelectorAll('button[data-note-id]')).forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-note-id');
+          notes = notes.filter(n => String(n.id) !== String(id));
+          saveNotes();
+          renderNotes();
+        });
+      });
+    };
+    loadNotes();
+    renderNotes();
+    clearNotesBtn?.addEventListener('click', () => {
+      if (!confirm('Remove all notes?')) return;
+      notes = [];
+      saveNotes();
+      renderNotes();
+    });
+    noteQuickInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const text = (noteQuickInput.value || '').trim();
+        if (!text) return;
+        notes.unshift({ id: Date.now(), ts: Date.now(), text });
+        noteQuickInput.value = '';
+        saveNotes();
+        renderNotes();
+      }
+    });
+
+    // Helpers / status (used by add customer/vehicle + overdue grid)
+    function showStatus(type, message) {
+      const status = document.getElementById('form-status');
+      if (!status) return;
+      status.className = `alert alert-${type}`;
+      status.textContent = message;
+      status.classList.remove('d-none');
+      setTimeout(() => status.classList.add('d-none'), 4000);
+    }
+    function extractFirstError(errors) {
+      if (!errors || typeof errors !== 'object') return null;
+      const keys = Object.keys(errors);
+      for (const key of keys) {
+        const val = errors[key];
+        if (Array.isArray(val) && val.length) {
+          const first = val[0];
+          if (first && typeof first === 'object' && 'message' in first) return first.message;
+          if (typeof first === 'string') return first;
+        }
+      }
+      return null;
+    }
+    function getCsrfToken() {
+      const tokenField = document.querySelector('input[name="csrfmiddlewaretoken"]');
+      return tokenField ? tokenField.value : '';
+    }
+
+    // Quick invoice: customer + vehicle pickers (same behavior as mechanic dashboard)
+    // NOTE: Django `json_script` serializes the value to JSON.
+    // If the view passes a JSON *string* (already json.dumps'd), `json_script`
+    // will double-encode it and JSON.parse() returns a string. Normalize here.
+    function normalizeToArray(value) {
+      if (Array.isArray(value)) return value;
+      if (value == null) return [];
+      if (typeof value === 'string') {
+        const s = value.trim();
+        if (!s) return [];
+        try { return normalizeToArray(JSON.parse(s)); } catch (e) { return []; }
+      }
+      if (typeof value === 'object') {
+        if (Array.isArray(value.results)) return value.results;
+        if (Array.isArray(value.customers)) return value.customers;
+        if (Array.isArray(value.vehicles)) return value.vehicles;
+        if (Array.isArray(value.data)) return value.data;
+        return Object.values(value).filter(v => v && typeof v === 'object');
+      }
+      return [];
+    }
+
+    let quickCustomers = [];
+    let quickVehicles = [];
+    try {
+      const raw = JSON.parse(document.getElementById('towing-quick-customers-data')?.textContent || '[]');
+      quickCustomers = normalizeToArray(raw);
+    } catch (e) { quickCustomers = []; }
+    try {
+      const raw = JSON.parse(document.getElementById('towing-quick-vehicles-data')?.textContent || '[]');
+      quickVehicles = normalizeToArray(raw);
+    } catch (e) { quickVehicles = []; }
+
+    const invoiceCustomerPickerBtn = document.getElementById('quick-invoice-customer-picker');
+    const invoiceCustomerSearch = document.getElementById('quick-invoice-customer-search');
+    const invoiceCustomerList = document.getElementById('quick-invoice-customer-list');
+    const invoiceCustomerIdInput = document.getElementById('quick-invoice-customer');
+
+    const invoiceVehiclePickerBtn = document.getElementById('quick-invoice-vehicle-picker');
+    const invoiceVehicleSearch = document.getElementById('quick-invoice-vehicle-search');
+    const invoiceVehicleHint = document.getElementById('quick-invoice-vehicle-hint');
+    const invoiceVehicleList = document.getElementById('quick-invoice-vehicle-list');
+    const invoiceVehicleIdInput = document.getElementById('quick-invoice-vehicle');
+    const invoiceAddVehicleBtn = document.getElementById('quick-invoice-add-vehicle');
+
+    const invoiceEmail = document.getElementById('quick-invoice-email');
+    const invoiceForm = document.getElementById('towing-invoice-form');
+
+    function setPickerLabel(btn, text) {
+      if (!btn) return;
+      btn.textContent = text || '';
+    }
+
+    function selectedCustomerId() {
+      return (invoiceCustomerIdInput?.value || '').trim();
+    }
+
+    function updateInvoiceVehicleAddVisibility() {
+      const hasCustomer = !!selectedCustomerId();
+      if (invoiceAddVehicleBtn) invoiceAddVehicleBtn.classList.toggle('d-none', !hasCustomer);
+      if (invoiceVehicleHint) invoiceVehicleHint.textContent = hasCustomer ? 'Select a vehicle (optional).' : 'Select a customer to see vehicles.';
+    }
+
+    function renderCustomerList() {
+      if (!invoiceCustomerList) return;
+      const q = (invoiceCustomerSearch?.value || '').trim().toLowerCase();
+      const list = (quickCustomers || []).filter(c => {
+        const name = (c.name || '').toLowerCase();
+        const email = (c.email || '').toLowerCase();
+        return !q || name.includes(q) || email.includes(q);
+      });
+      if (!list.length) {
+        invoiceCustomerList.innerHTML = '<div class="text-muted small px-2 py-2">No customers found.</div>';
+        return;
+      }
+      invoiceCustomerList.innerHTML = list.map(c => `
+        <button type="button" class="dropdown-item js-pick-customer" data-id="${c.id}">
+          <div class="fw-semibold">${(c.name || '').replace(/</g,'&lt;')}</div>
+          <div class="small text-muted">${(c.email || '').replace(/</g,'&lt;')}</div>
+        </button>
+      `).join('');
+    }
+
+    function renderVehicleList() {
+      if (!invoiceVehicleList) return;
+      const custId = selectedCustomerId();
+      const q = (invoiceVehicleSearch?.value || '').trim().toLowerCase();
+      const list = (quickVehicles || []).filter(v => {
+        if (!custId) return false;
+        if (String(v.customer_id) !== String(custId)) return false;
+        const label = (v.label || '').toLowerCase();
+        const unit = (v.unit_number || '').toLowerCase();
+        const vin = (v.vin || '').toLowerCase();
+        return !q || label.includes(q) || unit.includes(q) || vin.includes(q);
+      });
+      if (!custId) {
+        invoiceVehicleList.innerHTML = '<div class="text-muted small px-2 py-2">Select a customer first.</div>';
+        return;
+      }
+      if (!list.length) {
+        invoiceVehicleList.innerHTML = '<div class="text-muted small px-2 py-2">No vehicles for this customer.</div>';
+        return;
+      }
+      invoiceVehicleList.innerHTML = list.map(v => `
+        <button type="button" class="dropdown-item js-pick-vehicle" data-id="${v.id}">
+          <div class="fw-semibold">${(v.label || '').replace(/</g,'&lt;')}</div>
+          <div class="small text-muted">${(v.vin || '').replace(/</g,'&lt;')}</div>
+        </button>
+      `).join('');
+    }
+
+    function selectCustomer(id) {
+      const cust = (quickCustomers || []).find(c => String(c.id) === String(id));
+      if (!cust) return;
+      if (invoiceCustomerIdInput) invoiceCustomerIdInput.value = String(cust.id);
+      setPickerLabel(invoiceCustomerPickerBtn, cust.name || 'Selected');
+      // Auto fill bill-to email (not optional)
+      if (invoiceEmail) invoiceEmail.value = (cust.email || '').trim();
+      // Reset vehicle selection on customer change
+      if (invoiceVehicleIdInput) invoiceVehicleIdInput.value = '';
+      setPickerLabel(invoiceVehiclePickerBtn, 'Select vehicle');
+      if (invoiceVehicleSearch) invoiceVehicleSearch.value = '';
+      updateInvoiceVehicleAddVisibility();
+      renderVehicleList();
+    }
+
+    function selectVehicle(id) {
+      const veh = (quickVehicles || []).find(v => String(v.id) === String(id));
+      if (!veh) return;
+      if (invoiceVehicleIdInput) invoiceVehicleIdInput.value = String(veh.id);
+      setPickerLabel(invoiceVehiclePickerBtn, veh.label || 'Selected');
+    }
+
+    invoiceCustomerSearch?.addEventListener('input', renderCustomerList);
+    invoiceVehicleSearch?.addEventListener('input', renderVehicleList);
+    invoiceCustomerList?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.js-pick-customer');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      if (id) selectCustomer(id);
+    });
+    invoiceVehicleList?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.js-pick-vehicle');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      if (id) selectVehicle(id);
+    });
+
+    // Add customer / vehicle modals (same endpoints as mechanic dashboard)
+    const invoiceAddCustomerBtn = document.getElementById('quick-invoice-add-customer');
+    const quickAddCustomerUrl = "{% url 'accounts:add_customer' %}";
+    const quickAddVehicleUrl = "{% url 'accounts:add_vehicle' %}";
+
+    const addCustomerModalEl = document.getElementById('quickInvoiceAddCustomerModal');
+    const addCustomerModal = addCustomerModalEl && window.bootstrap ? new bootstrap.Modal(addCustomerModalEl) : null;
+    const addCustomerName = document.getElementById('quick-add-customer-name');
+    const addCustomerEmail = document.getElementById('quick-add-customer-email');
+    const addCustomerCc = document.getElementById('quick-add-customer-cc');
+    const addCustomerAddress = document.getElementById('quick-add-customer-address');
+    const addCustomerSave = document.getElementById('quick-add-customer-save');
+    const addCustomerError = document.getElementById('quick-add-customer-error');
+
+    const addVehicleModalEl = document.getElementById('quickInvoiceAddVehicleModal');
+    const addVehicleModal = addVehicleModalEl && window.bootstrap ? new bootstrap.Modal(addVehicleModalEl) : null;
+    const addVehicleUnit = document.getElementById('quick-add-vehicle-unit');
+    const addVehicleMakeModel = document.getElementById('quick-add-vehicle-make-model');
+    const addVehicleYear = document.getElementById('quick-add-vehicle-year');
+    const addVehiclePlate = document.getElementById('quick-add-vehicle-plate');
+    const addVehicleVin = document.getElementById('quick-add-vehicle-vin');
+    const addVehicleMileage = document.getElementById('quick-add-vehicle-mileage');
+    const addVehicleSave = document.getElementById('quick-add-vehicle-save');
+    const addVehicleError = document.getElementById('quick-add-vehicle-error');
+
+    function showInlineError(target, message) {
+      if (!target) return;
+      target.textContent = message || 'Unable to save.';
+      target.classList.remove('d-none');
+    }
+    function clearInlineError(target) {
+      if (!target) return;
+      target.textContent = '';
+      target.classList.add('d-none');
+    }
+
+    invoiceAddCustomerBtn?.addEventListener('click', () => {
+      clearInlineError(addCustomerError);
+      if (addCustomerName) addCustomerName.value = '';
+      if (addCustomerEmail) addCustomerEmail.value = '';
+      if (addCustomerCc) addCustomerCc.value = '';
+      if (addCustomerAddress) addCustomerAddress.value = '';
+      addCustomerModal?.show();
+      setTimeout(() => addCustomerName?.focus(), 150);
+    });
+
+    addCustomerSave?.addEventListener('click', async () => {
+      clearInlineError(addCustomerError);
+      addCustomerSave.disabled = true;
+      try {
+        const payload = new FormData();
+        payload.append('name', (addCustomerName?.value || '').trim());
+        payload.append('email', (addCustomerEmail?.value || '').trim());
+        payload.append('cc_emails', (addCustomerCc?.value || '').trim());
+        payload.append('address', (addCustomerAddress?.value || '').trim());
+        payload.append('csrfmiddlewaretoken', getCsrfToken());
+
+        const resp = await fetch(quickAddCustomerUrl, {
+          method: 'POST',
+          body: payload,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.success) {
+          const msg = data?.errors ? extractFirstError(data.errors) : null;
+          throw new Error(msg || 'Unable to save customer.');
+        }
+        const c = data.customer || {};
+        const newCustomer = { id: c.id, name: c.name || '', email: c.email || '', address: c.address || '' };
+        quickCustomers = [newCustomer, ...(quickCustomers || [])];
+        renderCustomerList();
+        selectCustomer(String(newCustomer.id));
+        addCustomerModal?.hide();
+        showStatus('success', 'Customer added.');
+      } catch (err) {
+        showInlineError(addCustomerError, err.message || 'Unable to save customer.');
+      } finally {
+        addCustomerSave.disabled = false;
+      }
+    });
+
+    invoiceAddVehicleBtn?.addEventListener('click', () => {
+      clearInlineError(addVehicleError);
+      const customerId = selectedCustomerId();
+      if (!customerId) return showStatus('warning', 'Select a customer first.');
+      if (addVehicleUnit) addVehicleUnit.value = '';
+      if (addVehicleMakeModel) addVehicleMakeModel.value = '';
+      if (addVehicleYear) addVehicleYear.value = '';
+      if (addVehiclePlate) addVehiclePlate.value = '';
+      if (addVehicleVin) addVehicleVin.value = '';
+      if (addVehicleMileage) addVehicleMileage.value = '';
+      addVehicleModal?.show();
+      setTimeout(() => addVehicleUnit?.focus(), 150);
+    });
+
+    addVehicleSave?.addEventListener('click', async () => {
+      clearInlineError(addVehicleError);
+      const customerId = selectedCustomerId();
+      if (!customerId) return;
+      addVehicleSave.disabled = true;
+      try {
+        const payload = new FormData();
+        payload.append('customer', customerId);
+        payload.append('unit_number', (addVehicleUnit?.value || '').trim());
+        payload.append('make_model', (addVehicleMakeModel?.value || '').trim());
+        payload.append('year', (addVehicleYear?.value || '').trim());
+        payload.append('license_plate', (addVehiclePlate?.value || '').trim());
+        payload.append('vin_number', (addVehicleVin?.value || '').trim());
+        payload.append('current_mileage', (addVehicleMileage?.value || '').trim());
+        payload.append('csrfmiddlewaretoken', getCsrfToken());
+
+        const resp = await fetch(quickAddVehicleUrl, {
+          method: 'POST',
+          body: payload,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.success) {
+          const msg = data?.errors ? extractFirstError(data.errors) : null;
+          throw new Error(msg || 'Unable to save vehicle.');
+        }
+        const v = data.vehicle || {};
+        const label = ((v.unit_no || 'Unit') + ' ' + (v.make_model || v.vin_no || '')).trim();
+        const newVehicle = {
+          id: v.id,
+          customer_id: Number(customerId),
+          label,
+          unit_number: v.unit_no || '',
+          make_model: v.make_model || '',
+          year: v.year || '',
+          vin: v.vin_no || '',
+        };
+        quickVehicles = [newVehicle, ...(quickVehicles || [])];
+        renderVehicleList();
+        selectVehicle(String(newVehicle.id));
+        addVehicleModal?.hide();
+        showStatus('success', 'Vehicle added.');
+      } catch (err) {
+        showInlineError(addVehicleError, err.message || 'Unable to save vehicle.');
+      } finally {
+        addVehicleSave.disabled = false;
+      }
+    });
+
+    renderCustomerList();
+    renderVehicleList();
+    updateInvoiceVehicleAddVisibility();
+
+    // Enforce bill-to email not optional
+    invoiceForm?.addEventListener('submit', (e) => {
+      const email = (invoiceEmail?.value || '').trim();
+      if (!email) {
+        e.preventDefault();
+        showStatus('warning', 'Bill-to email is required.');
+        invoiceEmail?.focus();
+        return;
+      }
+      // Lock + overlay until navigation completes
+      lockFormSubmits(invoiceForm);
+      showProcessingOverlay('Saving invoice…');
+    });
+
+    // Quick invoice lines (simple job entries)
+    const invoiceLinesWrap = document.getElementById('quick-invoice-lines');
+    const addLineBtn = document.getElementById('quick-invoice-add-line');
+    const postActionEl = document.getElementById('quick-invoice-post-action');
+    const saveContinueBtn = document.getElementById('quick-invoice-save-continue');
+    const saveViewBtn = document.getElementById('quick-invoice-save-view');
+
+    const getRows = () => invoiceLinesWrap ? Array.from(invoiceLinesWrap.querySelectorAll('.invoice-line-row')) : [];
+    const syncRemoveButtons = () => {
+      const rows = getRows();
+      rows.forEach((row, idx) => {
+        const btn = row.querySelector('.quick-invoice-remove-line');
+        if (btn) btn.disabled = rows.length <= 1;
+      });
+    };
+    const wireRow = (row) => {
+      const removeBtn = row.querySelector('.quick-invoice-remove-line');
+      removeBtn?.addEventListener('click', () => {
+        row.remove();
+        syncRemoveButtons();
+      });
+    };
+    const addRow = ({ job = '', qty = '1', rate = '' } = {}) => {
+      if (!invoiceLinesWrap) return null;
+      const template = invoiceLinesWrap.querySelector('.invoice-line-row');
+      if (!template) return null;
+      const clone = template.cloneNode(true);
+      clone.dataset.index = String(Date.now());
+      const jobEl = clone.querySelector('.quick-invoice-job');
+      const qtyEl = clone.querySelector('.quick-invoice-qty');
+      const rateEl = clone.querySelector('.quick-invoice-rate');
+      if (jobEl) jobEl.value = job;
+      if (qtyEl) qtyEl.value = qty;
+      if (rateEl) rateEl.value = rate;
+      invoiceLinesWrap.appendChild(clone);
+      wireRow(clone);
+      syncRemoveButtons();
+      return clone;
+    };
+    // Wire initial row
+    getRows().forEach(wireRow);
+    syncRemoveButtons();
+    addLineBtn?.addEventListener('click', () => addRow());
+    saveContinueBtn?.addEventListener('click', () => { if (postActionEl) postActionEl.value = 'continue'; });
+    saveViewBtn?.addEventListener('click', () => { if (postActionEl) postActionEl.value = 'view'; });
+
+    // Expose for towing calculator "Add to invoice"
+    try {
+      window.dashboardQuickInvoice = window.dashboardQuickInvoice || {};
+      window.dashboardQuickInvoice.addLine = addRow;
+    } catch (e) {}
+
+    // Towing mileage + price calculator (same logic as mechanic dashboard)
+    const mapsKey = '{{ google_maps_api_key|default:""|escapejs }}';
+    const originEl = document.getElementById('towing-origin');
+    const destEl = document.getElementById('towing-destination');
+    const unitEl = document.getElementById('towing-unit');
+    const rateEl = document.getElementById('towing-rate');
+    const baseFeeEl = document.getElementById('towing-base-fee');
+    const addStopBtn = document.getElementById('towing-add-stop');
+    const stopsWrap = document.getElementById('towing-stops');
+    const calcBtn = document.getElementById('towing-calc-btn');
+    const clearBtn = document.getElementById('towing-clear-btn');
+    const copyBtn = document.getElementById('towing-copy-btn');
+    const toInvoiceBtn = document.getElementById('towing-to-invoice-btn');
+    const statusEl = document.getElementById('towing-status');
+    const distanceOut = document.getElementById('towing-distance');
+    const durationOut = document.getElementById('towing-duration');
+    const priceOut = document.getElementById('towing-price');
+
+    let towingMap = null;
+    let towingDirectionsService = null;
+    let towingDirectionsRenderer = null;
+    let towingLast = { meters: 0, seconds: 0, summary: '' };
+    let mapsLoadPromise = null;
+
+    const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+    const fmt2 = (v) => new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+    const fmt0 = (v) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(v);
+    function setStatus(kind, msg) {
+      if (!statusEl) return;
+      statusEl.classList.remove('error', 'ok');
+      if (kind) statusEl.classList.add(kind);
+      statusEl.textContent = msg || '';
+    }
+    function getStops() {
+      if (!stopsWrap) return [];
+      return Array.from(stopsWrap.querySelectorAll('input.towing-stop'))
+        .map((el) => (el.value || '').trim())
+        .filter(Boolean);
+    }
+    function addStop(value = '') {
+      if (!stopsWrap) return;
+      const idx = stopsWrap.querySelectorAll('.towing-stop-row').length + 1;
+      const row = document.createElement('div');
+      row.className = 'input-group mb-2 towing-stop-row';
+      row.innerHTML = `
+        <span class="input-group-text">Stop ${idx}</span>
+        <input type="text" class="form-control towing-stop" placeholder="Stop address (optional)" value="${String(value).replace(/"/g, '&quot;')}">
+        <button class="btn btn-outline-danger" type="button" title="Remove stop"><i class="fa-solid fa-trash-can"></i></button>
+      `;
+      row.querySelector('button')?.addEventListener('click', () => {
+        row.remove();
+        Array.from(stopsWrap.querySelectorAll('.towing-stop-row')).forEach((r, i) => {
+          const label = r.querySelector('.input-group-text');
+          if (label) label.textContent = `Stop ${i + 1}`;
+        });
+      });
+      stopsWrap.appendChild(row);
+      try {
+        if (window.google?.maps?.places?.Autocomplete) {
+          new google.maps.places.Autocomplete(row.querySelector('input.towing-stop'), { fields: ['place_id', 'geometry', 'name', 'formatted_address'] });
+        }
+      } catch (e) {}
+    }
+    addStopBtn?.addEventListener('click', () => addStop(''));
+
+    function computeOutputs() {
+      const unit = unitEl?.value === 'mi' ? 'mi' : 'km';
+      const meters = towingLast.meters || 0;
+      const seconds = towingLast.seconds || 0;
+      const distance = unit === 'mi' ? (meters / 1609.344) : (meters / 1000);
+      const durationMin = Math.round(seconds / 60);
+      const rate = num(rateEl?.value);
+      const baseFee = num(baseFeeEl?.value);
+      const total = baseFee + (distance * rate);
+      if (distanceOut) distanceOut.textContent = meters ? `${fmt2(distance)} ${unit}` : '—';
+      if (durationOut) durationOut.textContent = seconds ? `${fmt0(durationMin)} min` : '—';
+      if (priceOut) priceOut.textContent = meters ? `$${fmt2(total)}` : '—';
+      return { unit, distance, durationMin, rate, baseFee, total };
+    }
+    rateEl?.addEventListener('input', computeOutputs);
+    baseFeeEl?.addEventListener('input', computeOutputs);
+    unitEl?.addEventListener('change', computeOutputs);
+
+    function buildSummary({ unit, distance, durationMin, rate, baseFee, total }) {
+      const a = (originEl?.value || '').trim();
+      const b = (destEl?.value || '').trim();
+      const stops = getStops();
+      const via = stops.length ? ` via ${stops.join(' → ')}` : '';
+      return `Towing route: ${a || 'A'} → ${b || 'B'}${via}\nDistance: ${fmt2(distance)} ${unit}\nDuration: ${fmt0(durationMin)} min\nRate: $${fmt2(rate)} / ${unit}\nBase fee: $${fmt2(baseFee)}\nEstimated price: $${fmt2(total)}`;
+    }
+    async function copySummary() {
+      const outputs = computeOutputs();
+      if (!towingLast.meters) return setStatus('error', 'Calculate a route first.');
+      const text = buildSummary(outputs);
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus('ok', 'Copied route summary.');
+      } catch (e) {
+        setStatus('error', 'Copy failed (browser blocked clipboard).');
+      }
+    }
+    copyBtn?.addEventListener('click', copySummary);
+
+    function clearCalc() {
+      if (originEl) originEl.value = '';
+      if (destEl) destEl.value = '';
+      if (stopsWrap) stopsWrap.innerHTML = '';
+      towingLast = { meters: 0, seconds: 0, summary: '' };
+      computeOutputs();
+      setStatus('', '');
+      try { towingDirectionsRenderer?.set('directions', null); } catch (e) {}
+    }
+    clearBtn?.addEventListener('click', clearCalc);
+
+    function ensureMapsLoaded() {
+      if (!mapsKey) {
+        setStatus('error', 'Google Maps key missing. Set GOOGLE_MAPS_API_KEY to enable live routing.');
+        return Promise.resolve(false);
+      }
+      if (window.google?.maps?.DirectionsService) return Promise.resolve(true);
+      if (mapsLoadPromise) return mapsLoadPromise;
+      mapsLoadPromise = new Promise((resolve) => {
+        let resolved = false;
+        const resolveOnce = (value) => {
+          if (resolved) return;
+          resolved = true;
+          resolve(value);
+        };
+
+        // Surface auth failures (wrong key, referrer restrictions, billing disabled, API not enabled).
+        // Google calls this global hook when available.
+        window.gm_authFailure = () => {
+          setStatus('error', 'Google Maps authentication failed. Check API key restrictions (HTTP referrers), billing, and that Maps JavaScript + Places are enabled.');
+          resolveOnce(false);
+        };
+
+        window.__initTowingCalcMaps = () => {
+          // Callback can fire even when some services are unavailable; verify core objects exist.
+          resolveOnce(!!(window.google?.maps));
+        };
+        const s = document.createElement('script');
+        s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsKey)}&libraries=places&callback=__initTowingCalcMaps`;
+        s.async = true;
+        s.defer = true;
+        s.onerror = () => resolveOnce(false);
+        // If the script loads but callback never fires (common on blocked/errored loads), don't hang forever.
+        s.onload = () => {
+          setTimeout(() => {
+            if (resolved) return;
+            resolveOnce(!!(window.google?.maps));
+          }, 0);
+        };
+        document.head.appendChild(s);
+        setTimeout(() => {
+          if (resolved) return;
+          resolveOnce(!!(window.google?.maps));
+        }, 12000);
+      });
+      return mapsLoadPromise;
+    }
+    function initMaps() {
+      if (!window.google?.maps) return false;
+      const mapEl = document.getElementById('towing-map');
+      if (!mapEl) return false;
+      if (!google.maps.places?.Autocomplete) {
+        setStatus('error', 'Google Places library not available. Enable Places API for this key.');
+      }
+      towingMap = new google.maps.Map(mapEl, {
+        center: { lat: 45.5019, lng: -73.5674 },
+        zoom: 8,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
+      towingDirectionsService = new google.maps.DirectionsService();
+      towingDirectionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: false, preserveViewport: false });
+      towingDirectionsRenderer.setMap(towingMap);
+      try {
+        if (originEl) new google.maps.places.Autocomplete(originEl, { fields: ['place_id', 'geometry', 'name', 'formatted_address'] });
+        if (destEl) new google.maps.places.Autocomplete(destEl, { fields: ['place_id', 'geometry', 'name', 'formatted_address'] });
+      } catch (e) {}
+      return true;
+    }
+    async function calculateRoute() {
+      const a = (originEl?.value || '').trim();
+      const b = (destEl?.value || '').trim();
+      if (!a || !b) return setStatus('error', 'Enter both From (A) and To (B).');
+      setStatus('', 'Calculating route…');
+      const ok = await ensureMapsLoaded();
+      if (!ok) return setStatus('error', 'Unable to load Google Maps. Check key/billing or network.');
+      if (!towingDirectionsService || !towingDirectionsRenderer) initMaps();
+      if (!towingDirectionsService) return setStatus('error', 'Maps service not ready.');
+      const stops = getStops();
+      const waypoints = stops.map((s) => ({ location: s, stopover: true }));
+      towingDirectionsService.route(
+        { origin: a, destination: b, waypoints, optimizeWaypoints: false, travelMode: google.maps.TravelMode.DRIVING },
+        (result, status) => {
+          if (status !== 'OK' || !result?.routes?.length) return setStatus('error', `Route failed: ${status}`);
+          try { towingDirectionsRenderer.setDirections(result); } catch (e) {}
+          const route = result.routes[0];
+          const legs = route.legs || [];
+          towingLast = {
+            meters: legs.reduce((sum, leg) => sum + (leg.distance?.value || 0), 0),
+            seconds: legs.reduce((sum, leg) => sum + (leg.duration?.value || 0), 0),
+            summary: route.summary || '',
+          };
+          computeOutputs();
+          setStatus('ok', 'Route updated.');
+        }
+      );
+    }
+    calcBtn?.addEventListener('click', calculateRoute);
+
+    // Load Places autocomplete early
+    (async () => {
+      if (!mapsKey) return;
+      const ok = await ensureMapsLoaded();
+      if (!ok) return;
+      initMaps();
+    })();
+    const warmOnFocus = async () => {
+      if (window.google?.maps?.places?.Autocomplete) return;
+      const ok = await ensureMapsLoaded();
+      if (ok) initMaps();
+    };
+    originEl?.addEventListener('focus', warmOnFocus);
+    destEl?.addEventListener('focus', warmOnFocus);
+
+    function fillOrAddInvoiceLine({ job, qty, rate }) {
+      const rows = getRows();
+      const first = rows[0];
+      if (first) {
+        const jobEl = first.querySelector('.quick-invoice-job');
+        const rateEl = first.querySelector('.quick-invoice-rate');
+        const empty = !(jobEl?.value || '').trim() && !(rateEl?.value || '').trim();
+        if (empty) {
+          first.querySelector('.quick-invoice-job').value = job;
+          first.querySelector('.quick-invoice-qty').value = qty;
+          first.querySelector('.quick-invoice-rate').value = rate;
+          return true;
+        }
+      }
+      window.dashboardQuickInvoice?.addLine?.({ job, qty, rate });
+      return true;
+    }
+    toInvoiceBtn?.addEventListener('click', async () => {
+      if (!towingLast.meters) await calculateRoute();
+      if (!towingLast.meters) return;
+      const outputs = computeOutputs();
+      const stops = getStops();
+      const a = (originEl?.value || '').trim();
+      const b = (destEl?.value || '').trim();
+      const stopChain = stops.length ? ` -> ${stops.join(' -> ')}` : '';
+      const job = `Towing service - Picked up from ${a || 'Location A'}${stopChain} -> drop at ${b || 'Location B'}`;
+      const qtyStr = String(Math.max(0, outputs.distance).toFixed(2));
+      const rateStr = String(Math.max(0, outputs.rate).toFixed(2));
+      fillOrAddInvoiceLine({ job, qty: qtyStr, rate: rateStr });
+      if (outputs.baseFee > 0) {
+        fillOrAddInvoiceLine({ job: 'Towing base fee', qty: '1', rate: String(outputs.baseFee.toFixed(2)) });
+      }
+      setStatus('ok', 'Added to invoice.');
+    });
+
+    /* Overdue customers grid (copied logic from mechanic dashboard) */
+    let overdueCustomersRaw = [];
+    try {
+      const raw = JSON.parse(document.getElementById('towing-overdue-customers-data')?.textContent || '[]');
+      overdueCustomersRaw = normalizeToArray(raw);
+    } catch (e) { overdueCustomersRaw = []; }
+    const overduePanel = document.getElementById('overdue-customers-panel');
+    const overdueTbody = document.getElementById('overdue-tbody');
+    const overdueSearch = document.getElementById('overdue-search');
+    const overdueFirst = document.getElementById('overdue-first');
+    const overduePrev = document.getElementById('overdue-prev');
+    const overdueNext = document.getElementById('overdue-next');
+    const overdueLast = document.getElementById('overdue-last');
+    const overduePageInfo = document.getElementById('overdue-page-info');
+    const overdueExpandBtn = document.getElementById('overdue-expand-btn');
+
+    const overdueCustomers = (overdueCustomersRaw || []).slice().sort((a, b) => (b.balance_due || 0) - (a.balance_due || 0));
+    let overduePage = 1;
+    const overduePageSize = 10;
+    let overdueQuery = '';
+
+      function currencyFmt(amount) {
+        const num = Number(amount || 0);
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+      }
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+      function formatLastSent(rawIso) {
+      if (!rawIso) return '—';
+      try {
+        const dt = new Date(rawIso);
+        if (Number.isNaN(dt.getTime())) return '—';
+        const today = new Date();
+        if (dt.getFullYear() === today.getFullYear() && dt.getMonth() === today.getMonth() && dt.getDate() === today.getDate()) return 'Today';
+        return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: '2-digit' }).format(dt);
+      } catch (e) { return '—'; }
+    }
+    function reminderUrlFor(customerId) {
+      const template = overduePanel?.dataset.reminderUrlTemplate || '';
+      return template.replace('/0/', `/${customerId}/`);
+    }
+      function recordPaymentUrlFor(customerId) {
+        const template = overduePanel?.dataset.recordPaymentUrlTemplate || '';
+        return template.replace('/0/', `/${customerId}/`);
+      }
+      function followupUrlFor(customerId) {
+        const template = overduePanel?.dataset.followupUrlTemplate || '';
+        return template.replace('/0/', `/${customerId}/`);
+      }
+      function invoiceDetailUrlFor(invoiceId) {
+        const template = overduePanel?.dataset.invoiceDetailUrlTemplate || '';
+        return template.replace('/0/', `/${invoiceId}/`);
+      }
+      function filteredOverdue() {
+        const q = (overdueQuery || '').trim().toLowerCase();
+        if (!q) return overdueCustomers;
+        return overdueCustomers.filter((r) => {
+          const haystack = `${r.customer_name || ''} ${r.customer_phone || ''}`.toLowerCase();
+          return haystack.includes(q);
+        });
+      }
+    function renderOverdueTable() {
+      if (!overdueTbody) return;
+      const items = filteredOverdue();
+      const totalPages = Math.max(1, Math.ceil(items.length / overduePageSize));
+      overduePage = Math.max(1, Math.min(overduePage, totalPages));
+      const start = (overduePage - 1) * overduePageSize;
+      const pageItems = items.slice(start, start + overduePageSize);
+      if (!pageItems.length) {
+        overdueTbody.innerHTML = '<tr><td colspan="6" class="text-muted text-center py-3">No overdue customers.</td></tr>';
+      } else {
+        overdueTbody.innerHTML = pageItems.map(row => {
+          const sent = !!row.sent_today;
+          const btnClass = sent ? 'btn-success' : 'btn-primary';
+          const btnLabel = sent ? 'Sent' : 'Send';
+          const disabledAttr = sent ? 'disabled' : '';
+          const customerName = row.customer_name || '';
+          const customerNameSafe = escapeHtml(customerName);
+          const customerPhoneSafe = escapeHtml(row.customer_phone || '');
+          return `
+            <tr>
+              <td>${customerNameSafe}</td>
+              <td>${customerPhoneSafe}</td>
+              <td>${formatLastSent(row.last_sent)}</td>
+              <td class="text-end">${currencyFmt(row.balance_due)}</td>
+              <td class="text-end">
+                <button class="btn btn-outline-primary btn-sm overdue-payment-btn"
+                  data-customer-id="${row.customer_id}"
+                  data-customer-name="${customerName.replace(/"/g, '&quot;')}"
+                  data-outstanding="${row.outstanding_due || row.balance_due || 0}">
+                  Record
+                </button>
+              </td>
+              <td class="text-end">
+                <button class="btn ${btnClass} btn-sm overdue-reminder-btn" data-customer-id="${row.customer_id}" ${disabledAttr}>${btnLabel}</button>
+              </td>
+            </tr>`;
+        }).join('');
+      }
+      const displayStart = items.length ? start + 1 : 0;
+      const displayEnd = Math.min(start + overduePageSize, items.length);
+      if (overduePageInfo) overduePageInfo.textContent = `${displayStart}-${displayEnd} of ${items.length}`;
+      overdueFirst && (overdueFirst.disabled = overduePage <= 1);
+      overduePrev && (overduePrev.disabled = overduePage <= 1);
+      overdueNext && (overdueNext.disabled = overduePage >= totalPages);
+      overdueLast && (overdueLast.disabled = overduePage >= totalPages);
+    }
+
+    const overdueFollowupTimers = new Map();
+    const overdueFollowupPending = new Map();
+
+    function queueOverdueFollowupSave(customerId, updates) {
+      if (!customerId || !updates) return;
+      const pending = overdueFollowupPending.get(customerId) || {};
+      Object.assign(pending, updates);
+      overdueFollowupPending.set(customerId, pending);
+      if (overdueFollowupTimers.has(customerId)) {
+        clearTimeout(overdueFollowupTimers.get(customerId));
+      }
+      overdueFollowupTimers.set(
+        customerId,
+        setTimeout(() => {
+          const payload = overdueFollowupPending.get(customerId) || {};
+          overdueFollowupPending.delete(customerId);
+          overdueFollowupTimers.delete(customerId);
+          saveOverdueFollowup(customerId, payload);
+        }, 600)
+      );
+    }
+
+    async function saveOverdueFollowup(customerId, updates) {
+      const url = followupUrlFor(customerId);
+      if (!url || !updates) return;
+      const formData = new FormData();
+      if (Object.prototype.hasOwnProperty.call(updates, 'next_followup')) {
+        formData.append('next_followup', updates.next_followup || '');
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, 'collection_notes')) {
+        formData.append('notes', updates.collection_notes || '');
+      }
+      try {
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+          body: formData,
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Unable to save follow-up.');
+        }
+        const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+        if (idx >= 0) {
+          if (Object.prototype.hasOwnProperty.call(updates, 'next_followup')) {
+            overdueCustomers[idx].next_followup = data.next_followup || '';
+          }
+          if (Object.prototype.hasOwnProperty.call(updates, 'collection_notes')) {
+            overdueCustomers[idx].collection_notes = data.collection_notes || '';
+          }
+        }
+      } catch (err) {
+        showStatus('danger', err.message || 'Unable to save follow-up.');
+      }
+    }
+
+    const customerPaymentModalEl = document.getElementById('customerPaymentModal');
+    const customerPaymentSuccessModalEl = document.getElementById('customerPaymentSuccessModal');
+    const customerPaymentModal = customerPaymentModalEl && window.bootstrap ? new bootstrap.Modal(customerPaymentModalEl) : null;
+    const customerPaymentSuccessModal = customerPaymentSuccessModalEl && window.bootstrap ? new bootstrap.Modal(customerPaymentSuccessModalEl) : null;
+
+    const customerPaymentForm = document.getElementById('customer-payment-form');
+    const customerPaymentCustomerId = document.getElementById('customer-payment-customer-id');
+    const customerPaymentCustomerName = document.getElementById('customer-payment-customer-name');
+    const customerPaymentOutstanding = document.getElementById('customer-payment-outstanding');
+    const customerPaymentAmount = document.getElementById('customer-payment-amount');
+    const customerPaymentDate = document.getElementById('customer-payment-date');
+    const customerPaymentMethod = document.getElementById('customer-payment-method');
+    const customerPaymentNotes = document.getElementById('customer-payment-notes');
+    const customerPaymentSubmit = document.getElementById('customer-payment-submit');
+
+    const customerPaymentSuccessMsg = document.getElementById('customer-payment-success-message');
+    const customerPaymentSuccessRows = document.getElementById('customer-payment-success-rows');
+    const customerPaymentStatementButtons = document.getElementById('customer-payment-statement-buttons');
+
+    function openCustomerPaymentModal({ customerId, customerName, outstanding }) {
+      if (!customerPaymentModal || !customerPaymentModalEl) return;
+      const today = customerPaymentModalEl.getAttribute('data-today') || '';
+      const outNum = Number(outstanding || 0);
+      if (customerPaymentCustomerId) customerPaymentCustomerId.value = customerId || '';
+      if (customerPaymentCustomerName) customerPaymentCustomerName.textContent = customerName || 'Customer';
+      if (customerPaymentOutstanding) customerPaymentOutstanding.textContent = currencyFmt(outNum);
+      if (customerPaymentAmount) {
+        customerPaymentAmount.value = outNum ? outNum.toFixed(2) : '';
+        customerPaymentAmount.readOnly = false;
+      }
+      if (customerPaymentDate) customerPaymentDate.value = today;
+      if (customerPaymentMethod) customerPaymentMethod.selectedIndex = 0;
+      if (customerPaymentNotes) customerPaymentNotes.value = '';
+      customerPaymentModal.show();
+    }
+
+    overdueSearch?.addEventListener('input', () => { overdueQuery = overdueSearch.value || ''; overduePage = 1; renderOverdueTable(); });
+    overdueFirst?.addEventListener('click', () => { overduePage = 1; renderOverdueTable(); });
+    overduePrev?.addEventListener('click', () => { overduePage = Math.max(1, overduePage - 1); renderOverdueTable(); });
+    overdueNext?.addEventListener('click', () => { overduePage = overduePage + 1; renderOverdueTable(); });
+    overdueLast?.addEventListener('click', () => {
+      const totalPages = Math.max(1, Math.ceil(filteredOverdue().length / overduePageSize));
+      overduePage = totalPages;
+      renderOverdueTable();
+    });
+
+    overdueTbody?.addEventListener('click', async (e) => {
+      const payBtn = e.target.closest('.overdue-payment-btn');
+      if (payBtn) {
+        const customerId = payBtn.dataset.customerId;
+        const customerName = payBtn.dataset.customerName || '';
+        const outstanding = payBtn.dataset.outstanding;
+        if (customerId) openCustomerPaymentModal({ customerId, customerName, outstanding });
+        return;
+      }
+      const btn = e.target.closest('.overdue-reminder-btn');
+      if (!btn) return;
+      const customerId = btn.dataset.customerId;
+      if (!customerId) return;
+      btn.disabled = true;
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-outline-secondary');
+      btn.textContent = 'Sending…';
+      try {
+        const resp = await fetch(reminderUrlFor(customerId), {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.error || 'Unable to send reminder.');
+        const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+        if (idx >= 0) overdueCustomers[idx].sent_today = true;
+        showStatus('success', data.message || 'Reminder sent.');
+      } catch (err) {
+        const msg = err.message || 'Unable to send reminder.';
+        if ((msg || '').toLowerCase().includes('already sent')) {
+          const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+          if (idx >= 0) overdueCustomers[idx].sent_today = true;
+        }
+        showStatus('danger', msg);
+      } finally {
+        renderOverdueTable();
+      }
+    });
+
+    function openOverdueModal() {
+      const items = filteredOverdue();
+      const modalHtml = `
+        <div class="modal fade" id="overdueCustomersModal" tabindex="-1">
+          <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down"><div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Overdue Customers</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
+                <div class="small text-muted">Showing <strong>${items.length}</strong> customers</div>
+                <input type="text" class="form-control form-control-sm" id="overdue-modal-search" placeholder="Search customer…" value="${(overdueQuery || '').replace(/"/g, '&quot;')}" style="min-width: 220px;">
+              </div>
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead><tr><th>Customer</th><th>Phone</th><th>Last statement</th><th class="text-end">Balance Due</th><th>Next followup</th><th>Notes</th><th class="text-end">Payment</th><th class="text-end">Reminder</th></tr></thead>
+                    <tbody id="overdue-modal-tbody"></tbody>
+                  </table>
+                </div>
+              <div class="d-flex justify-content-between align-items-center mt-2">
+                <div class="small text-muted" id="overdue-modal-page-info"></div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-secondary btn-sm" id="overdue-modal-first">First</button>
+                  <button class="btn btn-outline-secondary btn-sm" id="overdue-modal-prev">Previous</button>
+                  <button class="btn btn-outline-secondary btn-sm" id="overdue-modal-next">Next</button>
+                  <button class="btn btn-outline-secondary btn-sm" id="overdue-modal-last">Last</button>
+                </div>
+              </div>
+            </div>
+          </div></div>
+        </div>`;
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const modalEl = document.getElementById('overdueCustomersModal');
+      const modal = new bootstrap.Modal(modalEl);
+      modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
+
+      let page = 1;
+      const pageSize = 10;
+      const modalSearch = modalEl.querySelector('#overdue-modal-search');
+      const modalTbody = modalEl.querySelector('#overdue-modal-tbody');
+      const modalFirst = modalEl.querySelector('#overdue-modal-first');
+      const modalPrev = modalEl.querySelector('#overdue-modal-prev');
+      const modalNext = modalEl.querySelector('#overdue-modal-next');
+      const modalLast = modalEl.querySelector('#overdue-modal-last');
+      const modalInfo = modalEl.querySelector('#overdue-modal-page-info');
+
+        function modalFiltered() {
+          const q = (modalSearch.value || '').trim().toLowerCase();
+          overdueQuery = modalSearch.value || '';
+          if (!q) return overdueCustomers;
+          return overdueCustomers.filter((r) => {
+            const haystack = `${r.customer_name || ''} ${r.customer_phone || ''}`.toLowerCase();
+            return haystack.includes(q);
+          });
+        }
+      function renderModal() {
+        const list = modalFiltered().slice().sort((a, b) => (b.balance_due || 0) - (a.balance_due || 0));
+        const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+        page = Math.max(1, Math.min(page, totalPages));
+        const start = (page - 1) * pageSize;
+        const slice = list.slice(start, start + pageSize);
+        modalTbody.innerHTML = slice.map(row => {
+          const sent = !!row.sent_today;
+          const btnClass = sent ? 'btn-success' : 'btn-primary';
+          const btnLabel = sent ? 'Sent' : 'Send';
+          const disabledAttr = sent ? 'disabled' : '';
+          const customerName = row.customer_name || '';
+          const customerNameSafe = escapeHtml(customerName);
+          const customerPhoneSafe = escapeHtml(row.customer_phone || '');
+          const nextFollowupValue = row.next_followup || '';
+          const notesValue = row.collection_notes || '';
+          const notesSafe = escapeHtml(notesValue);
+          return `
+            <tr>
+              <td>${customerNameSafe}</td>
+              <td>${customerPhoneSafe}</td>
+              <td>${formatLastSent(row.last_sent)}</td>
+              <td class="text-end">${currencyFmt(row.balance_due)}</td>
+              <td>
+                <input type="date" class="form-control form-control-sm overdue-next-followup"
+                  data-customer-id="${row.customer_id}"
+                  value="${escapeHtml(nextFollowupValue)}">
+              </td>
+              <td>
+                <textarea class="form-control form-control-sm overdue-collection-notes"
+                  data-customer-id="${row.customer_id}"
+                  rows="2" placeholder="Add note...">${notesSafe}</textarea>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-outline-primary btn-sm overdue-payment-btn"
+                  data-customer-id="${row.customer_id}"
+                  data-customer-name="${customerName.replace(/"/g, '&quot;')}"
+                  data-outstanding="${row.outstanding_due || row.balance_due || 0}">Record</button>
+              </td>
+              <td class="text-end">
+                <button class="btn ${btnClass} btn-sm overdue-reminder-btn" data-customer-id="${row.customer_id}" ${disabledAttr}>${btnLabel}</button>
+              </td>
+            </tr>`;
+        }).join('') || '<tr><td colspan="8" class="text-muted text-center py-3">No overdue customers.</td></tr>';
+        const displayStart = list.length ? start + 1 : 0;
+        const displayEnd = Math.min(start + pageSize, list.length);
+        modalInfo.textContent = `${displayStart}-${displayEnd} of ${list.length}`;
+        modalFirst.disabled = page <= 1;
+        modalPrev.disabled = page <= 1;
+        modalNext.disabled = page >= totalPages;
+        modalLast.disabled = page >= totalPages;
+      }
+      modalSearch.addEventListener('input', () => { page = 1; renderModal(); });
+      modalFirst.addEventListener('click', () => { page = 1; renderModal(); });
+      modalPrev.addEventListener('click', () => { page = Math.max(1, page - 1); renderModal(); });
+      modalNext.addEventListener('click', () => { page = page + 1; renderModal(); });
+      modalLast.addEventListener('click', () => {
+        page = Math.max(1, Math.ceil(modalFiltered().length / pageSize));
+        renderModal();
+      });
+      modalTbody.addEventListener('click', async (e) => {
+        const payBtn = e.target.closest('.overdue-payment-btn');
+        if (payBtn) {
+          const customerId = payBtn.dataset.customerId;
+          const customerName = payBtn.dataset.customerName || '';
+          const outstanding = payBtn.dataset.outstanding;
+          if (customerId) {
+            modal.hide();
+            openCustomerPaymentModal({ customerId, customerName, outstanding });
+          }
+          return;
+        }
+        const btn = e.target.closest('.overdue-reminder-btn');
+        if (!btn) return;
+        const customerId = btn.dataset.customerId;
+        if (!customerId) return;
+        btn.disabled = true;
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-secondary');
+        btn.textContent = 'Sending…';
+        try {
+          const resp = await fetch(reminderUrlFor(customerId), {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(data.error || 'Unable to send reminder.');
+          const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+          if (idx >= 0) overdueCustomers[idx].sent_today = true;
+          showStatus('success', data.message || 'Reminder sent.');
+        } catch (err) {
+          const msg = err.message || 'Unable to send reminder.';
+          if ((msg || '').toLowerCase().includes('already sent')) {
+            const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+            if (idx >= 0) overdueCustomers[idx].sent_today = true;
+          }
+          showStatus('danger', msg);
+      } finally {
+        renderModal();
+        renderOverdueTable();
+      }
+    });
+
+    modalTbody.addEventListener('input', (e) => {
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.classList.contains('overdue-next-followup')) {
+        const customerId = target.dataset.customerId;
+        if (!customerId) return;
+        queueOverdueFollowupSave(customerId, { next_followup: target.value || '' });
+      }
+      if (target.classList.contains('overdue-collection-notes')) {
+        const customerId = target.dataset.customerId;
+        if (!customerId) return;
+        queueOverdueFollowupSave(customerId, { collection_notes: target.value || '' });
+      }
+    });
+    renderModal();
+    modal.show();
+  }
+    overdueExpandBtn?.addEventListener('click', openOverdueModal);
+    renderOverdueTable();
+
+    if (customerPaymentForm) {
+      customerPaymentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const customerId = customerPaymentCustomerId?.value;
+        if (!customerId) return;
+        const url = recordPaymentUrlFor(customerId);
+        if (!url) return;
+        const unlock = lockFormSubmits(customerPaymentForm);
+        const hide = showProcessingOverlay('Recording payment…');
+        if (customerPaymentSubmit) {
+          customerPaymentSubmit.disabled = true;
+          customerPaymentSubmit.textContent = 'Recording…';
+        }
+        try {
+          const formData = new FormData(customerPaymentForm);
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData,
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || data.status !== 'success') throw new Error(data.message || 'Unable to record payment.');
+          customerPaymentModal?.hide();
+          const idx = overdueCustomers.findIndex(r => String(r.customer_id) === String(customerId));
+          if (idx >= 0) {
+            overdueCustomers[idx].balance_due = Number(data.outstanding_after || 0);
+            overdueCustomers[idx].outstanding_due = Number(data.outstanding_after || 0);
+            if (Number(data.overdue_after || 0) <= 0.009) overdueCustomers.splice(idx, 1);
+          }
+          renderOverdueTable();
+          if (customerPaymentSuccessMsg) customerPaymentSuccessMsg.textContent = data.message || 'Payment recorded.';
+          if (customerPaymentSuccessRows) {
+            const rows = (data.allocations || []).map(a => {
+              const statusLabel = (a.status === 'paid') ? 'Paid' : (a.status === 'partial' ? 'Partially paid' : 'Pending');
+              const invoiceUrl = a.invoice_id ? invoiceDetailUrlFor(a.invoice_id) : '';
+              const invoiceLabel = a.invoice_number || '';
+              const invoiceCell = invoiceUrl
+                ? `<a href="${invoiceUrl}" target="_blank" rel="noopener" class="text-decoration-none">${invoiceLabel}</a>`
+                : `${invoiceLabel}`;
+              return `
+                <tr>
+                  <td>${invoiceCell}</td>
+                  <td class="text-end">${currencyFmt(a.applied)}</td>
+                  <td>${statusLabel}</td>
+                  <td class="text-end">${currencyFmt(a.balance_remaining)}</td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="4" class="text-muted text-center py-3">No allocations.</td></tr>';
+            customerPaymentSuccessRows.innerHTML = rows;
+          }
+          if (customerPaymentStatementButtons) {
+            const links = data.statement_links || {};
+            const emailUrl = data.statement_email_url || '';
+            const mkBtnGroup = (key, label) => {
+              const group = links[key] || {};
+              return `
+                <div class="border rounded p-2">
+                  <div class="fw-semibold mb-2">${label}</div>
+                  <div class="d-flex gap-2 flex-wrap">
+                    <a class="btn btn-sm btn-outline-primary" href="${group.download || '#'}">Download</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="${group.print || '#'}" target="_blank" rel="noopener">Print</a>
+                    <button type="button" class="btn btn-sm btn-outline-success js-statement-email" data-email-url="${emailUrl}" data-invoice-type="${key}">Email</button>
+                  </div>
+                </div>`;
+            };
+            customerPaymentStatementButtons.innerHTML = [
+              mkBtnGroup('paid', 'Paid'),
+              mkBtnGroup('pending', 'Pending'),
+              mkBtnGroup('all', 'All'),
+              mkBtnGroup('overdue', 'Overdue'),
+            ].join('');
+          }
+          customerPaymentSuccessModal?.show();
+        } catch (err) {
+          showStatus('danger', err.message || 'Unable to record payment.');
+        } finally {
+          if (customerPaymentSubmit) {
+            customerPaymentSubmit.disabled = false;
+            customerPaymentSubmit.textContent = 'Record Payment';
+          }
+          unlock();
+          hide();
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}
+

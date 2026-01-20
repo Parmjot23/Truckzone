@@ -1,0 +1,1340 @@
+{% extends 'customer_portal_base.html' %}
+{% load humanize %}
+
+{% block title %}Financial Performance Hub{% endblock %}
+
+{% block extra_css %}
+<style>
+  .finance-surface {
+    --fin-ink: #0f172a;
+    --fin-muted: #64748b;
+    --fin-border: rgba(15, 23, 42, 0.08);
+    --fin-surface: #f8fafc;
+    --fin-surface-strong: #ffffff;
+    --fin-accent: #0f766e;
+    --fin-accent-strong: #0b5d58;
+    --fin-gold: #f59e0b;
+    --fin-success: #16a34a;
+    --fin-danger: #dc2626;
+    --fin-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
+    --fin-shadow-soft: 0 12px 24px rgba(15, 23, 42, 0.08);
+    font-family: 'Manrope', 'Space Grotesk', sans-serif;
+    background: radial-gradient(circle at 15% 15%, rgba(15, 118, 110, 0.12), transparent 45%),
+                radial-gradient(circle at 85% 5%, rgba(245, 158, 11, 0.1), transparent 40%),
+                linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+    border-radius: 24px;
+    padding: 1.2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .finance-surface::before {
+    content: "";
+    position: absolute;
+    width: 360px;
+    height: 360px;
+    right: -140px;
+    top: -140px;
+    background: radial-gradient(circle, rgba(15, 118, 110, 0.25), transparent 70%);
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  .finance-surface::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.18;
+    pointer-events: none;
+  }
+
+  .finance-content {
+    position: relative;
+    z-index: 1;
+    color: var(--fin-ink);
+  }
+
+  .fin-reveal {
+    animation: finRise 0.6s ease both;
+    animation-delay: var(--delay, 0s);
+  }
+
+  @keyframes finRise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .finance-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #0f766e 70%, #0b5d58 100%);
+    color: #f8fafc;
+    border-radius: 22px;
+    padding: 1.4rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+    gap: 1.2rem;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .finance-hero::after {
+    content: "";
+    position: absolute;
+    inset: 1rem;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+  }
+
+  .finance-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(226, 232, 240, 0.78);
+    margin-bottom: 0.4rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .finance-title {
+    font-size: 1.7rem;
+    font-weight: 800;
+    margin-bottom: 0.35rem;
+    font-family: 'Space Grotesk', 'Manrope', sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  .finance-subtitle {
+    font-size: 0.98rem;
+    color: rgba(226, 232, 240, 0.85);
+    margin: 0 0 0.9rem;
+  }
+
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.3);
+    color: rgba(248, 250, 252, 0.92);
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+
+  .hero-panel {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 18px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    backdrop-filter: blur(6px);
+  }
+
+  .hero-panel-title {
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+  }
+
+  .hero-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.65rem;
+  }
+
+  .hero-metric .label {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(226, 232, 240, 0.7);
+    font-weight: 700;
+  }
+
+  .hero-metric .value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-top: 0.2rem;
+  }
+
+  .hero-actions {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .fin-btn {
+    border-radius: 12px;
+    padding: 0.5rem 0.9rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    text-decoration: none;
+  }
+
+  .fin-btn-primary {
+    background: linear-gradient(135deg, var(--fin-accent), var(--fin-accent-strong));
+    color: #fff;
+    box-shadow: 0 12px 24px rgba(15, 118, 110, 0.3);
+  }
+
+  .fin-btn-ghost {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .fin-btn-outline {
+    background: transparent;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+  }
+
+  .fin-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+
+  .finance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+
+  .finance-card {
+    background: var(--fin-surface-strong);
+    border-radius: 18px;
+    padding: 1rem;
+    border: 1px solid var(--fin-border);
+    box-shadow: var(--fin-shadow-soft);
+  }
+
+  .card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .card-head h3 {
+    font-size: 1.05rem;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .card-head p {
+    margin: 0.3rem 0 0;
+    color: var(--fin-muted);
+    font-size: 0.9rem;
+  }
+
+  .badge-soft {
+    background: #eef2ff;
+    color: #3730a3;
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .range-chips,
+  .compare-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .range-chip,
+  .compare-chip {
+    border-radius: 999px;
+    border: 1px solid var(--fin-border);
+    background: #fff;
+    color: var(--fin-ink);
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.32rem 0.7rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .range-chip.is-active,
+  .compare-chip.is-active {
+    background: var(--fin-accent);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 10px 20px rgba(15, 118, 110, 0.25);
+  }
+
+  .range-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.6rem;
+  }
+
+  .range-inputs label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fin-muted);
+    margin-bottom: 0.2rem;
+  }
+
+  .compare-grid {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .compare-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  .compare-item .label {
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .compare-item .value {
+    font-weight: 800;
+  }
+
+  .export-card {
+    background: linear-gradient(145deg, #f8fafc 0%, #eef2f7 100%);
+  }
+
+  .export-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .export-actions .fin-btn {
+    color: var(--fin-ink);
+  }
+
+  .export-actions .fin-btn-primary {
+    color: #fff;
+  }
+
+  .export-list {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .export-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    background: #fff;
+    border-radius: 12px;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--fin-border);
+  }
+
+  .export-item span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 700;
+  }
+
+  .export-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1rem;
+  }
+
+  .kpi-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 0.9rem;
+    border: 1px solid var(--fin-border);
+    box-shadow: var(--fin-shadow-soft);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, rgba(15, 118, 110, 0.1), transparent 55%);
+    opacity: 0.7;
+  }
+
+  .kpi-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .kpi-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--fin-muted);
+  }
+
+  .kpi-value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    margin: 0.3rem 0 0.2rem;
+  }
+
+  .kpi-sub {
+    font-size: 0.86rem;
+    color: var(--fin-muted);
+    margin: 0 0 0.35rem;
+  }
+
+  .trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .trend-up { color: var(--fin-success); }
+  .trend-down { color: var(--fin-danger); }
+
+  .kpi-bar {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 0.4rem;
+  }
+
+  .kpi-bar span {
+    display: block;
+    height: 100%;
+    width: var(--value, 60%);
+    background: linear-gradient(90deg, var(--fin-accent), #38bdf8);
+    border-radius: 999px;
+  }
+
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+
+  .chart-card.wide {
+    grid-column: span 2;
+  }
+
+  .chart-canvas {
+    min-height: 220px;
+    max-height: 260px;
+  }
+
+  .chart-pill {
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: #ecfdf3;
+    color: #15803d;
+  }
+
+  .chart-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.4rem;
+  }
+
+  .legend-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.45rem;
+    margin-top: 0.6rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--fin-muted);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.4rem;
+  }
+
+  .checklist,
+  .insight-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .checklist li,
+  .insight-list li {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+  }
+
+  .checklist .label,
+  .insight-list .label {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .status-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .status-ready { background: #dcfce7; color: #166534; }
+  .status-review { background: #fff7ed; color: #c2410c; }
+  .status-hold { background: #fee2e2; color: #b91c1c; }
+
+  .insight-actions {
+    margin-top: 0.9rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .table-card .table {
+    margin: 0;
+  }
+
+  .finance-table thead th {
+    text-transform: uppercase;
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+    color: var(--fin-muted);
+    border-bottom: 1px solid var(--fin-border);
+  }
+
+  .finance-table tbody td {
+    border: none;
+    padding: 0.55rem 0.4rem;
+    font-weight: 600;
+    color: var(--fin-ink);
+  }
+
+  .finance-table tbody tr + tr td {
+    border-top: 1px solid rgba(226, 232, 240, 0.7);
+  }
+
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr);
+    gap: 1rem;
+  }
+
+  .report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.7rem;
+  }
+
+  .report-card {
+    background: #fff;
+    border: 1px solid var(--fin-border);
+    border-radius: 14px;
+    padding: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .report-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.14);
+  }
+
+  .report-card .title {
+    font-weight: 800;
+    font-size: 0.95rem;
+  }
+
+  .report-card .meta {
+    font-size: 0.8rem;
+    color: var(--fin-muted);
+  }
+
+  .progress-line {
+    height: 8px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+    margin-top: 0.4rem;
+  }
+
+  .progress-line span {
+    display: block;
+    height: 100%;
+    width: var(--value, 70%);
+    background: linear-gradient(90deg, var(--fin-accent), var(--fin-gold));
+  }
+
+  .finance-modal .modal-content {
+    border-radius: 18px;
+    border: 1px solid var(--fin-border);
+    box-shadow: 0 24px 50px rgba(15, 23, 42, 0.2);
+  }
+
+  .finance-modal .modal-header {
+    background: linear-gradient(135deg, #0f172a, #0f766e);
+    color: #fff;
+    border-bottom: none;
+  }
+
+  .finance-modal .modal-title {
+    font-weight: 800;
+  }
+
+  .finance-modal .modal-body {
+    background: #f8fafc;
+  }
+
+  .finance-modal .modal-footer {
+    background: #f1f5f9;
+    border-top: none;
+  }
+
+  @media (max-width: 1100px) {
+    .chart-card.wide { grid-column: span 1; }
+    .bottom-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 900px) {
+    .finance-hero {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fin-reveal { animation: none; }
+    .fin-btn:hover,
+    .report-card:hover { transform: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% now "M j, Y g:i A" as now_ts %}
+{% with currency_symbol|default:"$" as currency %}
+<div class="finance-surface">
+  <div class="finance-content page-shell">
+    <section class="finance-hero fin-reveal" style="--delay: 0s;">
+      <div>
+        <div class="finance-eyebrow"><i class="fa-solid fa-chart-line"></i> Performance center</div>
+        <div class="finance-title">Financial Performance Hub</div>
+        <p class="finance-subtitle">Accounting clarity with export-ready reporting for leadership and tax prep.</p>
+        <div class="hero-meta">
+          <div class="meta-chip"><i class="fa-regular fa-calendar"></i> {{ period_label|default:"This Month" }}</div>
+          <div class="meta-chip"><i class="fa-solid fa-clock-rotate-left"></i> Updated {{ last_updated|date:"M j, Y g:i A"|default:now_ts }}</div>
+          <div class="meta-chip"><i class="fa-solid fa-flag"></i> {{ fiscal_year_label|default:"FY 2025" }}</div>
+          <div class="meta-chip"><i class="fa-solid fa-shield-check"></i> Books {{ books_status|default:"In review" }}</div>
+        </div>
+      </div>
+      <div class="hero-panel">
+        <div class="hero-panel-title">Today at a glance</div>
+        <div class="hero-metrics">
+          <div class="hero-metric">
+            <div class="label">Cash on hand</div>
+            <div class="value">{{ currency }}{{ cash_on_hand|default:238450|floatformat:2|intcomma }}</div>
+          </div>
+          <div class="hero-metric">
+            <div class="label">Accounts receivable</div>
+            <div class="value">{{ currency }}{{ accounts_receivable|default:82400|floatformat:2|intcomma }}</div>
+          </div>
+          <div class="hero-metric">
+            <div class="label">Accounts payable</div>
+            <div class="value">{{ currency }}{{ accounts_payable|default:39250|floatformat:2|intcomma }}</div>
+          </div>
+          <div class="hero-metric">
+            <div class="label">Cash runway</div>
+            <div class="value">{{ cash_runway_months|default:6.4 }} months</div>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button type="button" class="fin-btn fin-btn-primary" data-bs-toggle="modal" data-bs-target="#exportReportModal">
+            <i class="fa-solid fa-download"></i> Export report
+          </button>
+          <button type="button" class="fin-btn fin-btn-ghost">
+            <i class="fa-solid fa-file-circle-check"></i> Close period
+          </button>
+          <button type="button" class="fin-btn fin-btn-outline">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Upload receipts
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="finance-grid fin-reveal" style="--delay: 0.08s;">
+      <div class="finance-card">
+        <div class="card-head">
+          <div>
+            <h3>Reporting window</h3>
+            <p>Switch time ranges for fast comparisons.</p>
+          </div>
+          <span class="badge-soft">Auto-synced</span>
+        </div>
+        <div class="range-chips">
+          <a class="range-chip {% if active_range == 'today' %}is-active{% endif %}" href="?range=today">Today</a>
+          <a class="range-chip {% if active_range == 'yesterday' %}is-active{% endif %}" href="?range=yesterday">Yesterday</a>
+          <a class="range-chip {% if active_range == 'last_week' %}is-active{% endif %}" href="?range=last_week">Last week</a>
+          <a class="range-chip {% if active_range == 'this_week' %}is-active{% endif %}" href="?range=this_week">This week</a>
+          <a class="range-chip {% if active_range == 'last_month' %}is-active{% endif %}" href="?range=last_month">Last month</a>
+          <a class="range-chip {% if active_range == 'this_month' %}is-active{% endif %}" href="?range=this_month">This month</a>
+          <a class="range-chip {% if active_range == 'fiscal_year' %}is-active{% endif %}" href="?range=fiscal_year">Fiscal year</a>
+        </div>
+        <div class="range-inputs">
+          <div>
+            <label>Start date</label>
+            <input type="date" class="form-control form-control-sm" value="{{ period_start|date:'Y-m-d'|default:'' }}">
+          </div>
+          <div>
+            <label>End date</label>
+            <input type="date" class="form-control form-control-sm" value="{{ period_end|date:'Y-m-d'|default:'' }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="finance-card">
+        <div class="card-head">
+          <div>
+            <h3>Comparison</h3>
+            <p>Contrast performance with prior periods.</p>
+          </div>
+          <span class="badge-soft">Smart deltas</span>
+        </div>
+        <div class="compare-chips">
+          <button class="compare-chip is-active">Previous period</button>
+          <button class="compare-chip">Same period last year</button>
+          <button class="compare-chip">Custom</button>
+        </div>
+        <div class="compare-grid">
+          <div class="compare-item">
+            <div class="label">Net income change</div>
+            <div class="value trend-up">{{ net_income_change_display|default:"+8.4%" }}</div>
+          </div>
+          <div class="compare-item">
+            <div class="label">Gross margin change</div>
+            <div class="value trend-up">{{ gross_margin_change_display|default:"+2.1%" }}</div>
+          </div>
+          <div class="compare-item">
+            <div class="label">Expense change</div>
+            <div class="value trend-down">{{ expense_change_display|default:"-3.5%" }}</div>
+          </div>
+          <div class="compare-item">
+            <div class="label">Cash flow change</div>
+            <div class="value trend-up">{{ cash_flow_change_display|default:"+5.9%" }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="finance-card export-card">
+        <div class="card-head">
+          <div>
+            <h3>Exports and sharing</h3>
+            <p>Accountant-ready files for tax prep.</p>
+          </div>
+          <span class="badge-soft">Tax pack</span>
+        </div>
+        <div class="export-actions">
+          <button type="button" class="fin-btn fin-btn-primary" data-bs-toggle="modal" data-bs-target="#exportReportModal">
+            <i class="fa-solid fa-file-export"></i> Export pack
+          </button>
+          <button type="button" class="fin-btn fin-btn-outline">
+            <i class="fa-solid fa-share-nodes"></i> Share link
+          </button>
+        </div>
+        <div class="export-list">
+          <div class="export-item">
+            <span><i class="fa-solid fa-file-excel"></i> Excel workbook</span>
+            <span class="export-tag">XLSX</span>
+          </div>
+          <div class="export-item">
+            <span><i class="fa-solid fa-file-pdf"></i> PDF summary</span>
+            <span class="export-tag">PDF</span>
+          </div>
+          <div class="export-item">
+            <span><i class="fa-solid fa-file-csv"></i> Journal exports</span>
+            <span class="export-tag">CSV</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="kpi-grid fin-reveal" style="--delay: 0.14s;">
+      <div class="kpi-card">
+        <div class="kpi-label">Gross income</div>
+        <div class="kpi-value">{{ currency }}{{ gross_income|default:428500|floatformat:2|intcomma }}</div>
+        <div class="kpi-sub">All revenue streams combined.</div>
+        <div class="trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i> {{ gross_income_trend_display|default:"+6.2%" }}</div>
+        <div class="kpi-bar" style="--value: {{ gross_income_progress|default:74 }}%;"><span></span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Net income</div>
+        <div class="kpi-value">{{ currency }}{{ net_income|default:118300|floatformat:2|intcomma }}</div>
+        <div class="kpi-sub">After taxes and expenses.</div>
+        <div class="trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i> {{ net_income_trend_display|default:"+8.4%" }}</div>
+        <div class="kpi-bar" style="--value: {{ net_income_progress|default:68 }}%;"><span></span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Expenses</div>
+        <div class="kpi-value">{{ currency }}{{ total_expenses|default:214200|floatformat:2|intcomma }}</div>
+        <div class="kpi-sub">Operating and fixed costs.</div>
+        <div class="trend trend-down"><i class="fa-solid fa-arrow-trend-down"></i> {{ expenses_trend_display|default:"-3.5%" }}</div>
+        <div class="kpi-bar" style="--value: {{ expenses_progress|default:62 }}%;"><span></span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cost of goods sold</div>
+        <div class="kpi-value">{{ currency }}{{ cogs|default:96200|floatformat:2|intcomma }}</div>
+        <div class="kpi-sub">Direct costs tied to sales.</div>
+        <div class="trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i> {{ cogs_trend_display|default:"+1.9%" }}</div>
+        <div class="kpi-bar" style="--value: {{ cogs_progress|default:54 }}%;"><span></span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Assets</div>
+        <div class="kpi-value">{{ currency }}{{ assets_total|default:842300|floatformat:2|intcomma }}</div>
+        <div class="kpi-sub">Cash, inventory, and equipment.</div>
+        <div class="trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i> {{ assets_trend_display|default:"+4.1%" }}</div>
+        <div class="kpi-bar" style="--value: {{ assets_progress|default:83 }}%;"><span></span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Liabilities</div>
+        <div class="kpi-value">{{ currency }}{{ liabilities_total|default:312400|floatformat:2|intcomma }}</div>
+        <div class="kpi-sub">Payables and debt.</div>
+        <div class="trend trend-down"><i class="fa-solid fa-arrow-trend-down"></i> {{ liabilities_trend_display|default:"-1.2%" }}</div>
+        <div class="kpi-bar" style="--value: {{ liabilities_progress|default:48 }}%;"><span></span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Operating cash flow</div>
+        <div class="kpi-value">{{ currency }}{{ operating_cash_flow|default:96500|floatformat:2|intcomma }}</div>
+        <div class="kpi-sub">Cash generated from operations.</div>
+        <div class="trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i> {{ cash_flow_trend_display|default:"+5.9%" }}</div>
+        <div class="kpi-bar" style="--value: {{ cash_flow_progress|default:71 }}%;"><span></span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Gross margin</div>
+        <div class="kpi-value">{{ gross_margin|default:44.6 }}%</div>
+        <div class="kpi-sub">Profit after direct costs.</div>
+        <div class="trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i> {{ gross_margin_trend_display|default:"+2.1%" }}</div>
+        <div class="kpi-bar" style="--value: {{ gross_margin_progress|default:66 }}%;"><span></span></div>
+      </div>
+    </section>
+
+    <section class="chart-grid fin-reveal" style="--delay: 0.2s;">
+      <div class="finance-card chart-card wide">
+        <div class="card-head">
+          <div>
+            <h3>Income vs expenses</h3>
+            <p>Monthly trend across the reporting window.</p>
+          </div>
+          <span class="chart-pill">Gross profit {{ currency }}{{ gross_profit|default:214300|floatformat:0|intcomma }}</span>
+        </div>
+        <div class="chart-canvas">
+          <canvas id="incomeExpenseChart"></canvas>
+        </div>
+        <div class="chart-meta">
+          <span class="badge-soft">Income growth {{ income_growth_display|default:"+6.2%" }}</span>
+          <span class="badge-soft">Expense control {{ expense_change_display|default:"-3.5%" }}</span>
+        </div>
+      </div>
+
+      <div class="finance-card chart-card">
+        <div class="card-head">
+          <div>
+            <h3>Expense mix</h3>
+            <p>Top spending categories this period.</p>
+          </div>
+          <span class="badge-soft">By category</span>
+        </div>
+        <div class="chart-canvas">
+          <canvas id="expenseMixChart"></canvas>
+        </div>
+        <div class="legend-row">
+          {% for item in expense_mix_legend %}
+            <div><span class="legend-dot" style="background: {{ item.color }};"></span>{{ item.label }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="finance-card chart-card">
+        <div class="card-head">
+          <div>
+            <h3>Balance sheet snapshot</h3>
+            <p>Assets vs liabilities trend.</p>
+          </div>
+          <span class="badge-soft">Rolling</span>
+        </div>
+        <div class="chart-canvas">
+          <canvas id="balanceSheetChart"></canvas>
+        </div>
+        <div class="chart-meta">
+          <span class="badge-soft">Equity {{ currency }}{{ equity_total|default:529900|floatformat:0|intcomma }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="finance-grid fin-reveal" style="--delay: 0.26s;">
+      <div class="finance-card">
+        <div class="card-head">
+          <div>
+            <h3>Tax readiness</h3>
+            <p>Everything your accountant needs.</p>
+          </div>
+          <span class="badge-soft">Ready</span>
+        </div>
+        <ul class="checklist">
+          <li>
+            <span class="label"><i class="fa-solid fa-receipt"></i> Sales tax summary</span>
+            <span class="status-pill status-ready">Ready</span>
+          </li>
+          <li>
+            <span class="label"><i class="fa-solid fa-file-invoice-dollar"></i> Payroll tax filings</span>
+            <span class="status-pill status-ready">Ready</span>
+          </li>
+          <li>
+            <span class="label"><i class="fa-solid fa-user-tie"></i> 1099 contractor totals</span>
+            <span class="status-pill status-review">Review</span>
+          </li>
+          <li>
+            <span class="label"><i class="fa-solid fa-chart-area"></i> Depreciation schedule</span>
+            <span class="status-pill status-ready">Ready</span>
+          </li>
+          <li>
+            <span class="label"><i class="fa-solid fa-paperclip"></i> Receipts matched</span>
+            <span class="status-pill status-ready">{{ receipts_matched_percent|default:93 }}%</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="finance-card">
+        <div class="card-head">
+          <div>
+            <h3>Close checklist</h3>
+            <p>Month-end tasks and reconciliation status.</p>
+          </div>
+          <span class="badge-soft">In progress</span>
+        </div>
+        <ul class="checklist">
+          <li>
+            <span class="label"><i class="fa-solid fa-building-columns"></i> Bank reconciliations</span>
+            <span class="status-pill status-ready">Closed</span>
+          </li>
+          <li>
+            <span class="label"><i class="fa-solid fa-credit-card"></i> Credit card reconciliations</span>
+            <span class="status-pill status-review">Due</span>
+          </li>
+          <li>
+            <span class="label"><i class="fa-solid fa-boxes-stacked"></i> Inventory valuation</span>
+            <span class="status-pill status-ready">Closed</span>
+          </li>
+          <li>
+            <span class="label"><i class="fa-solid fa-scale-balanced"></i> Accruals and prepaid</span>
+            <span class="status-pill status-review">Review</span>
+          </li>
+          <li>
+            <span class="label"><i class="fa-solid fa-user-check"></i> Management review</span>
+            <span class="status-pill status-hold">Pending</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="finance-card">
+        <div class="card-head">
+          <div>
+            <h3>Insights</h3>
+            <p>Highlights for leadership decisions.</p>
+          </div>
+          <span class="badge-soft">This period</span>
+        </div>
+        <ul class="insight-list">
+          <li>
+            <span class="label"><i class="fa-solid fa-arrow-trend-up"></i> Gross margin is above target</span>
+            <span class="status-pill status-ready">+2.1%</span>
+          </li>
+          <li>
+            <span class="label"><i class="fa-solid fa-arrow-trend-down"></i> Facility costs trending higher</span>
+            <span class="status-pill status-review">+4.6%</span>
+          </li>
+          <li>
+            <span class="label"><i class="fa-solid fa-wallet"></i> Outstanding receivables need follow-up</span>
+            <span class="status-pill status-review">{{ currency }}{{ overdue_receivables|default:21400|floatformat:0|intcomma }}</span>
+          </li>
+          <li>
+            <span class="label"><i class="fa-solid fa-hand-holding-dollar"></i> Vendor terms improved</span>
+            <span class="status-pill status-ready">Net 30</span>
+          </li>
+        </ul>
+        <div class="insight-actions">
+          <button type="button" class="fin-btn fin-btn-primary">
+            <i class="fa-solid fa-layer-group"></i> Review categories
+          </button>
+          <button type="button" class="fin-btn fin-btn-outline">
+            <i class="fa-solid fa-envelope"></i> Send AR reminders
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="finance-card table-card fin-reveal" style="--delay: 0.32s;">
+      <div class="card-head">
+        <div>
+          <h3>Period comparison summary</h3>
+          <p>Side-by-side performance vs previous period.</p>
+        </div>
+        <span class="badge-soft">{{ period_label|default:"This Month" }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table finance-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th class="text-end">{{ current_period_label|default:"This period" }}</th>
+              <th class="text-end">{{ previous_period_label|default:"Previous period" }}</th>
+              <th class="text-end">Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Gross income</td>
+              <td class="text-end">{{ currency }}{{ gross_income|default:428500|floatformat:0|intcomma }}</td>
+              <td class="text-end">{{ currency }}{{ gross_income_prev|default:403200|floatformat:0|intcomma }}</td>
+              <td class="text-end trend trend-up">{{ gross_income_trend_display|default:"+6.2%" }}</td>
+            </tr>
+            <tr>
+              <td>Cost of goods sold</td>
+              <td class="text-end">{{ currency }}{{ cogs|default:96200|floatformat:0|intcomma }}</td>
+              <td class="text-end">{{ currency }}{{ cogs_prev|default:94300|floatformat:0|intcomma }}</td>
+              <td class="text-end trend trend-up">{{ cogs_trend_display|default:"+1.9%" }}</td>
+            </tr>
+            <tr>
+              <td>Gross profit</td>
+              <td class="text-end">{{ currency }}{{ gross_profit|default:332300|floatformat:0|intcomma }}</td>
+              <td class="text-end">{{ currency }}{{ gross_profit_prev|default:308900|floatformat:0|intcomma }}</td>
+              <td class="text-end trend trend-up">{{ gross_margin_trend_display|default:"+2.1%" }}</td>
+            </tr>
+            <tr>
+              <td>Operating expenses</td>
+              <td class="text-end">{{ currency }}{{ operating_expenses|default:214200|floatformat:0|intcomma }}</td>
+              <td class="text-end">{{ currency }}{{ operating_expenses_prev|default:222100|floatformat:0|intcomma }}</td>
+              <td class="text-end trend trend-down">{{ expenses_trend_display|default:"-3.5%" }}</td>
+            </tr>
+            <tr>
+              <td>Net income</td>
+              <td class="text-end">{{ currency }}{{ net_income|default:118300|floatformat:0|intcomma }}</td>
+              <td class="text-end">{{ currency }}{{ net_income_prev|default:100400|floatformat:0|intcomma }}</td>
+              <td class="text-end trend trend-up">{{ net_income_trend_display|default:"+8.4%" }}</td>
+            </tr>
+            <tr>
+              <td>Operating cash flow</td>
+              <td class="text-end">{{ currency }}{{ operating_cash_flow|default:96500|floatformat:0|intcomma }}</td>
+              <td class="text-end">{{ currency }}{{ operating_cash_flow_prev|default:91100|floatformat:0|intcomma }}</td>
+              <td class="text-end trend trend-up">{{ cash_flow_trend_display|default:"+5.9%" }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bottom-grid fin-reveal" style="--delay: 0.38s;">
+      <div class="finance-card">
+        <div class="card-head">
+          <div>
+            <h3>Reports library</h3>
+            <p>One click access to all accounting reports.</p>
+          </div>
+          <span class="badge-soft">Ready to export</span>
+        </div>
+        <div class="report-grid">
+          <a class="report-card" href="#">
+            <div class="title"><i class="fa-solid fa-chart-line"></i> Profit and loss</div>
+            <div class="meta">Updated {{ last_updated|date:"M j"|default:"Today" }}</div>
+          </a>
+          <a class="report-card" href="#">
+            <div class="title"><i class="fa-solid fa-scale-balanced"></i> Balance sheet</div>
+            <div class="meta">Updated {{ last_updated|date:"M j"|default:"Today" }}</div>
+          </a>
+          <a class="report-card" href="#">
+            <div class="title"><i class="fa-solid fa-water"></i> Cash flow</div>
+            <div class="meta">Updated {{ last_updated|date:"M j"|default:"Today" }}</div>
+          </a>
+          <a class="report-card" href="#">
+            <div class="title"><i class="fa-solid fa-list-check"></i> Trial balance</div>
+            <div class="meta">Updated {{ last_updated|date:"M j"|default:"Today" }}</div>
+          </a>
+          <a class="report-card" href="#">
+            <div class="title"><i class="fa-solid fa-book"></i> General ledger</div>
+            <div class="meta">Updated {{ last_updated|date:"M j"|default:"Today" }}</div>
+          </a>
+          <a class="report-card" href="#">
+            <div class="title"><i class="fa-solid fa-file-invoice"></i> Tax summary</div>
+            <div class="meta">Ready for filing</div>
+          </a>
+        </div>
+      </div>
+
+      <div class="finance-card">
+        <div class="card-head">
+          <div>
+            <h3>Audit trail</h3>
+            <p>Coverage and documentation status.</p>
+          </div>
+          <span class="badge-soft">Compliant</span>
+        </div>
+        <div>
+          <div class="kpi-label">Receipt coverage</div>
+          <div class="kpi-value">{{ receipts_matched_percent|default:93 }}%</div>
+          <div class="kpi-sub">Receipts attached to transactions.</div>
+          <div class="progress-line" style="--value: {{ receipts_matched_percent|default:93 }}%;"><span></span></div>
+        </div>
+        <div class="mt-3">
+          <div class="kpi-label">Reconciled accounts</div>
+          <div class="kpi-value">{{ reconciled_accounts_percent|default:88 }}%</div>
+          <div class="kpi-sub">Bank, credit card, and payroll.</div>
+          <div class="progress-line" style="--value: {{ reconciled_accounts_percent|default:88 }}%;"><span></span></div>
+        </div>
+        <div class="mt-3">
+          <button type="button" class="fin-btn fin-btn-primary w-100">
+            <i class="fa-solid fa-lock"></i> Lock books for audit
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="modal fade finance-modal" id="exportReportModal" tabindex="-1" aria-labelledby="exportReportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exportReportModalLabel">Export performance report</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="get" action="{% url 'accounts:download_report' %}">
+          {% if report_start_month %}
+            <input type="hidden" name="start_month" value="{{ report_start_month }}">
+          {% endif %}
+          {% if report_end_month %}
+            <input type="hidden" name="end_month" value="{{ report_end_month }}">
+          {% endif %}
+          {% if report_date %}
+            <input type="hidden" name="date" value="{{ report_date }}">
+          {% endif %}
+          <div class="mb-3">
+            <label class="form-label">Report type</label>
+            <select class="form-select" name="report_type">
+              <option value="pack">Full performance pack</option>
+              <option value="income_expense">Profit and loss</option>
+              <option value="tax_report">Tax summary</option>
+              <option value="detailed_income">Income journal</option>
+              <option value="detailed_expense">Expense journal</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Format</label>
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-outline-primary" name="format" value="excel"><i class="fa-solid fa-file-excel me-2"></i>Excel workbook</button>
+              <button type="submit" class="btn btn-outline-secondary" name="format" value="pdf"><i class="fa-solid fa-file-pdf me-2"></i>PDF summary</button>
+              <button type="submit" class="btn btn-outline-success" name="format" value="csv"><i class="fa-solid fa-file-csv me-2"></i>CSV journal export</button>
+            </div>
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="includeReceipts" name="include_receipts" checked>
+            <label class="form-check-label" for="includeReceipts">Include receipts and attachments</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="notifyAccountant" name="notify_accountant">
+            <label class="form-check-label" for="notifyAccountant">Email copy to accountant</label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endwith %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% if finance_chart_data %}
+  {{ finance_chart_data|json_script:"finance-chart-data" }}
+{% endif %}
+<script>
+  (function() {
+    const fallback = {
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      income: [120000, 132000, 128000, 145000, 152000, 166000],
+      expenses: [78000, 82000, 79000, 86000, 90000, 92000],
+      assets: [320000, 335000, 342000, 360000, 368000, 379000],
+      liabilities: [140000, 138000, 142000, 146000, 150000, 148000],
+      expense_labels: ['Payroll', 'Operations', 'Marketing', 'Facilities', 'Software', 'Other'],
+      expense_mix: [34, 22, 14, 12, 10, 8]
+    };
+
+    const dataEl = document.getElementById('finance-chart-data');
+    const chartData = dataEl ? JSON.parse(dataEl.textContent) : fallback;
+    const safeData = (chartData && typeof chartData === 'object') ? chartData : fallback;
+
+    const incomeExpenseCtx = document.getElementById('incomeExpenseChart');
+    if (incomeExpenseCtx && window.Chart) {
+      new Chart(incomeExpenseCtx, {
+        type: 'line',
+        data: {
+          labels: safeData.labels || [],
+          datasets: [
+            {
+              label: 'Income',
+              data: safeData.income || [],
+              borderColor: '#0f766e',
+              backgroundColor: 'rgba(15, 118, 110, 0.15)',
+              tension: 0.35,
+              fill: true,
+              pointRadius: 2
+            },
+            {
+              label: 'Expenses',
+              data: safeData.expenses || [],
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.16)',
+              tension: 0.35,
+              fill: true,
+              pointRadius: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, labels: { usePointStyle: true } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#64748b' } },
+            y: { beginAtZero: true, grid: { color: 'rgba(148, 163, 184, 0.2)' }, ticks: { color: '#64748b' } }
+          }
+        }
+      });
+    }
+
+    const expenseMixCtx = document.getElementById('expenseMixChart');
+    if (expenseMixCtx && window.Chart) {
+      new Chart(expenseMixCtx, {
+        type: 'doughnut',
+        data: {
+          labels: safeData.expense_labels || [],
+          datasets: [{
+            data: safeData.expense_mix || [],
+            backgroundColor: ['#0f766e', '#f59e0b', '#38bdf8', '#f97316', '#64748b', '#94a3b8'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    const balanceSheetCtx = document.getElementById('balanceSheetChart');
+    if (balanceSheetCtx && window.Chart) {
+      new Chart(balanceSheetCtx, {
+        type: 'bar',
+        data: {
+          labels: safeData.labels || [],
+          datasets: [
+            {
+              label: 'Assets',
+              data: safeData.assets || [],
+              backgroundColor: '#0f766e',
+              borderRadius: 8,
+              maxBarThickness: 18
+            },
+            {
+              label: 'Liabilities',
+              data: safeData.liabilities || [],
+              backgroundColor: '#f59e0b',
+              borderRadius: 8,
+              maxBarThickness: 18
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, labels: { usePointStyle: true } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#64748b' } },
+            y: { beginAtZero: true, grid: { color: 'rgba(148, 163, 184, 0.2)' }, ticks: { color: '#64748b' } }
+          }
+        }
+      });
+    }
+  })();
+</script>
+{% endblock %}

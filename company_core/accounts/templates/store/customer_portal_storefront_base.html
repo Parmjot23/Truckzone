@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% block portal_title %}Account{% endblock %}{% endblock %}
+{% block body_class %}public-page-road-bg page-without-hero topbar-light storefront-page page-store-account
+no-scroll-animations{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/storefront_public.css' %}">
+{% block portal_extra_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="store-account-shell">
+  <section class="store-account-header">
+    <div class="container">
+      <div class="store-account-header-inner">
+        <div>
+          <span class="badge bg-white text-primary mb-3">Account</span>
+          <h1 class="store-account-title">Welcome back, {{ customer_account.name|default:request.user.get_username }}.
+          </h1>
+          <p class="store-account-subtitle">Manage invoices, statements, balances, and settings while you shop.</p>
+        </div>
+        <div class="store-account-actions">
+          <a href="{% url 'accounts:store_product_list' %}" class="btn btn-light btn-sm">
+            <i class="fas fa-store me-1"></i> Continue shopping
+          </a>
+          <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-shopping-cart me-1"></i> View cart
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {% if portal_nav_items %}
+  <section class="store-account-nav">
+    <div class="container">
+      <div class="store-account-nav-inner">
+        {% if storefront_selected_profile %}
+        {% if storefront_has_multiple_locations %}
+        <div class="dropdown store-account-dropdown">
+          <button class="store-account-link store-account-location dropdown-toggle" type="button"
+            data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-store"></i>
+            <span class="store-label">My Store:</span>
+            <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+          </button>
+          <div class="dropdown-menu">
+            {% for profile in storefront_locations %}
+            <form method="post" action="{% url 'accounts:storefront_location_set' %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button
+                class="dropdown-item{% if storefront_selected_profile and profile.user_id == storefront_selected_profile.user_id %} active{% endif %}"
+                type="submit" name="storefront_location" value="{{ profile.user_id }}">
+                {{ profile.storefront_label }}
+              </button>
+            </form>
+            {% endfor %}
+          </div>
+        </div>
+        {% else %}
+        <div class="store-account-dropdown">
+          <div class="store-account-link store-account-location store-account-static">
+            <i class="fas fa-store"></i>
+            <span class="store-label">My Store:</span>
+            <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+          </div>
+        </div>
+        {% endif %}
+        {% endif %}
+        {% for item in portal_nav_items %}
+        <a class="store-account-link{% if item.active %} active{% endif %}{% if item.slug == 'logout' %} store-account-link-logout{% endif %}"
+          href="{{ item.url }}">
+          <i class="fas {{ item.icon }}"></i>
+          <span>{{ item.label }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="store-account-content">
+    <div class="container">
+      {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} mb-2 shadow-sm border-0" role="alert">
+          {{ message|safe }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% block portal_hero %}{% endblock %}
+      {% block portal_content %}{% endblock %}
+    </div>
+  </section>
+</div>
+{% endblock %}

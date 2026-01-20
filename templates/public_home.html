@@ -1,0 +1,1858 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ business_name|default:default_business_name }} - Heavy-Duty Truck Parts{% endblock %}
+
+
+{% block body_class %}page-home{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap"
+    rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/storefront_live_search.css' %}">
+
+<style>
+    /* =============================================
+       TRUCK PARTS - PUBLIC HOME DESIGN
+       Bold, Industrial, Professional
+       ============================================= */
+
+    :root {
+        --2g-blue: #0047AB;
+        --2g-blue-light: #2563EB;
+        --2g-blue-dark: #003080;
+        --2g-black: #0A0A0A;
+        --2g-charcoal: #1A1A1A;
+        --2g-slate: #2D2D2D;
+        --2g-white: #FFFFFF;
+        --2g-off-white: #F5F7FA;
+    }
+
+    /* === MESSAGE BANNER === */
+    .hero-message-banner {
+        background: var(--banner-gradient);
+        padding: 0.65rem 0;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-message-banner::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
+        opacity: 0.7;
+        pointer-events: none;
+    }
+
+    .hero-message-banner--sky {
+        --banner-gradient: linear-gradient(135deg, #e0f2fe 0%, #e0f7ff 45%, #dbeafe 100%);
+    }
+
+    .hero-message-banner--sunrise {
+        --banner-gradient: linear-gradient(135deg, #ffedd5 0%, #fde68a 45%, #fecdd3 100%);
+    }
+
+    .hero-message-banner--mint {
+        --banner-gradient: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 45%, #ccfbf1 100%);
+    }
+
+    .hero-message-banner--sand {
+        --banner-gradient: linear-gradient(135deg, #fef9c3 0%, #fde68a 45%, #f5d0c5 100%);
+    }
+
+    .hero-message-banner--ice {
+        --banner-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
+    }
+
+    .hero-message-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #0f172a;
+        text-align: center;
+    }
+
+    .hero-message-text {
+        font-size: 0.95rem;
+    }
+
+    .hero-message-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.8rem;
+        color: #0f172a;
+        text-decoration: none;
+    }
+
+    .hero-message-link:hover {
+        text-decoration: underline;
+        color: #0f172a;
+    }
+
+    /* === HERO SECTION - FEATURED PRODUCTS === */
+    .hero-showcase {
+        padding: 6rem 0 5rem;
+        background: var(--hero-gradient);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-showcase::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.7), transparent 55%);
+        opacity: 0.7;
+    }
+
+    .hero-showcase--sky {
+        --hero-gradient: linear-gradient(135deg, #e0f2fe 0%, #e0f7ff 45%, #dbeafe 100%);
+    }
+
+    .hero-showcase--sunrise {
+        --hero-gradient: linear-gradient(135deg, #ffedd5 0%, #fde68a 45%, #fecdd3 100%);
+    }
+
+    .hero-showcase--mint {
+        --hero-gradient: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 45%, #ccfbf1 100%);
+    }
+
+    .hero-showcase--sand {
+        --hero-gradient: linear-gradient(135deg, #fef9c3 0%, #fde68a 45%, #f5d0c5 100%);
+    }
+
+    .hero-showcase--ice {
+        --hero-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
+    }
+
+    .hero-showcase .container {
+        position: relative;
+        z-index: 1;
+    }
+
+    .hero-showcase-inner {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2.5rem;
+        align-items: center;
+    }
+
+    .hero-showcase-content {
+        max-width: 540px;
+    }
+
+    .hero-showcase-eyebrow {
+        display: inline-block;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.8rem;
+        margin-bottom: 1rem;
+        color: #0f172a;
+    }
+
+    .hero-showcase-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(2.2rem, 4vw, 3.4rem);
+        font-weight: 800;
+        margin-bottom: 1rem;
+        color: #0f172a;
+    }
+
+    .hero-showcase-subtitle {
+        font-size: 1.05rem;
+        color: #334155;
+        line-height: 1.7;
+        margin-bottom: 2rem;
+    }
+
+    .hero-showcase-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .btn-hero-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.85rem 1.8rem;
+        background: #0f172a;
+        color: #ffffff;
+        font-weight: 700;
+        border-radius: 10px;
+        text-decoration: none;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.9rem;
+        border: none;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-hero-primary:hover {
+        color: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.25);
+    }
+
+    .btn-hero-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.85rem 1.8rem;
+        background: rgba(255, 255, 255, 0.7);
+        color: #0f172a;
+        font-weight: 700;
+        border-radius: 10px;
+        text-decoration: none;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.9rem;
+        border: 1px solid rgba(15, 23, 42, 0.1);
+    }
+
+    .hero-showcase-carousel {
+        position: relative;
+        min-height: 320px;
+    }
+
+    .hero-showcase-slide {
+        display: none;
+    }
+
+    .hero-showcase-slide.is-active {
+        display: block;
+    }
+
+    .hero-showcase-card {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 22px;
+        padding: 2rem;
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 1.5rem;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+        align-items: center;
+        position: relative;
+    }
+
+    .hero-showcase-card--package {
+        grid-template-columns: 1fr;
+        text-align: left;
+    }
+
+    .hero-showcase-media {
+        width: 120px;
+        height: 120px;
+        border-radius: 18px;
+        background: #f1f5f9;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        font-size: 2rem;
+    }
+
+    .hero-showcase-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .hero-showcase-name {
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        color: #0f172a;
+    }
+
+    .hero-showcase-price {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1d4ed8;
+        margin-bottom: 1rem;
+    }
+
+    .hero-showcase-discount {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: #0f172a;
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        position: absolute;
+        top: 1.25rem;
+        right: 1.25rem;
+        z-index: 1;
+    }
+
+    .hero-showcase-link {
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.8rem;
+        color: #0f172a;
+        text-decoration: none;
+    }
+
+    .hero-showcase-package-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-showcase-package-title {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+    }
+
+    .hero-showcase-package-subtitle {
+        color: #475569;
+        margin-bottom: 1rem;
+    }
+
+    .hero-showcase-package-products {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .hero-showcase-package-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(248, 250, 252, 0.9);
+        border-radius: 999px;
+        padding: 0.35rem 0.75rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .hero-showcase-package-item img {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        object-fit: cover;
+    }
+
+    .hero-showcase-package-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: #0f172a;
+        color: #fff;
+        padding: 0.45rem 0.85rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .hero-showcase-dots {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        margin-top: 1.5rem;
+    }
+
+    .hero-showcase-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(15, 23, 42, 0.25);
+    }
+
+    .hero-showcase-dot.is-active {
+        background: #0f172a;
+    }
+
+    @media (max-width: 991px) {
+        .hero-showcase {
+            padding: 5rem 0 4rem;
+        }
+
+        .hero-showcase-card {
+            grid-template-columns: 1fr;
+            text-align: center;
+        }
+
+        .hero-showcase-card--package {
+            text-align: center;
+        }
+
+        .hero-showcase-package-header {
+            justify-content: center;
+        }
+
+        .hero-showcase-package-products {
+            justify-content: center;
+        }
+
+        .hero-showcase-media {
+            margin: 0 auto;
+        }
+
+        .hero-showcase-actions {
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .hero-showcase-carousel {
+            min-height: 360px;
+        }
+
+        .hero-showcase-card {
+            padding: 1.5rem;
+        }
+    }
+
+    /* === CATALOG SECTION - MODERN CARDS === */
+    .catalog-section {
+        padding: 8rem 0;
+        position: relative;
+        background: linear-gradient(135deg, rgba(248, 250, 252, 0.5) 0%, rgba(241, 245, 249, 0.4) 100%),
+            url('/static/images/category_section_bg.png');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+
+    @media (max-width: 991px) {
+        .catalog-section {
+            background-attachment: scroll;
+        }
+    }
+
+    .section-header {
+        text-align: center;
+        margin-bottom: 4rem;
+    }
+
+    .section-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: linear-gradient(135deg, rgba(0, 71, 171, 0.1), rgba(0, 71, 171, 0.05));
+        color: var(--2g-blue);
+        padding: 0.5rem 1.25rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 1rem;
+    }
+
+    .section-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 800;
+        color: var(--2g-charcoal);
+        margin-bottom: 1rem;
+        letter-spacing: -0.02em;
+    }
+
+    .section-subtitle {
+        font-size: 1.1rem;
+        color: #64748B;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.7;
+    }
+
+    /* Service Cards - Bold New Style */
+    .catalog-card {
+        background: var(--2g-white);
+        border-radius: 20px;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        border: 1px solid #E8ECF2;
+        position: relative;
+    }
+
+    /* Watermark for catalog card */
+
+
+    .catalog-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--2g-blue), var(--2g-blue-light));
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.4s ease;
+    }
+
+    .catalog-card:hover {
+        transform: translateY(-12px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+        border-color: transparent;
+    }
+
+    .catalog-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .catalog-media {
+        height: 180px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .catalog-media.blue {
+        background: linear-gradient(135deg, #0047AB 0%, #2563EB 100%);
+    }
+
+    .catalog-media.dark {
+        background: linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 100%);
+    }
+
+    .catalog-media.slate {
+        background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+    }
+
+    .catalog-media i {
+        font-size: 4rem;
+        color: rgba(255, 255, 255, 0.9);
+        transition: transform 0.4s ease;
+    }
+
+    .catalog-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s ease;
+    }
+
+    .catalog-card:hover .catalog-media img {
+        transform: scale(1.1);
+    }
+
+    .catalog-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        color: var(--2g-white);
+        padding: 0.35rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .catalog-body {
+        padding: 2rem;
+    }
+
+    .catalog-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--2g-charcoal);
+        margin-bottom: 0.75rem;
+    }
+
+    .catalog-text {
+        color: #64748B;
+        font-size: 0.95rem;
+        line-height: 1.7;
+        margin-bottom: 1.5rem;
+    }
+
+    .catalog-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--2g-blue);
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .catalog-link i {
+        font-size: 0.75rem;
+        transition: transform 0.3s ease;
+    }
+
+    .catalog-link:hover {
+        color: var(--2g-blue-dark);
+    }
+
+    .catalog-link:hover i {
+        transform: translateX(4px);
+    }
+
+    /* Category Cards */
+    .categories-section {
+        padding: 6rem 0;
+        background: var(--2g-white);
+    }
+
+    .category-card {
+        background: var(--2g-off-white);
+        border-radius: 18px;
+        padding: 1.75rem;
+        border: 1px solid #E8ECF2;
+        height: 100%;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .category-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1);
+        border-color: transparent;
+    }
+
+    .category-media {
+        height: 140px;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .category-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .category-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--2g-charcoal);
+        margin-bottom: 0.35rem;
+    }
+
+    .category-meta {
+        color: #64748B;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Featured Products */
+    .featured-products-section {
+        padding: 6rem 0;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.5) 100%),
+            url('/static/images/featured_parts_bg.png');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+
+    .featured-products-section .section-title {
+        color: var(--2g-white);
+    }
+
+    .featured-products-section .section-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .product-card {
+        background: var(--2g-white);
+        border-radius: 20px;
+        border: 1px solid #E8ECF2;
+        overflow: hidden;
+        transition: all 0.4s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .featured-discount-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: #0f172a;
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        z-index: 2;
+    }
+
+    .product-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+        border-color: transparent;
+    }
+
+    .product-media {
+        height: 200px;
+        background: #F8FAFC;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .product-media img {
+        display: flex;
+        flex-wrap: wrap;
+        width: 100px;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        position: static !important;
+        top: 0 !important;
+        left: 0 !important;
+    }
+
+    .product-body {
+        padding: 1.75rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .product-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--2g-charcoal);
+        margin-bottom: 0.5rem;
+    }
+
+    .product-price {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--2g-blue);
+        margin-bottom: 0.75rem;
+    }
+
+    .product-meta {
+        font-size: 0.9rem;
+        color: #64748B;
+        margin-top: auto;
+    }
+
+    /* === WHY CHOOSE US - BOLD FEATURES === */
+    .features-section {
+        padding: 8rem 0;
+        background: var(--2g-charcoal);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .features-section::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 60%;
+        height: 200%;
+        background: radial-gradient(ellipse at center, rgba(0, 71, 171, 0.15) 0%, transparent 60%);
+        pointer-events: none;
+    }
+
+    .features-section .section-eyebrow {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--2g-blue-light);
+    }
+
+    .features-section .section-title {
+        color: var(--2g-white);
+    }
+
+    .features-section .section-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .feature-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 2.5rem;
+        text-align: center;
+        transition: all 0.4s ease;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Watermark for feature card */
+
+
+    .feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(0, 71, 171, 0.1) 0%, transparent 100%);
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    .feature-card:hover {
+        border-color: var(--2g-blue);
+        transform: translateY(-8px);
+    }
+
+    .feature-card:hover::before {
+        opacity: 1;
+    }
+
+    .feature-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1.5rem;
+        background: linear-gradient(135deg, var(--2g-blue) 0%, var(--2g-blue-light) 100%);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-icon i {
+        font-size: 2rem;
+        color: var(--2g-white);
+    }
+
+    .feature-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--2g-white);
+        margin-bottom: 0.75rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .feature-text {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.95rem;
+        line-height: 1.7;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* === CTA SECTION - BOLD BANNER === */
+    .cta-section {
+        padding: 6rem 0;
+        background: linear-gradient(135deg, var(--2g-blue) 0%, var(--2g-blue-dark) 100%);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cta-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        opacity: 0.5;
+    }
+
+    .cta-content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+    }
+
+    .cta-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 800;
+        color: var(--2g-white);
+        margin-bottom: 1rem;
+        letter-spacing: -0.02em;
+    }
+
+    .cta-text {
+        font-size: 1.15rem;
+        color: rgba(255, 255, 255, 0.9);
+        max-width: 600px;
+        margin: 0 auto 2rem;
+        line-height: 1.7;
+    }
+
+    .cta-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-cta-light {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 2rem;
+        background: var(--2g-white);
+        color: var(--2g-blue);
+        font-weight: 700;
+        font-size: 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-cta-light:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        color: var(--2g-blue);
+    }
+
+    .btn-cta-dark {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 2rem;
+        background: var(--2g-charcoal);
+        color: var(--2g-white);
+        font-weight: 700;
+        font-size: 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-cta-dark:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        color: var(--2g-white);
+    }
+
+    /* === STOREFRONT CONTROL + RESULTS === */
+    .storefront-control {
+        padding: 3rem 0 1rem;
+        background: linear-gradient(180deg, rgba(245, 247, 250, 0.95) 0%, rgba(245, 247, 250, 0.5) 100%);
+    }
+
+    .storefront-search-card {
+        background: var(--2g-white);
+        border-radius: 22px;
+        border: 1px solid #E8ECF2;
+        padding: 1.5rem;
+        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+        margin-top: -3rem;
+        position: relative;
+        z-index: 5;
+    }
+
+    .storefront-search-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .storefront-search-input {
+        flex: 1 1 320px;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1.2rem;
+        border-radius: 999px;
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+    }
+
+    .storefront-search-input i {
+        color: var(--2g-blue);
+    }
+
+    .storefront-search-input input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        outline: none;
+        font-weight: 600;
+        color: var(--2g-charcoal);
+    }
+
+    .storefront-search-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+    }
+
+    .storefront-action {
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.75rem 1.4rem;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 71, 171, 0.2);
+        color: var(--2g-blue);
+        transition: all 0.3s ease;
+    }
+
+    .storefront-action:hover {
+        color: var(--2g-white);
+        background: var(--2g-blue);
+        box-shadow: 0 12px 30px rgba(0, 71, 171, 0.25);
+    }
+
+    .storefront-action.secondary {
+        background: var(--2g-blue);
+        color: var(--2g-white);
+        border-color: var(--2g-blue);
+    }
+
+    .storefront-action.secondary:hover {
+        background: var(--2g-blue-dark);
+        border-color: var(--2g-blue-dark);
+    }
+
+    .storefront-results {
+        padding: 4rem 0 5rem;
+        background: var(--2g-off-white);
+    }
+
+    .storefront-breadcrumb {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #64748B;
+        margin-bottom: 1rem;
+    }
+
+    .storefront-breadcrumb a {
+        color: #334155;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .storefront-breadcrumb .crumb-sep {
+        opacity: 0.5;
+    }
+
+    .storefront-heading {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .storefront-heading h2 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(1.8rem, 3vw, 2.6rem);
+        margin: 0;
+        color: var(--2g-charcoal);
+    }
+
+    .storefront-heading p {
+        margin: 0;
+        color: #64748B;
+        font-size: 1rem;
+    }
+
+    .storefront-count {
+        background: rgba(0, 71, 171, 0.1);
+        color: var(--2g-blue);
+        padding: 0.4rem 0.9rem;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.75rem;
+    }
+
+    .storefront-layout {
+        display: grid;
+        grid-template-columns: minmax(240px, 300px) 1fr;
+        gap: 2rem;
+    }
+
+    .sidebar-card {
+        background: var(--2g-white);
+        border-radius: 18px;
+        border: 1px solid #E8ECF2;
+        padding: 1.5rem;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+        margin-bottom: 1.5rem;
+    }
+
+    .sidebar-title {
+        font-weight: 800;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--2g-charcoal);
+        margin-bottom: 1rem;
+    }
+
+    .sidebar-links {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .sidebar-link {
+        text-decoration: none;
+        color: #475569;
+        font-weight: 600;
+        padding: 0.4rem 0.6rem;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .sidebar-link:hover,
+    .sidebar-link.active {
+        background: rgba(0, 71, 171, 0.1);
+        color: var(--2g-blue);
+    }
+
+    .category-tree-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .category-node {
+        padding-left: calc(var(--depth) * 0.8rem);
+    }
+
+    .category-node a {
+        display: block;
+        text-decoration: none;
+        color: #475569;
+        font-weight: 600;
+        padding: 0.35rem 0.5rem;
+        border-radius: 6px;
+    }
+
+    .category-node.is-active a {
+        color: var(--2g-blue);
+    }
+
+    .category-node.is-current a {
+        background: rgba(0, 71, 171, 0.12);
+        color: var(--2g-blue);
+        font-weight: 700;
+    }
+
+    .filter-option {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.9rem;
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+
+    .filter-option input {
+        accent-color: var(--2g-blue);
+    }
+
+    .storefront-main {
+        min-width: 0;
+    }
+
+    .subcategory-grid,
+    .storefront-products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .subcategory-card,
+    .storefront-product-card {
+        background: var(--2g-white);
+        border-radius: 18px;
+        border: 1px solid #E8ECF2;
+        overflow: hidden;
+        text-decoration: none;
+        color: var(--2g-charcoal);
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .subcategory-card:hover,
+    .storefront-product-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+        border-color: transparent;
+    }
+
+    .subcategory-media,
+    .storefront-product-media {
+        height: 160px;
+        background: #F1F5F9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .subcategory-media img,
+    .storefront-product-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .subcategory-body,
+    .storefront-product-body {
+        padding: 1.25rem 1.4rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        flex-grow: 1;
+    }
+
+    .storefront-product-title {
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+
+    .storefront-product-meta {
+        font-size: 0.85rem;
+        color: #64748B;
+    }
+
+    .storefront-product-price {
+        font-weight: 800;
+        color: var(--2g-blue);
+    }
+
+    .storefront-product-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #E8ECF2;
+        padding-top: 0.9rem;
+        margin-top: auto;
+        gap: 0.75rem;
+    }
+
+    .storefront-pagination {
+        margin-top: 2.5rem;
+    }
+
+    .catalog-group {
+        background: var(--2g-white);
+        border-radius: 24px;
+        padding: 2rem;
+        border: 1px solid #E8ECF2;
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+        margin-bottom: 2.5rem;
+    }
+
+    .catalog-group-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .catalog-group-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--2g-charcoal);
+    }
+
+    .catalog-group-subtitle {
+        color: #64748B;
+        max-width: 520px;
+    }
+
+    .catalog-group-link {
+        color: var(--2g-blue);
+        text-decoration: none;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .category-tile {
+        text-decoration: none;
+        color: var(--2g-charcoal);
+        background: #F8FAFC;
+        border-radius: 16px;
+        border: 1px solid #E8ECF2;
+        padding: 1rem;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        transition: all 0.3s ease;
+    }
+
+    .category-tile:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+        border-color: transparent;
+    }
+
+    .category-tile-media {
+        height: 120px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--2g-white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .category-tile-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .category-tile-title {
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .category-tile-meta {
+        font-size: 0.8rem;
+        color: #64748B;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 991px) {
+
+        .catalog-section,
+        .features-section {
+            padding: 5rem 0;
+        }
+
+        .storefront-search-card {
+            margin-top: -2rem;
+        }
+
+        .storefront-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 767px) {
+
+        .btn-hero-primary,
+        .btn-hero-secondary {
+            width: 100%;
+            max-width: 280px;
+            justify-content: center;
+        }
+
+        .cta-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .btn-cta-light,
+        .btn-cta-dark {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .storefront-search-card {
+            margin-top: -1.5rem;
+            padding: 1.25rem;
+        }
+
+        .storefront-search-actions {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/storefront_hero_products.js' %}" defer></script>
+<script src="{% static 'js/storefront_search.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+
+{% url 'accounts:store_product_list' as store_url %}
+{% url 'accounts:public_contact' as contact_url %}
+
+{% if hero_banner %}
+<section class="hero-message-banner hero-message-banner--{{ hero_banner.theme|default:'sunrise' }}">
+    <div class="container">
+        <div class="hero-message-content">
+            <span class="hero-message-text">{{ hero_banner.message }}</span>
+            {% if hero_banner.link_url and hero_banner.link_text %}
+            <a class="hero-message-link" href="{{ hero_banner.link_url }}">
+                {{ hero_banner.link_text }}
+                <i class="fas fa-arrow-right"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- HERO SECTION - Featured Products -->
+{% if hero_cards %}
+<section class="hero-showcase hero-showcase--{{ hero_showcase.gradient_theme|default:'sky' }}" data-hero-showcase>
+    <div class="container">
+        <div class="hero-showcase-inner">
+            <div class="hero-showcase-content">
+                <span class="hero-showcase-eyebrow">Featured Products</span>
+                <h1 class="hero-showcase-title">{{ business_name|default:default_business_name }}</h1>
+                <p class="hero-showcase-subtitle">Hand-picked parts and supplies ready for fast pickup or delivery.</p>
+                <div class="hero-showcase-actions">
+                    <a href="{{ store_url }}" class="btn-hero-primary">
+                        <i class="fas fa-store"></i>
+                        Shop All Parts
+                    </a>
+                    <a href="{{ contact_url }}" class="btn-hero-secondary">
+                        <i class="fas fa-headset"></i>
+                        Contact Parts Desk
+                    </a>
+                </div>
+            </div>
+            <div class="hero-showcase-carousel" data-hero-carousel>
+                {% for card in hero_cards %}
+                <article class="hero-showcase-slide{% if forloop.first %} is-active{% endif %}" data-hero-slide>
+                    {% if card.kind == 'product' %}
+                    {% with product=card.product %}
+                    <div class="hero-showcase-card">
+                        <div class="hero-showcase-media">
+                            {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                            {% else %}
+                            <i class="fas fa-box"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if card.slide.discount_percent %}
+                            <div class="hero-showcase-discount">Save {{ card.slide.discount_percent }}%</div>
+                            {% elif product.has_promotion %}
+                            {% if product.promotion_discount_percent %}
+                            <div class="hero-showcase-discount">Save {{ product.promotion_discount_percent }}%</div>
+                            {% else %}
+                            <div class="hero-showcase-discount">Promo</div>
+                            {% endif %}
+                            {% endif %}
+                            <div class="hero-showcase-name">{{ product.name }}</div>
+                            {% if show_prices_hero %}
+                            <div class="hero-showcase-price">
+                                {% if product.has_promotion %}
+                                <span class="text-decoration-line-through text-muted">${{
+                                    product.sale_price|floatformat:2 }}</span>
+                                <span class="ms-2">${{ product.promotion_price|floatformat:2 }}</span>
+                                {% elif product.sale_price %}
+                                ${{ product.sale_price|floatformat:2 }}
+                                {% else %}
+                                Call for price
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            <a class="hero-showcase-link"
+                                href="{% url 'accounts:store_product_detail' product.id %}">View product</a>
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% else %}
+                    {% with package=card.package %}
+                    <div class="hero-showcase-card hero-showcase-card--package">
+                        <div class="hero-showcase-package-header">
+                            <h3 class="hero-showcase-package-title">{{ package.title }}</h3>
+                            <span class="hero-showcase-package-badge">
+                                {% if package.free_product and package.discount_percent %}
+                                Free {{ package.free_product.name }} + {{ package.discount_percent }}% off
+                                {% elif package.free_product %}
+                                Free {{ package.free_product.name }}
+                                {% elif package.discount_percent %}
+                                Save {{ package.discount_percent }}%
+                                {% else %}
+                                Bundle deal
+                                {% endif %}
+                            </span>
+                        </div>
+                        <p class="hero-showcase-package-subtitle">
+                            {{ package.subtitle|default:"Bundle savings for fleet-ready orders." }}
+                        </p>
+                        <div class="hero-showcase-package-products">
+                            {% if package.primary_product %}
+                            <div class="hero-showcase-package-item">
+                                {% if package.primary_product.image %}
+                                <img src="{{ package.primary_product.image.url }}"
+                                    alt="{{ package.primary_product.name }}" loading="lazy">
+                                {% else %}
+                                <i class="fas fa-box"></i>
+                                {% endif %}
+                                <span>{{ package.primary_product.name }}</span>
+                            </div>
+                            {% endif %}
+                            {% if package.secondary_product %}
+                            <div class="hero-showcase-package-item">
+                                {% if package.secondary_product.image %}
+                                <img src="{{ package.secondary_product.image.url }}"
+                                    alt="{{ package.secondary_product.name }}" loading="lazy">
+                                {% else %}
+                                <i class="fas fa-box"></i>
+                                {% endif %}
+                                <span>{{ package.secondary_product.name }}</span>
+                            </div>
+                            {% endif %}
+                            {% if package.free_product %}
+                            <div class="hero-showcase-package-item">
+                                {% if package.free_product.image %}
+                                <img src="{{ package.free_product.image.url }}" alt="{{ package.free_product.name }}"
+                                    loading="lazy">
+                                {% else %}
+                                <i class="fas fa-gift"></i>
+                                {% endif %}
+                                <span>{{ package.free_product.name }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if package.primary_product %}
+                        <a class="hero-showcase-link"
+                            href="{% url 'accounts:store_product_detail' package.primary_product.id %}">View deal</a>
+                        {% else %}
+                        <a class="hero-showcase-link" href="{{ store_url }}">View deal</a>
+                        {% endif %}
+                    </div>
+                    {% endwith %}
+                    {% endif %}
+                </article>
+                {% endfor %}
+                <div class="hero-showcase-dots" data-hero-dots>
+                    {% for card in hero_cards %}
+                    <button type="button" class="hero-showcase-dot{% if forloop.first %} is-active{% endif %}"
+                        data-hero-dot="{{ forloop.counter0 }}" aria-label="Go to slide {{ forloop.counter }}">
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- STOREFRONT CONTROL -->
+<section class="storefront-control">
+    <div class="container">
+        <div class="storefront-search-card">
+            <form method="get" action="{% url 'accounts:store_search' %}" class="storefront-search-form"
+                data-storefront-search-form data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}">
+                <div class="storefront-search-input">
+                    <i class="fas fa-search"></i>
+                    <input type="search" name="q" value="{{ storefront_search_query }}"
+                        placeholder="Search parts, SKUs, or keywords..." data-storefront-search-input
+                        autocomplete="off">
+                </div>
+                <div class="storefront-search-actions">
+                    <button type="submit" class="btn-hero-primary btn-sm">
+                        <i class="fas fa-search"></i>
+                        Search
+                    </button>
+                    {% if not customer_account %}
+                    <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_product_list' %}"
+                        class="storefront-action">
+                        Sign In
+                    </a>
+                    <a href="{% url 'accounts:customer_signup' %}?next={% url 'accounts:store_product_list' %}"
+                        class="storefront-action secondary">
+                        Create Account
+                    </a>
+                    {% else %}
+                    <span class="small text-muted">Signed in for account pricing.</span>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+
+<!-- CATALOG SECTION -->
+<section class="catalog-section" id="catalog">
+    <div class="container">
+        <!-- Header -->
+        <div class="section-header">
+            <span class="section-eyebrow">
+                <i class="fas fa-boxes-stacked"></i>
+                Parts Catalog
+            </span>
+            <h2 class="section-title">Browse by Category Group</h2>
+            <p class="section-subtitle">
+                Find the right components fast with organized groups built for heavy-duty fleets.
+            </p>
+        </div>
+
+        {% if storefront_grouped_categories %}
+        {% for bundle in storefront_grouped_categories %}
+        <div class="catalog-group">
+            <div class="catalog-group-header">
+                <div>
+                    <div class="catalog-group-title">{{ bundle.group.name }}</div>
+                    {% if bundle.group.description %}
+                    <div class="catalog-group-subtitle">{{ bundle.group.description|truncatewords:20 }}</div>
+                    {% else %}
+                    <div class="catalog-group-subtitle">Explore {{ bundle.group.name|lower }} parts, kits, and
+                        accessories.</div>
+                    {% endif %}
+                </div>
+                <a href="{% url 'accounts:store_group_detail' bundle.group.id %}" class="catalog-group-link">
+                    View Group <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+            {% if bundle.categories %}
+            <div class="row g-4">
+                {% for category in bundle.categories %}
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a href="{% url 'accounts:store_category_detail' category.id %}" class="category-tile">
+                        <div class="category-tile-media">
+                            {% if category.image %}
+                            <img src="{{ category.image.url }}" alt="{{ category.name }}" loading="lazy">
+                            {% else %}
+                            <i class="fas fa-box-open fa-2x text-muted"></i>
+                            {% endif %}
+                        </div>
+                        <div class="category-tile-title">{{ category.name }}</div>
+                        {% if category.description %}
+                        <div class="category-tile-meta">{{ category.description|truncatewords:10 }}</div>
+                        {% endif %}
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-light text-center">
+                No categories added to this group yet.
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="alert alert-light text-center">
+            No category groups available yet.
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- FEATURED PRODUCTS SECTION -->
+<section class="featured-products-section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">
+                <i class="fas fa-star"></i>
+                Featured Parts
+            </span>
+            <h2 class="section-title">Ready-to-Ship Inventory</h2>
+            <p class="section-subtitle">Highlighting popular parts available for pickup or delivery.</p>
+        </div>
+
+        <div class="row g-4">
+            {% for product in featured_products %}
+            <div class="col-md-6 col-lg-4 d-flex">
+                <div class="product-card w-100">
+                    {% if product.has_promotion %}
+                    {% if product.promotion_discount_percent %}
+                    <div class="featured-discount-badge">Save {{ product.promotion_discount_percent }}%</div>
+                    {% else %}
+                    <div class="featured-discount-badge">Promo</div>
+                    {% endif %}
+                    {% endif %}
+                    <div class="product-media">
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                        {% else %}
+                        <i class="fas fa-box-open fa-3x text-muted"></i>
+                        {% endif %}
+                    </div>
+                    <div class="product-body">
+                        <div class="product-title">{{ product.name }}</div>
+                        {% if show_prices_featured %}
+                        <div class="product-price">
+                            {% if product.has_promotion %}
+                            <span class="text-muted text-decoration-line-through">${{ product.sale_price|floatformat:2
+                                }}</span>
+                            <span class="ms-2">${{ product.promotion_price|floatformat:2 }}</span>
+                            {% elif product.sale_price %}
+                            ${{ product.sale_price|floatformat:2 }}
+                            {% else %}
+                            Call for price
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        <div class="product-meta">{{ product.category.name|default:"Heavy-duty parts" }}</div>
+                        <a href="{% url 'accounts:store_product_detail' product.id %}" class="catalog-link mt-3">
+                            View Details <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-light text-center">
+                    Featured parts will appear once products are published to the store.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="{% url 'accounts:store_product_list' %}" class="btn-hero-primary">
+                Browse Full Catalog
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- FEATURES SECTION -->
+<section class="features-section">
+    <div class="container">
+        <!-- Header -->
+        <div class="section-header">
+            <span class="section-eyebrow">
+                <i class="fas fa-star"></i>
+                Why Choose Us
+            </span>
+            <h2 class="section-title">The {{ business_name|default:default_business_name }} Difference</h2>
+            <p class="section-subtitle">
+                A dedicated parts partner focused on uptime, accuracy, and value.
+            </p>
+        </div>
+
+        <!-- Feature Cards -->
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h3 class="feature-title">Fitment Support</h3>
+                    <p class="feature-text">Confirm specs fast so you get the right part on the first order.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <h3 class="feature-title">Fast Fulfillment</h3>
+                    <p class="feature-text">Same-day pickup options and quick delivery across the region.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-tags"></i>
+                    </div>
+                    <h3 class="feature-title">Fleet Pricing</h3>
+                    <p class="feature-text">Account pricing and volume programs tailored for operators.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 class="feature-title">OEM-Grade Quality</h3>
+                    <p class="feature-text">Trusted brands built for heavy-duty performance.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA SECTION -->
+<section class="cta-section">
+    <div class="container">
+        <div class="cta-content">
+            <h2 class="cta-title">Ready to Find the Right Part?</h2>
+            <p class="cta-text">
+                Browse our catalog or connect with the parts desk for quotes, fitment checks, and rush orders.
+            </p>
+            <div class="cta-buttons">
+                <a href="{% url 'accounts:store_product_list' %}" class="btn-cta-light">
+                    <i class="fas fa-store"></i>
+                    Shop Parts
+                </a>
+                <a href="{% url 'accounts:public_contact' %}" class="btn-cta-dark">
+                    <i class="fas fa-headset"></i>
+                    Contact Us
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

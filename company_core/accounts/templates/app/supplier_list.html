@@ -1,0 +1,476 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+
+{% block title %}
+    Suppliers
+{% endblock %}
+
+{% block content %}
+{% url 'accounts:supplier_list' as supplier_list_url %}
+<style>
+    .shell-card {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+        padding: 1rem;
+    }
+    .table-modern th {
+        font-weight: 700;
+        color: #64748b;
+        font-size: 0.9rem;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    .table-modern td {
+        vertical-align: middle;
+        border-top: none;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.95rem;
+    }
+    .table-modern tr:nth-child(even) td { background: #f8fafc; }
+    .table-search {
+        max-width: 320px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.35rem 0.65rem;
+        background: #f8fafc;
+    }
+    .table-search input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        outline: none;
+    }
+    .date-range-custom {
+        display: none;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .date-range-custom.show { display: flex; }
+</style>
+
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Suppliers</h2>
+            <div class="text-muted">Track balances, payments, and credits across every supplier.</div>
+        </div>
+        <div class="page-toolbar">
+            <button class="btn btn-outline-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                <i class="fas fa-user-plus me-1"></i>Add Supplier
+            </button>
+            <a href="{% url 'accounts:add_records' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus-circle me-1"></i>Add New Expense
+            </a>
+        </div>
+    </div>
+
+    <div class="shell-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <form method="GET" action="{{ supplier_list_url }}" id="supplier-search-form" class="flex-grow-1">
+                <div class="d-flex align-items-center table-search">
+                    <i class="fa fa-search text-muted me-2"></i>
+                    <input type="text" name="q" value="{{ query }}" id="search-input" placeholder="Search suppliers...">
+                </div>
+                <div class="mt-2 d-flex gap-2 align-items-center flex-wrap">
+                    <label class="text-muted small mb-0">Period:</label>
+                    <select id="dateRangeFilter" name="date_range" class="form-select form-select-sm" style="max-width: 200px;" data-select2-skip="true">
+                        {% for value,label in date_range_options %}
+                            <option value="{{ value }}"{% if current_date_range == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <div id="custom-date-range" class="date-range-custom{% if current_date_range == 'custom' %} show{% endif %}">
+                        <input type="date" class="form-control form-control-sm" name="start_date" id="start-date" value="{{ selected_start_date|date:'Y-m-d' }}">
+                        <span class="text-muted small">to</span>
+                        <input type="date" class="form-control form-control-sm" name="end_date" id="end-date" value="{{ selected_end_date|date:'Y-m-d' }}">
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="table-responsive" data-supplier-table>
+            {% include 'app/supplier_list_content.html' %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addSupplierModal" tabindex="-1" role="dialog" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+    <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+        <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+            <form method="post" action="{% url 'accounts:add_supplier' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ supplier_list_url }}">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addSupplierModalLabel">Add Supplier</h5>
+                    <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" style="overflow-y: auto;">
+                    <div class="alert alert-info mb-3">
+                        Create a new supplier to track contacts, emails, phone numbers, and addresses for your purchases.
+                    </div>
+                    {{ supplier_form.as_p }}
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="submit" class="btn btn-success">Save Supplier</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="supplierPaymentModal" tabindex="-1" aria-labelledby="supplierPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{% url 'accounts:supplier_make_payment' %}" id="supplier-payment-form">
+                {% csrf_token %}
+                <input type="hidden" name="supplier_id" id="payment-supplier-id">
+                <input type="hidden" name="supplier_name" id="payment-supplier-name">
+                <input type="hidden" name="next" value="{{ supplier_list_url }}" id="payment-next">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="supplierPaymentModalLabel">
+                        <i class="fas fa-wallet me-2"></i>Make Payment
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <div class="btn-group" role="group" aria-label="Payment type">
+                            <input type="radio" class="btn-check" name="payment_type" id="payment-type-other" value="other" checked>
+                            <label class="btn btn-outline-primary btn-sm" for="payment-type-other">Other</label>
+                            <input type="radio" class="btn-check" name="payment_type" id="payment-type-cheque" value="cheque">
+                            <label class="btn btn-outline-primary btn-sm" for="payment-type-cheque">Cheque</label>
+                        </div>
+                        <span class="text-muted small">Payments apply to oldest unpaid receipts first.</span>
+                    </div>
+
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <label for="payment-supplier-display" class="form-label">Supplier</label>
+                            <input type="text" class="form-control" id="payment-supplier-display" disabled>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="payment-amount" class="form-label">Amount</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="payment-amount" name="amount" required>
+                        </div>
+                    </div>
+
+                    <div class="mt-3" id="payment-other-fields">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="payment-method" class="form-label">Payment Method</label>
+                                <select class="form-select" id="payment-method" name="payment_method" required>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Credit Card">Credit Card</option>
+                                    <option value="Debit">Debit</option>
+                                    <option value="E-Transfer">E-Transfer</option>
+                                    <option value="ACH">ACH</option>
+                                    <option value="Manual">Manual</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="payment-notes" class="form-label">Notes (optional)</label>
+                                <textarea class="form-control" id="payment-notes" name="payment_notes" rows="2" placeholder="Add a note about this payment..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 d-none" id="payment-cheque-fields">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="cheque-date" class="form-label">Cheque Date</label>
+                                <input type="date" class="form-control" id="cheque-date" name="cheque_date">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="cheque-number" class="form-label">Cheque #</label>
+                                <input type="text" class="form-control" id="cheque-number" name="cheque_number">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="bank-account" class="form-label">Bank Account</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="bank-account" name="bank_account">
+                                        <option value="">Select bank account</option>
+                                        {% for account in bank_accounts %}
+                                            <option value="{{ account.display_label }}">{{ account.display_label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-outline-secondary" type="button" id="add-bank-account-modal-btn">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <label for="cheque-memo" class="form-label">Memo (optional)</label>
+                            <textarea class="form-control" id="cheque-memo" name="memo" rows="2" placeholder="Optional memo for this cheque..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="bankAccountModal" tabindex="-1" aria-labelledby="bankAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="bank-account-form">
+                {% csrf_token %}
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="bankAccountModalLabel"><i class="fas fa-university me-2"></i>Add Bank Account</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger d-none" id="bank-account-error" role="alert"></div>
+                    <div class="mb-3">
+                        <label for="bank-account-name" class="form-label">Account Name</label>
+                        <input type="text" class="form-control" id="bank-account-name" name="name" placeholder="e.g. Operating account" required>
+                    </div>
+                    <div class="mb-0">
+                        <label for="bank-account-number" class="form-label">Account Number (optional)</label>
+                        <input type="text" class="form-control" id="bank-account-number" name="account_number" placeholder="Optional">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchForm = document.getElementById('supplier-search-form');
+        const searchInput = document.getElementById('search-input');
+        const dateRange = document.getElementById('dateRangeFilter');
+        const customRange = document.getElementById('custom-date-range');
+        const startDate = document.getElementById('start-date');
+        const endDate = document.getElementById('end-date');
+        const tableWrapper = document.querySelector('[data-supplier-table]');
+
+        let debounceTimer = null;
+        const refreshTable = (queryString) => {
+            if (!tableWrapper) {
+                return;
+            }
+            const actionUrl = searchForm ? searchForm.action : window.location.pathname;
+            tableWrapper.innerHTML = `
+                <div class="d-flex justify-content-center my-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+
+            fetch(`${actionUrl}?${queryString}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(response => response.json())
+                .then(data => {
+                    tableWrapper.innerHTML = data.html;
+                })
+                .catch(() => {
+                    tableWrapper.innerHTML = `
+                        <div class="alert alert-danger" role="alert">
+                            An error occurred while fetching suppliers. Please try again.
+                        </div>
+                    `;
+                });
+        };
+
+        if (searchForm && searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function() {
+                    const formData = new FormData(searchForm);
+                    refreshTable(new URLSearchParams(formData).toString());
+                }, 300);
+            });
+        }
+
+        if (customRange && dateRange) {
+            customRange.classList.toggle('show', dateRange.value === 'custom');
+        }
+        if (dateRange) {
+            dateRange.addEventListener('change', () => {
+                if (customRange) {
+                    customRange.classList.toggle('show', dateRange.value === 'custom');
+                }
+                const formData = new FormData(searchForm);
+                refreshTable(new URLSearchParams(formData).toString());
+            });
+        }
+        if (startDate) {
+            startDate.addEventListener('change', () => {
+                const formData = new FormData(searchForm);
+                refreshTable(new URLSearchParams(formData).toString());
+            });
+        }
+        if (endDate) {
+            endDate.addEventListener('change', () => {
+                const formData = new FormData(searchForm);
+                refreshTable(new URLSearchParams(formData).toString());
+            });
+        }
+
+        const paymentModalEl = document.getElementById('supplierPaymentModal');
+        const supplierDisplay = document.getElementById('payment-supplier-display');
+        const supplierIdInput = document.getElementById('payment-supplier-id');
+        const supplierNameInput = document.getElementById('payment-supplier-name');
+        const paymentAmountInput = document.getElementById('payment-amount');
+        const paymentTypeOther = document.getElementById('payment-type-other');
+        const paymentTypeCheque = document.getElementById('payment-type-cheque');
+        const otherFields = document.getElementById('payment-other-fields');
+        const chequeFields = document.getElementById('payment-cheque-fields');
+        const paymentMethodSelect = document.getElementById('payment-method');
+        const paymentNotesInput = document.getElementById('payment-notes');
+        const chequeNumberInput = document.getElementById('cheque-number');
+        const chequeDateInput = document.getElementById('cheque-date');
+        const bankAccountInput = document.getElementById('bank-account');
+        const addBankAccountBtn = document.getElementById('add-bank-account-modal-btn');
+        const chequeMemoInput = document.getElementById('cheque-memo');
+        const paymentNextInput = document.getElementById('payment-next');
+        const bankAccountsUrl = '{% url "accounts:bank_account_add" %}';
+        const bankAccountModalEl = document.getElementById('bankAccountModal');
+        const bankAccountForm = document.getElementById('bank-account-form');
+        const bankAccountError = document.getElementById('bank-account-error');
+        const bankAccountName = document.getElementById('bank-account-name');
+        const bankAccountNumber = document.getElementById('bank-account-number');
+
+        const togglePaymentFields = () => {
+            const isCheque = paymentTypeCheque && paymentTypeCheque.checked;
+            if (chequeFields) {
+                chequeFields.classList.toggle('d-none', !isCheque);
+            }
+            if (otherFields) {
+                otherFields.classList.toggle('d-none', isCheque);
+            }
+            if (paymentMethodSelect) {
+                paymentMethodSelect.required = !isCheque;
+                paymentMethodSelect.disabled = isCheque;
+            }
+            if (paymentNotesInput) {
+                paymentNotesInput.disabled = isCheque;
+            }
+            if (chequeNumberInput) {
+                chequeNumberInput.required = isCheque;
+                chequeNumberInput.disabled = !isCheque;
+            }
+            if (chequeDateInput) {
+                chequeDateInput.disabled = !isCheque;
+            }
+            if (bankAccountInput) {
+                bankAccountInput.disabled = !isCheque;
+            }
+            if (addBankAccountBtn) {
+                addBankAccountBtn.disabled = !isCheque;
+            }
+            if (chequeMemoInput) {
+                chequeMemoInput.disabled = !isCheque;
+            }
+        };
+
+        if (paymentTypeOther) {
+            paymentTypeOther.addEventListener('change', togglePaymentFields);
+        }
+        if (paymentTypeCheque) {
+            paymentTypeCheque.addEventListener('change', togglePaymentFields);
+        }
+
+        if (paymentModalEl) {
+            paymentModalEl.addEventListener('show.bs.modal', (event) => {
+                const trigger = event.relatedTarget;
+                if (!trigger) {
+                    return;
+                }
+                const supplierId = trigger.getAttribute('data-supplier-id') || '';
+                const supplierName = trigger.getAttribute('data-supplier-name') || '';
+                const balanceRaw = trigger.getAttribute('data-balance') || '0';
+                const balanceValue = parseFloat(balanceRaw);
+                const amountValue = Number.isFinite(balanceValue) && balanceValue > 0 ? balanceValue : 0;
+
+                if (supplierIdInput) supplierIdInput.value = supplierId;
+                if (supplierNameInput) supplierNameInput.value = supplierName;
+                if (supplierDisplay) supplierDisplay.value = supplierName;
+                if (paymentAmountInput) paymentAmountInput.value = amountValue ? amountValue.toFixed(2) : '';
+                if (paymentNextInput) paymentNextInput.value = `${window.location.pathname}${window.location.search}`;
+                if (bankAccountInput) bankAccountInput.value = '';
+                if (paymentTypeOther) paymentTypeOther.checked = true;
+                if (paymentTypeCheque) paymentTypeCheque.checked = false;
+                if (chequeDateInput && !chequeDateInput.value) {
+                    const today = new Date().toISOString().slice(0, 10);
+                    chequeDateInput.value = today;
+                }
+                togglePaymentFields();
+            });
+        }
+
+        if (addBankAccountBtn && bankAccountModalEl) {
+            addBankAccountBtn.addEventListener('click', () => {
+                if (bankAccountError) {
+                    bankAccountError.classList.add('d-none');
+                    bankAccountError.textContent = '';
+                }
+                if (bankAccountName) bankAccountName.value = '';
+                if (bankAccountNumber) bankAccountNumber.value = '';
+                const modal = new bootstrap.Modal(bankAccountModalEl);
+                modal.show();
+            });
+        }
+
+        if (bankAccountForm) {
+            bankAccountForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const token = bankAccountForm.querySelector('input[name="csrfmiddlewaretoken"]').value;
+                const payload = new URLSearchParams({
+                    name: bankAccountName ? bankAccountName.value.trim() : '',
+                    account_number: bankAccountNumber ? bankAccountNumber.value.trim() : '',
+                });
+
+                fetch(bankAccountsUrl, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': token },
+                    body: payload,
+                })
+                    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                    .then(({ ok, data }) => {
+                        if (!ok || data.status !== 'success') {
+                            const message = data.message || 'Unable to add bank account.';
+                            if (bankAccountError) {
+                                bankAccountError.textContent = message;
+                                bankAccountError.classList.remove('d-none');
+                            }
+                            return;
+                        }
+                        if (bankAccountInput) {
+                            const exists = Array.from(bankAccountInput.options).some(option => option.value === data.value);
+                            if (!exists) {
+                                const option = document.createElement('option');
+                                option.value = data.value;
+                                option.textContent = data.label;
+                                bankAccountInput.appendChild(option);
+                            }
+                            bankAccountInput.value = data.value;
+                        }
+                        const modal = bootstrap.Modal.getInstance(bankAccountModalEl);
+                        if (modal) modal.hide();
+                    })
+                    .catch(() => {
+                        if (bankAccountError) {
+                            bankAccountError.textContent = 'Unable to add bank account.';
+                            bankAccountError.classList.remove('d-none');
+                        }
+                    });
+            });
+        }
+    });
+</script>
+{% endblock %}

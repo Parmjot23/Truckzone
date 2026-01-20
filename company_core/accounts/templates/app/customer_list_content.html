@@ -1,0 +1,66 @@
+{% load custom_filters %}
+{% for data in customers %}
+<tr id="customer-row-{{ data.customer.id }}">
+<td data-label="Rank">{{ rank_offset|add:forloop.counter }}</td>
+    <td data-label="Name">
+        <a href="#" class="customer-detail"
+           data-id="{{ data.customer.id }}"
+           data-name="{{ data.customer.name }}"
+           data-email="{{ data.customer.email }}"
+           data-phone="{{ data.customer.phone_number }}"
+           data-address="{{ data.customer.address }}">
+           {{ data.customer.name }}
+        </a>
+    </td>
+    <td data-label="Email">{{ data.customer.email }}</td>
+    <td data-label="Balance Due" class="text-end">
+        <a href="{% url 'accounts:customer_detail' data.customer.id 'pending' %}" class="pending-amount text-danger">
+            {{ data.pending_total|currency }}
+        </a>
+    </td>
+    <td data-label="Total Paid" class="text-end">
+        <a href="{% url 'accounts:customer_detail' data.customer.id 'paid' %}" class="paid-amount">
+            {{ data.paid_total|currency }}
+        </a>
+    </td>
+    <td data-label="Overdue Total" class="text-end">
+        <a href="{% url 'accounts:customer_detail' data.customer.id 'overdue' %}" class="overdue-amount text-danger">
+            {{ data.overdue_total|currency }}
+        </a>
+    </td>
+    <td data-label="Total Amount" class="text-end">
+        <a href="{% url 'accounts:customer_detail' data.customer.id 'all' %}" class="total-amount">
+            {{ data.total_amount|currency }}
+        </a>
+    </td>
+    <td data-label="Vehicles" class="text-center">
+        {% if data.customer.vehicle_count > 0 %}
+            <a href="{% url 'accounts:customer_vehicle_list' customer_id=data.customer.id %}" class="pill-btn">
+                {{ data.customer.vehicle_count }} Vehicles
+            </a>
+        {% else %}
+            <span class="text-muted">0</span>
+        {% endif %}
+    </td>
+    <td data-label="Actions" class="text-center table-actions">
+        <div class="dropdown">
+            <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'accounts:customer_edit' data.customer.id %}">Edit</a></li>
+                {% if data.total_amount == 0 %}
+                <li><a class="dropdown-item text-danger" href="{% url 'accounts:delete_customer' data.customer.id %}" onclick="return confirm('Delete {{ data.customer.name }}?');">Delete</a></li>
+                {% endif %}
+                {% if data.customer.email %}
+                <li><button class="dropdown-item send-signup-btn" type="button" data-id="{{ data.customer.id }}" data-email="{{ data.customer.email }}">Send signup email</button></li>
+                {% endif %}
+            </ul>
+        </div>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="9" class="text-center text-muted">No customers found.</td>
+</tr>
+{% endfor %}

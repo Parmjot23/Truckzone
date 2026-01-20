@@ -1,0 +1,4177 @@
+{% extends 'customer_portal_base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Add or Edit Work Order{% endblock %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css" rel="stylesheet">
+
+<style>
+  :root {
+    --wo-primary: #2f6df6;
+    --wo-primary-strong: #1f4fd6;
+    --wo-surface: #ffffff;
+    --wo-soft: #f4f7fb;
+    --wo-border: #e2e8f0;
+    --wo-muted: #64748b;
+  }
+
+  .select2-container--bootstrap4 .select2-selection--single {
+    height: calc(1.5em + .75rem + 2px) !important;
+    padding: .375rem .75rem !important;
+  }
+
+  .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+    line-height: 1.5em !important;
+    padding-left: 0 !important;
+  }
+
+  .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
+    height: calc(1.5em + .75rem) !important;
+  }
+
+  .select2-container--bootstrap4 .select2-search--dropdown .select2-search__field {
+    margin-bottom: 0.5rem;
+  }
+
+  #jobs .marked-for-deletion .form-control,
+  #jobs .marked-for-deletion .form-check-label,
+  #jobs .marked-for-deletion label {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  #jobs .marked-for-deletion input[type="checkbox"] {
+    text-decoration: none;
+    opacity: 1;
+  }
+
+  .wo-shell {
+    padding-top: 1.5rem;
+    padding-bottom: 3rem;
+    background: linear-gradient(180deg, #eef2f7 0%, #f8fafc 100%);
+  }
+
+  .wo-card {
+    background: var(--wo-surface);
+    border-radius: 18px;
+    box-shadow: 0 22px 48px rgba(15, 23, 42, 0.12);
+    border: 1px solid rgba(15, 23, 42, 0.05);
+    padding: 26px 28px;
+  }
+
+  .wo-section-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+    color: #0f172a;
+  }
+
+  .wo-subtitle {
+    color: var(--wo-muted);
+    margin-bottom: 0.35rem;
+    font-size: 0.95rem;
+  }
+
+  .wo-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .wo-toolbar .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 600;
+    padding: 0.65rem 1rem;
+    border-radius: 12px;
+  }
+
+  .wo-toolbar .btn-outline-light {
+    background: #f8fafc;
+    border-color: #e5e7eb;
+    color: #0f172a;
+  }
+
+  .wo-soft-panel {
+    background: #f3f6fb;
+    border: 1px solid #dce3ee;
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+
+  .wo-save-bar {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 18px;
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .wo-inline-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .wo-inline-stack .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .wo-callout {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-weight: 600;
+    box-shadow: 0 10px 22px rgba(249, 115, 22, 0.08);
+  }
+
+  .modal-quick-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .quick-create-card {
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px dashed #cbd5e1;
+    padding: 12px;
+  }
+
+  .quick-create-card h6 {
+    margin-bottom: 8px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  #workorder-form .form-control,
+  #workorder-form .form-select {
+    border-radius: 12px;
+    border: 1px solid var(--wo-border);
+    background: #f8fafc;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    color: #0f172a;
+  }
+
+  #workorder-form label {
+    font-weight: 600;
+    color: #111827;
+    font-size: 0.95rem;
+  }
+
+  #workorder-form .form-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .wo-section {
+    scroll-margin-top: 110px;
+  }
+
+  #step-customer,
+  #step-jobs,
+  #step-review {
+    scroll-margin-top: 130px;
+  }
+
+  .wo-hero {
+    background: linear-gradient(120deg, #ffffff 0%, #f1f5ff 100%);
+    border-radius: 18px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.12);
+    border: 1px solid rgba(46, 98, 255, 0.08);
+  }
+
+  .wo-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+    color: var(--wo-muted);
+    margin-bottom: 4px;
+    font-weight: 700;
+  }
+
+  .wo-hero-title {
+    font-size: 1.45rem;
+    font-weight: 800;
+    margin: 0;
+    color: #0f172a;
+  }
+
+  .wo-hero-subtitle {
+    margin: 4px 0 10px;
+    color: var(--wo-muted);
+  }
+
+  .wo-hero-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .wo-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #1f4fd6;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .wo-chip.muted {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+
+  .wo-hero-pill {
+    background: #0f172a;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    text-align: right;
+    min-width: 120px;
+  }
+
+  .wo-stepper {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-top: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  .wo-stepper a {
+    text-decoration: none;
+  }
+
+  .wo-step {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid var(--wo-border);
+    color: #0f172a;
+    font-weight: 700;
+    transition: all 0.18s ease;
+  }
+
+  .wo-step:hover {
+    border-color: #c7d2fe;
+    box-shadow: 0 10px 24px rgba(46, 98, 255, 0.12);
+  }
+
+  .wo-step.active {
+    border-color: #c7d2fe;
+    background: linear-gradient(120deg, #f4f7ff 0%, #e4ebff 100%);
+  }
+
+  .wo-step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e0e7ff;
+    color: #1f4fd6;
+    font-weight: 800;
+    font-size: 0.95rem;
+  }
+
+  .wo-step.active .wo-step-number {
+    background: #1f4fd6;
+    color: #fff;
+  }
+
+  .wo-section-card {
+    background: #fff;
+    border: 1px solid var(--wo-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  }
+
+  .wo-muted-card {
+    background: var(--wo-soft);
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  .wo-field-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+
+  .wo-field-row .form-group {
+    flex: 1 1 auto;
+    margin-bottom: 0;
+  }
+
+  .wo-quick-btn {
+    padding: 0.65rem 0.9rem;
+    border-radius: 12px;
+    border: 1px solid #d7ddf5;
+    background: #eef2ff;
+    color: #1f4fd6;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .wo-quick-btn:hover {
+    background: #dce5ff;
+    color: #153ea5;
+  }
+
+  .wo-vehicle-slab {
+    background: #f1f5f9;
+    border: 1px solid #dce3ee;
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  .job-entry-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 2.5fr) repeat(2, minmax(120px, 1fr)) minmax(120px, 1fr);
+    gap: 14px;
+    align-items: center;
+    padding: 16px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    background: #f6f9ff;
+    border: 1px solid #d7e0f3;
+    box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .job-field {
+    margin-bottom: 0;
+  }
+
+  .job-field label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--wo-muted);
+    margin-bottom: 0.35rem;
+    font-weight: 600;
+  }
+
+  .job-entry-row textarea,
+  .job-entry-row input {
+    background: #fff;
+    border-radius: 10px;
+    font-size: 0.95rem;
+  }
+
+  .job-field.job-delete {
+    text-align: center;
+  }
+
+  .job-field.job-delete label {
+    margin-bottom: 0.5rem;
+  }
+
+  .job-field.job-description textarea {
+    min-height: 64px;
+  }
+
+  .wo-inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .wo-inline-actions .btn-group {
+    gap: 6px;
+  }
+
+  .wo-inline-actions small {
+    color: var(--wo-muted);
+  }
+
+  .wo-total-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+  }
+
+  .wo-total-row h4 {
+    margin-bottom: 0;
+    color: #0f172a;
+    font-weight: 800;
+  }
+
+  .wo-save-bar .btn-primary {
+    padding: 0.65rem 1.4rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(47, 109, 246, 0.25);
+  }
+
+  .wo-save-bar .btn-outline-secondary {
+    padding: 0.65rem 1.1rem;
+    border-radius: 12px;
+  }
+
+  @media (max-width: 991px) {
+    .wo-hero {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .wo-field-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .wo-hero-pill {
+      align-self: flex-end;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .job-entry-row {
+      grid-template-columns: 1fr;
+    }
+
+    .job-field.job-delete {
+      text-align: left;
+    }
+  }
+</style>
+
+<div class="container-fluid wo-shell">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <h1 class="mb-3">
+        {% if workorder_form.instance.pk %}Edit{% else %}Create{% endif %} Work Order
+      </h1>
+
+      {% if editing_completed_workorder %}
+      <div class="wo-callout mb-3">
+        Heads up: this work order is marked as completed. Updates save immediately and may impact related invoices.
+      </div>
+      {% endif %}
+
+      <div class="wo-card">
+      <form method="post" novalidate id="workorder-form" data-tour="workorder-form">
+        {% csrf_token %}
+
+        {% for hidden_field in workorder_form.hidden_fields %}
+          {% if hidden_field.name != 'vehicle' %}
+            {{ hidden_field }}
+          {% endif %}
+        {% endfor %}
+
+        <div id="step-customer">
+          <div class="row g-4">
+            <div class="col-lg-6 col-xl-4">
+              <div class="wo-section-card h-100">
+                <div class="wo-section-title">Schedule &amp; Billing</div>
+                <div class="wo-subtitle">Pick the visit date, customer, and confirm who we should bill.</div>
+                <div class="row g-3 align-items-end">
+                  <div class="col-12">
+                    {{ workorder_form.scheduled_date|as_crispy_field }}
+                  </div>
+                  <div class="col-12">
+                    <div class="wo-field-row">
+                      <div class="form-group mb-0 w-100">
+                        {{ workorder_form.customer|as_crispy_field }}
+                      </div>
+                      <button
+                        type="button"
+                        class="wo-quick-btn"
+                        id="btnOpenAddCustomerModal"
+                        data-bs-toggle="modal"
+                        data-bs-target="#addCustomerModal"
+                      >
+                        + New Customer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="wo-muted-card mt-3">
+                  <div class="form-group mb-3">
+                    <label for="id_bill_to">Bill To</label>
+                    <input type="text" id="id_bill_to" class="form-control" readonly placeholder="Bill To">
+                  </div>
+                  <div class="form-group mb-3">
+                    <label for="id_bill_to_email">Bill To Email</label>
+                    <input type="email" id="id_bill_to_email" class="form-control" readonly placeholder="Bill To Email">
+                  </div>
+                  <div class="form-group mb-0">
+                    <label for="id_bill_to_address">Bill To Address</label>
+                    <textarea id="id_bill_to_address" class="form-control" rows="2" readonly placeholder="Bill To Address"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-6 col-xl-4">
+              <div class="wo-section-card h-100">
+                <div class="wo-section-title">Vehicle &amp; Unit</div>
+                <div class="wo-subtitle">Choose a vehicle to unlock history and maintenance reminders.</div>
+                <div class="wo-field-row">
+                  <div class="form-group mb-0 w-100">
+                    <label for="vehicle-select" class="form-label">Select Vehicle/Unit</label>
+                    <select id="vehicle-select" class="form-select">
+                      <option value="">-- Select vehicle --</option>
+                    </select>
+                    {{ workorder_form.vehicle }}
+                  </div>
+                  <button
+                    type="button"
+                    class="wo-quick-btn"
+                    data-bs-toggle="modal"
+                    data-bs-target="#addVehicleModal"
+                    id="btnOpenAddVehicleModal"
+                  >
+                    + New Vehicle
+                  </button>
+                </div>
+                <div class="wo-inline-actions mt-2">
+                  <div class="btn-group btn-group-sm flex-shrink-0" role="group">
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary"
+                      id="vehicle-history-button"
+                      data-bs-toggle="modal"
+                      data-bs-target="#vehicleHistoryModal"
+                      disabled
+                    >
+                      View Vehicle History
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary"
+                      id="vehicle-maintenance-button"
+                      data-bs-toggle="modal"
+                      data-bs-target="#vehicleMaintenanceModal"
+                      disabled
+                    >
+                      View Maintenance Reminders
+                    </button>
+                  </div>
+                  <div class="text-muted small text-lg-right">
+                    <div id="vehicle-history-hint">Select a vehicle to view history.</div>
+                    <div id="vehicle-maintenance-hint">Select a vehicle to review maintenance reminders.</div>
+                  </div>
+                </div>
+                <div class="wo-vehicle-slab mt-3 d-flex flex-column gap-3">
+                  <div>{{ workorder_form.vehicle_vin|as_crispy_field }}</div>
+                  <div>{{ workorder_form.mileage|as_crispy_field }}</div>
+                  <div>{{ workorder_form.unit_no|as_crispy_field }}</div>
+                  <div>{{ workorder_form.make_model|as_crispy_field }}</div>
+                  <div>{{ workorder_form.license_plate|as_crispy_field }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-6 col-xl-4">
+              <div class="wo-section-card h-100">
+                <div class="wo-section-title">Team &amp; Notes</div>
+                <div class="wo-subtitle">Assign techs and capture what needs attention.</div>
+                <div class="row g-3">
+                  <div class="col-12">
+                    {{ workorder_form.mechanics|as_crispy_field }}
+                  </div>
+                  <div class="col-12">
+                    {{ workorder_form.status|as_crispy_field }}
+                  </div>
+                  <div class="col-12">
+                    {{ workorder_form.description|as_crispy_field }}
+                  </div>
+                </div>
+                {% if workorder_form.instance.pk %}
+                  {% if workorder_form.instance.cause or workorder_form.instance.correction %}
+                    <div class="row g-3 mt-2">
+                      <div class="col-md-6">
+                        <div class="form-group mt-3">
+                          <label>Cause (Read-only):</label>
+                          <textarea class="form-control" rows="3" readonly>{{ workorder_form.instance.cause }}</textarea>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="form-group mt-3">
+                          <label>Correction (Read-only):</label>
+                          <textarea class="form-control" rows="3" readonly>{{ workorder_form.instance.correction }}</textarea>
+                        </div>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wo-section mb-4" id="step-jobs">
+          <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between gap-3 mb-2">
+            <div>
+              <div class="wo-section-title mb-0">Job Details</div>
+              <div class="wo-subtitle mb-0">Add services, parts, and adjustments.</div>
+            </div>
+          </div>
+
+          <div id="jobs" class="wo-soft-panel mb-3">
+            {{ formset.management_form }}
+            <p class="text-muted mb-3" id="no-jobs-message">No jobs yet. Use <strong>Add Service</strong> or <strong>Add Part</strong> to start.</p>
+            {% for f in formset %}
+              {% if f.instance.pk or f.errors or f.has_changed or f.initial.job or f.initial.qty or f.initial.rate %}
+                {% for hidden in f.hidden_fields %}
+                  {{ hidden }}
+                {% endfor %}
+                {% with job_value=f.job.value|default:'' %}
+                  {# Temporary classes help initialize edit mode state for special rows #}
+                  <div class="job-entry-row{% if 'Shop Supply' in job_value %} initial-shop-supply-check{% endif %}{% if job_value|lower|slice:":8" == 'discount' %} initial-discount-check{% endif %}{% if job_value|lower|slice:":8" == 'interest' %} initial-interest-check{% endif %}">
+                    <div class="job-field job-description">
+                      {{ f.job|as_crispy_field }}
+                    </div>
+                    <div class="job-field job-qty">
+                      {{ f.qty|as_crispy_field }}
+                    </div>
+                    <div class="job-field job-rate">
+                      {{ f.rate|as_crispy_field }}
+                    </div>
+                    <div class="job-field job-amount">
+                      <label for="{{ f.prefix }}-amount">Amount</label>
+                      <input type="text" name="{{ f.prefix }}-amount" id="id_{{ f.prefix }}-amount" class="form-control entry-amount" value="0.00" readonly>
+                    </div>
+                    <div class="job-field job-delete">
+                      <label for="{{ f.prefix }}-DELETE">Delete?</label>
+                      <input type="checkbox" name="{{ f.prefix }}-DELETE" id="{{ f.prefix }}-DELETE" {% if f.DELETE.value %}checked{% endif %} class="form-check-input">
+                    </div>
+                  </div>
+                  <input type="hidden" name="{{ f.prefix }}-service_id" id="id_{{ f.prefix }}-service_id">
+                  <input type="hidden" name="{{ f.prefix }}-service_due_months" id="id_{{ f.prefix }}-service_due_months">
+                  <input type="hidden" name="{{ f.prefix }}-service_due_kilometers" id="id_{{ f.prefix }}-service_due_kilometers">
+                  <input type="hidden" name="{{ f.prefix }}-skip_maintenance" id="id_{{ f.prefix }}-skip_maintenance">
+                {% endwith %}
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          <div class="d-flex justify-content-end mt-3">
+            <div class="wo-toolbar">
+              <button type="button" class="btn btn-outline-primary add-job-btn">
+                <i class="fas fa-plus-circle"></i> Add Service
+              </button>
+              <button type="button" class="btn btn-primary sell-product-btn">
+                <i class="fas fa-toolbox"></i> Add Part
+              </button>
+            </div>
+          </div>
+
+          <div id="step-review">
+            <!-- Additional Charges & Discounts -->
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <div class="border rounded p-3 h-100">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="toggle-shop-supply">
+                    <label class="form-check-label font-weight-semibold" for="toggle-shop-supply">Add Shop Supply</label>
+                  </div>
+                  <div id="shop-supply-section" class="special-entry-settings" style="display: none;">
+                    <div class="form-group">
+                      <label class="d-block font-weight-semibold mb-1">Shop Supply Type:</label>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="shop_supply_type" id="shop_supply_type_percentage" value="percentage" checked>
+                        <label class="form-check-label" for="shop_supply_type_percentage">Percentage</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="shop_supply_type" id="shop_supply_type_fixed" value="fixed">
+                        <label class="form-check-label" for="shop_supply_type_fixed">Fixed Amount</label>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label for="shop-supply-value">Value:</label>
+                      <input type="number" id="shop-supply-value" class="form-control" value="3" min="0" step="any">
+                    </div>
+                    <div class="form-group mb-0">
+                      <label for="shop-supply-reason">Reason (optional):</label>
+                      <input type="text" id="shop-supply-reason" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <div class="border rounded p-3 h-100">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="toggle-discount">
+                    <label class="form-check-label font-weight-semibold" for="toggle-discount">Apply Discount</label>
+                  </div>
+                  <div id="discount-section" class="special-entry-settings" style="display: none;">
+                    <div class="form-group">
+                      <label class="d-block font-weight-semibold mb-1">Discount Type:</label>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="discount_type" id="discount_fixed" value="fixed" checked>
+                        <label class="form-check-label" for="discount_fixed">Fixed Amount</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="discount_type" id="discount_percentage" value="percentage">
+                        <label class="form-check-label" for="discount_percentage">Percentage</label>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label for="discount-value">Value:</label>
+                      <input type="number" id="discount-value" class="form-control" value="0" min="0" step="any">
+                    </div>
+                    <div class="form-group mb-0">
+                      <label for="discount-reason">Reason (optional):</label>
+                      <input type="text" id="discount-reason" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <div class="border rounded p-3 h-100">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="toggle-interest">
+                    <label class="form-check-label font-weight-semibold" for="toggle-interest">Add Interest</label>
+                  </div>
+                  <div id="interest-section" class="special-entry-settings" style="display: none;">
+                    <div class="form-group">
+                      <label class="d-block font-weight-semibold mb-1">Interest Type:</label>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="interest_type" id="interest_type_fixed" value="fixed" checked>
+                        <label class="form-check-label" for="interest_type_fixed">Fixed Amount</label>
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="interest_type" id="interest_type_percentage" value="percentage">
+                        <label class="form-check-label" for="interest_type_percentage">Percentage</label>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label for="interest-value">Value:</label>
+                      <input type="number" id="interest-value" class="form-control" value="0" min="0" step="any">
+                    </div>
+                    <div class="form-group mb-0">
+                      <label for="interest-reason">Reason (optional):</label>
+                      <input type="text" id="interest-reason" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="wo-total-row mt-2">
+              <h4 class="mb-0">Total: <span id="total-amount">$0.00</span></h4>
+              <span class="text-muted small">Live total auto-updates as you add or remove lines.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="wo-save-bar">
+          <button type="submit" name="save_continue" class="btn btn-outline-secondary">
+            Save and Continue
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Save Work Order
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Vehicle History Modal -->
+<div
+  class="modal fade"
+  id="vehicleHistoryModal"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="vehicleHistoryModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="vehicleHistoryModalLabel">Vehicle History</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="vehicle-history-status" class="alert alert-info mb-3">
+          Select a vehicle to view its recent history.
+        </div>
+        <div id="vehicle-history-sections" style="display: none;">
+          <p class="text-muted mb-3" id="vehicle-history-vehicle-label"></p>
+          <div class="mb-4">
+            <h6 class="font-weight-bold">Recent Jobs</h6>
+            <div class="list-group" id="vehicle-history-jobs"></div>
+            <div class="text-muted small" id="vehicle-history-jobs-empty" style="display: none;">
+              No recent labor entries recorded for this vehicle.
+            </div>
+          </div>
+          <div>
+            <h6 class="font-weight-bold">Parts Used</h6>
+            <div class="list-group" id="vehicle-history-parts"></div>
+            <div class="text-muted small" id="vehicle-history-parts-empty" style="display: none;">
+              No recent parts usage recorded for this vehicle.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vehicle Maintenance Modal -->
+<div
+  class="modal fade"
+  id="vehicleMaintenanceModal"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="vehicleMaintenanceModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="vehicleMaintenanceModalLabel">Maintenance Reminders</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="vehicle-maintenance-status" class="alert alert-info mb-3">
+          Select a vehicle to review upcoming maintenance reminders.
+        </div>
+        <div id="vehicle-maintenance-sections" style="display: none;">
+          <p class="text-muted mb-2" id="vehicle-maintenance-vehicle-label"></p>
+          <div class="small text-muted mb-3" id="vehicle-maintenance-stats" style="display: none;"></div>
+          <div class="list-group" id="vehicle-maintenance-list"></div>
+          <div class="text-muted small" id="vehicle-maintenance-empty" style="display: none;">
+            No active maintenance reminders for this vehicle.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Service Modal -->
+<div class="modal fade" id="addJobModal" tabindex="-1" role="dialog" aria-labelledby="addJobModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addJobModalLabel">Add Service</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+        <div class="modal-body">
+        <div class="form-group">
+          <label for="jobNameSelect" class="font-weight-semibold">Job name</label>
+          <select id="jobNameSelect" class="form-control" required>
+            <option value="">Select job name</option>
+          </select>
+          <div class="invalid-feedback">Please select a job name.</div>
+        </div>
+        <div class="form-group mb-0">
+          <label for="jobDescriptionInput" class="font-weight-semibold">Job description</label>
+          <textarea
+            id="jobDescriptionInput"
+            class="form-control"
+            rows="3"
+            placeholder="Description will be selected automatically"
+          ></textarea>
+          <div class="invalid-feedback">No description found for this job.</div>
+          <select id="jobDescriptionSelect" class="d-none"></select>
+          <div id="jobDescriptionNotes" class="small text-muted mt-2" style="display:none;"></div>
+        </div>
+        <div class="form-group mt-3">
+          <label for="jobFixedHoursInput" class="font-weight-semibold">Fixed hours <span class="text-muted">(optional)</span></label>
+          <input type="number" id="jobFixedHoursInput" class="form-control" placeholder="e.g. 2.5" min="0" step="0.25">
+        </div>
+        <div class="form-group mt-3">
+          <label for="jobDueMonthsInput" class="font-weight-semibold">Due after (months) <span class="text-muted">(optional)</span></label>
+          <input type="number" id="jobDueMonthsInput" class="form-control" placeholder="e.g. 6" min="0" step="1">
+        </div>
+        <div class="form-group mt-3">
+          <label for="jobDueKilometersInput" class="font-weight-semibold">Due after (km) <span class="text-muted">(optional)</span></label>
+          <input type="number" id="jobDueKilometersInput" class="form-control" placeholder="e.g. 8000" min="0" step="1">
+          <small id="jobMaintenanceHint" class="form-text text-muted mt-1">We'll automatically create maintenance reminders for this vehicle when due info is provided.</small>
+        </div>
+        <div id="jobModalSuccess" class="alert alert-success mt-3 d-none" role="alert"></div>
+        <div id="jobModalError" class="alert alert-danger mt-3 d-none" role="alert"></div>
+      </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-link text-decoration-none" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmAddJobButton">
+          <i class="fas fa-plus-circle mr-1"></i> Update &amp; add service
+          </button>
+        </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Service Full Form Modal -->
+<div class="modal fade" id="newServiceModal" tabindex="-1" role="dialog" aria-labelledby="newServiceModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newServiceModalLabel">Create New Service</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="newServiceError" class="alert alert-danger d-none" role="alert"></div>
+        <div id="newServiceSuccess" class="alert alert-success d-none" role="alert"></div>
+        <div class="form-group">
+          <label for="newServiceJobName" class="font-weight-semibold">Job name</label>
+          <input type="text" id="newServiceJobName" class="form-control" placeholder="e.g. PM Inspection">
+        </div>
+        <div class="form-group mt-3">
+          <label for="newServiceDescription" class="font-weight-semibold">Description</label>
+          <textarea id="newServiceDescription" rows="3" class="form-control" placeholder="Service description"></textarea>
+        </div>
+        <div class="form-group mt-3">
+          <label for="newServiceNotes" class="font-weight-semibold">Notes (optional)</label>
+          <textarea id="newServiceNotes" rows="2" class="form-control" placeholder="Internal notes"></textarea>
+        </div>
+        <div class="form-group mt-3">
+          <label for="newServiceFixedHours" class="font-weight-semibold">Fixed hours (optional)</label>
+          <input type="number" id="newServiceFixedHours" class="form-control" min="0" step="0.25" placeholder="2.5">
+        </div>
+        <div class="row mt-3">
+          <div class="col-md-6">
+            <label for="newServiceDueMonths" class="font-weight-semibold">Due after (months)</label>
+            <input type="number" id="newServiceDueMonths" class="form-control" min="0" step="1" placeholder="6">
+          </div>
+          <div class="col-md-6">
+            <label for="newServiceDueKm" class="font-weight-semibold">Due after (km)</label>
+            <input type="number" id="newServiceDueKm" class="form-control" min="0" step="1" placeholder="8000">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link text-decoration-none" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="submitNewServiceButton">
+          <i class="fas fa-save mr-1"></i> Save service
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="sellProductModal" tabindex="-1" role="dialog" aria-labelledby="sellProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form id="sell-product-form-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="sellProductModalLabel">Add Part</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-quick-actions mb-3 d-flex justify-content-between align-items-center">
+            <div class="small text-muted">Add a part from inventory or create a new one without leaving this page.</div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="openProductFormBtn">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          <div class="form-group">
+            <label for="sell_product">Product</label>
+            <select id="sell_product" class="form-control">
+              <option value="">Select a product</option>
+              {% for product in products %}
+                <option value="{{ product.id }}">{{ product.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="sell_price">Price</label>
+            <input type="number" id="sell_price" class="form-control" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label for="sell_quantity">Quantity</label>
+            <input type="number" id="sell_quantity" class="form-control" min="1" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-link text-decoration-none" data-bs-dismiss="modal">Close</button>
+          <button type="button" id="add-sell-product" class="btn btn-primary">Add Part Entry</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- New Product Modal -->
+<div class="modal fade" id="newProductModal" tabindex="-1" role="dialog" aria-labelledby="newProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <form id="new-product-form">
+        <div class="modal-header">
+          <h5 class="modal-title" id="newProductModalLabel">Add Product</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="newProductError" class="alert alert-danger d-none" role="alert"></div>
+          <div id="newProductSuccess" class="alert alert-success d-none" role="alert"></div>
+          <div class="form-group">
+            <label class="font-weight-semibold" for="new_product_name">Name <span class="text-danger">*</span></label>
+            <input type="text" id="new_product_name" name="name" class="form-control" placeholder="Product name" required>
+          </div>
+          <div class="form-group mt-3">
+            <label class="font-weight-semibold" for="new_product_sku">SKU / Part #</label>
+            <input type="text" id="new_product_sku" name="sku" class="form-control" placeholder="Optional">
+          </div>
+          <div class="form-group mt-3">
+            <label class="font-weight-semibold" for="new_product_description">Description</label>
+            <textarea id="new_product_description" name="description" class="form-control" rows="3" placeholder="Optional details"></textarea>
+          </div>
+          <div class="form-group mt-3">
+            <label class="font-weight-semibold" for="new_product_category">Category</label>
+            <select id="new_product_category" name="category" class="form-control">
+              <option value="">Select a category (optional)</option>
+              {% for category in categories %}
+                <option value="{{ category.id }}">{{ category.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group mt-3">
+            <label class="font-weight-semibold" for="new_product_sale_price">Sale price</label>
+            <input type="number" step="0.01" min="0" id="new_product_sale_price" name="sale_price" class="form-control" placeholder="0.00">
+          </div>
+          <div class="form-group mt-3">
+            <label class="font-weight-semibold" for="new_product_cost_price">Cost price <span class="text-danger">*</span></label>
+            <input type="number" step="0.01" min="0" id="new_product_cost_price" name="cost_price" class="form-control" placeholder="0.00" required>
+          </div>
+          <div class="form-group mt-3">
+            <label class="font-weight-semibold" for="new_product_stock">Stock in quantity</label>
+            <input type="number" step="1" min="0" id="new_product_stock" name="quantity_in_stock" class="form-control" placeholder="e.g. 10">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-link text-decoration-none" data-bs-dismiss="modal" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="saveNewProductBtn">Save Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1" role="dialog" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form id="add-customer-form">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add New Customer</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {% csrf_token %}
+          {{ customer_form.as_p }}
+          <div id="customer-form-errors" class="text-danger"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="save-customer-button">Save Customer</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Vehicle Modal -->
+<div class="modal fade" id="addVehicleModal" tabindex="-1" role="dialog" aria-labelledby="addVehicleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <form id="add-vehicle-form">
+        <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addVehicleModalLabel">Add New Vehicle</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+          {% csrf_token %}
+          {% if vehicle_form.non_field_errors %}
+            <div class="alert alert-danger py-2">{{ vehicle_form.non_field_errors }}</div>
+          {% endif %}
+          <div class="form-group mb-2">
+            {{ vehicle_form.unit_number.label_tag }}
+            {{ vehicle_form.unit_number }}
+            {{ vehicle_form.unit_number.errors }}
+          </div>
+          <div class="form-group mb-2">
+            {{ vehicle_form.vin_number.label_tag }}
+            {{ vehicle_form.vin_number }}
+            {{ vehicle_form.vin_number.errors }}
+          </div>
+          <div class="form-group mb-2">
+            {{ vehicle_form.make_model.label_tag }}
+            {{ vehicle_form.make_model }}
+            {{ vehicle_form.make_model.errors }}
+          </div>
+          <div class="form-group mb-0">
+            {{ vehicle_form.current_mileage.label_tag }}
+            {{ vehicle_form.current_mileage }}
+            {{ vehicle_form.current_mileage.errors }}
+          </div>
+          <div id="vehicle-form-errors" class="text-danger"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="save-vehicle-button">Save Vehicle</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- JavaScript Section -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{{ job_catalog_json|json_script:"job-catalog-data" }}
+<script>
+// Define the formset prefix used in work order records.
+const FORMSET_PREFIX = 'workorder_records';
+
+function createModalController(modalSelector) {
+  const modalElement = typeof modalSelector === 'string' ? document.querySelector(modalSelector) : null;
+  const $ = window.jQuery || null;
+  const $modal = modalElement && $ ? $(modalElement) : null;
+  const hasBootstrapModal = !!($modal && typeof $modal.modal === 'function');
+  const fallbackListeners = [];
+  let fallbackBackdrop = null;
+
+  function ensureBackdrop() {
+    if (fallbackBackdrop || !modalElement) {
+      return;
+    }
+    fallbackBackdrop = document.createElement('div');
+    fallbackBackdrop.className = 'modal-backdrop fade show';
+    fallbackBackdrop.setAttribute('data-fallback-backdrop', modalElement.id || modalSelector);
+    document.body.appendChild(fallbackBackdrop);
+  }
+
+  function removeBackdrop() {
+    if (fallbackBackdrop && fallbackBackdrop.parentNode) {
+      fallbackBackdrop.parentNode.removeChild(fallbackBackdrop);
+    }
+    fallbackBackdrop = null;
+  }
+
+  function show() {
+    if (!modalElement) {
+      return;
+    }
+    if (hasBootstrapModal) {
+      $modal.modal('show');
+      return;
+    }
+    modalElement.classList.add('show');
+    modalElement.style.display = 'block';
+    modalElement.setAttribute('aria-hidden', 'false');
+    modalElement.setAttribute('aria-modal', 'true');
+    document.body.classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
+    ensureBackdrop();
+  }
+
+  function hide() {
+    if (!modalElement) {
+      return;
+    }
+    if (hasBootstrapModal) {
+      $modal.modal('hide');
+      return;
+    }
+    modalElement.classList.remove('show');
+    modalElement.style.display = 'none';
+    modalElement.setAttribute('aria-hidden', 'true');
+    modalElement.removeAttribute('aria-modal');
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    removeBackdrop();
+    fallbackListeners.forEach(function(callback) {
+      try {
+        callback();
+      } catch (error) {
+        console.error('Error running modal hidden callback', error);
+      }
+    });
+  }
+
+  function onHidden(callback) {
+    if (typeof callback !== 'function' || !modalElement) {
+      return;
+    }
+    if (hasBootstrapModal) {
+      $modal.on('hidden.bs.modal', callback);
+    } else {
+      fallbackListeners.push(callback);
+    }
+  }
+
+  if (!hasBootstrapModal && modalElement) {
+    modalElement.addEventListener('click', function(event) {
+      const dismissTrigger = event.target.closest('[data-dismiss="modal"], [data-bs-dismiss="modal"]');
+      if (dismissTrigger) {
+        event.preventDefault();
+        hide();
+      }
+    });
+  }
+
+  return {
+    element: modalElement,
+    $modal,
+    hasBootstrapModal,
+    show,
+    hide,
+    onHidden,
+  };
+}
+
+(function initializeWorkorderScripts() {
+  const $ = window.jQuery;
+  if (!$) {
+    console.error('Work order form scripts require jQuery.');
+    return;
+  }
+
+  function elementHasSelect2($element) {
+    return !!($element && $element.length && $element.data('select2'));
+  }
+
+  function initializeSelect2Dropdown($element, options, dropdownParent, unavailableMessage) {
+    if (!$element || !$element.length) {
+      return;
+    }
+    if (typeof $element.select2 === 'function') {
+      if (!elementHasSelect2($element)) {
+        const config = Object.assign({
+          theme: 'bootstrap4',
+          width: '100%',
+        }, options || {});
+        if (dropdownParent && !config.dropdownParent) {
+          config.dropdownParent = dropdownParent;
+        }
+        $element.select2(config);
+      }
+    } else if (unavailableMessage) {
+      console.warn(unavailableMessage);
+    }
+  }
+
+  function resetSelectElement($element) {
+    if (!$element || !$element.length) {
+      return;
+    }
+    $element.val('');
+    if (elementHasSelect2($element)) {
+      $element.val(null).trigger('change.select2');
+    } else {
+      $element.trigger('change');
+    }
+  }
+
+  function setSelectDisabled($element, disabled) {
+    if (!$element || !$element.length) {
+      return;
+    }
+    $element.prop('disabled', !!disabled);
+    if (elementHasSelect2($element)) {
+      $element.trigger('change.select2');
+    }
+  }
+
+  function focusSelectElement($element) {
+    if (!$element || !$element.length) {
+      return;
+    }
+    if (elementHasSelect2($element)) {
+      $element.select2('open');
+    } else {
+      $element.trigger('focus');
+    }
+  }
+
+  $(document).ready(function() {
+    console.log("Document Ready: Starting work order script execution.");
+
+  const addJobModalController = createModalController('#addJobModal');
+  const sellProductModalController = createModalController('#sellProductModal');
+  const addCustomerModalController = createModalController('#addCustomerModal');
+  const addVehicleModalController = createModalController('#addVehicleModal');
+  const newServiceModalController = createModalController('#newServiceModal');
+  const newProductModalController = createModalController('#newProductModal');
+
+  $('#sellProductModal').on('click', '[data-bs-dismiss="modal"], [data-dismiss="modal"]', function(e) {
+    e.preventDefault();
+    if (sellProductModalController) {
+      sellProductModalController.hide();
+    }
+  });
+
+  $('#newProductModal').on('click', '[data-bs-dismiss="modal"], [data-dismiss="modal"]', function(e) {
+    e.preventDefault();
+    if (newProductModalController) {
+      newProductModalController.hide();
+    }
+  });
+  const addJobModalElement = addJobModalController && addJobModalController.$modal && addJobModalController.$modal.length
+    ? addJobModalController.$modal
+    : (addJobModalController && addJobModalController.element ? $(addJobModalController.element) : undefined);
+    const jobNameSelect = $('#jobNameSelect');
+    const jobDescriptionSelect = $('#jobDescriptionSelect');
+    const noJobsMessage = $('#no-jobs-message');
+    var sellProductSelect = $('#sell_product');
+    if (sellProductSelect.length) {
+      const dropdownParent = sellProductModalController && sellProductModalController.$modal && sellProductModalController.$modal.length
+        ? sellProductModalController.$modal
+        : (sellProductModalController && sellProductModalController.element ? $(sellProductModalController.element) : undefined);
+      if (typeof sellProductSelect.select2 === 'function') {
+        sellProductSelect.select2({
+          theme: 'bootstrap4',
+          placeholder: 'Select a product',
+          width: '100%',
+          dropdownParent: dropdownParent
+        });
+      } else {
+        console.warn('Select2 is not available. Falling back to native select for Add Part modal.');
+      }
+    }
+
+    initializeSelect2Dropdown(jobNameSelect, {
+      placeholder: 'Search job names',
+    }, addJobModalElement, 'Select2 is not available. Job dropdown will use native controls.');
+  function setupCustomerPortalFields(form){
+    if(!form || form.dataset.portalReady === '1'){
+      return;
+    }
+    const toggle = form.querySelector('#id_register_portal');
+    if(!toggle){
+      return;
+    }
+    const usernameWrapper = form.querySelector('#div_id_portal_username') || (form.querySelector('#id_portal_username') ? form.querySelector('#id_portal_username').closest('p') : null);
+    const passwordWrapper = form.querySelector('#div_id_portal_password') || (form.querySelector('#id_portal_password') ? form.querySelector('#id_portal_password').closest('p') : null);
+    const passwordInput = form.querySelector('#id_portal_password');
+
+    function toggleVisibility(){
+      const show = toggle.checked;
+      if(usernameWrapper){
+        usernameWrapper.style.display = show ? '' : 'none';
+      }
+      if(passwordWrapper){
+        passwordWrapper.style.display = show ? '' : 'none';
+      }
+      if(!show && passwordInput){
+        passwordInput.value = '';
+      }
+    }
+
+    toggleVisibility();
+    toggle.addEventListener('change', toggleVisibility);
+    form.dataset.portalReady = '1';
+  }
+
+  const addCustomerFormEl = document.getElementById('add-customer-form');
+  setupCustomerPortalFields(addCustomerFormEl);
+  const addCustomerModalElement = addCustomerModalController
+    ? addCustomerModalController.element
+    : document.getElementById('addCustomerModal');
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function setCustomerModalPrefillName(name) {
+    if (!addCustomerModalElement) { return; }
+    const trimmed = (name || '').toString().trim();
+    if (trimmed) {
+      addCustomerModalElement.setAttribute('data-prefill-name', trimmed);
+    } else {
+      addCustomerModalElement.removeAttribute('data-prefill-name');
+    }
+  }
+
+  function consumeCustomerModalPrefillName() {
+    if (!addCustomerModalElement) { return ''; }
+    const prefill = (addCustomerModalElement.getAttribute('data-prefill-name') || '').toString().trim();
+    addCustomerModalElement.removeAttribute('data-prefill-name');
+    return prefill;
+  }
+
+  function openAddCustomerModalWithName(name) {
+    setCustomerModalPrefillName(name);
+    if (addCustomerModalController) {
+      addCustomerModalController.show();
+    } else {
+      $('#addCustomerModal').modal('show');
+    }
+  }
+
+  function decodeCustomerPrefillName(encoded) {
+    if (!encoded) { return ''; }
+    try {
+      return decodeURIComponent(encoded);
+    } catch (error) {
+      return encoded;
+    }
+  }
+
+  function buildCustomerNoResultsMarkup(term) {
+    const rawTerm = (term || '').toString().trim();
+    if (!rawTerm) {
+      return 'No customers found';
+    }
+    const safeTerm = escapeHtml(rawTerm);
+    const encodedTerm = encodeURIComponent(rawTerm);
+    return `<div class="select2-add-new-customer" data-customer-name="${encodedTerm}">+ Add "${safeTerm}"</div>`;
+  }
+
+  $('#btnOpenAddCustomerModal').on('click', function(e) {
+    e.preventDefault();
+    setCustomerModalPrefillName('');
+    resetCustomerModal();
+    if (addCustomerModalController) {
+      addCustomerModalController.show();
+    }
+  });
+
+  // --- Customer Data and Handling ---
+  var customerData = {};
+  {% for cust in customers %}
+    customerData['{{ cust.id }}'] = {
+      'name': '{{ cust.name|escapejs }}',
+      'email': '{{ cust.email|escapejs }}',
+      'address': '{{ cust.address|escapejs }}'
+    };
+  {% endfor %}
+  $('#id_customer').change(function() {
+    var customerId = $(this).val();
+    var c = customerData[customerId];
+    if (c) {
+      $('#id_bill_to').val(c.name);
+      $('#id_bill_to_email').val(c.email);
+      $('#id_bill_to_address').val(c.address);
+    } else {
+      $('#id_bill_to, #id_bill_to_email, #id_bill_to_address').val('');
+    }
+  }).trigger('change');
+
+  function resetCustomerModal(prefillName) {
+    if(addCustomerFormEl){
+      addCustomerFormEl.reset();
+      setupCustomerPortalFields(addCustomerFormEl);
+      const toggle = addCustomerFormEl.querySelector('#id_register_portal');
+      if(toggle){
+        toggle.checked = false;
+        toggle.dispatchEvent(new Event('change'));
+      }
+      if (prefillName) {
+        const nameInput = addCustomerFormEl.querySelector('#id_name');
+        if (nameInput) {
+          nameInput.value = prefillName;
+          nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+      $('#customer-form-errors').html('');
+    }
+  }
+
+  if (addCustomerModalController && addCustomerModalController.$modal) {
+    addCustomerModalController.$modal.on('show.bs.modal', function() {
+      resetCustomerModal(consumeCustomerModalPrefillName());
+    });
+  } else {
+    resetCustomerModal();
+  }
+  if (addCustomerModalController) {
+    addCustomerModalController.onHidden(function() {
+      flushPendingVehicleModal();
+    });
+  }
+
+  // --- Add Customer Modal AJAX ---
+  $('#save-customer-button').click(function(e) {
+    e.preventDefault();
+    var formEl = document.getElementById('add-customer-form');
+    var formData = new FormData(formEl);
+    fetch("{% url 'accounts:add_customer' %}", {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCsrfToken(),
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        if (addCustomerModalController) {
+          addCustomerModalController.hide();
+        }
+        var sel = document.getElementById('id_customer');
+        var newOpt = new Option(data.customer.name, data.customer.id, false, true);
+        sel.add(newOpt);
+        customerData[data.customer.id] = {
+          'name': data.customer.name,
+          'email': data.customer.email,
+          'address': data.customer.address
+        };
+        sel.dispatchEvent(new Event('change'));
+        formEl.reset();
+        $('#customer-form-errors').html('');
+        const toggle = formEl.querySelector('#id_register_portal');
+        if(toggle){
+          toggle.checked = false;
+          toggle.dispatchEvent(new Event('change'));
+        }
+      } else {
+        var errorHtml = '';
+        for (var field in data.errors) {
+          data.errors[field].forEach(function(err) {
+            errorHtml += '<p>' + (field !== '__all__' ? field + ': ' : '') + err.message + '</p>';
+          });
+        }
+        $('#customer-form-errors').html(errorHtml);
+      }
+    })
+    .catch(error => {
+      console.error('Error adding customer:', error);
+      $('#customer-form-errors').html('<p>An unexpected error occurred. Please try again.</p>');
+    });
+  });
+
+  // --- Vehicle dropdown population, field copying, and history modal ---
+  const vehicleSelect = $('#vehicle-select');
+  const customerSelect = $('#id_customer');
+  const vehicleHidden = $('#id_vehicle');
+  const addVehicleButton = $('#btnOpenAddVehicleModal');
+  const vehicleHistoryButton = $('#vehicle-history-button');
+  const vehicleHistoryHint = $('#vehicle-history-hint');
+  const vehicleHistoryModal = $('#vehicleHistoryModal');
+  const vehicleHistoryStatus = $('#vehicle-history-status');
+  const vehicleHistorySections = $('#vehicle-history-sections');
+  const vehicleHistoryVehicleLabel = $('#vehicle-history-vehicle-label');
+  const vehicleHistoryJobs = $('#vehicle-history-jobs');
+  const vehicleHistoryJobsEmpty = $('#vehicle-history-jobs-empty');
+  const vehicleHistoryParts = $('#vehicle-history-parts');
+  const vehicleHistoryPartsEmpty = $('#vehicle-history-parts-empty');
+  const vehicleHistoryApi = '{{ vehicle_history_api }}';
+  const vehicleMaintenanceButton = $('#vehicle-maintenance-button');
+  const vehicleMaintenanceHint = $('#vehicle-maintenance-hint');
+  const vehicleMaintenanceModal = $('#vehicleMaintenanceModal');
+  const vehicleMaintenanceStatus = $('#vehicle-maintenance-status');
+  const vehicleMaintenanceSections = $('#vehicle-maintenance-sections');
+  const vehicleMaintenanceVehicleLabel = $('#vehicle-maintenance-vehicle-label');
+  const vehicleMaintenanceList = $('#vehicle-maintenance-list');
+  const vehicleMaintenanceEmpty = $('#vehicle-maintenance-empty');
+  const vehicleMaintenanceStats = $('#vehicle-maintenance-stats');
+  const vehicleMaintenanceApi = '{{ vehicle_maintenance_api }}';
+  let lastPersistedVehicleId = vehicleHidden.val() || '';
+  let vehicleSaveAbortController = null;
+  let promptedVehicleCustomerId = '';
+  let pendingVehicleModalCustomerId = '';
+  let vehicleHistoryState = {};
+  let vehicleHistoryLoading = false;
+  let initialVehicleHistory = {};
+  let initialVehicleHistoryConsumed = false;
+  let vehicleMaintenanceState = {};
+  let vehicleMaintenanceLoading = false;
+  let initialVehicleMaintenance = {};
+  let initialVehicleMaintenanceConsumed = false;
+
+  function initCustomerSelect2() {
+    if (!customerSelect || !customerSelect.length || typeof customerSelect.select2 !== 'function') {
+      return false;
+    }
+    const currentValue = customerSelect.val();
+    if (customerSelect.data('select2')) {
+      customerSelect.select2('destroy');
+    }
+    customerSelect.select2({
+      theme: 'bootstrap4',
+      width: '100%',
+      placeholder: 'Search and select a customer',
+      language: {
+        noResults: function(params) {
+          return buildCustomerNoResultsMarkup(params && params.term ? params.term : '');
+        }
+      },
+      escapeMarkup: function(markup) {
+        if (typeof markup === 'string' && markup.indexOf('select2-add-new-customer') !== -1) {
+          return markup;
+        }
+        return escapeHtml(markup);
+      }
+    });
+    if (currentValue) {
+      customerSelect.val(currentValue).trigger('change.select2');
+    }
+    return true;
+  }
+
+  if (!initCustomerSelect2()) {
+    let select2Attempts = 0;
+    const select2Timer = setInterval(function() {
+      select2Attempts += 1;
+      if (initCustomerSelect2() || select2Attempts >= 25) {
+        clearInterval(select2Timer);
+      }
+    }, 200);
+  }
+
+  $(document).on('click', '.select2-add-new-customer', function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const encoded = $(this).attr('data-customer-name') || '';
+    const name = decodeCustomerPrefillName(encoded).trim();
+    openAddCustomerModalWithName(name);
+    if (customerSelect && customerSelect.length && customerSelect.data('select2')) {
+      customerSelect.select2('close');
+    }
+  });
+
+  function refreshCustomerAddNewOption() {
+    const select2 = customerSelect.data('select2');
+    if (!select2 || !select2.$dropdown) {
+      return;
+    }
+    const results = select2.$dropdown.find('.select2-results__options');
+    if (!results.length) {
+      return;
+    }
+    const hasSelectable = results.find('.select2-results__option[aria-selected]').length > 0;
+    if (hasSelectable) {
+      return;
+    }
+    const searchField = select2.$dropdown.find('.select2-search__field');
+    const term = searchField.length ? searchField.val().trim() : '';
+    const markup = buildCustomerNoResultsMarkup(term);
+    results.html(`<li class="select2-results__option select2-results__message" role="alert" aria-live="assertive">${markup}</li>`);
+  }
+
+  function wireCustomerAddNewHandlers() {
+    const select2 = customerSelect.data('select2');
+    if (!select2 || !select2.$dropdown) {
+      return;
+    }
+    const searchField = select2.$dropdown.find('.select2-search__field');
+    if (!searchField.length || searchField.data('addNewReady')) {
+      return;
+    }
+    searchField.data('addNewReady', true);
+    searchField.on('input', function() {
+      setTimeout(refreshCustomerAddNewOption, 0);
+    });
+    setTimeout(refreshCustomerAddNewOption, 0);
+  }
+
+  customerSelect.on('select2:open', function() {
+    wireCustomerAddNewHandlers();
+  });
+
+  try {
+    initialVehicleHistory = JSON.parse('{{ vehicle_history_json|escapejs }}');
+  } catch (error) {
+    initialVehicleHistory = {};
+  }
+  try {
+    initialVehicleMaintenance = JSON.parse('{{ vehicle_maintenance_json|escapejs }}');
+  } catch (error) {
+    initialVehicleMaintenance = {};
+  }
+
+  function getSelectedVehicleLabelById(id) {
+    if (!id) { return ''; }
+    const option = vehicleSelect.find(`option[value="${id}"]`);
+    return option.length ? option.text() : '';
+  }
+
+  function normalizeHistory(rawState) {
+    const state = rawState && typeof rawState === 'object' ? rawState : {};
+    const jobs = Array.isArray(state.jobs) ? state.jobs : [];
+    const parts = Array.isArray(state.parts) ? state.parts : [];
+    const vehicle = state.vehicle && typeof state.vehicle === 'object' ? state.vehicle : null;
+    const hasHistory = Boolean(state.has_history || jobs.length || parts.length);
+    const normalizedVehicle = vehicle ? Object.assign({}, vehicle) : null;
+    if (normalizedVehicle && !normalizedVehicle.label) {
+      const fallbackLabel = getSelectedVehicleLabelById(String(normalizedVehicle.id || ''));
+      if (fallbackLabel) {
+        normalizedVehicle.label = fallbackLabel;
+      }
+    }
+    return {
+      vehicle: normalizedVehicle,
+      jobs,
+      parts,
+      has_history: hasHistory,
+    };
+  }
+
+  function showVehicleHistoryStatus(message, type) {
+    if (!vehicleHistoryStatus.length) { return; }
+    vehicleHistoryStatus.removeClass('alert-info alert-danger alert-success');
+    const variant = type === 'danger' ? 'alert-danger' : (type === 'success' ? 'alert-success' : 'alert-info');
+    vehicleHistoryStatus.addClass(variant);
+    vehicleHistoryStatus.text(message);
+    vehicleHistoryStatus.show();
+  }
+
+  function renderVehicleHistory(state) {
+    if (!vehicleHistoryStatus.length) { return; }
+    const data = normalizeHistory(state);
+    const hasVehicle = Boolean(data.vehicle && data.vehicle.id);
+    if (!hasVehicle) {
+      vehicleHistorySections.hide();
+      showVehicleHistoryStatus('Select a vehicle to view its recent history.', 'info');
+      return;
+    }
+
+    const jobs = data.jobs;
+    const parts = data.parts;
+    const hasJobs = jobs.length > 0;
+    const hasParts = parts.length > 0;
+    const vehicleLabel = data.vehicle.label || getSelectedVehicleLabelById(String(data.vehicle.id));
+    vehicleHistoryVehicleLabel.text(vehicleLabel ? `History for ${vehicleLabel}` : '');
+
+    vehicleHistoryJobs.empty();
+    jobs.forEach(function(job) {
+      const row = $('<div class="list-group-item"></div>');
+      row.append($('<div class="font-weight-bold mb-1"></div>').text(job.description || 'Job'));
+      const meta = $('<div class="d-flex justify-content-between align-items-center small text-muted"></div>');
+      meta.append($('<span></span>').text(job.date || ''));
+      if (job.cost) {
+        meta.append($('<span class="text-primary font-weight-bold"></span>').text(job.cost));
+      }
+      row.append(meta);
+      if (job.notes) {
+        row.append($('<div class="small mt-2 text-muted"></div>').text(job.notes));
+      }
+      vehicleHistoryJobs.append(row);
+    });
+    vehicleHistoryJobs.toggle(hasJobs);
+    vehicleHistoryJobsEmpty.toggle(!hasJobs);
+
+    vehicleHistoryParts.empty();
+    parts.forEach(function(part) {
+      const row = $('<div class="list-group-item"></div>');
+      row.append($('<div class="font-weight-bold mb-1"></div>').text(part.description || 'Part'));
+      const meta = $('<div class="d-flex justify-content-between align-items-center small text-muted"></div>');
+      meta.append($('<span></span>').text(part.date || ''));
+      if (part.quantity) {
+        meta.append($('<span class="badge badge-light"></span>').text(`Qty ${part.quantity}`));
+      }
+      row.append(meta);
+      vehicleHistoryParts.append(row);
+    });
+    vehicleHistoryParts.toggle(hasParts);
+    vehicleHistoryPartsEmpty.toggle(!hasParts);
+
+    vehicleHistorySections.show();
+    if (hasJobs || hasParts) {
+      vehicleHistoryStatus.hide();
+    } else {
+      showVehicleHistoryStatus('No previous work recorded for this vehicle yet.', 'info');
+    }
+  }
+
+  function assignVehicleHistory(rawState) {
+    vehicleHistoryState = normalizeHistory(rawState);
+    const hasVehicle = Boolean(vehicleHistoryState.vehicle && vehicleHistoryState.vehicle.id);
+    if (vehicleHistoryButton.length) {
+      vehicleHistoryButton.prop('disabled', !hasVehicle || vehicleHistoryLoading);
+    }
+    if (vehicleHistoryHint.length) {
+      if (!hasVehicle) {
+        vehicleHistoryHint.text('Select a vehicle to view history.');
+      } else if (!vehicleHistoryState.has_history) {
+        vehicleHistoryHint.text('No previous history recorded for this vehicle yet.');
+      } else {
+        vehicleHistoryHint.text('Vehicle history ready to view.');
+      }
+    }
+    renderVehicleHistory(vehicleHistoryState);
+  }
+
+  function normalizeMaintenance(rawState) {
+    const state = rawState && typeof rawState === 'object' ? rawState : {};
+    const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+    const vehicle = state.vehicle && typeof state.vehicle === 'object' ? state.vehicle : null;
+    const normalizedVehicle = vehicle ? Object.assign({}, vehicle) : null;
+    if (normalizedVehicle && !normalizedVehicle.label) {
+      const fallbackLabel = getSelectedVehicleLabelById(String(normalizedVehicle.id || ''));
+      if (fallbackLabel) {
+        normalizedVehicle.label = fallbackLabel;
+      }
+    }
+    const hasTasks = Boolean(state.has_tasks || tasks.length);
+    return {
+      vehicle: normalizedVehicle,
+      tasks,
+      has_tasks: hasTasks,
+      active_count: typeof state.active_count === 'number' ? state.active_count : tasks.length,
+      overdue_count: typeof state.overdue_count === 'number' ? state.overdue_count : 0,
+    };
+  }
+
+  function showVehicleMaintenanceStatus(message, variant) {
+    if (!vehicleMaintenanceStatus.length) { return; }
+    vehicleMaintenanceStatus.removeClass('alert-info alert-danger alert-success');
+    if (variant) {
+      vehicleMaintenanceStatus.addClass(`alert-${variant}`);
+    }
+    vehicleMaintenanceStatus.text(message || '');
+    vehicleMaintenanceStatus.show();
+  }
+
+  function renderVehicleMaintenance(state) {
+    if (!vehicleMaintenanceSections.length) { return; }
+    const vehicleLabel = state.vehicle && state.vehicle.label
+      ? state.vehicle.label
+      : getSelectedVehicleLabelById(state.vehicle ? String(state.vehicle.id || '') : '');
+    vehicleMaintenanceVehicleLabel.text(vehicleLabel ? `Reminders for ${vehicleLabel}` : '');
+    const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+    const hasTasks = tasks.length > 0;
+
+    vehicleMaintenanceList.empty();
+    tasks.forEach(function(task) {
+      const row = $('<div class="list-group-item"></div>');
+      const header = $('<div class="d-flex justify-content-between align-items-center"></div>');
+      header.append($('<div class="font-weight-bold"></div>').text(task.title || 'Maintenance reminder'));
+      const badgeWrap = $('<div class="d-flex flex-wrap align-items-center"></div>');
+      if (task.priority_label) {
+        badgeWrap.append($('<span class="badge badge-light mr-1 mb-1"></span>').text(task.priority_label));
+      }
+      const statusBadge = $('<span class="badge mr-1 mb-1"></span>');
+      if (task.is_overdue) {
+        statusBadge.addClass('badge-danger').text(task.status_label || 'Overdue');
+      } else {
+        statusBadge.addClass('badge-info').text(task.status_label || 'Scheduled');
+      }
+      badgeWrap.append(statusBadge);
+      header.append(badgeWrap);
+      row.append(header);
+      if (task.due_display) {
+        const due = $('<div class="small mt-2"></div>').text(task.due_display);
+        if (task.is_overdue) {
+          due.addClass('text-danger font-weight-bold');
+        } else {
+          due.addClass('text-muted');
+        }
+        row.append(due);
+      }
+      if (task.description) {
+        row.append($('<div class="small text-muted mt-2"></div>').text(task.description));
+      }
+      vehicleMaintenanceList.append(row);
+    });
+
+    if (vehicleMaintenanceStats.length) {
+      if (state.active_count || state.overdue_count) {
+        const parts = [];
+        if (state.active_count) {
+          parts.push(`${state.active_count} active reminder${state.active_count === 1 ? '' : 's'}`);
+        }
+        if (state.overdue_count) {
+          parts.push(`${state.overdue_count} overdue`);
+        }
+        vehicleMaintenanceStats.text(parts.join(' • '));
+        vehicleMaintenanceStats.show();
+      } else {
+        vehicleMaintenanceStats.hide().text('');
+      }
+    }
+
+    vehicleMaintenanceList.toggle(hasTasks);
+    vehicleMaintenanceEmpty.toggle(!hasTasks);
+    vehicleMaintenanceSections.show();
+    if (hasTasks) {
+      vehicleMaintenanceStatus.hide();
+    } else {
+      showVehicleMaintenanceStatus('No upcoming maintenance scheduled for this vehicle yet.', 'info');
+    }
+  }
+
+  function assignVehicleMaintenance(rawState) {
+    vehicleMaintenanceState = normalizeMaintenance(rawState);
+    const hasVehicle = Boolean(vehicleMaintenanceState.vehicle && vehicleMaintenanceState.vehicle.id);
+    if (vehicleMaintenanceButton.length) {
+      vehicleMaintenanceButton.prop('disabled', !hasVehicle || vehicleMaintenanceLoading || !vehicleMaintenanceApi);
+    }
+    if (vehicleMaintenanceHint.length) {
+      if (!hasVehicle) {
+        vehicleMaintenanceHint.text('Select a vehicle to review maintenance reminders.');
+      } else if (!vehicleMaintenanceState.has_tasks) {
+        vehicleMaintenanceHint.text('No active maintenance reminders for this vehicle yet.');
+      } else {
+        vehicleMaintenanceHint.text('Maintenance reminders ready to view.');
+      }
+    }
+    renderVehicleMaintenance(vehicleMaintenanceState);
+  }
+
+  function handleVehicleMaintenanceError(vehicleId) {
+    vehicleMaintenanceLoading = false;
+    if (vehicleMaintenanceButton.length) {
+      vehicleMaintenanceButton.prop('disabled', false);
+    }
+    if (vehicleMaintenanceHint.length) {
+      vehicleMaintenanceHint.text('Unable to load maintenance reminders. Try again.');
+    }
+    showVehicleMaintenanceStatus('Unable to load maintenance reminders right now. Please try again.', 'danger');
+    if (vehicleMaintenanceSections.length) {
+      vehicleMaintenanceSections.hide();
+    }
+    vehicleMaintenanceState = normalizeMaintenance({
+      vehicle: vehicleId ? { id: vehicleId, label: getSelectedVehicleLabelById(vehicleId) } : null,
+      tasks: [],
+      has_tasks: false,
+    });
+  }
+
+  function fetchVehicleMaintenance(vehicleId) {
+    if (!vehicleMaintenanceApi || !vehicleId) {
+      assignVehicleMaintenance({});
+      return;
+    }
+    vehicleMaintenanceLoading = true;
+    if (vehicleMaintenanceButton.length) {
+      vehicleMaintenanceButton.prop('disabled', true);
+    }
+    if (vehicleMaintenanceHint.length) {
+      vehicleMaintenanceHint.text('Loading maintenance reminders…');
+    }
+    showVehicleMaintenanceStatus('Loading maintenance reminders…', 'info');
+    if (vehicleMaintenanceSections.length) {
+      vehicleMaintenanceSections.hide();
+    }
+    fetch(`${vehicleMaintenanceApi}?vehicle_id=${encodeURIComponent(vehicleId)}`)
+      .then(response => response.json().then(json => ({ status: response.status, json })).catch(() => ({ status: response.status, json: null })))
+      .then(({ status, json }) => {
+        if (status >= 200 && status < 300 && json) {
+          assignVehicleMaintenance(json);
+        } else {
+          handleVehicleMaintenanceError(String(vehicleId));
+        }
+      })
+      .catch(() => {
+        handleVehicleMaintenanceError(String(vehicleId));
+      })
+      .finally(() => {
+        vehicleMaintenanceLoading = false;
+        const hasVehicle = Boolean(vehicleMaintenanceState.vehicle && vehicleMaintenanceState.vehicle.id);
+        if (vehicleMaintenanceButton.length) {
+          vehicleMaintenanceButton.prop('disabled', !hasVehicle || !vehicleMaintenanceApi);
+        }
+      });
+  }
+
+  function handleVehicleMaintenanceChange(rawId) {
+    const vehicleId = rawId ? String(rawId) : '';
+    if (!vehicleId) {
+      assignVehicleMaintenance({});
+      return;
+    }
+    if (!initialVehicleMaintenanceConsumed) {
+      const initialId = initialVehicleMaintenance && initialVehicleMaintenance.vehicle ? String(initialVehicleMaintenance.vehicle.id || '') : '';
+      if (initialId && initialId === vehicleId) {
+        initialVehicleMaintenanceConsumed = true;
+        assignVehicleMaintenance(initialVehicleMaintenance);
+        return;
+      }
+    }
+    initialVehicleMaintenanceConsumed = true;
+    fetchVehicleMaintenance(vehicleId);
+  }
+
+  function handleVehicleHistoryError(vehicleId) {
+    vehicleHistoryLoading = false;
+    if (vehicleHistoryButton.length) {
+      vehicleHistoryButton.prop('disabled', false);
+    }
+    if (vehicleHistoryHint.length) {
+      vehicleHistoryHint.text('Unable to load vehicle history. Try again.');
+    }
+    showVehicleHistoryStatus('Unable to load vehicle history right now. Please try again.', 'danger');
+    if (vehicleHistorySections.length) {
+      vehicleHistorySections.hide();
+    }
+    vehicleHistoryState = normalizeHistory({
+      vehicle: vehicleId ? { id: vehicleId, label: getSelectedVehicleLabelById(vehicleId) } : null,
+      jobs: [],
+      parts: [],
+      has_history: false,
+    });
+  }
+
+  function fetchVehicleHistory(vehicleId) {
+    if (!vehicleHistoryApi || !vehicleId) {
+      assignVehicleHistory({});
+      return;
+    }
+    vehicleHistoryLoading = true;
+    if (vehicleHistoryButton.length) {
+      vehicleHistoryButton.prop('disabled', true);
+    }
+    if (vehicleHistoryHint.length) {
+      vehicleHistoryHint.text('Loading vehicle history…');
+    }
+    showVehicleHistoryStatus('Loading vehicle history…', 'info');
+    if (vehicleHistorySections.length) {
+      vehicleHistorySections.hide();
+    }
+    fetch(`${vehicleHistoryApi}?vehicle_id=${encodeURIComponent(vehicleId)}`)
+      .then(response => response.json().then(json => ({ status: response.status, json })).catch(() => ({ status: response.status, json: null })))
+      .then(({ status, json }) => {
+        if (status >= 200 && status < 300 && json) {
+          assignVehicleHistory(json);
+        } else {
+          handleVehicleHistoryError(String(vehicleId));
+        }
+      })
+      .catch(() => {
+        handleVehicleHistoryError(String(vehicleId));
+      })
+      .finally(() => {
+        vehicleHistoryLoading = false;
+        const hasVehicle = Boolean(vehicleHistoryState.vehicle && vehicleHistoryState.vehicle.id);
+        if (vehicleHistoryButton.length) {
+          vehicleHistoryButton.prop('disabled', !hasVehicle);
+        }
+      });
+  }
+
+  function handleVehicleHistoryChange(rawId) {
+    const vehicleId = rawId ? String(rawId) : '';
+    if (!vehicleId) {
+      assignVehicleHistory({});
+      return;
+    }
+    if (!initialVehicleHistoryConsumed) {
+      const initialId = initialVehicleHistory && initialVehicleHistory.vehicle ? String(initialVehicleHistory.vehicle.id || '') : '';
+      if (initialId && initialId === vehicleId) {
+        initialVehicleHistoryConsumed = true;
+        assignVehicleHistory(initialVehicleHistory);
+        return;
+      }
+    }
+    initialVehicleHistoryConsumed = true;
+    fetchVehicleHistory(vehicleId);
+  }
+
+  if (vehicleHistoryModal.length) {
+    vehicleHistoryModal.on('show.bs.modal', function() {
+      renderVehicleHistory(vehicleHistoryState);
+    });
+  }
+
+  if (vehicleMaintenanceModal.length) {
+    vehicleMaintenanceModal.on('show.bs.modal', function() {
+      renderVehicleMaintenance(vehicleMaintenanceState);
+    });
+  }
+
+  function copyVehicleFields() {
+    const opt = vehicleSelect.find('option:selected');
+    $('#id_unit_no').val(opt.data('unit') || '');
+    $('#id_vehicle_vin').val(opt.data('vin') || '');
+    $('#id_make_model').val(opt.data('make') || '');
+    const mileage = opt.data('mileage');
+    $('#id_mileage').val(typeof mileage !== 'undefined' && mileage !== null ? mileage : '');
+    const licensePlate = opt.data('license');
+    $('#id_license_plate').val(licensePlate || '');
+    vehicleHidden.val(opt.val() || '');
+  }
+  function persistVehicleSelection() {
+    if (!vehicleHidden.length) { return; }
+    const currentValue = vehicleHidden.val() || '';
+    if (currentValue === lastPersistedVehicleId) { return; }
+
+    if (vehicleSaveAbortController) {
+      vehicleSaveAbortController.abort();
+    }
+    vehicleSaveAbortController = new AbortController();
+
+    fetch(window.location.href, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({ ajax_action: 'update_vehicle', vehicle_id: currentValue || null }),
+      signal: vehicleSaveAbortController.signal
+    })
+      .then(response => response.json().then(json => ({ status: response.status, json })).catch(() => ({ status: response.status, json: null })))
+      .then(({ status, json }) => {
+        if (status >= 200 && status < 300 && json) {
+          if (json.ok === false) {
+            console.error('Unable to save vehicle selection.', json);
+            return;
+          }
+          const updatedId = json.vehicle_id !== undefined && json.vehicle_id !== null ? String(json.vehicle_id) : '';
+          lastPersistedVehicleId = updatedId;
+        } else {
+          console.error('Unable to save vehicle selection.', json);
+        }
+      })
+      .catch(error => {
+        if (error.name === 'AbortError') { return; }
+        console.error('Network error while saving vehicle selection.', error);
+      })
+      .finally(() => {
+        vehicleSaveAbortController = null;
+      });
+  }
+
+  assignVehicleHistory(initialVehicleHistory);
+  assignVehicleMaintenance(initialVehicleMaintenance);
+
+  vehicleSelect.on('change', function() {
+    copyVehicleFields();
+    persistVehicleSelection();
+    handleVehicleHistoryChange($(this).val());
+    handleVehicleMaintenanceChange($(this).val());
+  });
+
+  function isModalOpen(controller) {
+    return !!(controller && controller.element && controller.element.classList.contains('show'));
+  }
+
+  function queueAddVehicleModal(customerId) {
+    if (isModalOpen(addVehicleModalController)) {
+      return;
+    }
+    const nextId = customerId ? String(customerId) : '';
+    if (isModalOpen(addCustomerModalController)) {
+      pendingVehicleModalCustomerId = nextId;
+      return;
+    }
+    resetVehicleModal();
+    if (addVehicleModalController) {
+      addVehicleModalController.show();
+    }
+  }
+
+  function flushPendingVehicleModal() {
+    if (!pendingVehicleModalCustomerId) {
+      return;
+    }
+    const currentId = customerSelect && customerSelect.length ? String(customerSelect.val() || '') : '';
+    if (currentId && currentId === pendingVehicleModalCustomerId) {
+      resetVehicleModal();
+      if (addVehicleModalController) {
+        addVehicleModalController.show();
+      }
+    }
+    pendingVehicleModalCustomerId = '';
+  }
+
+  function loadVehicles(customerId, options) {
+    const opts = options || {};
+    const autoPromptEmpty = Boolean(opts.autoPromptEmpty);
+    if (!customerId) {
+      vehicleSelect.html('<option value="">-- Select vehicle --</option>');
+      copyVehicleFields();
+      persistVehicleSelection();
+      handleVehicleHistoryChange('');
+      handleVehicleMaintenanceChange('');
+      addVehicleButton.prop('disabled', true);
+      return;
+    }
+    addVehicleButton.prop('disabled', true);
+    fetch(`/api/customer/${customerId}/vehicles/`)
+      .then(r => r.json())
+      .then(data => {
+        let html = '<option value="">-- Select vehicle --</option>';
+        let vehicleCount = 0;
+        if (data && data.vehicles) {
+          vehicleCount = Array.isArray(data.vehicles) ? data.vehicles.length : 0;
+          html += data.vehicles.map(v => {
+            const unit = v.unit_no || '';
+            const vin = v.vin_no || '';
+            const make = v.make_model || '';
+            const license = v.license_plate || '';
+            const mileage = (v.current_mileage !== null && v.current_mileage !== undefined) ? v.current_mileage : '';
+            let txt = unit ? `Unit: ${unit}` : (make || (vin ? `VIN: ${vin}` : `Vehicle ${v.id}`));
+            if (make && unit) txt = `Unit: ${unit} (${make})`;
+            return `<option value="${v.id}" data-unit="${unit}" data-vin="${vin}" data-make="${make}" data-mileage="${mileage}" data-license="${license}">${txt}</option>`;
+          }).join('');
+        }
+        vehicleSelect.html(html);
+        if (vehicleHidden.val()) {
+          vehicleSelect.val(vehicleHidden.val());
+        }
+        vehicleSelect.trigger('change');
+        addVehicleButton.prop('disabled', false);
+        if (vehicleCount === 0 && autoPromptEmpty && promptedVehicleCustomerId !== String(customerId)) {
+          promptedVehicleCustomerId = String(customerId);
+          queueAddVehicleModal(customerId);
+        }
+      })
+      .catch(() => addVehicleButton.prop('disabled', false));
+  }
+
+  loadVehicles(customerSelect.val(), { autoPromptEmpty: false });
+  addVehicleButton.prop('disabled', !customerSelect.val());
+  function resetVehicleModal() {
+    const formEl = document.getElementById('add-vehicle-form');
+    if (formEl) {
+      formEl.reset();
+    }
+    $('#vehicle-form-errors').empty();
+  }
+  addVehicleButton.on('click', function(e) {
+    e.preventDefault();
+    resetVehicleModal();
+    if (addVehicleModalController) { addVehicleModalController.show(); }
+  });
+  customerSelect.on('change', function() {
+    const cid = $(this).val();
+    loadVehicles(cid, { autoPromptEmpty: true });
+    addVehicleButton.prop('disabled', !cid);
+  });
+
+  $('#save-vehicle-button').on('click', function(e) {
+    e.preventDefault();
+    const formEl = document.getElementById('add-vehicle-form');
+    const formData = new FormData(formEl);
+    const customerId = customerSelect.val();
+    const errorDiv = $('#vehicle-form-errors');
+    const btn = $(this);
+    errorDiv.empty();
+    if (!customerId) {
+      errorDiv.text('A customer must be selected before adding a vehicle.');
+      return;
+    }
+    formData.set('customer', customerId);
+    btn.prop('disabled', true).text('Saving...');
+    fetch("{% url 'accounts:add_vehicle' %}", {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCsrfToken(),
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
+    })
+      .then(r => r.json().then(data => ({status: r.status, body: data})))
+      .then(({status, body}) => {
+        if (status === 200 && body.success && body.vehicle) {
+          const v = body.vehicle;
+          const unitNo = v.unit_no || '';
+          const vinNo = v.vin_no || '';
+          const makeModel = v.make_model || '';
+          let label = unitNo ? `Unit: ${unitNo}` : (makeModel || (vinNo ? `VIN: ${vinNo}` : `Vehicle ID ${v.id}`));
+          if (makeModel && unitNo) label = `Unit: ${unitNo} (${makeModel})`;
+          const mileage = (v.current_mileage !== null && v.current_mileage !== undefined) ? v.current_mileage : '';
+          const newOption = new Option(label, v.id.toString(), true, true);
+          $(newOption)
+            .attr('data-unit', unitNo)
+            .attr('data-vin', vinNo)
+            .attr('data-make', makeModel)
+            .attr('data-mileage', mileage)
+            .attr('data-license', v.license_plate || '');
+          vehicleSelect.append(newOption).trigger('change');
+          if (addVehicleModalController) {
+            addVehicleModalController.hide();
+          }
+          formEl.reset();
+        } else {
+          let htmlErrors = '<ul>';
+          if (body.errors) {
+            Object.entries(body.errors).forEach(([field, errs]) => {
+              errs.forEach(err => { htmlErrors += `<li>${field !== '__all__' ? field + ': ' : ''}${err.message || err}</li>`; });
+            });
+          } else if (body.message) {
+            htmlErrors += `<li>${body.message}</li>`;
+          }
+          htmlErrors += '</ul>';
+          errorDiv.html(htmlErrors);
+        }
+      })
+      .catch(err => {
+        console.error('Error saving vehicle:', err);
+        errorDiv.text('A network or unexpected error occurred. Please try again.');
+      })
+      .finally(() => {
+        btn.prop('disabled', false).text('Save Vehicle');
+      });
+  });
+
+  function formatPercentageValue(value) {
+      const num = parseFloat(value);
+      if (!isFinite(num)) {
+          return '0';
+      }
+      return num.toFixed(2).replace(/\.0+$|0+$/, '').replace(/\.$/, '');
+  }
+
+  function parseSpecialEntryDetails(jobValue, defaults) {
+      const defaultType = defaults && defaults.type ? defaults.type : 'fixed';
+      const defaultValue = defaults && defaults.value !== undefined && defaults.value !== null
+          ? parseFloat(defaults.value)
+          : 0;
+      const details = {
+          type: defaultType,
+          value: isFinite(defaultValue) ? defaultValue : 0,
+          reason: ''
+      };
+      if (!jobValue) {
+          return details;
+      }
+      const reasonIndex = jobValue.indexOf(' - ');
+      if (reasonIndex !== -1) {
+          details.reason = jobValue.slice(reasonIndex + 3).trim();
+      }
+      const insideMatch = jobValue.match(/\(([^)]+)\)/);
+      const searchTarget = insideMatch ? insideMatch[1] : jobValue;
+      const percentMatch = searchTarget.match(/([0-9]+(?:\.[0-9]+)?)\s*%/);
+      if (percentMatch) {
+          details.type = 'percentage';
+          details.value = parseFloat(percentMatch[1]);
+          return details;
+      }
+      const numberMatch = searchTarget.match(/([0-9]+(?:\.[0-9]+)?)/);
+      if (numberMatch) {
+          details.type = 'fixed';
+          details.value = parseFloat(numberMatch[1]);
+      }
+      return details;
+  }
+
+  function configureSpecialRow($row, type) {
+      if (!$row || !$row.length) {
+          return;
+      }
+      $row.addClass(type + ' special-entry');
+      const jobInput = $row.find('[name$="-job"]');
+      const qtyInput = $row.find('input[name$="-qty"]');
+      const rateInput = $row.find('input[name$="-rate"]');
+      if (jobInput.length) {
+          jobInput.addClass(`${type}-job`).prop('readonly', true);
+      }
+      if (qtyInput.length) {
+          qtyInput.addClass(`${type}-qty`).prop('readonly', true).val(1);
+      }
+      if (rateInput.length) {
+          rateInput.addClass(`${type}-rate`).prop('readonly', true);
+      }
+  }
+
+  function setShopSupplyInputs(details) {
+      if (details.type === 'fixed') {
+          $('#shop_supply_type_fixed').prop('checked', true);
+      } else {
+          $('#shop_supply_type_percentage').prop('checked', true);
+      }
+      $('#shop-supply-value').val(isFinite(details.value) ? details.value : 0);
+      $('#shop-supply-reason').val(details.reason || '');
+  }
+
+  function setDiscountInputs(details) {
+      if (details.type === 'percentage') {
+          $('#discount_percentage').prop('checked', true);
+      } else {
+          $('#discount_fixed').prop('checked', true);
+      }
+      $('#discount-value').val(isFinite(details.value) ? details.value : 0);
+      $('#discount-reason').val(details.reason || '');
+  }
+
+  function setInterestInputs(details) {
+      if (details.type === 'percentage') {
+          $('#interest_type_percentage').prop('checked', true);
+      } else {
+          $('#interest_type_fixed').prop('checked', true);
+      }
+      $('#interest-value').val(isFinite(details.value) ? details.value : 0);
+      $('#interest-reason').val(details.reason || '');
+  }
+
+  function initializeEditModeState() {
+      let shopSupplyActive = false;
+      $('.initial-shop-supply-check').each(function() {
+          const $row = $(this);
+          const jobInput = $row.find('[name$="-job"]');
+          const rateInput = $row.find('input[name$="-rate"]');
+          const deleteCheckbox = $row.find('input[name$="-DELETE"]');
+          configureSpecialRow($row, 'shop-supply');
+          const defaults = {
+              type: 'percentage',
+              value: $('#shop-supply-value').length ? parseFloat($('#shop-supply-value').attr('value')) || 0 : 0
+          };
+          if (rateInput.length && !isNaN(parseFloat(rateInput.val()))) {
+              defaults.value = Math.abs(parseFloat(rateInput.val())) || defaults.value;
+          }
+          const details = parseSpecialEntryDetails(jobInput.length ? jobInput.val() : '', defaults);
+          if (deleteCheckbox.length && deleteCheckbox.is(':checked')) {
+              $row.addClass('shop-supply-deleted').hide();
+          } else {
+              shopSupplyActive = true;
+              $('#toggle-shop-supply').prop('checked', true);
+              $('#shop-supply-section').show();
+              setShopSupplyInputs(details);
+              $row.show();
+          }
+          $row.removeClass('initial-shop-supply-check');
+      });
+      if (!shopSupplyActive) {
+          $('#toggle-shop-supply').prop('checked', false);
+          $('#shop-supply-section').hide();
+      }
+
+      let discountActive = false;
+      $('.initial-discount-check').each(function() {
+          const $row = $(this);
+          const jobInput = $row.find('[name$="-job"]');
+          const rateInput = $row.find('input[name$="-rate"]');
+          const deleteCheckbox = $row.find('input[name$="-DELETE"]');
+          configureSpecialRow($row, 'discount');
+          const defaults = {
+              type: 'fixed',
+              value: rateInput.length ? Math.abs(parseFloat(rateInput.val()) || 0) : 0
+          };
+          const details = parseSpecialEntryDetails(jobInput.length ? jobInput.val() : '', defaults);
+          if (deleteCheckbox.length && deleteCheckbox.is(':checked')) {
+              $row.hide();
+          } else {
+              discountActive = true;
+              $('#toggle-discount').prop('checked', true);
+              $('#discount-section').show();
+              setDiscountInputs(details);
+              $row.show();
+          }
+          $row.removeClass('initial-discount-check');
+      });
+      if (!discountActive) {
+          $('#toggle-discount').prop('checked', false);
+          $('#discount-section').hide();
+      }
+
+      let interestActive = false;
+      $('.initial-interest-check').each(function() {
+          const $row = $(this);
+          const jobInput = $row.find('[name$="-job"]');
+          const rateInput = $row.find('input[name$="-rate"]');
+          const deleteCheckbox = $row.find('input[name$="-DELETE"]');
+          configureSpecialRow($row, 'interest');
+          const defaults = {
+              type: 'fixed',
+              value: rateInput.length ? Math.abs(parseFloat(rateInput.val()) || 0) : 0
+          };
+          const details = parseSpecialEntryDetails(jobInput.length ? jobInput.val() : '', defaults);
+          if (deleteCheckbox.length && deleteCheckbox.is(':checked')) {
+              $row.hide();
+          } else {
+              interestActive = true;
+              $('#toggle-interest').prop('checked', true);
+              $('#interest-section').show();
+              setInterestInputs(details);
+              $row.show();
+          }
+          $row.removeClass('initial-interest-check');
+      });
+      if (!interestActive) {
+          $('#toggle-interest').prop('checked', false);
+          $('#interest-section').hide();
+      }
+  }
+  initializeEditModeState();
+
+  function updateDeletionStyles($row) {
+      if (!$row || !$row.length) {
+          return;
+      }
+      const deleteCheckbox = $row.find('input[name$="-DELETE"]');
+      if (!deleteCheckbox.length) {
+          return;
+      }
+      if (deleteCheckbox.is(':checked')) {
+          $row.addClass('marked-for-deletion');
+      } else {
+          $row.removeClass('marked-for-deletion');
+      }
+  }
+
+  function toggleNoJobsMessage() {
+      if (!noJobsMessage || !noJobsMessage.length) {
+          return;
+      }
+      const hasVisibleJobRows = $('#jobs .job-entry-row:visible').length > 0;
+      if (hasVisibleJobRows) {
+          noJobsMessage.hide();
+      } else {
+          noJobsMessage.show();
+      }
+  }
+  toggleNoJobsMessage();
+
+  $('#jobs .job-entry-row').each(function() {
+      updateDeletionStyles($(this));
+  });
+
+  // --- Add Service Button & Logic ---
+  function addJobForm(options) {
+      options = options || {};
+      var totalFormsElem = $(`#id_${FORMSET_PREFIX}-TOTAL_FORMS`);
+      var totalForms = parseInt(totalFormsElem.val());
+      var newFormIdx = totalForms;
+      const workorderPk = "{% if workorder_form.instance.pk %}{{ workorder_form.instance.pk }}{% endif %}";
+      const workorderHiddenInput = workorderPk ? `<input type="hidden" name="${FORMSET_PREFIX}-${newFormIdx}-workorder" value="${workorderPk}">` : '';
+        var formHtml = `
+          <div class="job-entry-row mb-3">
+              <div class="job-field job-description">
+                  <textarea name="${FORMSET_PREFIX}-${newFormIdx}-job" placeholder="Job Description" class="form-control" id="id_${FORMSET_PREFIX}-${newFormIdx}-job" rows="3"></textarea>
+              </div>
+              <div class="job-field job-qty">
+                  <input type="number" name="${FORMSET_PREFIX}-${newFormIdx}-qty" placeholder="Quantity" class="form-control" id="id_${FORMSET_PREFIX}-${newFormIdx}-qty" step="any">
+              </div>
+              <div class="job-field job-rate">
+                  <input type="number" name="${FORMSET_PREFIX}-${newFormIdx}-rate" placeholder="Rate" class="form-control" id="id_${FORMSET_PREFIX}-${newFormIdx}-rate" step="0.01">
+              </div>
+              <div class="job-field job-amount">
+                  <label for="id_${FORMSET_PREFIX}-${newFormIdx}-amount">Amount</label>
+                  <input type="text" name="${FORMSET_PREFIX}-${newFormIdx}-amount" class="form-control entry-amount" id="id_${FORMSET_PREFIX}-${newFormIdx}-amount" value="0.00" readonly>
+              </div>
+              <div class="job-field job-delete">
+                  <label for="id_${FORMSET_PREFIX}-${newFormIdx}-DELETE">Delete?</label>
+                  <input type="checkbox" name="${FORMSET_PREFIX}-${newFormIdx}-DELETE" id="id_${FORMSET_PREFIX}-${newFormIdx}-DELETE" class="form-check-input">
+              </div>
+          </div>
+          <input type="hidden" name="${FORMSET_PREFIX}-${newFormIdx}-id" id="id_${FORMSET_PREFIX}-${newFormIdx}-id">
+          ${workorderHiddenInput}
+          <input type="hidden" name="${FORMSET_PREFIX}-${newFormIdx}-service_id" id="id_${FORMSET_PREFIX}-${newFormIdx}-service_id">
+          <input type="hidden" name="${FORMSET_PREFIX}-${newFormIdx}-service_due_months" id="id_${FORMSET_PREFIX}-${newFormIdx}-service_due_months">
+          <input type="hidden" name="${FORMSET_PREFIX}-${newFormIdx}-service_due_kilometers" id="id_${FORMSET_PREFIX}-${newFormIdx}-service_due_kilometers">
+          <input type="hidden" name="${FORMSET_PREFIX}-${newFormIdx}-skip_maintenance" id="id_${FORMSET_PREFIX}-${newFormIdx}-skip_maintenance">`;
+      $('#jobs').append(formHtml);
+      const $newRow = $('#jobs .job-entry-row').last();
+      updateDeletionStyles($newRow);
+      if (options.jobDescription) {
+          $(`#id_${FORMSET_PREFIX}-${newFormIdx}-job`).val(options.jobDescription);
+      }
+      if (options.fixedHours !== undefined && options.fixedHours !== null && options.fixedHours !== '') {
+          $(`#id_${FORMSET_PREFIX}-${newFormIdx}-qty`).val(options.fixedHours);
+      }
+      if (options.serviceId !== undefined) {
+          $(`#id_${FORMSET_PREFIX}-${newFormIdx}-service_id`).val(options.serviceId || '');
+      }
+      if (options.dueAfterMonths !== undefined) {
+          $(`#id_${FORMSET_PREFIX}-${newFormIdx}-service_due_months`).val(options.dueAfterMonths || '');
+      }
+      if (options.dueAfterKilometers !== undefined) {
+          $(`#id_${FORMSET_PREFIX}-${newFormIdx}-service_due_kilometers`).val(options.dueAfterKilometers || '');
+      }
+      if (options.serviceSkipMaintenance !== undefined) {
+          $(`#id_${FORMSET_PREFIX}-${newFormIdx}-skip_maintenance`).val(options.serviceSkipMaintenance ? '1' : '');
+      }
+      totalFormsElem.val(newFormIdx + 1);
+      calculateTotal();
+      console.log("Added Job Form, new total forms:", totalFormsElem.val());
+      toggleNoJobsMessage();
+  }
+
+  const jobCatalogDataElement = document.getElementById('job-catalog-data');
+  let jobCatalog = [];
+  if (jobCatalogDataElement) {
+      try {
+          const parsed = JSON.parse(jobCatalogDataElement.textContent || '[]');
+          if (Array.isArray(parsed)) {
+              jobCatalog = parsed;
+          }
+      } catch (error) {
+          console.error('Unable to parse saved job catalog data:', error);
+      }
+  }
+
+  // jobNameSelect and jobDescriptionSelect are defined earlier in the script;
+  // reuse those references here to avoid redeclaration errors that break the
+  // work order JavaScript on load.
+  const jobDescriptionInput = $('#jobDescriptionInput');
+  const jobDescriptionNotes = $('#jobDescriptionNotes');
+  const jobModalError = $('#jobModalError');
+  const jobModalSuccess = $('#jobModalSuccess');
+  const jobFixedHoursInput = $('#jobFixedHoursInput');
+  const jobDueMonthsInput = $('#jobDueMonthsInput');
+  const jobDueKilometersInput = $('#jobDueKilometersInput');
+  const createServiceUrl = "{% url 'accounts:create_service_description' %}";
+  const quickCreateProductUrl = "{% url 'accounts:quick_create_inventory_product' %}";
+  const newServiceFields = {
+      jobName: $('#newServiceJobName'),
+      description: $('#newServiceDescription'),
+      notes: $('#newServiceNotes'),
+      fixedHours: $('#newServiceFixedHours'),
+      dueMonths: $('#newServiceDueMonths'),
+      dueKm: $('#newServiceDueKm'),
+      error: $('#newServiceError'),
+      success: $('#newServiceSuccess'),
+  };
+  const newProductFormEl = document.getElementById('new-product-form');
+  const newProductFields = {
+      name: $('#new_product_name'),
+      sku: $('#new_product_sku'),
+      sale: $('#new_product_sale_price'),
+      cost: $('#new_product_cost_price'),
+      description: $('#new_product_description'),
+      category: $('#new_product_category'),
+      quantity: $('#new_product_stock'),
+      error: $('#newProductError'),
+      success: $('#newProductSuccess')
+  };
+
+  function getCsrfToken() {
+      const field = $('input[name="csrfmiddlewaretoken"]').first();
+      return field.length ? field.val() : '';
+  }
+
+  function clearJobModalError() {
+      if (jobModalError.length) {
+          jobModalError.addClass('d-none').text('');
+      }
+      if (jobModalSuccess.length) {
+          jobModalSuccess.addClass('d-none').text('');
+      }
+  }
+
+  function showJobModalError(message) {
+      if (jobModalError.length) {
+          jobModalError.removeClass('d-none').text(message);
+      } else {
+          alert(message);
+      }
+  }
+
+  function normalizeString(value) {
+      return (value || '').toString();
+  }
+
+  function formatFixedHoursDisplay(value) {
+      if (value === null || value === undefined || value === '') {
+          return '';
+      }
+      const numeric = Number(value);
+      if (!isFinite(numeric)) {
+          return String(value);
+      }
+      const normalized = numeric.toFixed(2);
+      return normalized.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  }
+
+  function normalizeDueInputValue(rawValue) {
+      const trimmed = (rawValue ?? '').toString().trim();
+      if (!trimmed) {
+          return '';
+      }
+      const numeric = Number(trimmed);
+      if (!Number.isFinite(numeric) || numeric < 0) {
+          return null;
+      }
+      return String(Math.floor(numeric));
+  }
+
+  function showJobModalSuccess(message) {
+      if (jobModalSuccess.length) {
+          jobModalSuccess.removeClass('d-none').text(message);
+      }
+  }
+
+  function collectJobModalValues() {
+      const selectedOption = jobNameSelect.find('option:selected');
+      const rawJobValue = jobNameSelect.val() || '';
+      const jobIdValue = selectedOption.data('jobId') || selectedOption.val() || rawJobValue;
+      const jobNameValue = (selectedOption.data('jobName') || selectedOption.text() || rawJobValue).trim();
+
+      if (!jobNameValue) {
+          jobNameSelect.addClass('is-invalid');
+          focusSelectElement(jobNameSelect);
+          return null;
+      }
+
+      const descriptionText = jobDescriptionInput.val().trim();
+      if (!descriptionText) {
+          jobDescriptionInput.addClass('is-invalid').trigger('focus');
+          return null;
+      }
+
+      const fixedHoursRaw = jobFixedHoursInput.length ? jobFixedHoursInput.val().trim() : '';
+      if (fixedHoursRaw) {
+          const numericFixedHours = Number(fixedHoursRaw);
+          if (!isFinite(numericFixedHours) || numericFixedHours < 0) {
+              showJobModalError('Fixed hours must be a non-negative number.');
+              if (jobFixedHoursInput.length) {
+                  jobFixedHoursInput.trigger('focus');
+              }
+              return null;
+          }
+      }
+
+      const dueMonthsRaw = jobDueMonthsInput.length ? jobDueMonthsInput.val() : '';
+      const dueKilometersRaw = jobDueKilometersInput.length ? jobDueKilometersInput.val() : '';
+      const normalizedDueMonths = jobDueMonthsInput.length ? normalizeDueInputValue(dueMonthsRaw) : '';
+      if (normalizedDueMonths === null) {
+          showJobModalError('Due after (months) must be a whole number.');
+          if (jobDueMonthsInput.length) {
+              jobDueMonthsInput.trigger('focus');
+          }
+          return null;
+      }
+      const normalizedDueKilometers = jobDueKilometersInput.length ? normalizeDueInputValue(dueKilometersRaw) : '';
+      if (normalizedDueKilometers === null) {
+          showJobModalError('Due after (km) must be a whole number.');
+          if (jobDueKilometersInput.length) {
+              jobDueKilometersInput.trigger('focus');
+          }
+          return null;
+      }
+
+      return {
+          selectedOption,
+          jobIdValue,
+          jobNameValue,
+          descriptionText,
+          fixedHoursRaw,
+          normalizedDueMonths,
+          normalizedDueKilometers,
+          notes: '',
+      };
+  }
+
+  function formatDueSummaryDisplay(monthsValue, kilometersValue) {
+      const parts = [];
+      const normalizedMonths = normalizeDueInputValue(monthsValue);
+      if (normalizedMonths !== null && normalizedMonths !== '') {
+          const monthsNumber = Number(normalizedMonths);
+          parts.push(`${monthsNumber} month${monthsNumber === 1 ? '' : 's'}`);
+      }
+      const normalizedKilometers = normalizeDueInputValue(kilometersValue);
+      if (normalizedKilometers !== null && normalizedKilometers !== '') {
+          const kmNumber = Number(normalizedKilometers);
+          parts.push(`${kmNumber.toLocaleString()} km`);
+      }
+      if (!parts.length) {
+          return '';
+      }
+      return `Next due in ${parts.join(' or ')}`;
+  }
+
+  function findJobInCatalog(jobId, jobName) {
+      const normalizedId = jobId !== undefined && jobId !== null && jobId !== '' ? String(jobId) : '';
+      const normalizedName = normalizeString(jobName);
+      return jobCatalog.find(function(job) {
+          if (!job) {
+              return false;
+          }
+          if (normalizedId && job.id !== undefined && job.id !== null) {
+              return String(job.id) === normalizedId;
+          }
+          if (normalizedName) {
+              return normalizeString(job.name) === normalizedName;
+          }
+          return false;
+      }) || null;
+  }
+
+  function upsertJobCatalogEntry(jobNameData, descriptionData) {
+      if (!jobNameData || !descriptionData) {
+          return;
+      }
+
+      const jobIdValue = jobNameData.id !== undefined && jobNameData.id !== null ? jobNameData.id : '';
+      const jobNameValue = normalizeString(jobNameData.name);
+
+      let jobEntry = findJobInCatalog(jobIdValue, jobNameValue);
+      if (!jobEntry) {
+          jobEntry = {
+              id: jobIdValue,
+              name: jobNameValue,
+              descriptions: [],
+          };
+          jobCatalog.push(jobEntry);
+      }
+
+      if (!Array.isArray(jobEntry.descriptions)) {
+          jobEntry.descriptions = [];
+      }
+
+      const descriptionIdValue = descriptionData.id !== undefined && descriptionData.id !== null ? descriptionData.id : '';
+      const descriptionTextValue = normalizeString(descriptionData.text);
+      const descriptionNotesValue = normalizeString(descriptionData.notes);
+      const descriptionFixedHoursValue = normalizeString(descriptionData.fixed_hours);
+      const descriptionDueMonthsValue = descriptionData.due_after_months !== undefined && descriptionData.due_after_months !== null
+          ? descriptionData.due_after_months
+          : '';
+      const descriptionDueKilometersValue = descriptionData.due_after_kilometers !== undefined && descriptionData.due_after_kilometers !== null
+          ? descriptionData.due_after_kilometers
+          : '';
+
+      let existingDescription = null;
+      if (descriptionIdValue !== '') {
+          existingDescription = jobEntry.descriptions.find(function(item) {
+              return item && item.id !== undefined && item.id !== null && String(item.id) === String(descriptionIdValue);
+          }) || null;
+      }
+
+      if (!existingDescription) {
+          existingDescription = jobEntry.descriptions.find(function(item) {
+              return item && normalizeString(item.text).toLowerCase() === descriptionTextValue.toLowerCase();
+          }) || null;
+      }
+
+      if (existingDescription) {
+          existingDescription.id = descriptionIdValue;
+          existingDescription.text = descriptionTextValue;
+          existingDescription.notes = descriptionNotesValue;
+          existingDescription.fixed_hours = descriptionFixedHoursValue;
+          existingDescription.due_after_months = descriptionDueMonthsValue;
+          existingDescription.due_after_kilometers = descriptionDueKilometersValue;
+      } else {
+          jobEntry.descriptions.push({
+              id: descriptionIdValue,
+              text: descriptionTextValue,
+              notes: descriptionNotesValue,
+              fixed_hours: descriptionFixedHoursValue,
+              due_after_months: descriptionDueMonthsValue,
+              due_after_kilometers: descriptionDueKilometersValue,
+          });
+      }
+
+      jobEntry.descriptions.sort(function(a, b) {
+          return normalizeString(a && a.text).localeCompare(normalizeString(b && b.text), undefined, { sensitivity: 'base' });
+      });
+
+      jobCatalog.sort(function(a, b) {
+          return normalizeString(a && a.name).localeCompare(normalizeString(b && b.name), undefined, { sensitivity: 'base' });
+      });
+  }
+
+  async function saveServiceTemplateToCatalog(options) {
+      if (!createServiceUrl) {
+          throw new Error('We could not save that job description.');
+      }
+      const requestBody = {
+          job_name_id: options.jobId || '',
+          job_name: options.jobName || '',
+          description: options.description || '',
+          notes: options.notes || '',
+          fixed_hours: options.fixedHours || '',
+          due_after_kilometers: options.dueAfterKilometers || '',
+          due_after_months: options.dueAfterMonths || '',
+      };
+      const csrfToken = getCsrfToken();
+      const response = await fetch(createServiceUrl, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrfToken,
+          },
+          body: JSON.stringify(requestBody),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+          throw new Error(data.error || 'We could not save that job description.');
+      }
+
+      const serviceData = data.service || {};
+      const jobData = serviceData.job_name || { id: options.jobId, name: options.jobName };
+      const descriptionData = {
+          id: serviceData.id,
+          text: serviceData.description || options.description || '',
+          notes: serviceData.notes || '',
+          fixed_hours: serviceData.fixed_hours || options.fixedHours || '',
+              due_after_kilometers: serviceData.due_after_kilometers !== undefined && serviceData.due_after_kilometers !== null
+                  ? String(serviceData.due_after_kilometers)
+                  : (options.dueAfterKilometers || ''),
+              due_after_months: serviceData.due_after_months !== undefined && serviceData.due_after_months !== null
+                  ? String(serviceData.due_after_months)
+                  : (options.dueAfterMonths || ''),
+              notes: serviceData.notes || options.notes || '',
+      };
+
+      upsertJobCatalogEntry(jobData, descriptionData);
+      refreshJobNameOptions();
+      refreshJobDescriptionOptions(
+          jobData.id !== undefined && jobData.id !== null && jobData.id !== '' ? String(jobData.id) : jobData.name,
+          jobData.name
+      );
+
+      return { jobData, descriptionData };
+  }
+
+  function refreshJobNameOptions() {
+      jobNameSelect.empty();
+      jobNameSelect.append('<option value="">Select job name</option>');
+      const hasCatalog = Array.isArray(jobCatalog) && jobCatalog.length > 0;
+
+      if (hasCatalog) {
+          const sortedJobs = [...jobCatalog].sort(function(a, b) {
+              return normalizeString(a && a.name).localeCompare(normalizeString(b && b.name), undefined, { sensitivity: 'base' });
+          });
+
+          sortedJobs.forEach(function(job) {
+              if (job && job.name) {
+                  const option = $('<option></option>');
+                  if (job.id !== undefined && job.id !== null && job.id !== '') {
+                      option.val(String(job.id));
+                      option.attr('data-job-id', String(job.id));
+                  } else {
+                      option.val(job.name);
+                  }
+                  option.attr('data-job-name', job.name);
+                  option.text(job.name);
+                  jobNameSelect.append(option);
+              }
+          });
+          setSelectDisabled(jobDescriptionSelect, false);
+      } else {
+          setSelectDisabled(jobDescriptionSelect, true);
+          resetSelectElement(jobDescriptionSelect);
+      }
+
+      setSelectDisabled(jobNameSelect, false);
+      resetSelectElement(jobNameSelect);
+  }
+
+  function refreshJobDescriptionOptions(jobId, jobName) {
+      jobDescriptionSelect.empty();
+      const matchedJob = findJobInCatalog(jobId, jobName);
+
+      jobDescriptionNotes.hide().text('');
+      jobDescriptionInput.data('selectedServiceId', '').removeData('dueMonths').removeData('dueKilometers').removeData('notes');
+      if (jobFixedHoursInput.length) {
+          jobFixedHoursInput.val('');
+      }
+      if (jobDueMonthsInput.length) {
+          jobDueMonthsInput.val('');
+      }
+      if (jobDueKilometersInput.length) {
+          jobDueKilometersInput.val('');
+      }
+
+      if (matchedJob && Array.isArray(matchedJob.descriptions) && matchedJob.descriptions.length) {
+          const sortedDescriptions = [...matchedJob.descriptions].sort(function(a, b) {
+              return normalizeString(a && a.text).localeCompare(normalizeString(b && b.text), undefined, { sensitivity: 'base' });
+          });
+          const desc = sortedDescriptions[0];
+          if (desc && desc.text) {
+              const option = $('<option></option>');
+              option.val(desc.id ? String(desc.id) : desc.text);
+              option.attr('data-service-id', desc.id ? String(desc.id) : '');
+              option.attr('data-description', desc.text);
+              if (desc.notes) option.attr('data-notes', desc.notes);
+              if (desc.fixed_hours !== undefined && desc.fixed_hours !== null && desc.fixed_hours !== '') {
+                  option.attr('data-fixed-hours', desc.fixed_hours);
+              } else {
+                  option.attr('data-fixed-hours', '');
+              }
+              option.attr('data-due-months', desc.due_after_months !== undefined && desc.due_after_months !== null ? desc.due_after_months : '');
+              option.attr('data-due-kilometers', desc.due_after_kilometers !== undefined && desc.due_after_kilometers !== null ? desc.due_after_kilometers : '');
+              jobDescriptionSelect.append(option).val(option.val());
+              jobDescriptionInput.val(desc.text);
+              jobDescriptionInput.data('selectedServiceId', desc.id ? String(desc.id) : '');
+              jobDescriptionInput.data('dueMonths', desc.due_after_months !== undefined && desc.due_after_months !== null ? String(desc.due_after_months) : '');
+              jobDescriptionInput.data('dueKilometers', desc.due_after_kilometers !== undefined && desc.due_after_kilometers !== null ? String(desc.due_after_kilometers) : '');
+              jobDescriptionInput.data('notes', desc.notes || '');
+              if (jobFixedHoursInput.length) {
+                  jobFixedHoursInput.val(formatFixedHoursDisplay(desc.fixed_hours));
+              }
+              if (jobDueMonthsInput.length && desc.due_after_months) {
+                  jobDueMonthsInput.val(desc.due_after_months);
+              }
+              if (jobDueKilometersInput.length && desc.due_after_kilometers) {
+                  jobDueKilometersInput.val(desc.due_after_kilometers);
+              }
+              const details = [];
+              if (desc.notes) {
+                  details.push(desc.notes);
+              }
+              const dueSummary = formatDueSummaryDisplay(desc.due_after_months, desc.due_after_kilometers);
+              if (dueSummary) {
+                  details.push(dueSummary);
+              }
+              if (details.length) {
+                  jobDescriptionNotes.text(details.join(' • ')).show();
+              }
+              jobDescriptionInput.removeClass('is-invalid');
+          } else {
+              jobDescriptionInput.addClass('is-invalid');
+          }
+      } else {
+          jobDescriptionInput.val('').addClass('is-invalid').data('selectedServiceId', '').removeData('dueMonths').removeData('dueKilometers').removeData('notes');
+          jobDescriptionNotes.hide().text('');
+      }
+  }
+
+  jobNameSelect.on('change', function () {
+      const selectedOption = $(this).find('option:selected');
+      if (!selectedOption || !selectedOption.length) {
+          jobDescriptionInput.data('selectedServiceId', '');
+          jobDescriptionNotes.hide().text('');
+          jobDescriptionInput.val('').removeData('dueMonths').removeData('dueKilometers').removeData('notes').addClass('is-invalid');
+          if (jobFixedHoursInput.length) {
+              jobFixedHoursInput.val('');
+          }
+          if (jobDueMonthsInput.length) {
+              jobDueMonthsInput.val('');
+          }
+          if (jobDueKilometersInput.length) {
+              jobDueKilometersInput.val('');
+          }
+          return;
+      }
+      const selectedJobId = selectedOption.data('jobId') || selectedOption.val() || '';
+      const selectedJobName = selectedOption.data('jobName') || selectedOption.text() || '';
+      jobNameSelect.removeClass('is-invalid');
+      clearJobModalError();
+      refreshJobDescriptionOptions(selectedJobId, selectedJobName);
+      if (jobFixedHoursInput.length) {
+          jobFixedHoursInput.val('');
+      }
+      if (jobDueMonthsInput.length) {
+          jobDueMonthsInput.val('');
+      }
+      if (jobDueKilometersInput.length) {
+          jobDueKilometersInput.val('');
+      }
+  });
+
+  jobDescriptionSelect.on('change', function () {
+      const selectedOption = $(this).find('option:selected');
+      if (!selectedOption || !selectedOption.length) {
+          jobDescriptionInput.data('selectedServiceId', '');
+          jobDescriptionNotes.hide().text('');
+          if (jobFixedHoursInput.length) {
+              jobFixedHoursInput.val('');
+          }
+          if (jobDueMonthsInput.length) {
+              jobDueMonthsInput.val('');
+          }
+          if (jobDueKilometersInput.length) {
+              jobDueKilometersInput.val('');
+          }
+          return;
+      }
+
+      const serviceId = selectedOption.data('serviceId') || '';
+      const optionValue = selectedOption.val();
+      const storedDescription = selectedOption.data('description');
+      const descriptionText = storedDescription || ((serviceId || optionValue) ? (selectedOption.text() || '') : '');
+      const hasSelection = !!(serviceId || storedDescription || optionValue);
+
+      if (hasSelection) {
+          jobDescriptionInput.val(descriptionText).removeClass('is-invalid');
+          jobDescriptionInput.data('selectedServiceId', serviceId);
+      } else {
+          jobDescriptionInput.data('selectedServiceId', '');
+      }
+
+      const notes = selectedOption.data('notes');
+      const fixedHoursValue = selectedOption.data('fixedHours');
+      if (jobFixedHoursInput.length) {
+          jobFixedHoursInput.val(formatFixedHoursDisplay(fixedHoursValue));
+      }
+      const dueMonthsValue = selectedOption.data('dueMonths');
+      const dueKilometersValue = selectedOption.data('dueKilometers');
+      if (jobDueMonthsInput.length) {
+          jobDueMonthsInput.val(
+              dueMonthsValue !== undefined && dueMonthsValue !== null && String(dueMonthsValue) !== ''
+                  ? dueMonthsValue
+                  : ''
+          );
+      }
+      if (jobDueKilometersInput.length) {
+          jobDueKilometersInput.val(
+              dueKilometersValue !== undefined && dueKilometersValue !== null && String(dueKilometersValue) !== ''
+                  ? dueKilometersValue
+                  : ''
+          );
+      }
+      if (hasSelection) {
+          const details = [];
+          if (notes) {
+              details.push(notes);
+          }
+          if (fixedHoursValue !== undefined && fixedHoursValue !== null && String(fixedHoursValue) !== '') {
+              details.push(`Fixed hours: ${formatFixedHoursDisplay(fixedHoursValue)}`);
+          }
+          const dueSummary = formatDueSummaryDisplay(dueMonthsValue, dueKilometersValue);
+          if (dueSummary) {
+              details.push(dueSummary);
+          }
+          if (details.length) {
+              jobDescriptionNotes.text(details.join(' • ')).show();
+          } else {
+              jobDescriptionNotes.hide().text('');
+          }
+      } else {
+          jobDescriptionNotes.hide().text('');
+      }
+  });
+
+  jobDescriptionInput.on('input', function () {
+      const value = $(this).val().trim();
+      if (value) {
+          $(this).removeClass('is-invalid');
+      }
+      $(this).data('selectedServiceId', '');
+      resetSelectElement(jobDescriptionSelect);
+      if (!value) {
+          jobDescriptionNotes.hide().text('');
+      }
+      if (jobFixedHoursInput.length) {
+          jobFixedHoursInput.val('');
+      }
+      if (jobDueMonthsInput.length) {
+          jobDueMonthsInput.val('');
+      }
+      if (jobDueKilometersInput.length) {
+          jobDueKilometersInput.val('');
+      }
+  });
+
+  $('.add-job-btn').on('click', function () {
+      refreshJobNameOptions();
+      clearJobModalError();
+      jobDescriptionInput.val('').removeClass('is-invalid').data('selectedServiceId', '');
+      jobNameSelect.removeClass('is-invalid');
+      jobDescriptionNotes.hide().text('');
+      if (jobFixedHoursInput.length) {
+          jobFixedHoursInput.val('');
+      }
+      if (jobDueMonthsInput.length) {
+          jobDueMonthsInput.val('');
+      }
+      if (jobDueKilometersInput.length) {
+          jobDueKilometersInput.val('');
+      }
+      if (addJobModalController) {
+        addJobModalController.show();
+      }
+      setTimeout(function () {
+          if (jobNameSelect.length && !jobNameSelect.prop('disabled')) {
+              focusSelectElement(jobNameSelect);
+          } else {
+              jobDescriptionInput.trigger('focus');
+          }
+      }, 200);
+  });
+
+  $('#confirmAddJobButton').on('click', async function () {
+      clearJobModalError();
+      if (jobNameSelect.prop('disabled')) {
+          jobNameSelect.addClass('is-invalid');
+          focusSelectElement(jobNameSelect);
+          return;
+      }
+
+      const collected = collectJobModalValues();
+      if (!collected) { return; }
+
+      const descriptionOption = jobDescriptionSelect.find('option:selected');
+      const selectedJobId = collected.jobIdValue;
+      const selectedJobName = collected.jobNameValue;
+      const descriptionText = collected.descriptionText;
+      const fixedHoursRaw = collected.fixedHoursRaw;
+      const normalizedDueMonths = collected.normalizedDueMonths;
+      const normalizedDueKilometers = collected.normalizedDueKilometers;
+
+      let selectedServiceId = jobDescriptionInput.data('selectedServiceId') || '';
+      let catalogDueMonths = jobDescriptionInput.data('dueMonths') || '';
+      let catalogDueKilometers = jobDescriptionInput.data('dueKilometers') || '';
+
+      if (!descriptionText) {
+          jobDescriptionInput.addClass('is-invalid');
+          showJobModalError('No description available for this job.');
+          return;
+      }
+
+      if (!selectedServiceId) {
+          const jobEntry = findJobInCatalog(selectedJobId, selectedJobName);
+          if (jobEntry && Array.isArray(jobEntry.descriptions)) {
+              const existingMatch = jobEntry.descriptions.find(function(desc) {
+                  return desc && normalizeString(desc.text).toLowerCase() === descriptionText.toLowerCase();
+              });
+              if (existingMatch && existingMatch.id !== undefined && existingMatch.id !== null && existingMatch.id !== '') {
+                  selectedServiceId = String(existingMatch.id);
+                  catalogDueMonths = existingMatch.due_after_months !== undefined && existingMatch.due_after_months !== null
+                      ? String(existingMatch.due_after_months)
+                      : '';
+                  catalogDueKilometers = existingMatch.due_after_kilometers !== undefined && existingMatch.due_after_kilometers !== null
+                      ? String(existingMatch.due_after_kilometers)
+                      : '';
+              }
+          }
+      }
+
+      const dropdownDueMonths = descriptionOption && descriptionOption.length
+          ? (descriptionOption.data('dueMonths') !== undefined && descriptionOption.data('dueMonths') !== null
+              ? String(descriptionOption.data('dueMonths'))
+              : '')
+          : '';
+      const dropdownDueKilometers = descriptionOption && descriptionOption.length
+          ? (descriptionOption.data('dueKilometers') !== undefined && descriptionOption.data('dueKilometers') !== null
+              ? String(descriptionOption.data('dueKilometers'))
+              : '')
+          : '';
+      const existingDueMonths = dropdownDueMonths || catalogDueMonths || '';
+      const existingDueKilometers = dropdownDueKilometers || catalogDueKilometers || '';
+
+      const resolvedDueMonths = normalizedDueMonths || '';
+      const resolvedDueKilometers = normalizedDueKilometers || '';
+
+      const skipMaintenance = !resolvedDueMonths && !resolvedDueKilometers;
+
+      const $button = $(this);
+      if (!createServiceUrl) {
+          showJobModalError('We could not save that job description.');
+          return;
+      }
+
+      const requestBody = {
+          job_name_id: selectedJobId || '',
+          job_name: selectedJobName,
+          description: descriptionText,
+          fixed_hours: fixedHoursRaw,
+          due_after_kilometers: resolvedDueKilometers || '',
+          due_after_months: resolvedDueMonths || '',
+      };
+
+      const csrfToken = getCsrfToken();
+      $button.prop('disabled', true).data('loading', true);
+
+      try {
+          const response = await fetch(createServiceUrl, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': csrfToken,
+              },
+              body: JSON.stringify(requestBody),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.success) {
+              throw new Error(data.error || 'We could not save that job description.');
+          }
+
+          const serviceData = data.service || {};
+          const jobData = serviceData.job_name || { id: selectedJobId, name: selectedJobName };
+          const descriptionData = {
+              id: serviceData.id,
+              text: serviceData.description || descriptionText,
+              notes: serviceData.notes || '',
+              fixed_hours: serviceData.fixed_hours || '',
+              due_after_kilometers: serviceData.due_after_kilometers !== undefined && serviceData.due_after_kilometers !== null
+                  ? String(serviceData.due_after_kilometers)
+                  : '',
+              due_after_months: serviceData.due_after_months !== undefined && serviceData.due_after_months !== null
+                  ? String(serviceData.due_after_months)
+                  : '',
+          };
+
+          upsertJobCatalogEntry(jobData, descriptionData);
+          refreshJobDescriptionOptions(jobData.id !== undefined && jobData.id !== null && jobData.id !== '' ? String(jobData.id) : jobData.name, jobData.name);
+          selectedServiceId = String(serviceData.id || selectedServiceId || '');
+          jobDescriptionInput.data('selectedServiceId', selectedServiceId);
+          if (serviceData.id) {
+              jobDescriptionSelect.val(String(serviceData.id)).trigger('change');
+          }
+          jobDescriptionNotes.text(formatDueSummaryDisplay(descriptionData.due_after_months, descriptionData.due_after_kilometers)).toggle(!!descriptionData.due_after_months || !!descriptionData.due_after_kilometers);
+      } catch (error) {
+          showJobModalError(error.message || 'We could not save that job description.');
+          jobDescriptionInput.trigger('focus');
+          return;
+      } finally {
+          $button.prop('disabled', false).removeData('loading');
+      }
+
+      addJobForm({
+          jobDescription: descriptionText,
+          fixedHours: fixedHoursRaw,
+          serviceId: selectedServiceId,
+          dueAfterMonths: resolvedDueMonths,
+          dueAfterKilometers: resolvedDueKilometers,
+          serviceSkipMaintenance: skipMaintenance,
+      });
+      if (addJobModalController) {
+        addJobModalController.hide();
+      }
+  });
+
+  if (addJobModalController) {
+    addJobModalController.onHidden(function () {
+      jobDescriptionInput.removeClass('is-invalid').data('selectedServiceId', '');
+      jobNameSelect.removeClass('is-invalid');
+      clearJobModalError();
+      if (jobFixedHoursInput.length) {
+          jobFixedHoursInput.val('');
+      }
+      if (jobDueMonthsInput.length) {
+          jobDueMonthsInput.val('');
+      }
+      if (jobDueKilometersInput.length) {
+          jobDueKilometersInput.val('');
+      }
+    });
+  }
+
+  $('#saveServiceTemplateButton').on('click', async function () {
+      clearJobModalError();
+      const values = collectJobModalValues();
+      if (!values) { return; }
+      const saveBtn = $(this);
+      saveBtn.prop('disabled', true).text('Saving...');
+      try {
+          const response = await saveServiceTemplateToCatalog({
+              jobId: values.jobIdValue,
+              jobName: values.jobNameValue,
+              description: values.descriptionText,
+              fixedHours: values.fixedHoursRaw,
+              dueAfterMonths: values.normalizedDueMonths || '',
+              dueAfterKilometers: values.normalizedDueKilometers || '',
+              notes: values.notes || '',
+          });
+          const desc = response.descriptionData || {};
+          const jobData = response.jobData || {};
+          jobDescriptionInput.data('selectedServiceId', desc.id || '');
+          if (desc.id) {
+              jobDescriptionSelect.val(String(desc.id)).trigger('change');
+          }
+          jobDescriptionNotes.text(formatDueSummaryDisplay(desc.due_after_months, desc.due_after_kilometers)).toggle(!!desc.due_after_months || !!desc.due_after_kilometers);
+          showJobModalSuccess('Saved to your service library.');
+      } catch (error) {
+          showJobModalError(error.message || 'We could not save that job description.');
+      } finally {
+          saveBtn.prop('disabled', false).text('Save to library');
+      }
+  });
+
+  // --- Add Part Modal Logic ---
+  var productSalePrices = JSON.parse('{{ product_data_json|escapejs }}');
+  if (!productSalePrices || typeof productSalePrices !== 'object') {
+      productSalePrices = {};
+  }
+  const sellPriceInput = $('#sell_price');
+  const addPartButton = $('#add-sell-product');
+
+  function normalizeProductInfo(raw) {
+      if (!raw) {
+          return { price: '0.00', name: '' };
+      }
+      if (typeof raw === 'object') {
+          return {
+              price: raw.price !== undefined && raw.price !== null ? String(raw.price) : '0.00',
+              name: raw.name || '',
+          };
+      }
+      return { price: String(raw), name: '' };
+  }
+
+  function setPartButtonLabel(productId) {
+      const info = normalizeProductInfo(productSalePrices[productId]);
+      const currentPrice = (sellPriceInput.val() || '').trim();
+      if (currentPrice && info.price && currentPrice !== info.price) {
+          addPartButton.text('Update & Add Part Entry');
+      } else {
+          addPartButton.text('Add Part Entry');
+      }
+  }
+
+  function appendProductOption(product) {
+      if (!product || !product.id || !product.name) { return; }
+      const option = new Option(product.display_name || product.name, product.id, true, true);
+      sellProductSelect.append(option).trigger('change');
+      const priceValue = product.sale_price !== undefined && product.sale_price !== null ? String(product.sale_price) : '0.00';
+      productSalePrices[product.id] = { name: product.name, price: priceValue };
+  }
+
+  function openNewServiceModal() {
+      Object.values(newServiceFields).forEach(function(field) {
+          if (field && typeof field.val === 'function') {
+              field.val('');
+          }
+      });
+      if (newServiceFields.error) { newServiceFields.error.addClass('d-none').text(''); }
+      if (newServiceFields.success) { newServiceFields.success.addClass('d-none').text(''); }
+      if (newServiceModalController) {
+          newServiceModalController.show();
+      }
+  }
+
+  if (sellProductSelect.length) {
+      sellProductSelect.on('change', function() {
+          const productId = $(this).val();
+          const info = normalizeProductInfo(productSalePrices[productId]);
+          if (sellPriceInput.length) {
+              sellPriceInput.val(info.price || '0.00');
+          }
+          setPartButtonLabel(productId);
+      });
+  }
+
+  if (sellPriceInput.length) {
+      sellPriceInput.on('input', function() {
+          setPartButtonLabel(sellProductSelect.val());
+      });
+  }
+
+  $('.sell-product-btn').click(function() {
+      console.log("Add Part button clicked");
+      sellProductSelect.val(null).trigger('change');
+      $('#sell_quantity').val("");
+      if (sellPriceInput.length) {
+          sellPriceInput.val('');
+      }
+      addPartButton.text('Add Part Entry');
+      if (sellProductModalController) {
+        sellProductModalController.show();
+      }
+  });
+
+  $('#openNewServiceForm').on('click', function(e) {
+      e.preventDefault();
+      openNewServiceModal();
+  });
+
+  $('#submitNewServiceButton').on('click', async function() {
+      if (!newServiceFields.jobName || !newServiceFields.description) { return; }
+      const jobNameVal = (newServiceFields.jobName.val() || '').trim();
+      const descriptionVal = (newServiceFields.description.val() || '').trim();
+      const notesVal = newServiceFields.notes ? (newServiceFields.notes.val() || '').trim() : '';
+      const fixedHoursVal = newServiceFields.fixedHours ? (newServiceFields.fixedHours.val() || '').trim() : '';
+      const dueMonthsVal = newServiceFields.dueMonths ? (newServiceFields.dueMonths.val() || '').trim() : '';
+      const dueKmVal = newServiceFields.dueKm ? (newServiceFields.dueKm.val() || '').trim() : '';
+      if (!jobNameVal) {
+          newServiceFields.error.removeClass('d-none').text('Job name is required.');
+          newServiceFields.jobName.trigger('focus');
+          return;
+      }
+      if (!descriptionVal) {
+          newServiceFields.error.removeClass('d-none').text('Description is required.');
+          newServiceFields.description.trigger('focus');
+          return;
+      }
+      newServiceFields.error.addClass('d-none').text('');
+      newServiceFields.success.addClass('d-none').text('');
+      const btn = $(this);
+      btn.prop('disabled', true).text('Saving...');
+      try {
+          const response = await saveServiceTemplateToCatalog({
+              jobName: jobNameVal,
+              description: descriptionVal,
+              notes: notesVal,
+              fixedHours: fixedHoursVal,
+              dueAfterMonths: dueMonthsVal,
+              dueAfterKilometers: dueKmVal,
+          });
+          const desc = response.descriptionData || {};
+          const jobData = response.jobData || {};
+          newServiceFields.success.removeClass('d-none').text('Service saved.');
+          // Preselect in main add service modal
+          refreshJobNameOptions();
+          const resolvedJobId = jobData.id ? String(jobData.id) : (jobData.name || jobNameVal);
+          jobNameSelect.val(resolvedJobId).trigger('change');
+          jobDescriptionInput.val(desc.text || descriptionVal).data('selectedServiceId', desc.id || '');
+          if (desc.id) {
+              jobDescriptionSelect.val(String(desc.id)).trigger('change');
+          }
+          if (newServiceModalController) {
+              newServiceModalController.hide();
+          }
+      } catch (error) {
+          newServiceFields.error.removeClass('d-none').text(error.message || 'Could not save service.');
+      } finally {
+          btn.prop('disabled', false).text('Save service');
+      }
+  });
+
+  function clearNewProductFeedback() {
+      if (newProductFields.error) { newProductFields.error.addClass('d-none').text(''); }
+      if (newProductFields.success) { newProductFields.success.addClass('d-none').text(''); }
+  }
+
+  function resetNewProductModal() {
+      if (newProductFormEl) {
+          newProductFormEl.reset();
+      } else {
+          Object.values(newProductFields).forEach(function(field) {
+              if (field && typeof field.val === 'function') {
+                  field.val('');
+              }
+          });
+      }
+      clearNewProductFeedback();
+  }
+
+  $('#openProductFormBtn').on('click', function(e) {
+      e.preventDefault();
+      resetNewProductModal();
+      if (newProductModalController) {
+          newProductModalController.show();
+      } else {
+          const modal = $('#newProductModal');
+          if (modal.length && typeof modal.modal === 'function') {
+              modal.modal('show');
+          }
+      }
+  });
+
+  $('#saveNewProductBtn').on('click', async function() {
+      clearNewProductFeedback();
+      const formData = newProductFormEl ? new FormData(newProductFormEl) : new FormData();
+      const nameVal = (formData.get('name') || '').trim();
+      const skuVal = (formData.get('sku') || '').trim();
+      const saleVal = (formData.get('sale_price') || '').trim();
+      const costVal = (formData.get('cost_price') || '').trim();
+      const descriptionVal = (formData.get('description') || '').trim();
+      const categoryVal = (formData.get('category') || '').trim();
+      const quantityVal = (formData.get('quantity_in_stock') || '').trim();
+      if (!nameVal) {
+          if (newProductFields.error) { newProductFields.error.removeClass('d-none').text('Name is required.'); }
+          newProductFields.name.trigger('focus');
+          return;
+      }
+      const btn = $(this);
+      btn.prop('disabled', true).text('Saving...');
+      formData.set('name', nameVal);
+      formData.set('sku', skuVal);
+      formData.set('sale_price', saleVal || '0');
+      formData.set('cost_price', costVal || '0');
+      formData.set('description', descriptionVal);
+      if (categoryVal) {
+          formData.set('category', categoryVal);
+      } else {
+          formData.delete('category');
+      }
+      if (quantityVal === '') {
+          formData.delete('quantity_in_stock');
+      } else {
+          formData.set('quantity_in_stock', quantityVal);
+      }
+      try {
+          const response = await fetch(quickCreateProductUrl, {
+              method: 'POST',
+              headers: {
+                  'X-CSRFToken': getCsrfToken(),
+                  'X-Requested-With': 'XMLHttpRequest'
+              },
+              body: formData
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.success) {
+              const errors = data && data.errors ? data.errors : {};
+              const errorMessages = Object.values(errors).flat().join(' ') || (data.error || 'Could not save product.');
+              throw new Error(errorMessages);
+          }
+          appendProductOption(data.product);
+          if (newProductFields.success) {
+              newProductFields.success.removeClass('d-none').text(`${data.product.display_name || data.product.name} saved.`);
+          }
+          const modal = $('#newProductModal');
+          if (modal.length) {
+              if (newProductModalController && typeof newProductModalController.hide === 'function') {
+                  newProductModalController.hide();
+              } else if (typeof modal.modal === 'function') {
+                  modal.modal('hide');
+              }
+          }
+      } catch (error) {
+          if (newProductFields.error) { newProductFields.error.removeClass('d-none').text(error.message || 'Could not save product.'); }
+      } finally {
+          btn.prop('disabled', false).text('Save Product');
+      }
+  });
+
+  async function maybeUpdateProductPrice(productId, name, priceValue) {
+      const info = normalizeProductInfo(productSalePrices[productId]);
+      if (!productId || priceValue === '' || priceValue === undefined || priceValue === null) {
+          return info.price;
+      }
+      const normalizedPrice = parseFloat(priceValue);
+      if (!isFinite(normalizedPrice) || normalizedPrice < 0) {
+          throw new Error('Enter a valid price for the part.');
+      }
+      const priceString = normalizedPrice.toFixed(2);
+      if (info.price && priceString === info.price) {
+          return priceString;
+      }
+
+      const payload = new FormData();
+      payload.set('product_id', productId);
+      payload.set('name', name || 'Updated Product');
+      payload.set('sale_price', priceString);
+      payload.set('cost_price', priceString);
+
+      const response = await fetch(quickCreateProductUrl, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+          body: payload,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+          const errorMessages = data.errors ? Object.values(data.errors).flat().join(' ') : (data.error || 'Could not update part price.');
+          throw new Error(errorMessages);
+      }
+      const updated = data.product || {};
+      productSalePrices[productId] = { name: updated.name || name || '', price: String(updated.sale_price || priceString) };
+      return productSalePrices[productId].price;
+  }
+
+  $('#add-sell-product').click(async function() {
+      console.log("Add Sale Entry clicked from modal");
+      var prodSel = sellProductSelect;
+      var productId = prodSel.val();
+      var productName = prodSel.find('option:selected').text();
+      var quantity = $('#sell_quantity').val();
+      var priceInputValue = sellPriceInput.length ? sellPriceInput.val() : '';
+      if (!productId || !quantity || parseFloat(quantity) <= 0) {
+          alert("Please select a product and enter a valid positive quantity.");
+          return;
+      }
+      var salePrice = priceInputValue || normalizeProductInfo(productSalePrices[productId]).price || "0.00";
+      try {
+          salePrice = await maybeUpdateProductPrice(productId, productName, salePrice);
+      } catch (error) {
+          alert(error.message || 'Unable to update part price.');
+          return;
+      }
+      var totalFormsElem = $(`#id_${FORMSET_PREFIX}-TOTAL_FORMS`);
+      var totalForms = parseInt(totalFormsElem.val());
+      var newFormIdx = totalForms;
+      const workorderPk = "{% if workorder_form.instance.pk %}{{ workorder_form.instance.pk }}{% endif %}";
+      const workorderHiddenInput = workorderPk ? `<input type="hidden" name="${FORMSET_PREFIX}-${newFormIdx}-workorder" value="${workorderPk}">` : '';
+        var rowHtml = `
+            <div class="job-entry-row mb-3">
+                <div class="job-field job-description">
+                    <input type="text" name="${FORMSET_PREFIX}-${newFormIdx}-job" value="Part - ${productName}" class="form-control" id="id_${FORMSET_PREFIX}-${newFormIdx}-job" readonly>
+                </div>
+                <div class="job-field job-qty">
+                    <input type="number" name="${FORMSET_PREFIX}-${newFormIdx}-qty" value="${quantity}" class="form-control" id="id_${FORMSET_PREFIX}-${newFormIdx}-qty" step="any">
+                </div>
+                <div class="job-field job-rate">
+                    <input type="number" name="${FORMSET_PREFIX}-${newFormIdx}-rate" value="${parseFloat(salePrice).toFixed(2)}" class="form-control" id="id_${FORMSET_PREFIX}-${newFormIdx}-rate" step="0.01" readonly>
+                </div>
+                <div class="job-field job-amount">
+                    <label class="d-block">Amount</label>
+                    <input type="text" name="${FORMSET_PREFIX}-${newFormIdx}-amount" class="form-control entry-amount" id="id_${FORMSET_PREFIX}-${newFormIdx}-amount" value="0.00" readonly>
+                </div>
+                <div class="job-field job-delete">
+                    <label for="id_${FORMSET_PREFIX}-${newFormIdx}-DELETE">Delete?</label>
+                    <input type="checkbox" name="${FORMSET_PREFIX}-${newFormIdx}-DELETE" id="id_${FORMSET_PREFIX}-${newFormIdx}-DELETE" class="form-check-input">
+                </div>
+            </div>
+            <input type="hidden" name="${FORMSET_PREFIX}-${newFormIdx}-product" value="${productId}">
+            <input type="hidden" name="${FORMSET_PREFIX}-${newFormIdx}-id" id="id_${FORMSET_PREFIX}-${newFormIdx}-id">
+            ${workorderHiddenInput}`;
+      $('#jobs').append(rowHtml);
+      const $newRow = $('#jobs .job-entry-row').last();
+      updateDeletionStyles($newRow);
+      totalFormsElem.val(newFormIdx + 1);
+      if (sellProductModalController) {
+        sellProductModalController.hide();
+      }
+      calculateTotal();
+      console.log("Added Sale Entry, new total forms:", totalFormsElem.val());
+  });
+
+  // --- Special Entry Helpers and Toggles ---
+  function getShopSupplyConfig() {
+      const type = $('input[name="shop_supply_type"]:checked').val() === 'fixed' ? 'fixed' : 'percentage';
+      const value = parseFloat($('#shop-supply-value').val());
+      return {
+          type,
+          value: isFinite(value) ? Math.max(value, 0) : 0,
+          reason: ($('#shop-supply-reason').val() || '').trim()
+      };
+  }
+
+  function buildShopSupplyDescription(config) {
+      const parts = ['Shop Supply'];
+      const value = isFinite(config.value) ? config.value : 0;
+      if (config.type === 'percentage') {
+          parts.push(`(${formatPercentageValue(value)}%)`);
+      } else {
+          parts.push(`(${formatCurrency(value)})`);
+      }
+      if (config.reason) {
+          parts.push(`- ${config.reason}`);
+      }
+      return parts.join(' ');
+  }
+
+  function ensureShopSupplyRow() {
+      let $row = $('.shop-supply').first();
+      if ($row.length) {
+          configureSpecialRow($row, 'shop-supply');
+          const deleteCheckbox = $row.find('input[name$="-DELETE"]');
+          if (deleteCheckbox.length) {
+              deleteCheckbox.prop('checked', false);
+          }
+          $row.removeClass('shop-supply-deleted').show();
+          updateDeletionStyles($row);
+          return $row;
+      }
+      const totalFormsElem = $(`#id_${FORMSET_PREFIX}-TOTAL_FORMS`);
+      if (!totalFormsElem.length) {
+          return null;
+      }
+      const newIndex = parseInt(totalFormsElem.val(), 10);
+      const workorderPk = "{% if workorder_form.instance.pk %}{{ workorder_form.instance.pk }}{% endif %}";
+      const workorderHiddenInput = workorderPk ? `<input type="hidden" name="${FORMSET_PREFIX}-${newIndex}-workorder" value="${workorderPk}">` : '';
+      const rowHtml = `
+          <div class="job-entry-row mb-3 shop-supply special-entry">
+              <div class="job-field job-description">
+                  <input type="text" name="${FORMSET_PREFIX}-${newIndex}-job" value="Shop Supply" class="form-control shop-supply-job" id="id_${FORMSET_PREFIX}-${newIndex}-job" readonly>
+              </div>
+              <div class="job-field job-qty">
+                  <input type="number" name="${FORMSET_PREFIX}-${newIndex}-qty" value="1" class="form-control shop-supply-qty" id="id_${FORMSET_PREFIX}-${newIndex}-qty" readonly>
+              </div>
+              <div class="job-field job-rate">
+                  <input type="number" name="${FORMSET_PREFIX}-${newIndex}-rate" value="0.00" class="form-control shop-supply-rate" id="id_${FORMSET_PREFIX}-${newIndex}-rate" step="0.01" readonly>
+              </div>
+              <div class="job-field job-delete">
+                  <label for="id_${FORMSET_PREFIX}-${newIndex}-DELETE">Delete?</label>
+                  <input type="checkbox" name="${FORMSET_PREFIX}-${newIndex}-DELETE" id="id_${FORMSET_PREFIX}-${newIndex}-DELETE" class="form-check-input">
+              </div>
+          </div>
+          <input type="hidden" name="${FORMSET_PREFIX}-${newIndex}-id" id="id_${FORMSET_PREFIX}-${newIndex}-id">
+          ${workorderHiddenInput}`;
+      $('#jobs').append(rowHtml);
+      totalFormsElem.val(newIndex + 1);
+      $row = $('.shop-supply').last();
+      configureSpecialRow($row, 'shop-supply');
+      updateDeletionStyles($row);
+      return $row;
+  }
+
+  function hideShopSupplyRow() {
+      const $row = $('.shop-supply').first();
+      if ($row.length) {
+          const deleteCheckbox = $row.find('input[name$="-DELETE"]');
+          if (deleteCheckbox.length) {
+              deleteCheckbox.prop('checked', true);
+          }
+          $row.addClass('shop-supply-deleted').hide();
+          updateDeletionStyles($row);
+      }
+  }
+
+  function updateShopSupplyRowValues(baseSubtotal) {
+      const $row = $('.shop-supply').first();
+      if (!$row.length) {
+          return 0;
+      }
+      const config = getShopSupplyConfig();
+      let amount = 0;
+      if (config.type === 'percentage') {
+          amount = baseSubtotal * (config.value / 100);
+      } else {
+          amount = config.value;
+      }
+      amount = isFinite(amount) ? Math.max(amount, 0) : 0;
+      $row.find('.shop-supply-job').val(buildShopSupplyDescription(config));
+      $row.find('.shop-supply-rate').val(amount.toFixed(2));
+      $row.find('input[name$="-qty"]').val(1);
+      return amount;
+  }
+
+  function getDiscountConfig() {
+      const type = $('input[name="discount_type"]:checked').val() === 'percentage' ? 'percentage' : 'fixed';
+      const value = parseFloat($('#discount-value').val());
+      return {
+          type,
+          value: isFinite(value) ? Math.max(value, 0) : 0,
+          reason: ($('#discount-reason').val() || '').trim()
+      };
+  }
+
+  function buildDiscountDescription(config) {
+      const parts = ['Discount'];
+      const value = isFinite(config.value) ? config.value : 0;
+      if (value > 0) {
+          if (config.type === 'percentage') {
+              parts.push(`(${formatPercentageValue(value)}%)`);
+          } else {
+              parts.push(`(${formatCurrency(value)})`);
+          }
+      }
+      if (config.reason) {
+          parts.push(`- ${config.reason}`);
+      }
+      return parts.join(' ');
+  }
+
+  function ensureDiscountRow() {
+      let $row = $('.discount').first();
+      if ($row.length) {
+          configureSpecialRow($row, 'discount');
+          const deleteCheckbox = $row.find('input[name$="-DELETE"]');
+          if (deleteCheckbox.length) {
+              deleteCheckbox.prop('checked', false);
+          }
+          $row.show();
+          updateDeletionStyles($row);
+          return $row;
+      }
+      const totalFormsElem = $(`#id_${FORMSET_PREFIX}-TOTAL_FORMS`);
+      if (!totalFormsElem.length) {
+          return null;
+      }
+      const newIndex = parseInt(totalFormsElem.val(), 10);
+      const workorderPk = "{% if workorder_form.instance.pk %}{{ workorder_form.instance.pk }}{% endif %}";
+      const workorderHiddenInput = workorderPk ? `<input type="hidden" name="${FORMSET_PREFIX}-${newIndex}-workorder" value="${workorderPk}">` : '';
+      const rowHtml = `
+          <div class="job-entry-row mb-3 discount special-entry">
+              <div class="job-field job-description">
+                  <input type="text" name="${FORMSET_PREFIX}-${newIndex}-job" value="Discount" class="form-control discount-job" id="id_${FORMSET_PREFIX}-${newIndex}-job" readonly>
+              </div>
+              <div class="job-field job-qty">
+                  <input type="number" name="${FORMSET_PREFIX}-${newIndex}-qty" value="1" class="form-control discount-qty" id="id_${FORMSET_PREFIX}-${newIndex}-qty" readonly>
+              </div>
+              <div class="job-field job-rate">
+                  <input type="number" name="${FORMSET_PREFIX}-${newIndex}-rate" value="0.00" class="form-control discount-rate" id="id_${FORMSET_PREFIX}-${newIndex}-rate" step="0.01" readonly>
+              </div>
+              <div class="job-field job-delete">
+                  <label for="id_${FORMSET_PREFIX}-${newIndex}-DELETE">Delete?</label>
+                  <input type="checkbox" name="${FORMSET_PREFIX}-${newIndex}-DELETE" id="id_${FORMSET_PREFIX}-${newIndex}-DELETE" class="form-check-input">
+              </div>
+          </div>
+          <input type="hidden" name="${FORMSET_PREFIX}-${newIndex}-id" id="id_${FORMSET_PREFIX}-${newIndex}-id">
+          ${workorderHiddenInput}`;
+      $('#jobs').append(rowHtml);
+      totalFormsElem.val(newIndex + 1);
+      $row = $('.discount').last();
+      configureSpecialRow($row, 'discount');
+      updateDeletionStyles($row);
+      return $row;
+  }
+
+  function hideDiscountRow() {
+      const $row = $('.discount').first();
+      if ($row.length) {
+          const deleteCheckbox = $row.find('input[name$="-DELETE"]');
+          if (deleteCheckbox.length) {
+              deleteCheckbox.prop('checked', true);
+          }
+          $row.hide();
+          updateDeletionStyles($row);
+      }
+  }
+
+  function updateDiscountRowValues(baseSubtotal, shopSupplyAmount) {
+      const $row = $('.discount').first();
+      if (!$row.length) {
+          return 0;
+      }
+      const config = getDiscountConfig();
+      let amount = 0;
+      const baseForDiscount = baseSubtotal + shopSupplyAmount;
+      if (config.type === 'percentage') {
+          amount = baseForDiscount * (config.value / 100);
+      } else {
+          amount = config.value;
+      }
+      amount = isFinite(amount) ? Math.max(amount, 0) : 0;
+      const signedAmount = -Math.abs(amount);
+      $row.find('.discount-job').val(buildDiscountDescription(config));
+      $row.find('.discount-rate').val(signedAmount.toFixed(2));
+      $row.find('input[name$="-qty"]').val(1);
+      return signedAmount;
+  }
+
+  function getInterestConfig() {
+      const type = $('input[name="interest_type"]:checked').val() === 'percentage' ? 'percentage' : 'fixed';
+      const value = parseFloat($('#interest-value').val());
+      return {
+          type,
+          value: isFinite(value) ? Math.max(value, 0) : 0,
+          reason: ($('#interest-reason').val() || '').trim()
+      };
+  }
+
+  function buildInterestDescription(config) {
+      const parts = ['Interest'];
+      const value = isFinite(config.value) ? config.value : 0;
+      if (value > 0) {
+          if (config.type === 'percentage') {
+              parts.push(`(${formatPercentageValue(value)}%)`);
+          } else {
+              parts.push(`(${formatCurrency(value)})`);
+          }
+      }
+      if (config.reason) {
+          parts.push(`- ${config.reason}`);
+      }
+      return parts.join(' ');
+  }
+
+  function ensureInterestRow() {
+      let $row = $('.interest').first();
+      if ($row.length) {
+          configureSpecialRow($row, 'interest');
+          const deleteCheckbox = $row.find('input[name$="-DELETE"]');
+          if (deleteCheckbox.length) {
+              deleteCheckbox.prop('checked', false);
+          }
+          $row.show();
+          updateDeletionStyles($row);
+          return $row;
+      }
+      const totalFormsElem = $(`#id_${FORMSET_PREFIX}-TOTAL_FORMS`);
+      if (!totalFormsElem.length) {
+          return null;
+      }
+      const newIndex = parseInt(totalFormsElem.val(), 10);
+      const workorderPk = "{% if workorder_form.instance.pk %}{{ workorder_form.instance.pk }}{% endif %}";
+      const workorderHiddenInput = workorderPk ? `<input type="hidden" name="${FORMSET_PREFIX}-${newIndex}-workorder" value="${workorderPk}">` : '';
+      const rowHtml = `
+          <div class="job-entry-row mb-3 interest special-entry">
+              <div class="job-field job-description">
+                  <input type="text" name="${FORMSET_PREFIX}-${newIndex}-job" value="Interest" class="form-control interest-job" id="id_${FORMSET_PREFIX}-${newIndex}-job" readonly>
+              </div>
+              <div class="job-field job-qty">
+                  <input type="number" name="${FORMSET_PREFIX}-${newIndex}-qty" value="1" class="form-control interest-qty" id="id_${FORMSET_PREFIX}-${newIndex}-qty" readonly>
+              </div>
+              <div class="job-field job-rate">
+                  <input type="number" name="${FORMSET_PREFIX}-${newIndex}-rate" value="0.00" class="form-control interest-rate" id="id_${FORMSET_PREFIX}-${newIndex}-rate" step="0.01" readonly>
+              </div>
+              <div class="job-field job-delete">
+                  <label for="id_${FORMSET_PREFIX}-${newIndex}-DELETE">Delete?</label>
+                  <input type="checkbox" name="${FORMSET_PREFIX}-${newIndex}-DELETE" id="id_${FORMSET_PREFIX}-${newIndex}-DELETE" class="form-check-input">
+              </div>
+          </div>
+          <input type="hidden" name="${FORMSET_PREFIX}-${newIndex}-id" id="id_${FORMSET_PREFIX}-${newIndex}-id">
+          ${workorderHiddenInput}`;
+      $('#jobs').append(rowHtml);
+      totalFormsElem.val(newIndex + 1);
+      $row = $('.interest').last();
+      configureSpecialRow($row, 'interest');
+      updateDeletionStyles($row);
+      return $row;
+  }
+
+  function hideInterestRow() {
+      const $row = $('.interest').first();
+      if ($row.length) {
+          const deleteCheckbox = $row.find('input[name$="-DELETE"]');
+          if (deleteCheckbox.length) {
+              deleteCheckbox.prop('checked', true);
+          }
+          $row.hide();
+          updateDeletionStyles($row);
+      }
+  }
+
+  function updateInterestRowValues(preInterestSubtotal) {
+      const $row = $('.interest').first();
+      if (!$row.length) {
+          return 0;
+      }
+      const config = getInterestConfig();
+      let amount = 0;
+      if (config.type === 'percentage') {
+          amount = preInterestSubtotal * (config.value / 100);
+      } else {
+          amount = config.value;
+      }
+      amount = isFinite(amount) ? Math.max(amount, 0) : 0;
+      $row.find('.interest-job').val(buildInterestDescription(config));
+      $row.find('.interest-rate').val(amount.toFixed(2));
+      $row.find('input[name$="-qty"]').val(1);
+      return amount;
+  }
+
+  $('#toggle-shop-supply').on('change', function() {
+      if ($(this).is(':checked')) {
+          $('#shop-supply-section').slideDown(150);
+          ensureShopSupplyRow();
+      } else {
+          $('#shop-supply-section').slideUp(150);
+          hideShopSupplyRow();
+      }
+      calculateTotal();
+  });
+
+  $('#shop-supply-value, input[name="shop_supply_type"], #shop-supply-reason').on('input change', function() {
+      if ($('#toggle-shop-supply').is(':checked')) {
+          calculateTotal();
+      }
+  });
+
+  $('#toggle-discount').on('change', function() {
+      if ($(this).is(':checked')) {
+          $('#discount-section').slideDown(150);
+          ensureDiscountRow();
+      } else {
+          $('#discount-section').slideUp(150);
+          hideDiscountRow();
+      }
+      calculateTotal();
+  });
+
+  $('#discount-value, input[name="discount_type"], #discount-reason').on('input change', function() {
+      if ($('#toggle-discount').is(':checked')) {
+          calculateTotal();
+      }
+  });
+
+  $('#toggle-interest').on('change', function() {
+      if ($(this).is(':checked')) {
+          $('#interest-section').slideDown(150);
+          ensureInterestRow();
+      } else {
+          $('#interest-section').slideUp(150);
+          hideInterestRow();
+      }
+      calculateTotal();
+  });
+
+  $('#interest-value, input[name="interest_type"], #interest-reason').on('input change', function() {
+      if ($('#toggle-interest').is(':checked')) {
+          calculateTotal();
+      }
+  });
+
+  // --- Helper functions for live calculations ---
+  function updateRowAmount(row) {
+      var qty = parseFloat(row.find('input[name$="-qty"]').val()) || 0;
+      var rate = parseFloat(row.find('input[name$="-rate"]').val()) || 0;
+      var amountField = row.find('.entry-amount');
+      if (amountField.length) {
+          amountField.val((qty * rate).toFixed(2));
+      }
+  }
+  function updateAllRowAmounts() {
+      $('#jobs .job-entry-row').each(function() {
+          updateRowAmount($(this));
+      });
+  }
+
+  // --- Core Calculation Functions ---
+  function calculateRegularRowsTotal() {
+      var sum = 0.0;
+      $('#jobs .job-entry-row').each(function() {
+          const $row = $(this);
+          if ($row.hasClass('special-entry')) {
+              return;
+          }
+          const delCheck = $row.find('input[name$="-DELETE"]');
+          if (delCheck.length && delCheck.is(':checked')) {
+              return;
+          }
+          const qty = parseFloat($row.find('input[name$="-qty"]').val()) || 0;
+          const rate = parseFloat($row.find('input[name$="-rate"]').val()) || 0;
+          sum += qty * rate;
+      });
+      return sum;
+  }
+
+  function calculateTotal() {
+      updateAllRowAmounts();
+      const baseSubtotal = calculateRegularRowsTotal();
+
+      let shopSupplyAmount = 0;
+      if ($('#toggle-shop-supply').is(':checked')) {
+          const $shopSupplyRow = ensureShopSupplyRow();
+          if ($shopSupplyRow) {
+              shopSupplyAmount = updateShopSupplyRowValues(baseSubtotal);
+          }
+      } else {
+          hideShopSupplyRow();
+      }
+
+      let discountAmount = 0;
+      if ($('#toggle-discount').is(':checked')) {
+          const $discountRow = ensureDiscountRow();
+          if ($discountRow) {
+              discountAmount = updateDiscountRowValues(baseSubtotal, shopSupplyAmount);
+          }
+      } else {
+          hideDiscountRow();
+      }
+
+      const preInterestSubtotal = baseSubtotal + shopSupplyAmount + discountAmount;
+
+      let interestAmount = 0;
+      if ($('#toggle-interest').is(':checked')) {
+          const $interestRow = ensureInterestRow();
+          if ($interestRow) {
+              interestAmount = updateInterestRowValues(preInterestSubtotal);
+          }
+      } else {
+          hideInterestRow();
+      }
+
+      const overall = preInterestSubtotal + interestAmount;
+      $('#total-amount').text(formatCurrency(overall));
+  }
+  function formatCurrency(value) {
+      var num = parseFloat(value) || 0;
+      return "$" + num.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // Delegated event listeners for recalculation in formset rows.
+  $(document).on('input change', `#jobs input[name$="-qty"], #jobs input[name$="-rate"], #jobs input[name$="-DELETE"]`, function() {
+      const $row = $(this).closest('.job-entry-row');
+      if ($(this).is('input[name$="-DELETE"]')) {
+          updateDeletionStyles($row);
+      }
+      updateRowAmount($row);
+      calculateTotal();
+  });
+
+  // Initial total calculation.
+  updateAllRowAmounts();
+  calculateTotal();
+  console.log("Document Ready: Script execution finished.");
+  });
+})();
+</script>
+
+<!-- Mini Shepherd tour for this page if query ?tour=1 -->
+<script src="https://cdn.jsdelivr.net/npm/shepherd.js@9.1.1/dist/js/shepherd.min.js"></script>
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('tour')) return;
+  const tour = new Shepherd.Tour({ defaultStepOptions: { cancelIcon: { enabled: true }, scrollTo: true } });
+  tour.addStep({ title: 'Workorder Form', text: 'Fill customer, vehicle/unit, and details. Add service lines below.', attachTo: { element: '#workorder-form', on: 'top' }, buttons: [{ text: 'Next', action: tour.next }] });
+  tour.addStep({ title: 'Assign Mechanics', text: 'Select every mechanic who should collaborate on this workorder.', attachTo: { element: '#id_mechanics', on: 'right' }, buttons: [{ text: 'Back', action: tour.back }, { text: 'Next', action: tour.next }] });
+  tour.addStep({ title: 'Jobs', text: 'Add services/parts with quantity and rates. Use Add Service or Add Part.', attachTo: { element: '#jobs', on: 'top' }, buttons: [{ text: 'Back', action: tour.back }, { text: 'Done', action: tour.complete }] });
+  tour.start();
+})();
+</script>
+
+{% endblock %}
+

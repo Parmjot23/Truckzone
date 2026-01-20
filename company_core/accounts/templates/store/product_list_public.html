@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ heading }} - {{ business_name|default:default_business_name }}{% endblock %}
+{% block body_class %}public-page-road-bg page-without-hero topbar-light storefront-page no-scroll-animations{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/storefront_public.css' %}">
+<link rel="stylesheet" href="{% static 'css/storefront_live_search.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="storefront-shell">
+    <section class="storefront-hero">
+        <div class="container">
+            <nav class="storefront-breadcrumbs" aria-label="Breadcrumb">
+                {% for crumb in breadcrumbs %}
+                    {% if crumb.url %}
+                    <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+                    {% else %}
+                    <span>{{ crumb.label }}</span>
+                    {% endif %}
+                    {% if not forloop.last %}
+                    <span class="crumb-sep">/</span>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+            <div class="storefront-hero-inner">
+                <div class="storefront-hero-copy">
+                    <div class="storefront-eyebrow">
+                        <i class="fas fa-boxes-stacked"></i>
+                        {% if active_category %}
+                        Category
+                        {% elif active_group %}
+                        Category Group
+                        {% elif search_query %}
+                        Search Results
+                        {% else %}
+                        Products
+                        {% endif %}
+                    </div>
+                    <h1>{{ heading }}</h1>
+                    {% if subheading %}
+                    <p>{{ subheading }}</p>
+                    {% endif %}
+                </div>
+                <div class="storefront-hero-actions">
+                    {% if storefront_selected_profile %}
+                        {% if storefront_has_multiple_locations %}
+                        <div class="dropdown">
+                            <button class="btn btn-light dropdown-toggle storefront-store-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-store"></i>
+                                <span class="store-label">My Store:</span>
+                                <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end storefront-store-menu">
+                                {% for profile in storefront_locations %}
+                                <form method="post" action="{% url 'accounts:storefront_location_set' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button class="dropdown-item{% if storefront_selected_profile and profile.user_id == storefront_selected_profile.user_id %} active{% endif %}"
+                                        type="submit" name="storefront_location" value="{{ profile.user_id }}">
+                                        {{ profile.storefront_label }}
+                                    </button>
+                                </form>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="btn btn-light storefront-store-toggle storefront-store-static">
+                            <i class="fas fa-store"></i>
+                            <span class="store-label">My Store:</span>
+                            <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                    {% if customer_account %}
+                    <a href="{% url 'accounts:customer_dashboard' %}" class="btn btn-light">My Account</a>
+                    <a href="{% url 'accounts:store_cart' %}" class="btn btn-primary">View Cart</a>
+                    {% else %}
+                    <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_product_list' %}" class="btn btn-light">Sign In</a>
+                    <a href="{% url 'accounts:customer_signup' %}?next={% url 'accounts:store_product_list' %}" class="btn btn-primary">Create Account</a>
+                    {% endif %}
+                </div>
+            </div>
+            <form class="storefront-search" method="get" action="{% url 'accounts:store_search' %}"
+                data-storefront-search-form data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}">
+                <input type="search" name="q" value="{{ search_query }}" placeholder="Search parts, SKUs, or keywords"
+                    data-storefront-search-input data-storefront-search-sync data-storefront-main-search autocomplete="off">
+                <button type="submit">Search</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="storefront-section">
+        <div class="container" data-storefront-results>
+            {% include "store/product_list_public_content.html" %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/storefront_search.js' %}" defer></script>
+{% endblock %}

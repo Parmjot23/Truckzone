@@ -1,0 +1,25 @@
+<!-- templates/app/no_invoices.html -->
+{% extends 'customer_portal_base.html' %}
+
+{% block title %}
+    No Invoices Found
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="alert alert-warning text-center" role="alert">
+                <h4 class="alert-heading">No Invoices Found</h4>
+                <p>There are currently no unpaid or partially paid invoices for <strong>{{ bill_to }}</strong>.</p>
+                <hr>
+                <p class="mb-0">Please check back later or contact the customer for more information.</p>
+            </div>
+            <div class="text-center mt-4">
+                <a href="{% url 'accounts:customer_list' %}" class="btn btn-primary">Back to Customer List</a>
+                <a href="{% url 'accounts:home' %}" class="btn btn-secondary">Go to Dashboard</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

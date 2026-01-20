@@ -1,0 +1,34 @@
+<!-- inventory/partials/_transaction_form.html -->
+{% load static %}
+<input type="hidden" name="transaction_id" value="{{ form.instance.id }}">
+{{ form.non_field_errors }}
+
+<div class="form-group">
+  {{ form.product.label_tag }}
+  <div class="input-group mb-2">
+    {{ form.product }}
+    <div class="input-group-append">
+      <button type="button" class="btn btn-outline-secondary" data-toggle="modal" data-target="#addProductModal">+</button>
+    </div>
+  </div>
+</div>
+
+<div class="form-group">
+  {{ form.transaction_type.label_tag }}
+  {{ form.transaction_type }}
+</div>
+
+<div class="form-group">
+  {{ form.quantity.label_tag }}
+  {{ form.quantity }}
+</div>
+
+<div class="form-group">
+  {{ form.transaction_date.label_tag }}
+  {{ form.transaction_date }}
+</div>
+
+<div class="form-group">
+  {{ form.remarks.label_tag }}
+  {{ form.remarks }}
+</div>

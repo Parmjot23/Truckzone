@@ -1,0 +1,55 @@
+<svg width="360" height="260" viewBox="0 0 360 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="about_bg" x1="22" y1="28" x2="336" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a" />
+      <stop offset="0.4" stop-color="#1e3a8a" />
+      <stop offset="1" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="about_panel" x1="88" y1="72" x2="272" y2="216" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a" stop-opacity="0.78" />
+      <stop offset="1" stop-color="#1f2937" stop-opacity="0.95" />
+    </linearGradient>
+    <linearGradient id="about_fig" x1="214" y1="110" x2="298" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1d4ed8" />
+      <stop offset="1" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="about_accent" x1="46" y1="46" x2="146" y2="146" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f97316" />
+      <stop offset="1" stop-color="#facc15" />
+    </linearGradient>
+    <filter id="about_shadow" x="0" y="0" width="360" height="260" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="20" flood-opacity="0.26" flood-color="#0f172a" />
+    </filter>
+  </defs>
+  <rect x="18" y="18" width="324" height="224" rx="28" fill="url(#about_bg)" filter="url(#about_shadow)" />
+  <g opacity="0.4">
+    <circle cx="86" cy="66" r="30" fill="#f97316" />
+    <circle cx="272" cy="56" r="26" fill="#38bdf8" />
+    <circle cx="286" cy="184" r="34" fill="#22d3ee" />
+  </g>
+  <g transform="translate(70 72)">
+    <rect x="12" y="18" width="196" height="132" rx="22" fill="url(#about_panel)" />
+    <rect x="28" y="34" width="164" height="96" rx="18" fill="#0f172a" fill-opacity="0.6" />
+    <path d="M48 54h108l18 28h-24l-12 20h-80l-10-16H30l18-32z" stroke="#38bdf8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.7" />
+    <path d="M78 118h60" stroke="#f97316" stroke-width="6" stroke-linecap="round" stroke-opacity="0.6" />
+    <circle cx="78" cy="132" r="16" fill="#0f172a" />
+    <circle cx="78" cy="132" r="9" fill="#f8fafc" />
+    <circle cx="150" cy="132" r="16" fill="#0f172a" />
+    <circle cx="150" cy="132" r="9" fill="#f8fafc" />
+    <path d="M46 80h120" stroke="#f8fafc" stroke-width="4" stroke-linecap="round" stroke-opacity="0.35" />
+    <path d="M60 96h88" stroke="#f8fafc" stroke-width="4" stroke-linecap="round" stroke-opacity="0.35" />
+  </g>
+  <g transform="translate(214 88)">
+    <path d="M30 30c0-10.5 8.5-19 19-19s19 8.5 19 19-8.5 19-19 19-19-8.5-19-19z" fill="#f8fafc" fill-opacity="0.92" />
+    <path d="M26 74c0-12.7 10.3-23 23-23h12c12.7 0 23 10.3 23 23v38H26V74z" fill="url(#about_fig)" />
+    <path d="M40 82h18l9 38H31l9-38z" fill="#0f172a" fill-opacity="0.75" />
+    <rect x="64" y="68" width="34" height="12" rx="6" transform="rotate(14 64 68)" fill="#f97316" />
+    <path d="M22 64l-18 24" stroke="#f8fafc" stroke-width="6" stroke-linecap="round" stroke-opacity="0.55" />
+    <path d="M72 110l26 16" stroke="#facc15" stroke-width="6" stroke-linecap="round" stroke-opacity="0.65" />
+  </g>
+  <g transform="translate(40 40)">
+    <circle cx="44" cy="44" r="36" fill="url(#about_accent)" />
+    <path d="M34 46l10-10 12 12 20-20" stroke="#0f172a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.7" />
+    <path d="M18 152h40l12 24h40l-10-20" stroke="#f8fafc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.35" />
+  </g>
+</svg>

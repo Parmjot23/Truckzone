@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <!-- Meta Tags and Title -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{% endblock %}</title>
+
+    <link rel="icon" type="image/png" href="{{ default_company_logo_url }}">
+
+    <!-- External Stylesheets -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@9.1.1/dist/css/shepherd.css">
+
+    <!-- Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;500;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom Styles -->
+    <style>
+        :root {
+            --navbar-height: 70px;
+        }
+        /* Reset and Base Styles */
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            display: flex;
+            flex-direction: column; /* Accommodates fixed navbar */
+            font-family: 'Poppins', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 400;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        body.ui-scale-active {
+            position: relative;
+        }
+
+        body.ui-scale-active .ui-scale-target {
+            width: 100%;
+            transform-origin: top left;
+            zoom: var(--ui-scale-factor);
+        }
+
+        @supports not (zoom: 1) {
+            body.ui-scale-active .ui-scale-target {
+                transform: scale(var(--ui-scale-factor));
+                width: calc(100% / var(--ui-scale-factor));
+            }
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Poppins', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .lead,
+        .highlight-text,
+        .section-lead {
+            font-family: 'Merriweather', 'Georgia', serif;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+        }
+
+        .navbar-brand,
+        .brand-title,
+        .brand-highlight {
+            font-family: 'Merriweather', 'Georgia', serif;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .sidebar .nav-link,
+        .card-title,
+        .section-heading,
+        .stat-label,
+        .table thead th {
+            font-family: 'Poppins', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 600;
+        }
+
+        /* Theme Modes for Body */
+        .light-mode body {
+            background-color: #f0f0f0;
+            color: #000000;
+        }
+        .dark-mode body {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        .funky-theme body {
+            background-color: #ffefd5;
+            color: #2c3e50;
+            font-family: "Comic Sans MS", "Comic Neue", "Trebuchet MS", cursive;
+        }
+        .blue-theme body {
+            background-color: #e0f7fa;
+            color: #004d73;
+            font-family: "Verdana", sans-serif;
+        }
+        .green-theme body {
+            background-color: #e8f5e9;
+            color: #1b5e20;
+            font-family: "Tahoma", sans-serif;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 220px;
+            background-color: #007bff;
+            color: #ffffff;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            overflow-y: auto;
+            transition: width 0.3s ease;
+        }
+        .light-mode .sidebar { background-color: #007bff; }
+        .dark-mode .sidebar { background-color: #343a40; }
+        .funky-theme .sidebar { background-color: #ff6347; }
+        .blue-theme .sidebar { background-color: #0288d1; }
+        .green-theme .sidebar { background-color: #43a047; }
+
+        .sidebar .nav-link {
+            color: #ffffff;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            font-size: 0.95rem;
+            font-weight: 600;
+            line-height: 1.2;
+            min-height: 48px;
+        }
+        .sidebar .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar .nav-link i {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+            text-align: center;
+        }
+        /* Wrap text in a span for toggling */
+        .sidebar .nav-link .link-text {
+            transition: opacity 0.3s ease;
+        }
+
+        /* Collapsed Sidebar: only icons visible */
+        .sidebar-collapsed .sidebar {
+            width: 60px;  /* Reduced width to fit icons */
+            overflow: hidden;
+        }
+        .sidebar-collapsed .main-container {
+            margin-left: 60px;  /* Adjusted for smaller sidebar */
+        }
+        .sidebar-collapsed .nav-link .link-text {
+            display: none;
+        }
+
+        /* Main Container Styles */
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-left: 220px;
+            margin-top: var(--navbar-height);
+            transition: margin-left 0.3s ease;
+        }
+
+        .activity-details-panel {
+            width: 100%;
+        }
+
+        @media (min-width: 992px) {
+            .activity-details-panel {
+                width: auto;
+                max-width: 420px;
+            }
+        }
+
+        /* Navbar Styles */
+        .navbar-custom {
+            font-size: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            color: #ffffff; /* Enforce white text color */
+            overflow: visible; /* allow logo/frame to overflow upwards */
+        }
+        .light-mode .navbar-custom { background-color: #007bff; }
+        .dark-mode .navbar-custom { background-color: #343a40; }
+        .funky-theme .navbar-custom { background-color: #ff6347; }
+        .blue-theme .navbar-custom { background-color: #0288d1; }
+        .green-theme .navbar-custom { background-color: #43a047; }
+        /* Enforce white color for links and icons in top bar */
+        .navbar-custom a,
+        .navbar-custom .nav-link,
+        .navbar-custom .navbar-brand,
+        .navbar-custom .navbar-brand i,
+        .navbar-custom .nav-link i {
+            color: #ffffff !important;
+        }
+        .navbar-custom .navbar-brand i { font-size: 1.5rem; }
+
+        /* Logo + Half-circle accent */
+        .navbar-home-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            padding: 0.25rem 0.75rem;
+        }
+
+        /* Adjust main content and sidebar when navbar is fixed */
+        .fixed-navbar .main-container { margin-top: var(--navbar-height); }
+        .fixed-navbar .sidebar { top: var(--navbar-height); }
+
+        /* Theme Toggle and Sidebar Toggle Buttons */
+        .theme-toggle-button, .sidebar-toggle-button {
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 1.3rem;
+            color: #ffffff;
+            transition: color 0.3s ease;
+            margin-right: 0.5rem;
+        }
+        .theme-toggle-button:hover, .sidebar-toggle-button:hover {
+            color: #adb5bd;
+        }
+
+        /* Profile Dropdown remains unchanged */
+        .navbar-profile .dropdown-menu {
+            min-width: 200px;
+        }
+        .navbar-profile .dropdown-item {
+            font-size: 0.95rem;
+            color:black;
+        }
+
+        /* Main Content and Footer */
+        .main-content {
+            flex: 1;
+            padding: 0.8rem;
+            overflow: auto;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding: 0.8rem;
+            font-size: 0.9rem;
+        }
+
+        /* Alert Messages */
+        .messages { margin: 0.8rem; }
+
+        /* Responsive Design */
+        @media (max-width: 576px) {
+            .sidebar { display: none; }
+            .main-container { margin-left: 0; }
+            .sidebar-toggle-button { display: none; }
+        }
+                .navbar-custom .dropdown-menu {
+            background-color: #fff !important;
+            border: 1px solid rgba(0,0,0,.15) !important;
+        }
+        .navbar-custom .dropdown-menu .dropdown-item {
+            color: #212529 !important;
+        }
+        .navbar-custom .dropdown-menu .dropdown-item:hover,
+        .navbar-custom .dropdown-menu .dropdown-item:focus {
+            color: #16181b !important;
+            background-color: #f8f9fa !important;
+        }
+
+        /* Ensure Bootstrap modals appear above the page content */
+        .modal {
+            z-index: 2000;
+        }
+
+        .modal-backdrop {
+            z-index: 1500;
+        }
+
+    </style>
+
+    <!-- Inline Script to Set Initial Theme and Sidebar State -->
+    <script>
+        (function() {
+            const themeModes = ['light-mode', 'dark-mode', 'funky-theme', 'blue-theme', 'green-theme'];
+            const currentThemeIndex = parseInt(localStorage.getItem('themeModeIndex')) || 0;
+            const isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            const htmlElement = document.documentElement;
+
+            // Apply Theme Class
+            htmlElement.classList.add(themeModes[currentThemeIndex]);
+
+            // Apply Sidebar State Class
+            if (isSidebarCollapsed) {
+                htmlElement.classList.add('sidebar-collapsed');
+            }
+
+            // Add class for fixed navbar to adjust layouts
+            htmlElement.classList.add('fixed-navbar');
+        })();
+    </script>
+
+    <!-- External Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+</head>
+<body{% if ui_scale_public_is_active %} class="ui-scale-active" style="--ui-scale-factor: {{ ui_scale_public_factor }};"{% endif %}>
+    <div class="ui-scale-target">
+    <!-- Side Navigation Bar with Updated Order -->
+    <nav class="sidebar" id="sidebar-nav">
+        <div class="sidebar-content">
+            <ul class="nav flex-column">
+                <li class="nav-item" id="side-dashboard">
+                    <a class="nav-link" href="{% url 'accounts:home' %}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span class="link-text">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="side-invoices">
+                    <a class="nav-link" href="{% url 'accounts:groupedinvoice_list' %}">
+                        <i class="fas fa-file-invoice"></i>
+                        <span class="link-text">Invoices</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="side-customers">
+                    <a class="nav-link" href="{% url 'accounts:customer_list' %}">
+                        <i class="fas fa-users"></i>
+                        <span class="link-text">Customers</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="side-suppliers">
+                    <a class="nav-link" href="{% url 'accounts:supplier_list' %}">
+                        <i class="fas fa-truck-loading"></i>
+                        <span class="link-text">Suppliers</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="side-inventory">
+                    <a class="nav-link" href="{% url 'accounts:inventory_hub' %}">
+                        <i class="fas fa-boxes"></i>
+                        <span class="link-text">Inventory</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="side-inventory-analytics">
+                    <a class="nav-link" href="{% url 'accounts:inventory_analytics' %}">
+                        <i class="fas fa-chart-line"></i>
+                        <span class="link-text">Inventory Analytics</span>
+                    </a>
+                </li>
+                <!-- Remaining Items -->
+                <li class="nav-item" id="side-notes">
+                    <a class="nav-link" href="{% url 'accounts:notes_expand' %}">
+                        <i class="fas fa-sticky-note"></i>
+                        <span class="link-text">Notes</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="side-tables">
+                    <a class="nav-link" href="{% url 'accounts:tables' %}">
+                        <i class="fas fa-table"></i>
+                        <span class="link-text">Tables</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="side-account-settings">
+                    <a class="nav-link" href="{% url 'accounts:account_settings' %}">
+                        <i class="fas fa-cog"></i>
+                        <span class="link-text">Account Settings</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="side-customize-invoice">
+                    <a class="nav-link" href="{% url 'accounts:customize_invoice' %}">
+                        <i class="fas fa-pencil-alt"></i>
+                        <span class="link-text">Customize Invoice</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="side-profile">
+                    <a class="nav-link" href="{% url 'accounts:profile_view' %}">
+                        <i class="fas fa-user"></i>
+                        <span class="link-text">Profile</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="side-logout">
+                    <form id="logoutFormSidebar" action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="button" class="nav-link btn btn-link" onclick="openLogoutModal('logoutFormSidebar')">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span class="link-text">Logout</span>
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Navbar with Unchanged Profile Dropdown -->
+        <nav class="navbar navbar-expand-lg navbar-custom">
+            <div class="d-flex align-items-center">
+                <!-- Sidebar Toggle Button -->
+                <button id="sidebarToggle" class="sidebar-toggle-button" aria-label="Toggle Sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <a class="navbar-brand navbar-home-link" href="{% url 'accounts:home' %}" aria-label="Home Dashboard">
+                    <i class="fas fa-home"></i>
+                </a>
+            </div>
+            <div class="navbar-center" id="topnav-center">
+                <ul class="navbar-nav">
+                    <li class="nav-item" id="nav-workorder-create">
+                        <a class="nav-link" href="{% url 'accounts:add_workorder' %}">
+                            <i class="fas fa-clipboard-list"></i> Create Workorder
+                        </a>
+                    </li>
+                    <li class="nav-item" id="nav-expense-create">
+                        <a class="nav-link" href="{% url 'accounts:mechexpense_add' %}">
+                            <i class="fas fa-receipt"></i> Add Expense
+                        </a>
+                    </li>
+                    <li class="nav-item" id="nav-supplier-create">
+                        <a class="nav-link" href="{% url 'accounts:inventory_suppliers' %}">
+                            <i class="fas fa-user-plus"></i> Add Supplier
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="navbar-profile d-flex align-items-center">
+                <button id="themeToggle" class="theme-toggle-button" aria-label="Toggle Theme">
+                    <i class="fas fa-palette"></i>
+                </button>
+                <a class="navbar-brand" href="#" id="profileDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <i class="fas fa-user"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="profileDropdown">
+                    <a class="dropdown-item" href="{% url 'accounts:profile_view' %}">Profile Settings</a>
+                    <a class="dropdown-item" href="{% url 'accounts:customize_invoice' %}">Modify Invoice</a>
+                    <a class="dropdown-item" href="{% url 'accounts:qr_code_style' %}">QR Code Styling</a>
+                    <a class="dropdown-item" href="{% url 'accounts:password_change' %}">Change Password</a>
+                    <a class="dropdown-item" href="{% url 'accounts:account_settings' %}">Account Settings</a>
+                    {% if request.user.is_superuser %}
+                        <a class="dropdown-item" href="{% url 'accounts:display_preferences' %}">Interface Scale</a>
+                    {% endif %}
+                    <div class="dropdown-divider"></div>
+                    <!-- Navbar Logout Form -->
+                    <form id="logoutFormNavbar" action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="button" class="dropdown-item" onclick="openLogoutModal('logoutFormNavbar')">
+                            Logout
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Alert Messages -->
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %} text-center">
+                        <i class="fas fa-info-circle"></i> {{ message|safe }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Page Content -->
+        <div class="main-content">
+            {% block content %}
+            {% endblock %}
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 {{ business_name|default:default_business_name }}. All rights reserved.</p>
+            <div>
+                <a href="{% url 'accounts:privacy_policy' %}">Privacy Policy</a> |
+                <a href="{% url 'accounts:terms_and_conditions' %}">Terms and Conditions</a> |
+                <a href="{% url 'accounts:cookies_policy' %}">Cookies Policy</a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true" data-backdrop="true" data-keyboard="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Logout</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="cancelLogout()">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to logout?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="cancelLogout()">No</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmLogout()">Yes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/shepherd.js@9.1.1/dist/js/shepherd.min.js"></script>
+    <!-- Theme and Sidebar Toggle Scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navbar = document.querySelector('.navbar-custom');
+
+            function updateLayoutSpacing() {
+                if (navbar) {
+                    const height = navbar.offsetHeight;
+                    document.documentElement.style.setProperty('--navbar-height', `${height}px`);
+                }
+            }
+
+            updateLayoutSpacing();
+            window.addEventListener('load', updateLayoutSpacing);
+            window.addEventListener('resize', updateLayoutSpacing);
+
+            // Theme Toggle
+            const themeToggle = document.getElementById('themeToggle');
+            const themeModes = ['light-mode', 'dark-mode', 'funky-theme', 'blue-theme', 'green-theme'];
+            let currentThemeIndex = parseInt(localStorage.getItem('themeModeIndex')) || 0;
+
+            function applyTheme(index) {
+                document.documentElement.classList.remove(...themeModes);
+                document.documentElement.classList.add(themeModes[index]);
+                localStorage.setItem('themeModeIndex', index);
+                updateLayoutSpacing();
+            }
+
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    currentThemeIndex = (currentThemeIndex + 1) % themeModes.length;
+                    applyTheme(currentThemeIndex);
+                });
+            }
+
+            // Sidebar Toggle
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function() {
+                    document.documentElement.classList.toggle('sidebar-collapsed');
+                    const collapsed = document.documentElement.classList.contains('sidebar-collapsed');
+                    localStorage.setItem('sidebarCollapsed', collapsed);
+                });
+            }
+        });
+
+        // Logout Modal Handling
+        let logoutFormToSubmit = null;
+
+        function openLogoutModal(formId) {
+            logoutFormToSubmit = document.getElementById(formId);
+            $('#logoutModal').modal('show');
+            setTimeout(function() {
+                if ($('#logoutModal').hasClass('show')) {
+                    $('#logoutModal').modal('hide');
+                    logoutFormToSubmit = null;
+                }
+            }, 10000);
+        }
+
+        function confirmLogout() {
+            if (logoutFormToSubmit) {
+                logoutFormToSubmit.submit();
+                $('#logoutModal').modal('hide');
+                logoutFormToSubmit = null;
+            }
+        }
+
+        function cancelLogout() {
+            logoutFormToSubmit = null;
+            $('#logoutModal').modal('hide');
+        }
+    </script>
+    </div>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{% with current=request.resolver_match.url_name %}
+<nav class="comm-nav" aria-label="Communication hub navigation">
+  <a href="{% url 'accounts:communication_hub' %}"
+     class="comm-nav-link {% if current == 'communication_hub' %}is-active{% endif %}"
+     {% if current == 'communication_hub' %}aria-current="page"{% endif %}>
+    <i class="fa-solid fa-tower-broadcast"></i>
+    Hub overview
+  </a>
+  <a href="{% url 'accounts:appointments_list' %}"
+     class="comm-nav-link {% if current == 'appointments_list' or current == 'appointments_detail' %}is-active{% endif %}"
+     {% if current == 'appointments_list' or current == 'appointments_detail' %}aria-current="page"{% endif %}>
+    <i class="fa-regular fa-calendar-check"></i>
+    Appointments
+  </a>
+  <a href="{% url 'accounts:contacts_list' %}"
+     class="comm-nav-link {% if current == 'contacts_list' or current == 'contacts_detail' %}is-active{% endif %}"
+     {% if current == 'contacts_list' or current == 'contacts_detail' %}aria-current="page"{% endif %}>
+    <i class="fa-regular fa-envelope"></i>
+    Messages
+  </a>
+  <a href="{% url 'accounts:flyer_campaigns' %}"
+     class="comm-nav-link {% if current == 'flyer_campaigns' %}is-active{% endif %}"
+     {% if current == 'flyer_campaigns' %}aria-current="page"{% endif %}>
+    <i class="fa-solid fa-paper-plane"></i>
+    Flyer Emails
+  </a>
+</nav>
+{% endwith %}

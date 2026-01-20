@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>QR Code for {{ product.name }}</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            margin: 1cm;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f7f7f7;
+        }
+
+        .label {
+            /* Brother / Zebra thermal printers commonly use 2.25" x 1.25" label stock */
+            width: 2.25in;
+            height: 1.25in;
+            background: #ffffff;
+            border: 1px solid #d0d0d0;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            padding: 0.12in 0.18in;
+            gap: 0.15in;
+        }
+
+        .label-qr {
+            flex: 0 0 1.05in;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .label-qr img {
+            width: 1in;
+            height: 1in;
+            object-fit: contain;
+        }
+
+        .label-text {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .product-name {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-bottom: 0.05in;
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+
+        .product-description {
+            font-size: 8pt;
+            line-height: 1.2;
+            color: #333333;
+            word-wrap: break-word;
+        }
+
+        .product-description.empty {
+            color: #888888;
+            font-style: italic;
+        }
+
+        .product-sku {
+            font-size: 7pt;
+            margin-top: 0.05in;
+            color: #555555;
+            letter-spacing: 0.4pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="label">
+        <div class="label-qr">
+            <img src="data:image/jpeg;base64,{{ qr_code_base64 }}" alt="QR Code">
+        </div>
+        <div class="label-text">
+            <div class="product-name">{{ product.name }}</div>
+            {% if product.description %}
+                <div class="product-description">{{ product.description }}</div>
+            {% else %}
+                <div class="product-description empty">No description available</div>
+            {% endif %}
+            {% if product.sku %}
+                <div class="product-sku">{{ product.sku }}</div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

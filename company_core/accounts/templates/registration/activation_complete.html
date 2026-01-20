@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Account Activated{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="header">
+        <h2>Account Activated</h2>
+    </div>
+    <div class="content mt-3">
+        <p>Your account has been successfully activated. You can now <a href="{% url 'accounts:login' %}">login</a>.</p>
+    </div>
+    <div class="footer mt-3">
+        <p>Thank you for joining us. If you have any questions, feel free to contact our support team.</p>
+    </div>
+</div>
+{% endblock %}

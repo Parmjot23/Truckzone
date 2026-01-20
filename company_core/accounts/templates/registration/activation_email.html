@@ -1,0 +1,53 @@
+<!-- templates/registration/activation_email.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Activate Your {{ business_name|default:default_business_name }} Account</title>
+    <style>
+        /* Add your CSS styling here */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 5px;
+            max-width: 600px;
+            margin: auto;
+        }
+        .button {
+            background-color: #28a745;
+            color: #ffffff !important;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #777777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Welcome to {{ business_name|default:default_business_name }}, {{ user.first_name }}!</h2>
+        <p>Thank you for registering. To unlock all features, please click the button below to confirm your email address:</p>
+        <a href="http://{{ domain }}{% url 'accounts:activate' uidb64=uid token=token %}" class="button">Activate</a>
+        <p>If the button doesn't work, please copy and paste the following link into your browser:</p>
+        <p>http://{{ domain }}{% url 'accounts:activate' uidb64=uid token=token %}</p>
+        <div class="footer">
+            <p>If you did not register for an account, please ignore this email.</p>
+            <p>© {{ timezone.now.year }} {{ business_name|default:default_business_name }}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{% extends 'customer_portal_base.html' %}
+
+{% block title %}Delete Supplier Credit{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h4 class="mb-3">Delete Supplier Credit</h4>
+      <p>Are you sure you want to delete credit <strong>{{ object.credit_no }}</strong> for <strong>{{ object.supplier_name|default:object.supplier|default:"-" }}</strong>?</p>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Delete</button>
+        <a href="{% url 'accounts:supplier_credit_detail' object.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

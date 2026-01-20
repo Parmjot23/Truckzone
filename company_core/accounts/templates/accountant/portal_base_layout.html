@@ -1,0 +1,213 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Accountant Portal{% endblock %}</title>
+
+  <link rel="icon" type="image/png" href="{{ default_company_logo_url }}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+  <style>
+    :root {
+      --accountant-ink: #0f172a;
+      --accountant-muted: #475569;
+      --accountant-surface: #ffffff;
+      --accountant-border: #e2e8f0;
+      --accountant-accent: #0ea5e9;
+      --accountant-accent-strong: #0284c7;
+      --accountant-gradient: linear-gradient(135deg, #0ea5e9, #14b8a6);
+      --accountant-bg: #f8fafc;
+      --accountant-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Manrope', 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      background: var(--accountant-bg);
+      color: var(--accountant-ink);
+    }
+
+    .accountant-topbar {
+      background: var(--accountant-gradient);
+      color: #fff;
+      padding: 0.75rem 0;
+      box-shadow: 0 18px 36px rgba(14, 116, 144, 0.3);
+      position: sticky;
+      top: 0;
+      z-index: 1020;
+    }
+
+    .accountant-topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .accountant-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+
+    .accountant-brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.95);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.35rem;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+    }
+
+    .accountant-brand-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .accountant-brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+      min-width: 0;
+    }
+
+    .accountant-brand-text span {
+      font-weight: 700;
+      font-size: 0.98rem;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .accountant-brand-text small {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      opacity: 0.75;
+    }
+
+    .accountant-topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .accountant-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .accountant-shell {
+      padding: 2.5rem 0 3.5rem;
+      background: radial-gradient(circle at 12% 8%, rgba(14, 165, 233, 0.12), transparent 46%),
+                  radial-gradient(circle at 86% 0%, rgba(20, 184, 166, 0.16), transparent 48%);
+      min-height: calc(100vh - 160px);
+    }
+
+    .accountant-card {
+      background: var(--accountant-surface);
+      border: 1px solid var(--accountant-border);
+      border-radius: 18px;
+      box-shadow: var(--accountant-shadow);
+      padding: 1.4rem;
+    }
+
+    .accountant-footer {
+      padding: 1.5rem 0;
+      color: var(--accountant-muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--accountant-border);
+      background: #fff;
+    }
+
+    .accountant-footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 767.98px) {
+      .accountant-shell {
+        padding: 2rem 0 2.5rem;
+      }
+      .accountant-card {
+        padding: 1.1rem;
+      }
+      .accountant-topbar-inner {
+        justify-content: center;
+      }
+      .accountant-footer-inner {
+        justify-content: center;
+        text-align: center;
+      }
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <header class="accountant-topbar">
+    <div class="container">
+      <div class="accountant-topbar-inner">
+        <div class="accountant-brand">
+          <div class="accountant-brand-logo">
+            <img src="{{ company_logo_url|default:default_company_logo_url }}" alt="{{ business_name|default:default_business_name }}">
+          </div>
+          <div class="accountant-brand-text">
+            <span>{{ business_name|default:default_business_name }}</span>
+            <small>Accountant Portal</small>
+          </div>
+        </div>
+        <div class="accountant-topbar-actions">
+          <span class="accountant-pill"><i class="fa-solid fa-shield-halved"></i> {{ accountant_access_label|default:"Read only" }}</span>
+          <a href="{% url 'accounts:logout' %}" class="btn btn-light btn-sm">Sign out</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  {% block content %}{% endblock %}
+
+  <footer class="accountant-footer">
+    <div class="container accountant-footer-inner">
+      <span>&copy; {% now "Y" %} {{ business_name|default:default_business_name }}</span>
+      {% if portal_support_email %}
+        <span>Support: {{ portal_support_email }}</span>
+      {% endif %}
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% block extra_js %}{% endblock %}
+  <script src="{% static 'js/select2_autoinit.js' %}"></script>
+</body>
+</html>

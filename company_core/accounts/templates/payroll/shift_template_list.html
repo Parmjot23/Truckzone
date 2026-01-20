@@ -1,0 +1,56 @@
+﻿{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Shift Templates</h2>
+            <div class="text-muted small">Reusable shifts for one-click time entry.</div>
+        </div>
+        <div class="page-toolbar d-flex gap-2">
+            <a href="{% url 'accounts:shift_template_create' %}" class="btn btn-primary btn-sm">Add template</a>
+        </div>
+    </div>
+
+    {% include 'payroll/_nav.html' %}
+
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table mb-0 table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Start</th>
+                        <th>Finish</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for template in templates %}
+                    <tr>
+                        <td>{{ template.name }}</td>
+                        <td>{{ template.start_time|time:"H:i" }}</td>
+                        <td>{{ template.end_time|time:"H:i" }}</td>
+                        <td>{% if template.active %}Active{% else %}Inactive{% endif %}</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'accounts:shift_template_update' template.id %}">Edit</a>
+                            <form method="post" action="{% url 'accounts:shift_template_delete' template.id %}" class="d-inline" onsubmit="return confirm('Delete this shift template?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                                <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">No shift templates yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

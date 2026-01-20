@@ -1,0 +1,99 @@
+<!-- templates/registration/payment.html -->
+
+{% extends "customer_portal_base.html" %}
+
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Payment Information</h2>
+
+    <!-- Simplified Notice for Trial Period and Cancellation Policy -->
+    <div class="alert alert-info">
+        You have selected the <strong>{{ plan }}</strong> plan.
+    </div>
+
+
+    <form action="{% url 'accounts:payment' %}" method="post" id="payment-form">
+        {% csrf_token %}
+        {{ form|crispy }}
+        
+        <!-- Stripe Card Element -->
+        <div class="form-group">
+            <label for="card-element">Credit or debit card</label>
+            <div id="card-element" class="form-control">
+                <!-- A Stripe Element will be inserted here -->
+            </div>
+            <!-- Display form errors related to card input -->
+            <div id="card-errors" role="alert" class="text-danger mt-2"></div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary mt-3">Submit</button>
+    </form>
+</div>
+
+<!-- Stripe JavaScript -->
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+  // Initialize Stripe and Elements
+  var stripe = Stripe('{{ stripe_publishable_key }}');
+  var elements = stripe.elements();
+
+  var style = {
+    base: {
+      color: '#32325d',
+      fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+      fontSmoothing: 'antialiased',
+      fontSize: '16px',
+      '::placeholder': {
+        color: '#aab7c4'
+      }
+    },
+    invalid: {
+      color: '#fa755a',
+      iconColor: '#fa755a'
+    }
+  };
+
+  // Create Stripe card element and mount it
+  var card = elements.create('card', {style: style});
+  card.mount('#card-element');
+
+  // Error handling on card change
+  card.addEventListener('change', function(event) {
+    var displayError = document.getElementById('card-errors');
+    if (event.error) {
+      displayError.textContent = event.error.message;
+    } else {
+      displayError.textContent = '';
+    }
+  });
+
+  // Handle form submission
+  var form = document.getElementById('payment-form');
+  form.addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    // Create a Stripe token
+    stripe.createToken(card).then(function(result) {
+      if (result.error) {
+        // Display error if token creation fails
+        var errorElement = document.getElementById('card-errors');
+        errorElement.textContent = result.error.message;
+      } else {
+        // Insert token into form and submit
+        var hiddenInput = document.createElement('input');
+        hiddenInput.setAttribute('type', 'hidden');
+        hiddenInput.setAttribute('name', 'stripe_token');
+        hiddenInput.setAttribute('value', result.token.id);
+        form.appendChild(hiddenInput);
+        
+        // Submit the form
+        form.submit();
+      }
+    });
+  });
+</script>
+
+{% endblock %}

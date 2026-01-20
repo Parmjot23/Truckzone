@@ -1,0 +1,110 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+
+{% block title %}QR Code Styling{% endblock %}
+
+{% block content %}
+<div class="container mt-5 qr-style-container">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-xl-5">
+            <div class="qr-settings-card shadow-sm">
+                <h2 class="mb-3 text-center">QR Code Label Settings</h2>
+                <p class="text-muted text-center">Fine-tune the information that appears on your QR code labels before you download them.</p>
+                <form method="post" class="qr-style-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="{{ form.qr_code_font_scale.id_for_label }}" class="font-weight-bold">Font size scale</label>
+                        <div class="d-flex align-items-center qr-scale-control">
+                            {{ form.qr_code_font_scale }}
+                            <span
+                                class="badge badge-primary font-weight-normal ml-3"
+                                id="qrFontScaleValue"
+                                data-default="{{ form.qr_code_font_scale.value|default:profile.qr_code_font_scale }}"
+                            >
+                                {{ form.qr_code_font_scale.value|default:profile.qr_code_font_scale }}%
+                            </span>
+                        </div>
+                        {% if form.qr_code_font_scale.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.qr_code_font_scale.errors|join:', ' }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="mt-4">
+                        <h5 class="mb-2">Label details</h5>
+                        <p class="text-muted small mb-3">Choose which product fields should be printed on the QR label.</p>
+                        <div class="form-check mb-2">
+                            {{ form.show_product_name }}
+                            <label class="form-check-label" for="{{ form.show_product_name.id_for_label }}">{{ form.show_product_name.label }}</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            {{ form.show_product_description }}
+                            <label class="form-check-label" for="{{ form.show_product_description.id_for_label }}">{{ form.show_product_description.label }}</label>
+                        </div>
+                        <div class="form-check">
+                            {{ form.show_product_sku }}
+                            <label class="form-check-label" for="{{ form.show_product_sku.id_for_label }}">{{ form.show_product_sku.label }}</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Save Preference</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .qr-style-container {
+        color: #1f2933;
+    }
+
+    .qr-settings-card {
+        border-radius: 12px;
+        background: #ffffff;
+        padding: 2.5rem;
+    }
+
+    .qr-style-form input[type="range"] {
+        flex: 1;
+    }
+
+    .qr-scale-control {
+        gap: 12px;
+    }
+
+    .qr-style-form .form-check {
+        padding-left: 1.75rem;
+    }
+
+    @media (max-width: 576px) {
+        .qr-settings-card {
+            padding: 2rem 1.5rem;
+        }
+    }
+</style>
+
+<script>
+    (function() {
+        const slider = document.getElementById('{{ form.qr_code_font_scale.id_for_label }}');
+        const valueBadge = document.getElementById('qrFontScaleValue');
+        if (!slider || !valueBadge) {
+            return;
+        }
+
+        function updateScale(scaleValue) {
+            const normalized = parseInt(scaleValue, 10) || parseInt(valueBadge.dataset.default || '100', 10);
+            const clamped = Math.min(160, Math.max(20, normalized));
+            valueBadge.textContent = clamped + '%';
+            if (slider.value !== String(clamped)) {
+                slider.value = clamped;
+            }
+        }
+
+        updateScale(slider.value || valueBadge.dataset.default);
+
+        slider.addEventListener('input', function(event) {
+            updateScale(event.target.value);
+        });
+    })();
+</script>
+{% endblock %}

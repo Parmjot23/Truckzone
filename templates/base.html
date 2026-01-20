@@ -1,0 +1,2008 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="{{ business_name|default:default_business_name }} - Heavy-duty truck parts, accessories, and fleet supplies for fleets and owner-operators.">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}{{ business_name|default:default_business_name }} - Heavy-Duty Truck Parts & Accessories{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="{{ company_logo_url|default:default_company_logo_url }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Bootstrap 5.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome 6.5 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- Custom Global CSS -->
+    <link href="{% static 'css/base_global.css' %}" rel="stylesheet">
+
+    <!-- INLINE NAVIGATION CSS - No external dependencies -->
+    <style>
+        /* === CSS VARIABLES === */
+        :root {
+            --nav-navy: #1A1A1A;
+            --nav-navy-light: #2D2D2D;
+            --nav-orange: #0047AB;
+            --nav-orange-hover: #003380;
+            --nav-white: #FFFFFF;
+            --nav-gray-100: #F1F5F9;
+            --nav-gray-200: #E2E8F0;
+            --nav-gray-400: #94A3B8;
+            --nav-gray-600: #475569;
+            --nav-shadow: 0 4px 20px rgba(26, 26, 26, 0.08);
+            --nav-shadow-lg: 0 10px 40px rgba(26, 26, 26, 0.15);
+        }
+
+        /* === PREMIUM TOP BAR === */
+        .premium-topbar {
+            background: linear-gradient(135deg, #0D0D0D 0%, #1A1A1A 50%, #2D2D2D 100%);
+            padding: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Background pattern using existing image */
+        .premium-topbar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("{% static 'images/hero_fallback_bg.png' %}");
+            background-size: cover;
+            background-position: center;
+            opacity: 0.25;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .premium-topbar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 200%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+            animation: shimmer 8s linear infinite;
+            z-index: 1;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-50%);
+            }
+
+            100% {
+                transform: translateX(50%);
+            }
+        }
+
+        .topbar-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 44px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .topbar-left,
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            height: 100%;
+        }
+
+        .topbar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0 1rem;
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.85rem;
+            font-weight: 500;
+            height: 100%;
+            transition: all 0.2s ease;
+        }
+
+        .topbar-item i {
+            color: var(--nav-orange);
+        }
+
+        .topbar-item:hover {
+            color: white;
+        }
+
+        .topbar-divider {
+            width: 1px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .topbar-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 999px;
+            transition: all 0.3s ease;
+            margin: 0 0.25rem;
+        }
+
+        .topbar-btn.contact {
+            background: linear-gradient(135deg, #0047AB 0%, #003380 100%);
+            color: white;
+            box-shadow: 0 2px 10px rgba(0, 71, 171, 0.3);
+        }
+
+        .topbar-btn.contact:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0, 71, 171, 0.4);
+            color: white;
+        }
+
+        .topbar-btn.login {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .topbar-btn.login:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .topbar-store-dropdown {
+            display: flex;
+            align-items: center;
+            margin-right: 0.35rem;
+        }
+
+        .topbar-store-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0.9rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .topbar-store-toggle:hover,
+        .topbar-store-toggle:focus {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        .topbar-store-toggle i {
+            color: var(--nav-orange);
+        }
+
+        .topbar-store-toggle .store-label {
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .topbar-store-toggle .store-value {
+            max-width: 160px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .topbar-store-static {
+            cursor: default;
+        }
+
+        .topbar-store-dropdown .dropdown-menu {
+            min-width: 220px;
+            border-radius: 14px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: var(--nav-shadow-lg);
+            padding: 0.35rem;
+            z-index: 2000;
+        }
+
+        .topbar-store-dropdown form {
+            margin: 0;
+        }
+
+        .topbar-store-dropdown .dropdown-item {
+            font-weight: 600;
+        }
+
+        button.dropdown-item {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .topbar-account .dropdown-toggle::after {
+            margin-left: 0.35rem;
+        }
+
+        .topbar-account .dropdown-menu {
+            min-width: 220px;
+            border-radius: 14px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: var(--nav-shadow-lg);
+            padding: 0.35rem;
+            z-index: 2000;
+        }
+
+        .mobile-section-label {
+            margin: 0.75rem 0 0.35rem;
+            padding: 0 0.5rem;
+            font-size: 0.7rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        @media (max-width: 767px) {
+            .topbar-item span {
+                display: none;
+            }
+
+            .topbar-btn span {
+                display: none;
+            }
+
+            .topbar-store-toggle .store-label {
+                display: none;
+            }
+
+            .topbar-store-toggle .store-value {
+                max-width: 90px;
+            }
+
+            .topbar-btn {
+                padding: 0.5rem 0.75rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .premium-topbar {
+                display: none;
+            }
+        }
+
+        /* === STYLISH MAIN NAVIGATION === */
+        .stylish-navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .stylish-navbar.scrolled {
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: var(--nav-shadow-lg);
+        }
+
+        .stylish-navbar.scrolled::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #0047AB, #003380, #1A1A1A);
+        }
+
+        .navbar-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 75px;
+            transition: height 0.3s ease;
+        }
+
+        .stylish-navbar.scrolled .navbar-inner {
+            height: 65px;
+        }
+
+        /* Brand */
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-brand:hover {
+            transform: scale(1.02);
+        }
+
+        .nav-brand img {
+            height: 48px;
+            width: auto;
+            transition: height 0.3s ease;
+        }
+
+        .stylish-navbar.scrolled .nav-brand img {
+            height: 40px;
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+        }
+
+        .brand-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.15rem;
+            color: var(--nav-navy);
+        }
+
+        .brand-tagline {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 0.7rem;
+            color: var(--nav-orange);
+            letter-spacing: 0.1em;
+        }
+
+        /* Desktop Nav Links */
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-link {
+            position: relative;
+            padding: 0.6rem 1rem;
+            color: var(--nav-navy);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.25s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #0047AB, #003380);
+            transform: translateX(-50%);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--nav-orange);
+            background: rgba(0, 71, 171, 0.06);
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 50%;
+        }
+
+        .nav-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 1.25rem;
+            background: linear-gradient(135deg, #0047AB 0%, #003380 100%);
+            color: white !important;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-decoration: none;
+            border-radius: 999px;
+            box-shadow: 0 4px 15px rgba(0, 71, 171, 0.35);
+            transition: all 0.3s ease;
+            margin-left: 1rem;
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 71, 171, 0.45);
+            color: white !important;
+        }
+
+        .nav-cta i {
+            transition: transform 0.3s ease;
+            font-size: 0.75rem;
+        }
+
+        .nav-cta:hover i {
+            transform: translateX(3px);
+        }
+
+        .nav-cart {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.55rem 0.9rem;
+            border-radius: 999px;
+            border: 1px solid rgba(0, 71, 171, 0.2);
+            color: var(--nav-navy);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            margin-left: 0.75rem;
+            background: #fff;
+        }
+
+        .nav-cart:hover {
+            color: var(--nav-orange);
+            border-color: rgba(0, 71, 171, 0.35);
+            box-shadow: var(--nav-shadow);
+        }
+
+        .nav-cart-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            min-width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            background: var(--nav-orange);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+            box-shadow: 0 6px 16px rgba(0, 71, 171, 0.35);
+        }
+
+        .nav-store-dropdown {
+            margin-left: 0.75rem;
+        }
+
+        .nav-store-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.55rem 0.95rem;
+            border-radius: 999px;
+            border: 1px solid rgba(0, 71, 171, 0.2);
+            background: #fff;
+            color: var(--nav-navy);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+        }
+
+        .nav-store-toggle:hover,
+        .nav-store-toggle:focus {
+            color: var(--nav-orange);
+            border-color: rgba(0, 71, 171, 0.35);
+            box-shadow: var(--nav-shadow);
+        }
+
+        .nav-store-toggle .store-label {
+            color: var(--nav-gray-600);
+        }
+
+        .nav-store-toggle .store-value {
+            max-width: 160px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .nav-store-static {
+            cursor: default;
+        }
+
+        .nav-store-menu {
+            min-width: 220px;
+            border-radius: 14px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: var(--nav-shadow-lg);
+            padding: 0.35rem;
+        }
+
+        .nav-store-menu .dropdown-item {
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .nav-store-dropdown form {
+            margin: 0;
+        }
+
+        .mobile-cart-badge {
+            margin-left: auto;
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            border-radius: 999px;
+            padding: 0.15rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        /* Mobile Toggle */
+        .mobile-toggle {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .mobile-toggle:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .toggle-line {
+            width: 22px;
+            height: 2.5px;
+            background: var(--nav-navy);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            margin: 0 auto;
+        }
+
+        .mobile-toggle:hover .toggle-line {
+            background: var(--nav-orange);
+        }
+
+        @media (max-width: 991px) {
+            .desktop-menu {
+                display: none !important;
+            }
+
+            .mobile-toggle {
+                display: flex;
+            }
+
+            .navbar-inner {
+                height: 65px;
+            }
+
+            .nav-brand img {
+                height: 38px;
+            }
+
+            .brand-name {
+                font-size: 1rem;
+            }
+
+            .brand-tagline {
+                font-size: 0.6rem;
+            }
+        }
+
+        @media (max-width: 575px) {
+            .nav-brand img {
+                height: 34px;
+            }
+
+            .brand-name {
+                font-size: clamp(0.8rem, 3.5vw, 1rem);
+            }
+
+            .brand-tagline {
+                font-size: 0.55rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .brand-text {
+                display: none;
+            }
+
+            .nav-brand img {
+                height: 38px;
+            }
+        }
+
+        /* === SLEEK MODERN MOBILE MENU === */
+        .mobile-menu {
+            width: min(320px, 85vw) !important;
+            background: linear-gradient(180deg, #0A0A0A 0%, #1A1A1A 100%);
+            border-left: none !important;
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .mobile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            background: rgba(0, 71, 171, 0.15);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .mobile-brand-mini {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .mobile-brand-mini img {
+            height: 36px;
+            width: auto;
+            filter: drop-shadow(0 2px 8px rgba(0, 71, 171, 0.3));
+        }
+
+        .mobile-brand-mini span {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #FFFFFF;
+            letter-spacing: -0.01em;
+        }
+
+        .mobile-close {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .mobile-close:hover {
+            background: #0047AB;
+            border-color: #0047AB;
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        .mobile-body {
+            display: flex;
+            flex-direction: column;
+            height: calc(100% - 85px);
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .mobile-nav-links {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .mobile-link {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            padding: 0.875rem 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            text-decoration: none;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 500;
+            font-size: 0.95rem;
+            border: 1px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mobile-link::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #0047AB;
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+            border-radius: 0 3px 3px 0;
+        }
+
+        .mobile-link-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(0, 71, 171, 0.2), rgba(0, 71, 171, 0.1));
+            border-radius: 10px;
+            color: #4A90D9;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-link span {
+            flex: 1;
+        }
+
+        .mobile-link-arrow {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 0.65rem;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-link:hover,
+        .mobile-link.active {
+            background: rgba(0, 71, 171, 0.15);
+            border-color: rgba(0, 71, 171, 0.3);
+            color: #FFFFFF;
+        }
+
+        .mobile-link:hover::before,
+        .mobile-link.active::before {
+            transform: scaleY(1);
+        }
+
+        .mobile-link:hover .mobile-link-icon,
+        .mobile-link.active .mobile-link-icon {
+            background: linear-gradient(135deg, #0047AB, #2563EB);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .mobile-link:hover .mobile-link-arrow {
+            transform: translateX(3px);
+            color: #4A90D9;
+        }
+
+        /* Divider */
+        .mobile-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            margin: 0.75rem 1rem;
+        }
+
+        .mobile-cta {
+            padding: 1rem;
+            margin-top: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .mobile-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            padding: 0.85rem 1.25rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .mobile-btn.primary {
+            background: linear-gradient(135deg, #0047AB 0%, #2563EB 100%);
+            color: white;
+            box-shadow: 0 4px 20px rgba(0, 71, 171, 0.4);
+        }
+
+        .mobile-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 71, 171, 0.5);
+            color: white;
+        }
+
+        .mobile-btn.login {
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .mobile-btn.login:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+            color: white;
+        }
+
+        .mobile-btn.secondary {
+            background: transparent;
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .mobile-btn.secondary:hover {
+            border-color: #0047AB;
+            background: rgba(0, 71, 171, 0.15);
+            color: white;
+        }
+
+        .mobile-btn.contact {
+            background: linear-gradient(135deg, #0047AB 0%, #003380 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 71, 171, 0.35);
+        }
+
+        .mobile-btn.contact:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 71, 171, 0.45);
+            color: white;
+        }
+
+        /* Contact info in mobile menu */
+        .mobile-contact-info {
+            padding: 1rem;
+            background: rgba(0, 71, 171, 0.08);
+            margin: 0.5rem 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 71, 171, 0.15);
+        }
+
+        .mobile-contact-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .mobile-contact-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .mobile-contact-item i {
+            color: #4A90D9;
+            width: 16px;
+            text-align: center;
+        }
+
+        .mobile-contact-item a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+        }
+
+        .mobile-contact-item a:hover {
+            color: #4A90D9;
+        }
+
+        .mobile-store-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            padding: 0 1rem 0.5rem;
+        }
+
+        .mobile-store-form {
+            margin: 0;
+        }
+
+        .mobile-store-option {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .mobile-store-option:hover {
+            background: rgba(0, 71, 171, 0.2);
+            border-color: rgba(0, 71, 171, 0.4);
+            color: #fff;
+        }
+
+        .mobile-store-option.is-active {
+            background: rgba(0, 71, 171, 0.35);
+            border-color: rgba(0, 71, 171, 0.6);
+            color: #fff;
+        }
+
+        .mobile-store-option i {
+            color: #4A90D9;
+            font-size: 0.8rem;
+        }
+
+        .mobile-store-static {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin: 0 1rem 0.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .mobile-store-static i {
+            color: #4A90D9;
+        }
+    </style>
+
+    <!-- AI Chat Styles -->
+    <style>
+        .ai-chat-launcher {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            background: linear-gradient(135deg, #0047AB, #003380, #1A1A1A);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            padding: 0.6rem 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            box-shadow: 0 10px 30px rgba(0, 71, 171, 0.35);
+            cursor: pointer;
+            z-index: 1200;
+            transition: transform 0.2s ease;
+        }
+
+        .ai-chat-launcher:hover {
+            transform: translateY(-2px);
+        }
+
+        .ai-chat-launcher .spark {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ai-chat-launcher .spark img {
+            width: 14px;
+            height: 14px;
+            object-fit: contain;
+        }
+
+        .ai-chat-panel {
+            position: fixed;
+            bottom: 100px;
+            right: 18px;
+            width: min(420px, calc(100vw - 32px));
+            max-height: 78vh;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(8px) scale(0.95);
+            transition: all 0.2s ease;
+            z-index: 1200;
+            border: 1px solid #E2E8F0;
+        }
+
+        .ai-chat-panel.is-open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
+        }
+
+        .ai-chat-header {
+            padding: 1rem;
+            background: #1A1A1A;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ai-chat-title {
+            font-weight: 700;
+        }
+
+        .ai-chat-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .ai-chat-body {
+            padding: 1rem;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .ai-chat-message {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .ai-chat-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #F1F5F9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .ai-chat-bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            background: #F8FAFC;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .ai-chat-message-user {
+            flex-direction: row-reverse;
+        }
+
+        .ai-chat-message-user .ai-chat-bubble {
+            background: #FFF7ED;
+            color: #0F172A;
+        }
+
+        .ai-chat-message-user .ai-chat-avatar {
+            background: #0047AB;
+            color: #fff;
+        }
+
+        .ai-chat-input {
+            padding: 1rem;
+            border-top: 1px solid #E2E8F0;
+            display: flex;
+            gap: 0.5rem;
+            background: #fff;
+        }
+
+        .ai-chat-input input {
+            flex: 1;
+            border: 1px solid #E2E8F0;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            outline: none;
+        }
+
+        .ai-chat-input input:focus {
+            border-color: #0047AB;
+        }
+
+        .ai-chat-send {
+            background: #0047AB;
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .ai-chat-footnote {
+            padding: 0.5rem 1rem;
+            background: #F8FAFC;
+            font-size: 0.75rem;
+            color: #64748B;
+            text-align: center;
+            border-top: 1px solid #E2E8F0;
+        }
+
+        /* =============================================
+           SCROLL ANIMATIONS
+           ============================================= */
+
+        /* Base animation state - hidden before entering viewport */
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        /* Animated state - when element enters viewport */
+        .animate-on-scroll.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Animation variants */
+        .animate-fade-up {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+        }
+
+        .animate-fade-up.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .animate-fade-left {
+            opacity: 0;
+            transform: translateX(-40px);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+        }
+
+        .animate-fade-left.is-visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .animate-fade-right {
+            opacity: 0;
+            transform: translateX(40px);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+        }
+
+        .animate-fade-right.is-visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .animate-scale {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .animate-scale.is-visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Staggered delays for children */
+        .stagger-children>*:nth-child(1) {
+            transition-delay: 0ms;
+        }
+
+        .stagger-children>*:nth-child(2) {
+            transition-delay: 100ms;
+        }
+
+        .stagger-children>*:nth-child(3) {
+            transition-delay: 200ms;
+        }
+
+        .stagger-children>*:nth-child(4) {
+            transition-delay: 300ms;
+        }
+
+        .stagger-children>*:nth-child(5) {
+            transition-delay: 400ms;
+        }
+
+        .stagger-children>*:nth-child(6) {
+            transition-delay: 500ms;
+        }
+
+        .stagger-children>*:nth-child(7) {
+            transition-delay: 600ms;
+        }
+
+        .stagger-children>*:nth-child(8) {
+            transition-delay: 700ms;
+        }
+
+        /* Prefers reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+
+            .animate-on-scroll,
+            .animate-fade-up,
+            .animate-fade-left,
+            .animate-fade-right,
+            .animate-scale {
+                opacity: 1;
+                transform: none;
+                transition: none;
+            }
+        }
+
+        body.no-scroll-animations .animate-on-scroll,
+        body.no-scroll-animations .animate-fade-up,
+        body.no-scroll-animations .animate-fade-left,
+        body.no-scroll-animations .animate-fade-right,
+        body.no-scroll-animations .animate-scale {
+            opacity: 1;
+            transform: none;
+            transition: none;
+        }
+
+        /* === PAGE SPECIFIC ANIMATION VARIANTS === */
+        /* Home Page - Default - Fade Up */
+        body.page-home .animate-on-scroll {
+            transform: translateY(40px);
+        }
+
+        body.page-home .animate-on-scroll.is-visible {
+            transform: translateY(0);
+        }
+
+        /* About Page - Fade Left (Slide in from Right) */
+        body.page-about .animate-on-scroll {
+            transform: translateX(40px);
+        }
+
+        body.page-about .animate-on-scroll.is-visible {
+            transform: translateX(0);
+        }
+
+        /* Contact Page - Scale/Zoom */
+        body.page-contact .animate-on-scroll {
+            transform: scale(0.92);
+        }
+
+        body.page-contact .animate-on-scroll.is-visible {
+            transform: scale(1);
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+
+    {# Google Analytics removed (not used). Keep a stub to avoid breaking inline tracking hooks. #}
+    <script>
+        window.analyticsEvents = { track: function () { } };
+    </script>
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+
+    <!-- Premium Top Bar -->
+    <div class="premium-topbar">
+        <div class="container-fluid px-3 px-lg-5">
+            <div class="topbar-inner">
+                <div class="topbar-left">
+                    <div class="topbar-item">
+                        <i class="far fa-clock"></i>
+                        <span>{{ business_hours|default:default_business_hours }}</span>
+                    </div>
+                    <div class="topbar-divider d-none d-md-block"></div>
+                    <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}" class="topbar-item d-none d-md-flex" style="text-decoration: none;"
+                        data-analytics-event="call_header" data-analytics-category="contact"
+                        data-analytics-label="Header Phone">
+                        <i class="fas fa-phone-alt"></i>
+                        <span>{{ business_contact_phone }}</span>
+                    </a>
+                </div>
+                <div class="topbar-right">
+                    <a href="{% url 'accounts:public_contact' %}" class="topbar-btn contact"
+                        data-analytics-event="parts_desk" data-analytics-category="cta"
+                        data-analytics-label="Header Parts Desk">
+                        <i class="fas fa-headset"></i>
+                        <span>Parts Desk</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stylish Main Navigation -->
+    <nav class="stylish-navbar" id="mainNavbar">
+        <div class="container-fluid px-3 px-lg-5">
+            <div class="navbar-inner">
+                <!-- Brand -->
+                <a class="nav-brand" href="{% url 'accounts:store_product_list' %}">
+                    <img src="{{ company_logo_url|default:default_company_logo_url }}" alt="{{ business_name|default:default_business_name }}">
+                    <div class="brand-text">
+                        <span class="brand-name">{{ business_name|default:default_business_name }}</span>
+                        <span class="brand-tagline">TRUCK, TRAILER &amp; EQUIPMENT PARTS</span>
+                    </div>
+                </a>
+
+                <!-- Desktop Menu -->
+                <div class="desktop-menu d-none d-lg-flex align-items-center">
+                    <ul class="nav-menu">
+                        <li><a href="{% url 'accounts:store_product_list' %}" class="nav-link">Parts</a></li>
+                        <li><a href="{% url 'accounts:public_about' %}" class="nav-link">About</a></li>
+                        <li><a href="{% url 'accounts:public_contact' %}" class="nav-link">Contact</a></li>
+                    </ul>
+                    {% if storefront_selected_profile %}
+                        {% if storefront_has_multiple_locations %}
+                        <div class="dropdown nav-store-dropdown">
+                            <button class="nav-store-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-store"></i>
+                                <span class="store-label">My Store:</span>
+                                <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end nav-store-menu">
+                                {% for profile in storefront_locations %}
+                                <form method="post" action="{% url 'accounts:storefront_location_set' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button class="dropdown-item{% if storefront_selected_profile and profile.user_id == storefront_selected_profile.user_id %} active{% endif %}"
+                                        type="submit" name="storefront_location" value="{{ profile.user_id }}">
+                                        {{ profile.storefront_label }}
+                                    </button>
+                                </form>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="nav-store-dropdown">
+                            <div class="nav-store-toggle nav-store-static">
+                                <i class="fas fa-store"></i>
+                                <span class="store-label">My Store:</span>
+                                <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                    {% if customer_account %}
+                    <a href="{% url 'accounts:store_cart' %}" class="nav-cart" aria-label="Cart">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Cart</span>
+                        <span class="nav-cart-badge" data-cart-count>{{ cart_item_count|default:0 }}</span>
+                    </a>
+                    {% endif %}
+                    {% if customer_account %}
+                    <a href="{% url 'accounts:customer_dashboard' %}" class="nav-cta" data-analytics-event="client_login"
+                        data-analytics-category="cta" data-analytics-label="Desktop Nav My Account">
+                        <span>My Account</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                    {% else %}
+                    <a href="{% url 'accounts:login' %}" class="nav-cta" data-analytics-event="client_login"
+                        data-analytics-category="cta" data-analytics-label="Desktop Nav Client Login">
+                        <span>Client Login</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Mobile Toggle -->
+                <button class="mobile-toggle d-lg-none" type="button" data-bs-toggle="offcanvas"
+                    data-bs-target="#mobileMenu">
+                    <span class="toggle-line"></span>
+                    <span class="toggle-line"></span>
+                    <span class="toggle-line"></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Premium Mobile Menu -->
+    <div class="offcanvas offcanvas-end mobile-menu" tabindex="-1" id="mobileMenu">
+        <div class="mobile-header">
+            <div class="mobile-brand-mini">
+                <img src="{{ company_logo_url|default:default_company_logo_url }}" alt="{{ business_name|default:default_business_name }}">
+                <span>{{ business_name|default:default_business_name }}</span>
+            </div>
+            <button type="button" class="mobile-close" data-bs-dismiss="offcanvas">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="mobile-body">
+            <div class="mobile-nav-links">
+                <a href="{% url 'accounts:store_product_list' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-store"></i></div>
+                    <span>Parts</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                <a href="{% url 'accounts:public_about' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-info-circle"></i></div>
+                    <span>About Us</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                <a href="{% url 'accounts:public_contact' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-envelope"></i></div>
+                    <span>Contact</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                {% if storefront_selected_profile %}
+                <div class="mobile-section-label">Store Location</div>
+                {% if storefront_has_multiple_locations %}
+                <div class="mobile-store-list">
+                    {% for profile in storefront_locations %}
+                    <form method="post" action="{% url 'accounts:storefront_location_set' %}" class="mobile-store-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button class="mobile-store-option{% if storefront_selected_profile and profile.user_id == storefront_selected_profile.user_id %} is-active{% endif %}"
+                            type="submit" name="storefront_location" value="{{ profile.user_id }}">
+                            <span>{{ profile.storefront_label }}</span>
+                            {% if storefront_selected_profile and profile.user_id == storefront_selected_profile.user_id %}
+                            <i class="fas fa-check"></i>
+                            {% else %}
+                            <i class="fas fa-store"></i>
+                            {% endif %}
+                        </button>
+                    </form>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="mobile-store-static">
+                    <i class="fas fa-store"></i>
+                    <span>{{ storefront_selected_profile.storefront_label }}</span>
+                </div>
+                {% endif %}
+                {% endif %}
+                {% if customer_account and customer_account.user.profile.occupation == 'parts_store' %}
+                <div class="mobile-section-label">Account</div>
+                <a href="{% url 'accounts:customer_invoice_list' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <span>Invoices</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                <a href="{% url 'accounts:customer_invoice_statements' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-file-lines"></i></div>
+                    <span>Statements</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                <a href="{% url 'accounts:customer_settlement_summary' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-scale-balanced"></i></div>
+                    <span>Balance</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                <a href="{% url 'accounts:customer_profile' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-gear"></i></div>
+                    <span>Settings</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                {% endif %}
+            </div>
+            <div class="mobile-cta">
+                {% if customer_account %}
+                <a href="{% url 'accounts:customer_dashboard' %}" class="mobile-btn primary"
+                    data-analytics-event="client_login" data-analytics-category="cta"
+                    data-analytics-label="Mobile My Account">
+                    <i class="fas fa-user-circle"></i>
+                    <span>My Account</span>
+                </a>
+                {% else %}
+                <a href="{% url 'accounts:login' %}" class="mobile-btn primary" data-analytics-event="login_mobile"
+                    data-analytics-category="auth" data-analytics-label="Mobile Client Login">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Client Login</span>
+                </a>
+                {% endif %}
+                {% if customer_account %}
+                <a href="{% url 'accounts:store_cart' %}" class="mobile-btn login">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>View Cart</span>
+                    <span class="mobile-cart-badge" data-cart-count>{{ cart_item_count|default:0 }}</span>
+                </a>
+                {% endif %}
+                {% if customer_account %}
+                <a href="{% url 'accounts:logout' %}?next={% url 'accounts:store_product_list' %}" class="mobile-btn login">
+                    <i class="fas fa-arrow-right-from-bracket"></i>
+                    <span>Sign Out</span>
+                </a>
+                {% endif %}
+                <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}" class="mobile-btn secondary" data-analytics-event="call_mobile"
+                    data-analytics-category="contact" data-analytics-label="Mobile Call CTA">
+                    <i class="fas fa-phone"></i>
+                    <span>Call: {{ business_contact_phone }}</span>
+                </a>
+                <a href="{% url 'accounts:public_contact' %}" class="mobile-btn contact"
+                    data-analytics-event="contact_mobile" data-analytics-category="cta"
+                    data-analytics-label="Mobile Contact CTA">
+                    <i class="fas fa-envelope"></i>
+                    <span>Contact Us</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% block navbar_driveon_highlight %}
+    <!-- DriveON Highlight Block (Optional override) -->
+    {% endblock %}
+
+    {% if messages %}
+    <div class="container-fluid px-3 px-lg-5 mt-3">
+        {% for message in messages %}
+            {% if 'error' in message.tags %}
+            <div class="alert alert-danger" role="alert">
+                {{ message }}
+            </div>
+            {% elif 'warning' in message.tags %}
+            <div class="alert alert-warning" role="alert">
+                {{ message }}
+            </div>
+            {% elif 'success' in message.tags %}
+            <div class="alert alert-success" role="alert">
+                {{ message }}
+            </div>
+            {% else %}
+            <div class="alert alert-info" role="alert">
+                {{ message }}
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main id="mainContent">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer-main">
+        <div class="container-fluid px-4 px-lg-5">
+            <div class="row">
+                <!-- Brand -->
+                <div class="col-lg-4 mb-5 mb-lg-0">
+                    <h5 class="text-white mb-4">{{ business_name|default:default_business_name }}</h5>
+                    <p class="mb-4 text-white-50">
+                        Heavy-duty truck parts, accessories, and fleet supplies with fast turnaround and expert
+                        fitment support.
+                    </p>
+                    <div class="social-links">
+                        <a href="#" class="social-icon-btn"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="social-icon-btn"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="social-icon-btn"><i class="fab fa-tiktok"></i></a>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="col-6 col-md-6 col-lg-2 mb-4 mb-lg-0">
+                    <h6 class="footer-heading">Quick Links</h6>
+                    <ul class="footer-links">
+                        <li><a href="{% url 'accounts:public_about' %}">About Us</a></li>
+                        <li><a href="{% url 'accounts:store_product_list' %}">Parts</a></li>
+                        <li><a href="{% url 'accounts:public_contact' %}">Contact</a></li>
+                    </ul>
+                </div>
+
+                <!-- Parts -->
+                <div class="col-6 col-md-6 col-lg-3 mb-4 mb-lg-0">
+                    <h6 class="footer-heading">Parts Catalog</h6>
+                    <ul class="footer-links">
+                        <li><a href="{% url 'accounts:store_product_list' %}">Shop All Parts</a></li>
+                        <li><a href="{% url 'accounts:store_product_list' %}">Browse Categories</a></li>
+                        <li><a href="{% url 'accounts:customer_signup' %}">Fleet Accounts</a></li>
+                        <li><a href="{% url 'accounts:public_contact' %}">Contact Parts Desk</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact -->
+                <div class="col-lg-3">
+                    <h6 class="footer-heading">Contact Us</h6>
+                    <div class="d-flex flex-column gap-3">
+                        <div class="footer-contact-item">
+                            <i class="fas fa-phone footer-contact-icon"></i>
+                            <div>
+                                <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}" class="d-block text-white-50"
+                                    data-analytics-event="call_footer" data-analytics-category="contact"
+                                    data-analytics-label="Footer Phone">{{ business_contact_phone }}</a>
+                            </div>
+                        </div>
+                        <div class="footer-contact-item">
+                            <i class="fas fa-envelope footer-contact-icon"></i>
+                            <a href="mailto:{{ business_contact_email }}" class="text-white-50"
+                                data-analytics-event="email_click" data-analytics-category="contact"
+                                data-analytics-label="{{ business_contact_email }}">{{ business_contact_email }}</a>
+                        </div>
+                        <div class="footer-contact-item">
+                            <i class="fas fa-map-marker-alt footer-contact-icon"></i>
+                            <span class="text-white-50">{{ business_contact_address|linebreaksbr }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parts Badge Row -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <div
+                        class="p-4 rounded-3 bg-brand-navy border border-secondary d-md-flex align-items-center justify-content-between">
+                        <div class="mb-3 mb-md-0">
+                            <span class="badge bg-primary mb-2">PARTS READY</span>
+                            <h5 class="text-white mb-1">Heavy-Duty Parts for Every Fleet</h5>
+                            <p class="text-white-50 mb-0 small">Order online or contact the parts desk for fitment help.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'accounts:store_product_list' %}" class="btn btn-primary btn-sm"
+                                data-analytics-event="shop_parts" data-analytics-category="cta"
+                                data-analytics-label="Footer Shop Parts">Shop
+                                Parts</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <div class="row">
+                    <div class="col-md-6 text-center text-md-start">
+                        <p class="mb-0 text-white-50">&copy; {% now "Y" %} {{ business_name|default:default_business_name }}. All rights
+                            reserved.</p>
+                    </div>
+                    <div class="col-md-6 text-center text-md-end">
+                        <a href="{% url 'accounts:privacy_policy' %}" class="mx-2 text-white-50 small">Privacy</a>
+                        <a href="{% url 'accounts:terms_and_conditions' %}" class="mx-2 text-white-50 small">Terms</a>
+                        <a href="{% url 'accounts:cookies_policy' %}" class="mx-2 text-white-50 small">Cookies</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- AI Chat Assistant -->
+    <button type="button" class="ai-chat-launcher" id="aiChatToggle" aria-label="Open AI assistant">
+        <span class="spark">
+            <img src="{% static 'images/chatbot.png' %}" alt="AI">
+        </span>
+        <span>Ask AI</span>
+    </button>
+
+    <div class="ai-chat-panel" id="aiChatPanel" aria-live="polite" aria-label="AI assistant" role="dialog">
+        <div class="ai-chat-header">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-robot"></i>
+                <div>
+                    <div class="ai-chat-title">{{ business_name|default:default_business_name }} AI</div>
+                    <div class="ai-chat-subtitle small opacity-75">Instant Answers</div>
+                </div>
+            </div>
+            <button class="ai-chat-close" type="button" id="aiChatClose" aria-label="Close chat">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="ai-chat-body" id="aiChatMessages">
+            <div class="ai-chat-message ai-chat-message-bot">
+                <div class="ai-chat-avatar"><i class="fas fa-robot"></i></div>
+                <div class="ai-chat-bubble">Hi! How can I help you find the right truck parts today?</div>
+            </div>
+        </div>
+        <form class="ai-chat-input" id="aiChatForm">
+            <input id="aiChatInput" type="text" placeholder="Type your question..." autocomplete="off">
+            <button class="ai-chat-send" type="submit">Send</button>
+        </form>
+        <div class="ai-chat-footnote">
+            For immediate parts help call <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}" class="text-primary fw-bold">{{ business_contact_phone }}</a>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom Scripts -->
+    <script>
+        // Navbar Scroll Effect
+        const navbar = document.getElementById('mainNavbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // Current Link Active State
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('.nav-link').forEach(link => {
+            if (link.getAttribute('href') === currentPath) {
+                link.classList.add('active');
+            }
+        });
+
+        // AI Chat Logic (Simplified & Preserved)
+        (() => {
+            const panel = document.getElementById('aiChatPanel');
+            const toggle = document.getElementById('aiChatToggle');
+            const closeBtn = document.getElementById('aiChatClose');
+            const form = document.getElementById('aiChatForm');
+            const input = document.getElementById('aiChatInput');
+            const messages = document.getElementById('aiChatMessages');
+
+            // Helper: Get CSRF
+            const getCsrfToken = () => {
+                const match = document.cookie.match(/csrftoken=([^;]+)/);
+                if (match) return decodeURIComponent(match[1]);
+                const meta = document.querySelector('meta[name="csrf-token"]');
+                return meta ? meta.content : '';
+            };
+
+            // Toggle ID
+            toggle.addEventListener('click', () => panel.classList.toggle('is-open'));
+            closeBtn.addEventListener('click', () => panel.classList.remove('is-open'));
+
+            // Send Message
+            const appendMsg = (role, text) => {
+                const div = document.createElement('div');
+                div.className = `ai-chat-message ${role === 'user' ? 'ai-chat-message-user' : 'ai-chat-message-bot'}`;
+                div.innerHTML = `
+                    <div class="ai-chat-avatar"><i class="fas fa-${role === 'user' ? 'user' : 'robot'}"></i></div>
+                    <div class="ai-chat-bubble">${text}</div>
+                `;
+                messages.appendChild(div);
+                messages.scrollTop = messages.scrollHeight;
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const text = input.value.trim();
+                if (!text) return;
+
+                input.value = '';
+                appendMsg('user', text);
+
+                try {
+                    const res = await fetch('/api/public/ai-chat/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: JSON.stringify({ message: text, history: [] }) // Simple history needed?
+                    });
+                    const data = await res.json();
+                    if (data.reply) {
+                        appendMsg('bot', data.reply);
+                    } else {
+                        appendMsg('bot', 'Sorry, I could not connect. Please try again.');
+                    }
+                } catch (err) {
+                    appendMsg('bot', 'Error connecting to server.');
+                }
+            });
+        })();
+
+        // Scroll Animation Observer
+        (() => {
+            if (document.body.classList.contains('no-scroll-animations')) {
+                return;
+            }
+            // Add animation classes to common section elements
+            const animatableSelectors = [
+                'section',
+                '.hero-home-new',
+                '.hero-section',
+                '.catalog-card',
+                '.card',
+                '.row > [class*="col-"]',
+                '.accordion-item',
+                '.faq-item',
+                'header:not(.premium-topbar):not(.stylish-navbar)',
+                '.section-heading',
+                '.section-title',
+                'h2',
+                '.container > .row'
+            ];
+
+            // Find all animatable elements
+            const elements = document.querySelectorAll(animatableSelectors.join(', '));
+
+            elements.forEach(el => {
+                // Skip navigation, topbar, footer elements
+                if (el.closest('.premium-topbar') ||
+                    el.closest('.stylish-navbar') ||
+                    el.closest('.mobile-menu') ||
+                    el.closest('footer') ||
+                    el.closest('.ai-chat-panel')) {
+                    return;
+                }
+
+                // Add the base animation class
+                el.classList.add('animate-on-scroll');
+            });
+
+            // Create Intersection Observer
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        // Optional: stop observing after animation
+                        // observer.unobserve(entry.target);
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: '0px 0px -50px 0px',
+                threshold: 0.1
+            });
+
+            // Observe all animated elements
+            document.querySelectorAll('.animate-on-scroll').forEach(el => {
+                observer.observe(el);
+            });
+        })();
+
+        // Storefront add-to-cart handling (avoid redirect)
+        (() => {
+            const updateCartBadges = (count) => {
+                document.querySelectorAll('[data-cart-count]').forEach(el => {
+                    el.textContent = count;
+                });
+            };
+
+            const getButtonTextEl = (button) => button.querySelector('.btn-text');
+
+            const setButtonLabel = (button, label) => {
+                const textEl = getButtonTextEl(button);
+                if (textEl) {
+                    textEl.textContent = label;
+                    button.setAttribute('aria-label', label);
+                    button.setAttribute('title', label);
+                    return;
+                }
+                button.innerHTML = label;
+            };
+
+            const storeButtonDefaults = (button) => {
+                const textEl = getButtonTextEl(button);
+                if (textEl) {
+                    if (!button.dataset.originalLabel) {
+                        button.dataset.originalLabel = textEl.textContent.trim();
+                    }
+                    return;
+                }
+                if (!button.dataset.originalHtml) {
+                    button.dataset.originalHtml = button.innerHTML;
+                }
+            };
+
+            const restoreButton = (button) => {
+                if (button.dataset.originalLabel) {
+                    setButtonLabel(button, button.dataset.originalLabel);
+                    return;
+                }
+                if (button.dataset.originalHtml) {
+                    button.innerHTML = button.dataset.originalHtml;
+                    return;
+                }
+                button.innerHTML = 'Add to cart';
+            };
+
+            document.querySelectorAll('form[data-add-to-cart]').forEach(form => {
+                form.addEventListener('submit', async (event) => {
+                    if (!window.fetch) {
+                        return;
+                    }
+                    event.preventDefault();
+
+                    const submitBtn = form.querySelector('[type="submit"]');
+                    if (submitBtn) {
+                        storeButtonDefaults(submitBtn);
+                        submitBtn.disabled = true;
+                        setButtonLabel(submitBtn, submitBtn.dataset.loadingLabel || 'Adding...');
+                    }
+
+                    const formData = new FormData(form);
+                    const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]')?.value;
+
+                    try {
+                        const response = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRFToken': csrfToken || '',
+                                'Accept': 'application/json',
+                            },
+                            body: formData,
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Add to cart failed');
+                        }
+
+                        const data = await response.json();
+                        if (data && typeof data.cart_count !== 'undefined') {
+                            updateCartBadges(data.cart_count);
+                        }
+                        if (data && typeof data.product_id !== 'undefined') {
+                            const productId = String(data.product_id);
+                            document.querySelectorAll(`[data-cart-slot][data-product-id="${productId}"]`).forEach(slot => {
+                                slot.classList.add('is-in-cart');
+                            });
+                        }
+
+                        if (submitBtn) {
+                            setButtonLabel(submitBtn, submitBtn.dataset.successLabel || 'Added');
+                        }
+                    } catch (err) {
+                        if (submitBtn) {
+                            restoreButton(submitBtn);
+                            submitBtn.disabled = false;
+                        }
+                        form.submit();
+                        return;
+                    }
+
+                    if (submitBtn) {
+                        setTimeout(() => {
+                            submitBtn.disabled = false;
+                            restoreButton(submitBtn);
+                        }, 1200);
+                    }
+                });
+            });
+        })();
+
+        // Analytics event wiring
+        (() => {
+            const track = (name, meta = {}) => {
+                if (window.analyticsEvents && typeof window.analyticsEvents.track === 'function') {
+                    window.analyticsEvents.track(name, meta);
+                }
+            };
+
+            document.querySelectorAll('[data-analytics-event]').forEach(el => {
+                const eventName = el.getAttribute('data-analytics-event');
+                if (!eventName) return;
+
+                const category = el.getAttribute('data-analytics-category') || 'engagement';
+                const label = el.getAttribute('data-analytics-label');
+                const value = el.getAttribute('data-analytics-value');
+
+                el.addEventListener('click', () => {
+                    const payload = { event_category: category };
+                    if (label) payload.event_label = label;
+                    if (value && !Number.isNaN(Number(value))) {
+                        payload.value = Number(value);
+                    }
+                    track(eventName, payload);
+                });
+            });
+
+            const chatToggle = document.getElementById('aiChatToggle');
+            if (chatToggle) {
+                chatToggle.addEventListener('click', () => track('ai_chat_open', { event_category: 'engagement' }));
+            }
+        })();
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

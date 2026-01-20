@@ -1,0 +1,118 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+
+{% block title %}Supplier Credits{% endblock %}
+
+{% block content %}
+<style>
+  .credit-shell { display: flex; flex-direction: column; gap: 1rem; }
+  .credit-card { border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; box-shadow: 0 12px 30px rgba(15,23,42,0.06); padding: 1rem; }
+  .credit-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; width: 100%; }
+  .search-box { flex: 1; min-width: 240px; display: flex; align-items: center; gap: 0.5rem; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.45rem 0.65rem; background: #f8fafc; }
+  .search-box input { border: none; background: transparent; width: 100%; outline: none; }
+  .pill-btn { border-radius: 12px; padding: 0.42rem 0.9rem; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; font-size: 0.92rem; box-shadow: 0 10px 18px rgba(15,23,42,0.06); }
+  .pill-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: #fff; border-radius: 12px; padding: 0.45rem 0.95rem; font-weight: 700; font-size: 0.92rem; box-shadow: 0 12px 24px rgba(37,99,235,0.18); }
+  .filter-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; width: 100%; }
+  .filter-item { min-width: 160px; flex: 1 1 180px; }
+  .filter-item label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; margin-bottom: 0.2rem; display: block; }
+  .filter-item select { border-radius: 10px; border: 1px solid #e2e8f0; padding: 0.45rem 0.6rem; font-size: 0.92rem; background: #fff; }
+  .credit-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .credit-table th { text-align: left; padding: 0.75rem; color: #64748b; background: #f1f5f9; font-weight: 700; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+  .credit-table td { padding: 0.75rem; border-bottom: 1px solid #f1f5f9; }
+  .credit-table tr:nth-child(even) td { background: #f8fafc; }
+</style>
+
+<div class="page-shell credit-shell">
+  <div class="page-header">
+    <div>
+      <h2 class="mb-0">Supplier Credits</h2>
+      <div class="text-muted small">Track returns and adjustments by supplier.</div>
+    </div>
+    <div class="page-toolbar">
+      <a href="{% url 'accounts:supplier_credit_add' %}" class="pill-primary btn btn-sm">
+        <i class="fas fa-plus-circle me-1"></i>Add supplier credit
+      </a>
+      <a href="{% url 'accounts:supplier_cheque_list' %}" class="pill-btn btn btn-sm">
+        <i class="fas fa-money-check me-1"></i>Cheques
+      </a>
+      <a href="{% url 'accounts:mechexpense_list' %}" class="pill-btn btn btn-sm">
+        <i class="fas fa-receipt me-1"></i>Expenses
+      </a>
+    </div>
+  </div>
+
+  <div class="credit-card">
+    <form method="GET" class="credit-toolbar" action="{% url 'accounts:supplier_credit_list' %}">
+      <div class="search-box">
+        <i class="fa fa-search text-muted"></i>
+        <input type="text" name="search" placeholder="Search credits..." value="{{ search_query }}">
+      </div>
+      <div class="filter-row">
+        <div class="filter-item">
+          <label for="period-filter">Period</label>
+          <select name="period" id="period-filter" data-select2-skip="true">
+            <option value="">All time</option>
+            <option value="today" {% if selected_period == 'today' %}selected{% endif %}>Today</option>
+            <option value="yesterday" {% if selected_period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+            <option value="this_week" {% if selected_period == 'this_week' %}selected{% endif %}>This week</option>
+            <option value="last_week" {% if selected_period == 'last_week' %}selected{% endif %}>Last week</option>
+            <option value="this_month" {% if selected_period == 'this_month' %}selected{% endif %}>This month</option>
+            <option value="last_month" {% if selected_period == 'last_month' %}selected{% endif %}>Last month</option>
+            <option value="1y" {% if selected_period == '1y' %}selected{% endif %}>Last 12 months</option>
+            <option value="this_year" {% if selected_period == 'this_year' %}selected{% endif %}>This year</option>
+            <option value="last_year" {% if selected_period == 'last_year' %}selected{% endif %}>Last year</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label for="supplier-filter">Supplier</label>
+          <select name="supplier" id="supplier-filter">
+            <option value="">All suppliers</option>
+            {% for supplier in supplier_options %}
+              <option value="{{ supplier }}" {% if selected_supplier == supplier %}selected{% endif %}>{{ supplier }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="pill-btn btn btn-sm">Filter</button>
+    </form>
+
+    <div class="mt-3">
+      <table class="credit-table">
+        <thead>
+          <tr>
+            <th>Credit #</th>
+            <th>Date</th>
+            <th>Supplier</th>
+            <th class="text-end">Total</th>
+            <th class="text-end">Applied</th>
+            <th class="text-end">Available</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for credit in object_list %}
+          <tr>
+            <td>
+              <a href="{% url 'accounts:supplier_credit_detail' credit.pk %}" class="btn btn-outline-primary btn-sm">{{ credit.credit_no }}</a>
+            </td>
+            <td>{{ credit.date|date:"M d, Y" }}</td>
+            <td>{{ credit.supplier_name|default:credit.supplier|default:"-" }}</td>
+            <td class="text-end">{{ credit.total_incl_tax|currency }}</td>
+            <td class="text-end">{{ credit.applied_total|currency }}</td>
+            <td class="text-end">{{ credit.available_total|currency }}</td>
+            <td class="text-center">
+              <a href="{% url 'accounts:supplier_credit_edit' credit.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+              <a href="{% url 'accounts:supplier_credit_delete' credit.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted">No supplier credits found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

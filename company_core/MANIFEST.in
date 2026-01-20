@@ -1,0 +1,4 @@
+﻿recursive-include accounts/templates *
+recursive-include accounts/static *
+recursive-include api/templates *
+recursive-include api/static *

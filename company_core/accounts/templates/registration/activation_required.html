@@ -1,0 +1,36 @@
+<!-- templates/registration/activation_required.html -->
+
+{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white d-flex align-items-center">
+                    <i class="bi bi-envelope-fill me-2"></i>
+                    <h4 class="mb-0">Email Confirmation Required</h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <p class="lead">Hello, <strong>{{ user.first_name }}</strong>!</p>
+                    <p>Thank you for registering with <strong>{{ business_name|default:default_business_name }}</strong>. To activate your account and gain full access to all features, please confirm your email address.</p>
+                    <p><strong>Check your inbox</strong> for an activation email containing a confirmation link. If you don't see it:</p>
+                    <ul>
+                        <li>Check your <strong>spam or junk</strong> folder.</li>
+                        <li>Ensure that you entered the correct email address during registration.</li>
+                    </ul>
+                    <p>If you still haven't received the activation email, you can resend it by clicking the button below:</p>
+                    <div class="text-center mt-4">
+                        <a href="{% url 'accounts:resend_activation' %}" class="btn btn-info">
+                            <i class="bi bi-envelope-check me-2"></i> Resend Activation Email
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

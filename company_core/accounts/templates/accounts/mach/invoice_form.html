@@ -1,0 +1,453 @@
+{% extends "accounts/mach/mach_portal_base.html" %}
+{% load static %}
+
+{% block title %}
+Generate Invoice
+{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Generate Invoice</h1>
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Invoices</h3>
+            <div class="form-group">
+                <label for="selectMonth">Select Month:</label>
+                <select id="selectMonth" class="form-control">
+                    <option value="">--Select Month--</option>
+                    {% for month in months %}
+                    <option value="{{ month|date:"Y-m" }}">{{ month|date:"F Y" }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="selectDate">Select Date:</label>
+                <select id="selectDate" class="form-control">
+                    <option value="">--Select Date--</option>
+                </select>
+            </div>
+            <ul id="invoiceList" class="list-group"></ul>
+        </div>
+        <div id="invoiceDetails" class="col-md-6">
+            <div class="form-group">
+                <label for="invoiceNumber">Invoice Number:</label>
+                <input type="text" id="invoiceNumber" class="form-control" disabled>
+            </div>
+            <div class="form-group">
+                <label for="invoiceDate">Date:</label>
+                <input type="date" id="invoiceDate" class="form-control" disabled>
+            </div>
+            <div class="form-group">
+                <label for="mileage">Mileage (km):</label>
+                <input type="text" id="mileage" class="form-control" placeholder="km" disabled>
+            </div>
+            <div class="form-group">
+                <label for="unit">Unit No:</label>
+                <input type="text" id="unit" class="form-control" placeholder="unit no" disabled>
+            </div>
+            <div class="form-group">
+                <label for="vin">Vin No:</label>
+                <input type="text" id="vin" class="form-control" placeholder="vin no" disabled>
+            </div>
+            <div class="form-group">
+                <label for="bill_to">Bill To:</label>
+                <input type="text" id="bill_to" class="form-control" disabled>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Description</th>
+                            <th>Qty</th>
+                            <th>Rate</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoiceJobs"></tbody>
+                </table>
+            </div>
+            <div id="invoiceSummary" class="mt-3" style="display: none;">
+                <div id="partsLaborBreakdown" class="mb-2" style="display: none;">
+                    <p><strong>Labor Subtotal:</strong> $<span id="laborSubtotalDisplay">0.00</span></p>
+                    <p><strong>Parts Subtotal:</strong> $<span id="partsSubtotalDisplay">0.00</span></p>
+                </div>
+                <p><strong>Subtotal:</strong> $<span id="subtotalDisplay">0.00</span></p>
+                <p><strong>Tax:</strong> $<span id="taxDisplay">0.00</span></p>
+                <p><strong>Total Due:</strong> $<span id="totalDueDisplay">0.00</span></p>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="paidCheckbox">
+                <label class="form-check-label" for="paidCheckbox">Paid</label>
+            </div>
+            <button type="button" class="btn btn-primary mt-3" onclick="generateInvoice()">Generate Invoice</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const TAX_RATE = 0.05;
+document.addEventListener('DOMContentLoaded', function () {
+    const selectMonth = document.getElementById('selectMonth');
+    const selectDate = document.getElementById('selectDate');
+    const currentMonth = new Date().toISOString().slice(0, 7); // Current year-month
+    const currentDate = new Date().toISOString().slice(0, 10); // Current date
+
+    selectMonth.value = currentMonth;
+    fetchDates(currentMonth, currentDate);
+
+    selectMonth.addEventListener('change', function () {
+        const month = this.value;
+        if (month) {
+            fetchDates(month);
+        } else {
+            selectDate.innerHTML = '<option value="">--Select Date--</option>';
+            document.getElementById('invoiceList').innerHTML = '';
+        }
+    });
+
+    selectDate.addEventListener('change', function () {
+        const date = this.value;
+        if (date) {
+            fetchInvoices(date);
+        } else {
+            document.getElementById('invoiceList').innerHTML = '';
+        }
+    });
+});
+
+function fetchDates(month, defaultDate = null) {
+    fetch(`/get-invoice-dates/${month}/`)
+        .then(response => response.json())
+        .then(dates => {
+            const selectDate = document.getElementById('selectDate');
+            selectDate.innerHTML = '<option value="">--Select Date--</option>';
+            dates.forEach(date => {
+                const option = document.createElement('option');
+                option.value = date;
+                option.textContent = new Date(date).toLocaleDateString();
+                selectDate.appendChild(option);
+            });
+            if (defaultDate) {
+                selectDate.value = defaultDate;
+                fetchInvoices(defaultDate);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function fetchInvoices(date) {
+    fetch(`/get-invoices/${date}/`)
+        .then(response => response.json())
+        .then(invoices => {
+            const invoiceList = document.getElementById('invoiceList');
+            invoiceList.innerHTML = '';
+            document.getElementById('invoiceJobs').innerHTML = '';
+            updateInvoiceSummary();
+            invoices.forEach(invoice => {
+                const li = document.createElement('li');
+                li.classList.add('list-group-item');
+                const link = document.createElement('a');
+                link.href = '#';
+                link.setAttribute('data-invoice-id', invoice.id);
+                link.textContent = invoice.bill_to;
+                link.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    const invoiceId = this.getAttribute('data-invoice-id');
+                    fetch(`/get-invoice-details/${invoiceId}/`)
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById('invoiceNumber').value = data.invoice_number;
+                            document.getElementById('invoiceDate').value = data.date;
+                            document.getElementById('mileage').value = data.mileage;
+                            document.getElementById('unit').value = data.unit_no;
+                            document.getElementById('vin').value = data.vin_no;
+                            document.getElementById('bill_to').value = data.bill_to;
+
+                            const invoiceJobs = document.getElementById('invoiceJobs');
+                            invoiceJobs.innerHTML = '';
+                            data.jobs.forEach(job => {
+                                const isPart = Boolean(
+                                    job.is_part ?? job.isPart ?? job.has_part ?? job.hasPart ?? job.product_id ?? job.productId ?? job.product
+                                );
+                                const totalRaw = job.total ?? ((parseFloat(job.qty) || 0) * (parseFloat(job.rate) || 0));
+                                const parsedTotal = Number.isFinite(totalRaw) ? totalRaw : parseFloat(totalRaw);
+                                const totalValue = Number.isFinite(parsedTotal) ? parsedTotal : 0;
+                                invoiceJobs.innerHTML += `
+                                    <tr data-is-part="${isPart ? 'true' : 'false'}">
+                                        <td>${job.description}</td>
+                                        <td>${job.qty}</td>
+                                        <td>${job.rate}</td>
+                                        <td>${totalValue.toFixed(2)}</td>
+                                    </tr>`;
+                            });
+                            updateInvoiceSummary();
+                        })
+                        .catch(error => console.error('Error:', error));
+                });
+                li.appendChild(link);
+                invoiceList.appendChild(li);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function calculateInvoiceTotals() {
+    const rows = document.querySelectorAll('tbody#invoiceJobs tr');
+    let subtotal = 0;
+    let partsSubtotal = 0;
+
+    rows.forEach(row => {
+        const qty = parseFloat(row.cells[1].innerText) || 0;
+        const rate = parseFloat(row.cells[2].innerText) || 0;
+        const total = qty * rate;
+        subtotal += total;
+        if (row.dataset.isPart === 'true') {
+            partsSubtotal += total;
+        }
+    });
+
+    const laborSubtotal = subtotal - partsSubtotal;
+    const tax = subtotal * TAX_RATE;
+    const totalDue = subtotal + tax;
+
+    return {
+        subtotal,
+        tax,
+        totalDue,
+        partsSubtotal,
+        laborSubtotal,
+        hasParts: partsSubtotal > 0,
+        hasRows: rows.length > 0,
+    };
+}
+
+function updateInvoiceSummary(totals = null) {
+    const summaryContainer = document.getElementById('invoiceSummary');
+    const breakdown = document.getElementById('partsLaborBreakdown');
+    const laborDisplay = document.getElementById('laborSubtotalDisplay');
+    const partsDisplay = document.getElementById('partsSubtotalDisplay');
+    const subtotalDisplay = document.getElementById('subtotalDisplay');
+    const taxDisplay = document.getElementById('taxDisplay');
+    const totalDueDisplay = document.getElementById('totalDueDisplay');
+
+    const computedTotals = totals || calculateInvoiceTotals();
+
+    if (!summaryContainer || !subtotalDisplay || !taxDisplay || !totalDueDisplay) {
+        return computedTotals;
+    }
+
+    if (!computedTotals.hasRows) {
+        summaryContainer.style.display = 'none';
+        if (breakdown) {
+            breakdown.style.display = 'none';
+        }
+        if (laborDisplay) {
+            laborDisplay.textContent = '0.00';
+        }
+        if (partsDisplay) {
+            partsDisplay.textContent = '0.00';
+        }
+        subtotalDisplay.textContent = '0.00';
+        taxDisplay.textContent = '0.00';
+        totalDueDisplay.textContent = '0.00';
+        return computedTotals;
+    }
+
+    summaryContainer.style.display = 'block';
+
+    if (computedTotals.hasParts && breakdown && laborDisplay && partsDisplay) {
+        breakdown.style.display = 'block';
+        laborDisplay.textContent = computedTotals.laborSubtotal.toFixed(2);
+        partsDisplay.textContent = computedTotals.partsSubtotal.toFixed(2);
+    } else if (breakdown) {
+        breakdown.style.display = 'none';
+    }
+
+    subtotalDisplay.textContent = computedTotals.subtotal.toFixed(2);
+    taxDisplay.textContent = computedTotals.tax.toFixed(2);
+    totalDueDisplay.textContent = computedTotals.totalDue.toFixed(2);
+
+    return computedTotals;
+}
+
+function generateInvoice() {
+    const invoiceNumber = document.getElementById('invoiceNumber').value;
+    const invoiceDate = document.getElementById('invoiceDate').value;
+    const mileage = document.getElementById('mileage').value;
+    const unit = document.getElementById('unit').value;
+    const vin = document.getElementById('vin').value;
+    const billTo = document.getElementById('bill_to').value;
+    const isPaid = document.getElementById('paidCheckbox').checked;
+    const paidImageDisplayStyle = isPaid ? 'https://i.imgur.com/bCAo1hr.png' : '';
+
+    const checkedRows = document.querySelectorAll('tbody#invoiceJobs tr');
+    let invoiceItems = '';
+    checkedRows.forEach((row) => {
+        const description = row.cells[0].innerText;
+        const qty = parseFloat(row.cells[1].innerText);
+        const rate = parseFloat(row.cells[2].innerText);
+        const total = qty * rate;
+        invoiceItems += `<tr>
+            <td>${description}</td>
+            <td>${qty}</td>
+            <td>${rate}</td>
+            <td>${total.toFixed(2)}</td>
+        </tr>`;
+    });
+
+    const totals = updateInvoiceSummary();
+    const subtotal = totals.subtotal;
+    const tax = totals.tax;
+    const totalDue = totals.totalDue;
+    const breakdownHTML = totals.hasParts ? `
+                    <p>Labor Subtotal: ${totals.laborSubtotal.toFixed(2)}</p>
+                    <p>Parts Subtotal: ${totals.partsSubtotal.toFixed(2)}</p>` : '';
+    const invoiceHTML = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Invoice</title>
+            <style>
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    padding: 40px;
+                    background-color: #f9f9f9;
+                    color: #333;
+                }
+                .invoice-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 40px;
+                }
+                .invoice-header h2 {
+                    font-size: 24px;
+                    color: #333;
+                }
+                .invoice-logo img, .paid-stamp img {
+                    height: 200px;
+                }
+                .invoice-logo, .contact-info {
+                    text-align: right;
+                }
+                .contact-info p {
+                    margin: 4px 0;
+                    font-size: 14px;
+                    color: #666;
+                }
+                .contact-info {
+                    display: inline-block;
+                    text-align: right;
+                    max-width: 100%;
+                }
+                .contact-info p {
+                    max-width: 250px;
+                    line-height: 1.5;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+                th, td {
+                    border: 1px solid #ccc;
+                    padding: 12px 8px;
+                    text-align: left;
+                }
+                th {
+                    background-color: #007bff;
+                    color: #ffffff;
+                }
+                tr:nth-child(even) {
+                    background-color: #f2f2f2;
+                }
+                .bill-margin {
+                    margin: 20px 0;
+                    padding-left: 20px;
+                    border-left: 4px solid #007bff;
+                }
+                .subtotal-margin, .subtotal-and-paid-container {
+                    margin: 10px 0;
+                    padding: 20px;
+                    background-color: #f2f2f2;
+                    border-radius: 8px;
+                }
+                .subtotal-and-paid-container {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .paid-stamp {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    padding: 20px;
+                }
+                #paidImage {
+                    max-height: 130px;
+                }
+                @media print {
+                    body, .invoice-header, .invoice-logo img, .contact-info, .contact-info p, table, th, td, .bill-margin, .subtotal-margin, .subtotal-and-paid-container, .paid-stamp, .paid-stamp img {
+                        -webkit-print-color-adjust: exact;
+                        color-adjust: exact;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="invoice-header">
+                <div>
+                    <h2>Invoice</h2>
+                    <p><strong>Bill To:</strong></p><div class="bill-margin"><pre>${billTo}</pre></div>
+                    <p><strong>Date:</strong> ${invoiceDate}</p>
+                    <p><strong>Invoice Number:</strong> ${invoiceNumber}</p>
+                    <p><strong>Unit no:</strong> ${unit}</p>
+                    <p><strong>Milage(km):</strong> ${mileage}</p>
+                    <p><strong>Vin no:</strong> ${vin}</p> 
+                </div>
+                <div>
+                    <div class="invoice-logo">
+                        <img src="{{ company_logo_url|default:default_company_logo_url|escapejs }}" alt="Company Logo">
+                    </div>
+                    <div class="contact-info">
+                        <p>67 cityline point NE<br>
+                            Calgary, AB T3N2H6<br>
+                            tel     - (403)397-0442<br>
+                            - (647)296-6846<br>
+                            email - roadlink016@gmail.com<br>
+                            gst/hst no - 789044757 RT0001<br></p>
+                    </div>
+                </div>
+            </div>
+            <div class="subtotal-and-paid-container">
+                <div class="subtotal-margin">
+                    ${breakdownHTML}
+                    <p>Subtotal: ${subtotal.toFixed(2)}</p>
+                    <p>Tax: ${tax.toFixed(2)}</p>
+                    <p><strong>Total Due: ${totalDue.toFixed(2)}</strong></p>
+                </div>
+                <div class="paid-stamp">
+                    <img src="${paidImageDisplayStyle}" id="paidImage" style="display:block;">
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Qty</th>
+                        <th>Rate</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>${invoiceItems}</tbody>
+            </table>
+        </body>
+        </html>`;
+
+    const invoiceWindow = window.open('', '_blank');
+    invoiceWindow.document.write(invoiceHTML);
+    invoiceWindow.document.close();
+}
+</script>
+{% endblock %}

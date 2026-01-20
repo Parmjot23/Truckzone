@@ -1,0 +1,73 @@
+{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">{% if mode == 'edit' %}Edit{% else %}Add{% endif %} Employee</h2>
+            <div class="text-muted small">Hourly payroll profile.</div>
+        </div>
+    </div>
+
+    {% include 'payroll/_nav.html' %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Linked mechanic (optional)</label>
+                        {{ form.mechanic }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Role</label>
+                        {{ form.role }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">First name</label>
+                        {{ form.first_name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Last name</label>
+                        {{ form.last_name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        {{ form.email }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phone</label>
+                        {{ form.phone }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Hourly rate</label>
+                        {{ form.hourly_rate }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        {{ form.status }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Hire date</label>
+                        {{ form.hire_date }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Termination date</label>
+                        {{ form.termination_date }}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Notes</label>
+                        {{ form.notes }}
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a href="{% url 'accounts:employee_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

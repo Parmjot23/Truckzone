@@ -1,0 +1,192 @@
+{# templates/emails/invoice_email_unpaid.html #}
+{% load custom_filters %}
+{% with brand=profile.invoice_header_color|default:"#4a90e2" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice #{{ invoice.invoice_number }} – {{ profile.company_name }}</title>
+
+  <!-- Google Font (widely supported) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+
+  <style>
+    /* --------- BASIC RESET --------- */
+    html,body{margin:0;padding:0;width:100%;background:#f3f5f9;font-family:"Inter",Arial,sans-serif;color:#333;}
+    table{border-collapse:collapse;width:100%;}
+    a{color:{{ brand }};text-decoration:none;}
+
+    /* --------- CARD LAYOUT --------- */
+    .wrapper{max-width:680px;margin:40px auto;background:#fff;border-radius:10px;
+             border:1px solid #e5e8ef;box-shadow:0 6px 18px rgba(0,0,0,.06);overflow:hidden;}
+    .content{padding:40px;}
+
+    /* --------- HEADER --------- */
+    .header{display:flex;align-items:center;gap:18px;margin-bottom:32px;padding-bottom:20px;
+            border-bottom:4px solid {{ brand }};}
+    .header img{max-height:64px;}
+    .header h1{margin:0;font-size:28px;color:{{ brand }};font-weight:700;}
+
+    /* --------- TEXT --------- */
+    p{margin:0 0 18px;font-size:15px;line-height:1.55;}
+    .greeting{font-size:16px;font-weight:500;}
+
+    /* --------- BADGE --------- */
+    .badge{display:inline-block;background:{{ brand }};color:#fff;padding:4px 10px;border-radius:4px;
+           font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+
+    /* --------- SUMMARY --------- */
+    .summary{background:#fbfcff;border:1px solid #e5e8ef;border-radius:10px;padding:22px;margin:24px 0;}
+    .summary-row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:10px;}
+    .summary-row strong{font-weight:600;}
+
+    /* --------- TOTAL AMOUNT DUE --------- */
+    .total-due{background:#d93025;color:#fff;text-align:center;border-radius:10px;
+               padding:22px;font-size:22px;font-weight:700;letter-spacing:.2px;margin:28px 0 32px;}
+
+    /* --------- TABLE --------- */
+    th,td{padding:14px 10px;font-size:14px;border-bottom:1px solid #e5e8ef;}
+    th{background:{{ brand }};color:#fff;text-align:left;font-weight:600;}
+    th:nth-child(n+2),td:nth-child(n+2){text-align:right;}
+    tbody tr:nth-child(even){background:#fafbfe;}
+
+    /* --------- BUTTON (Stripe payment link) --------- */
+    .btn{display:inline-block;background:#28a745;color:#fff;font-size:16px;font-weight:600;
+         padding:16px 34px;border-radius:6px;margin:32px 0;text-align:center;}
+    .btn:hover{opacity:.9;}
+
+    /* --------- SMALL PRINT --------- */
+    .note{font-size:13px;color:#5f6b7a;margin:24px 0;}
+
+    /* --------- FOOTER --------- */
+    .footer{background:#f0f2f7;color:#8d96a6;font-size:12px;text-align:center;
+            padding:20px;border-top:1px solid #e5e8ef;}
+
+    /* --------- MOBILE --------- */
+    @media(max-width:520px){
+      .content{padding:24px;}
+      .header{flex-direction:column;align-items:flex-start;gap:12px;}
+      .total-due{font-size:18px;padding:18px;}
+      th,td{font-size:13px;}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="content">
+
+      <!-- Header -->
+      <div class="header">
+        {% if company_logo_url %}
+          <img src="{{ company_logo_url }}" alt="{{ profile.company_name }} logo">
+        {% endif %}
+        <h1>Invoice #{{ invoice.invoice_number }}</h1>
+      </div>
+
+      <!-- Greeting -->
+      <p class="greeting">Hello {{ invoice.bill_to }},</p>
+      <p>Thank you for trusting <strong>{{ profile.company_name }}</strong>. Below is a summary of your invoice; we appreciate your prompt attention.</p>
+
+      {% if profile.term %}
+        <span class="badge">Due – {{ profile.get_term_display }}</span>
+      {% endif %}
+
+      <!-- Summary -->
+      <div class="summary">
+        <div class="summary-row"><strong>Date&nbsp;Issued:</strong><span>{{ invoice.date }}</span></div>
+        {% if profile.term %}
+          <div class="summary-row"><strong>Due&nbsp;Date:</strong><span>{{ profile.get_term_display }}</span></div>
+        {% endif %}
+        {% if invoice.is_subscription %}
+          <div class="summary-row"><strong>Payment&nbsp;Type:</strong><span>Subscription – {{ invoice.get_subscription_frequency_display }}</span></div>
+        {% else %}
+          <div class="summary-row"><strong>Payment&nbsp;Type:</strong><span>One-time</span></div>
+        {% endif %}
+        <div class="summary-row"><strong>Subtotal:</strong><span>{{ subtotal|currency }}</span></div>
+        <div class="summary-row"><strong>{{ profile.get_tax_name }}:</strong><span>{{ tax|currency }}</span></div>
+      </div>
+
+      <!-- Total Amount Due -->
+      <div class="total-due">Total&nbsp;Amount&nbsp;Due&nbsp;&nbsp;{{ total_amount|currency }}</div>
+
+      {% if profile.show_note and profile.note %}
+        <p class="note"><strong>Note:</strong> {{ profile.note|linebreaksbr }}</p>
+      {% endif %}
+
+      <!-- CTA / Payment Instructions -->
+        {# -- Payment instructions ---------------------------------------------- #}
+        {% with payment_link=invoice.payment_link %}
+          {% if profile.send_payment_link_email and payment_link %}
+            <a href="{{ payment_link }}" class="btn">Pay Online</a>
+            <p class="note"
+               style="background:#d4edda;border:1px solid #c3e6cb;border-radius:8px;
+                      padding:18px;color:#155724;">
+              Or send an Interac e‑Transfer to
+              <a href="mailto:{{ profile.interact_email }}"
+                 style="color:#155724;font-weight:600;">
+                 {{ profile.interact_email }}
+              </a>.
+            </p>
+          {% else %}
+            {# Either the flag is off or there’s no online link → fallback to e‑Transfer only #}
+            <p class="note"
+               style="background:#d4edda;border:1px solid #c3e6cb;border-radius:8px;
+                      padding:18px;color:#155724;">
+              <strong>How&nbsp;to&nbsp;Pay:</strong>&nbsp;please send an Interac e‑Transfer to
+              <a href="mailto:{{ profile.interact_email }}"
+                 style="color:#155724;font-weight:600;">
+                 {{ profile.interact_email }}
+              </a>.
+            </p>
+          {% endif %}
+        {% endwith %}
+
+
+      <!-- Line items -->
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Rate</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in invoice.income_records.all %}
+            <tr>
+              <td>{{ job.job|linebreaksbr }}</td>
+              <td>{{ job.qty }}</td>
+              <td>{{ job.rate|currency }}</td>
+              <td>{{ job.amount|currency }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" style="text-align:center;padding:20px;color:#8d96a6;">
+                No billable items.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <p>Questions?  Just reply to this e-mail or reach us at
+        <a href="mailto:{{ profile.company_email }}">{{ profile.company_email }}</a>.
+      </p>
+      <p>We appreciate your business!</p>
+
+    </div>
+    <div class="footer">
+      &copy;&nbsp;{{ now|date:"Y" }} {{ profile.company_name }} &nbsp;•&nbsp;
+      <a href="https://www.smart-invoices.com" style="color:inherit;text-decoration:none;">
+        www.smart-invoices.com
+      </a>
+    </div>
+  </div>
+  {% if invoice_open_tracking_url %}
+    <img src="{{ invoice_open_tracking_url }}" alt="" width="1" height="1" style="display:none;">
+  {% endif %}
+</body>
+</html>
+{% endwith %}

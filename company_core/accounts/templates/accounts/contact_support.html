@@ -1,0 +1,159 @@
+<!-- company_core/accounts/templates/accounts/contact_support.html -->
+{% extends "base.html" %}
+
+{% block title %}Contact Support{% endblock %}
+
+{% block content %}
+<style>
+    .form-container {
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .form-container h2 {
+        margin-bottom: 20px;
+        font-size: 24px;
+        text-align: center;
+        color: #333;
+    }
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #555;
+    }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+        border-color: #80bdff;
+        outline: none;
+    }
+    .form-button {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 18px;
+        cursor: pointer;
+    }
+    .form-button:hover {
+        background-color: #0056b3;
+    }
+    .messages {
+        margin-bottom: 20px;
+        padding: 10px;
+        border: 1px solid #d4edda;
+        border-radius: 4px;
+        color: #155724;
+        background-color: #d4edda;
+    }
+</style>
+
+<div class="form-container">
+    <h2>Contact Support</h2>
+    {% with subject_value=form.subject.value reference_value=form.reference_code.value %}
+        {% if subject_value %}
+            <div class="alert alert-info small" role="note">
+                <strong>Regarding:</strong>
+                {{ subject_value }}
+                {% if reference_value %}
+                    <span class="d-block">Reference ID: {{ reference_value }}</span>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    {% if messages %}
+        <div class="messages" id="message-container">
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger small">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="form-group">
+            <label for="id_message_type">{{ form.message_type.label }}</label>
+            {{ form.message_type }}
+            {% if form.message_type.errors %}
+                <div class="text-danger small">{{ form.message_type.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_reference_code">{{ form.reference_code.label }}</label>
+            {{ form.reference_code }}
+            {% if form.reference_code.errors %}
+                <div class="text-danger small">{{ form.reference_code.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_subject">{{ form.subject.label }}</label>
+            {{ form.subject }}
+            {% if form.subject.errors %}
+                <div class="text-danger small">{{ form.subject.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_full_name">{{ form.full_name.label }}</label>
+            {{ form.full_name }}
+            {% if form.full_name.errors %}
+                <div class="text-danger small">{{ form.full_name.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_email">{{ form.email.label }}</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+                <div class="text-danger small">{{ form.email.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_phone">{{ form.phone.label }}</label>
+            {{ form.phone }}
+            {% if form.phone.errors %}
+                <div class="text-danger small">{{ form.phone.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_message">{{ form.message.label }}</label>
+            {{ form.message }}
+            {% if form.message.errors %}
+                <div class="text-danger small">{{ form.message.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        <input type="hidden" name="service_type" value="{{ service_type }}">
+        <button type="submit" class="form-button">Submit</button>
+    </form>
+</div>
+
+<script>
+    window.addEventListener('DOMContentLoaded', (event) => {
+        const messageContainer = document.getElementById('message-container');
+        if (messageContainer) {
+            setTimeout(() => {
+                messageContainer.style.display = 'none';
+            }, 3000);
+        }
+    });
+</script>
+{% endblock %}

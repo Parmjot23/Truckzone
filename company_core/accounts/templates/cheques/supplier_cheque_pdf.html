@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { size: A4; margin: 1cm; }
+    body { font-family: 'Helvetica', Arial, sans-serif; color: #111827; }
+    .cheque { border: 1px solid #cbd5f5; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; }
+    .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+    .section { flex: 1; }
+    .label { text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.08em; color: #6b7280; }
+    .value { font-size: 1rem; font-weight: 700; margin-top: 0.25rem; }
+    .amount { font-size: 1.4rem; font-weight: 800; color: #1d4ed8; }
+    .lines { width: 100%; border-collapse: collapse; }
+    .lines th { text-align: left; padding: 0.4rem 0; border-bottom: 1px solid #e5e7eb; font-size: 0.8rem; color: #6b7280; }
+    .lines td { padding: 0.45rem 0; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="cheque">
+    <div class="row">
+      <div class="section">
+        <div class="label">Business</div>
+        <div class="value">
+          {% if profile and profile.company_name %}
+            {{ profile.company_name }}
+          {% else %}
+            {{ cheque.user.get_full_name|default:cheque.user.username }}
+          {% endif %}
+        </div>
+        {% if profile and profile.company_address %}
+          <div>{{ profile.company_address }}</div>
+        {% endif %}
+      </div>
+      <div class="section" style="text-align: right;">
+        <div class="label">Cheque #</div>
+        <div class="value">{{ cheque.cheque_number }}</div>
+        <div class="label" style="margin-top: 0.5rem;">Date</div>
+        <div class="value">{{ cheque.date|date:"F d, Y" }}</div>
+      </div>
+    </div>
+    <div class="row" style="margin-top: 1rem;">
+      <div class="section">
+        <div class="label">Pay to the order of</div>
+        <div class="value">{{ cheque.supplier_name|default:cheque.supplier|default:"-" }}</div>
+      </div>
+      <div class="section" style="text-align: right;">
+        <div class="label">Amount</div>
+        <div class="amount">${{ cheque.total_amount|floatformat:2 }}</div>
+      </div>
+    </div>
+    {% if cheque.bank_account %}
+    <div style="margin-top: 0.75rem;">
+      <div class="label">Bank Account</div>
+      <div class="value">{{ cheque.bank_account }}</div>
+    </div>
+    {% endif %}
+    {% if cheque.memo %}
+    <div style="margin-top: 0.75rem;">
+      <div class="label">Memo</div>
+      <div>{{ cheque.memo }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <h3>Cheque Details</h3>
+  <table class="lines">
+    <thead>
+      <tr>
+        <th>Receipt</th>
+        <th>Date</th>
+        <th style="text-align:right;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td>{% if line.mech_expense %}{{ line.mech_expense.receipt_no }}{% else %}-{% endif %}</td>
+        <td>{% if line.mech_expense %}{{ line.mech_expense.date|date:"M d, Y" }}{% else %}-{% endif %}</td>
+        <td style="text-align:right;">${{ line.amount|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

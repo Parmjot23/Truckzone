@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-5">
+  <!-- Hero Section -->
+  <section class="hero-section text-center mb-5">
+    <h1 class="display-4">Inventory Management</h1>
+    <p class="lead">Effortless stock management with real-time updates and smart notifications.</p>
+  </section>
+
+  <!-- Overview Section -->
+  <section class="overview-section mb-4">
+    <h2 class="mb-3">Overview</h2>
+    <p>
+      Our integrated Inventory system lets you create custom product categories, manage suppliers, and record detailed stock transactions. Every time a work order or invoice is generated, the inventory is automatically updated to reflect a stock out, ensuring your stock levels are always current.
+    </p>
+  </section>
+
+  <!-- Key Features Section -->
+  <section class="key-features-section mb-4">
+    <h2 class="mb-3">Key Features</h2>
+    <ul>
+      <li><strong>Custom Categories:</strong> Organize products into categories that fit your business needs.</li>
+      <li><strong>Supplier Management:</strong> Easily track suppliers and link them with your products.</li>
+      <li><strong>Product Creation:</strong> Add products with complete details including SKU, description, and cost.</li>
+      <li><strong>Stock Transactions:</strong> Record stock ins, stock outs, and adjustments with ease.</li>
+      <li><strong>Automatic Updates:</strong> Inventory is updated automatically when products are used in work orders or invoices.</li>
+      <li><strong>Reorder Notifications:</strong> Set reorder levels and receive alerts before stock runs low.</li>
+    </ul>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="how-it-works-section mb-4">
+    <h2 class="mb-3">How It Works</h2>
+    <ol>
+      <li><strong>Create Categories &amp; Suppliers:</strong> Set up product categories and record supplier details.</li>
+      <li><strong>Add Products:</strong> Input your products with all relevant details to streamline future transactions.</li>
+      <li><strong>Manage Stock Movements:</strong> Log stock ins for new purchases, stock outs during sales or work orders, and adjustments as needed.</li>
+      <li><strong>Auto-Sync:</strong> Every work order or invoice involving a product triggers an automatic inventory update.</li>
+      <li><strong>Reorder Alerts:</strong> Get notified instantly when stock levels fall below your preset threshold.</li>
+    </ol>
+  </section>
+
+  <!-- Benefits Section -->
+  <section class="benefits-section mb-5">
+    <h2 class="mb-3">Benefits</h2>
+    <ul>
+      <li><strong>Real-Time Data:</strong> Keep your inventory information current at all times.</li>
+      <li><strong>Operational Efficiency:</strong> Reduce manual errors and save time with automated updates.</li>
+      <li><strong>Cost-Effective Management:</strong> Prevent overstocking or understocking with timely alerts.</li>
+      <li><strong>Seamless Integration:</strong> Works perfectly with our Work Order and Invoice features.</li>
+    </ul>
+  </section>
+
+  <!-- Call to Action Section -->
+  <section class="cta-section text-center">
+    <h2 class="mb-3">Manage Your Inventory Effectively</h2>
+    <p>Take control of your stock and streamline your supply chain management. Sign up now to experience the difference.</p>
+                    <a href="{% url 'accounts:login' %}" class="btn btn-primary btn-lg">Get Started</a>
+  </section>
+</div>
+{% endblock %}

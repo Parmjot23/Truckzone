@@ -1,0 +1,45 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Overdue Invoice Reminder Sent</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background-color: #dc3545;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Overdue Invoice Reminder Sent</h1>
+    </div>
+    <div class="content">
+        <p>Hello,</p>
+        <p>This is a confirmation that the overdue invoice reminder for customer <strong>{{ customer.name }}</strong> has been successfully sent.</p>
+        <p>The total overdue balance for this customer is <strong>{{ total_overdue_balance|currency }}</strong>.</p>
+        <p>Please review the information and follow up with the customer if necessary.</p>
+    </div>
+    <div class="footer">
+        &copy; {{ current_year }} {{ profile.company_name }}.
+    </div>
+</body>
+</html>

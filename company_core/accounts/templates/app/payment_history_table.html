@@ -1,0 +1,50 @@
+{% load custom_filters %}
+<div class="table-responsive">
+    <table class="table table-sm table-bordered mb-0">
+        <thead>
+            <tr class="bg-success text-white">
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Notes</th>
+                {% if show_actions %}
+                <th style="width: 1%; white-space: nowrap;">Actions</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in payments %}
+            <tr>
+                <td>{{ p.date }}</td>
+                <td>{{ p.amount|currency }}</td>
+                <td>{{ p.method }}</td>
+                <td>{{ p.notes }}</td>
+                {% if show_actions %}
+                <td class="text-nowrap">
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary js-payment-edit"
+                        data-payment-id="{{ p.id }}"
+                        data-amount="{{ p.amount }}"
+                        data-date="{{ p.date|date:'Y-m-d' }}"
+                        data-method="{{ p.method|default_if_none:'' }}"
+                        data-notes="{{ p.notes|default_if_none:''|escapejs }}">
+                        Edit
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger js-payment-delete"
+                        data-payment-id="{{ p.id }}">
+                        Delete
+                    </button>
+                </td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="{% if show_actions %}5{% else %}4{% endif %}" class="text-center text-muted">No payments recorded.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

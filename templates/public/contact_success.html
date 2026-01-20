@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Message Sent{% endblock %}
+{% block content %}
+<section class="section-full-width">
+  <div class="container text-center">
+    <h2 class="section-title">Thanks!</h2>
+    <p class="lead">Your message has been sent. We’ll get back to you shortly.</p>
+    <a href="{% url 'accounts:public_home' %}" class="btn btn-primary mt-3">Back to Home</a>
+  </div>
+</section>
+{% endblock %}
+

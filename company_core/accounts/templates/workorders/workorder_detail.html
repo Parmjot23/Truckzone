@@ -1,0 +1,380 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Work Order #{{ workorder.id }}{% endblock %}
+
+{% block content %}
+<style>
+  .wo-surface { background: #f6f7fb; padding: 1.5rem 0; }
+  .wo-shell { max-width: 100%; width: 100%; margin: 0; padding: 0 1.5rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
+  .wo-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .wo-title { font-size: 1.6rem; font-weight: 800; margin: 0; color: #0f172a; }
+  .pill { border-radius: 999px; padding: 0.4rem 0.85rem; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.35rem; }
+  .pill-status { background: #e0e7ff; color: #1d4ed8; }
+  .pill-mech { background: #e2e8f0; color: #334155; }
+  .pill-warning { background: #fef3c7; color: #92400e; }
+  .pill-success { background: #dcfce7; color: #166534; }
+  .wo-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .wo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+  .wo-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 12px 30px rgba(15,23,42,0.06); padding: 1rem; }
+  .section-title { font-weight: 800; margin-bottom: 0.5rem; color: #111827; }
+  .text-muted-sm { color: #6b7280; font-size: 0.9rem; }
+  .detail-list { display: flex; flex-direction: column; gap: 0.75rem; }
+  .detail-item { display: flex; align-items: center; gap: 0.6rem; }
+  .detail-icon { width: 36px; height: 36px; border-radius: 10px; background: #eef2ff; display: inline-flex; align-items: center; justify-content: center; color: #1d4ed8; }
+  .detail-body .label { font-size: 0.9rem; color: #6b7280; margin: 0; }
+  .detail-body .value { font-weight: 700; color: #0f172a; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }
+  .summary-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0.75rem; min-height: 110px; }
+  .assign-list { display: flex; flex-direction: column; gap: 0.75rem; }
+  .assign-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 0.75rem; background: #f8fafc; }
+  .assign-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .timeline-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 0.6rem; }
+  .timeline-cell { border: 1px solid #e5e7eb; border-radius: 10px; padding: 0.7rem; background: #f9fafb; }
+  .empty-block { text-align: center; padding: 1.25rem; color: #6b7280; border: 1px dashed #e5e7eb; border-radius: 12px; background: #f8fafc; }
+  .job-card { grid-column: 1 / -1; }
+  .job-table thead th { background: #f8fafc; border-bottom: 1px solid #e5e7eb; font-weight: 700; }
+  .job-table td { vertical-align: middle; }
+  .job-meta { color: #6b7280; font-size: 0.85rem; }
+  .job-total { font-weight: 800; color: #0f172a; }
+  .pm-inline { border-top: 1px dashed #e5e7eb; padding-top: 0.75rem; margin-top: 0.75rem; }
+</style>
+
+<div class="wo-surface">
+  <div class="wo-shell">
+    <div class="wo-header">
+      <div>
+        <h1 class="wo-title">Work Order #{{ workorder.id }}</h1>
+        <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+          <span class="pill pill-status">{{ workorder.get_status_display }}</span>
+          <span class="pill pill-mech">Mechanic: {{ workorder.get_mechanic_status_display|default:"Not Started" }}</span>
+        </div>
+      </div>
+      <div class="wo-actions">
+        <a href="{% url 'accounts:workorder_update' workorder.id %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+        {% if workorder.invoice %}
+          <a href="{% url 'accounts:groupedinvoice_edit' workorder.invoice.id %}" class="btn btn-outline-primary btn-sm">
+            <i class="fa-regular fa-file-lines me-1"></i>Invoice
+          </a>
+        {% else %}
+          <form method="post" action="{% url 'accounts:workorder_recreate_invoice' workorder.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-primary btn-sm">
+              <i class="fa-solid fa-rotate me-1"></i>Recreate Invoice
+            </button>
+          </form>
+        {% endif %}
+        <a href="{% url 'accounts:workorder_delete' workorder.id %}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this work order?');"><i class="fa-solid fa-trash me-1"></i>Delete</a>
+        {% if pm_blank_pdf_url %}
+          <a href="{{ pm_blank_pdf_url }}" class="btn btn-outline-secondary btn-sm"><i class="fa-regular fa-file-lines me-1"></i>Blank PM</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="wo-grid">
+      <div class="wo-card">
+        <div class="section-title">Customer & Vehicle Details</div>
+        <div class="detail-list">
+          <div class="detail-item">
+            <span class="detail-icon"><i class="fa-regular fa-user"></i></span>
+            <div class="detail-body">
+              <p class="label mb-0">Customer</p>
+              <div class="value">{{ workorder.customer|default:"-" }}</div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <span class="detail-icon"><i class="fa-regular fa-calendar"></i></span>
+            <div class="detail-body">
+              <p class="label mb-0">Scheduled</p>
+              <div class="value">{{ workorder.scheduled_date|date:"M j, Y"|default:"-" }}</div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <span class="detail-icon"><i class="fa-regular fa-clock"></i></span>
+            <div class="detail-body">
+              <p class="label mb-0">Created</p>
+              <div class="value">{{ workorder.date_created|date:"M j, Y g:i A"|default:"-" }}</div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <span class="detail-icon"><i class="fa-solid fa-truck"></i></span>
+            <div class="detail-body">
+              <p class="label mb-0">Unit</p>
+              <div class="value">
+                {% if workorder.vehicle %}
+                  {{ workorder.vehicle }}
+                {% else %}
+                  {{ workorder.unit_no|default:"-" }}{% if workorder.make_model %} {{ workorder.make_model }}{% endif %}{% if workorder.vehicle_vin %} (VIN: {{ workorder.vehicle_vin }}){% endif %}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <span class="detail-icon"><i class="fa-solid fa-id-card"></i></span>
+            <div class="detail-body">
+              <p class="label mb-0">License Plate</p>
+              <div class="value">
+                {% if workorder.license_plate %}
+                  {{ workorder.license_plate }}
+                {% elif workorder.vehicle %}
+                  {{ workorder.vehicle.license_plate|default:"-" }}
+                {% else %}
+                  -
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <span class="detail-icon"><i class="fa-regular fa-file-lines"></i></span>
+            <div class="detail-body">
+              <p class="label mb-0">Invoice #</p>
+              <div class="value">
+                {% if workorder.invoice %}
+                  <a href="{% url 'accounts:groupedinvoice_detail' workorder.invoice.id %}" class="text-decoration-none">
+                    {{ workorder.invoice.invoice_number }}
+                  </a>
+                {% else %}
+                  -
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <span class="detail-icon"><i class="fa-regular fa-circle-check"></i></span>
+            <div class="detail-body">
+              <p class="label mb-0">Completed</p>
+              <div class="value">{% if workorder.completed_at %}{{ workorder.completed_at|date:"M j, Y g:i A" }}{% else %}-{% endif %}</div>
+            </div>
+          </div>
+        </div>
+        {% if pm_pdf_url %}
+          <div class="pm-inline d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+              <div class="text-muted-sm fw-semibold">PM Inspection</div>
+              <div class="text-muted-sm">
+                {{ pm_inspection_summary.inspection_date|default:"Submitted" }}{% if pm_inspection_summary.inspector_name %} &middot; {{ pm_inspection_summary.inspector_name }}{% endif %}
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              {% if pm_inspection_summary.overall_status == 'pass' %}
+                <span class="pill pill-success">Pass</span>
+              {% elif pm_inspection_summary.overall_status == 'fail' %}
+                <span class="pill pill-warning">Fail</span>
+              {% endif %}
+              <a href="{{ pm_pdf_url }}" class="btn btn-outline-primary btn-sm">View PM Sheet</a>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="wo-card">
+        <div class="section-title">Work Summary</div>
+        <div class="summary-grid">
+          <div class="summary-box">
+            <div class="text-muted-sm mb-1">Owner's Description</div>
+            <div>{{ workorder.description|default:'No description provided.' }}</div>
+          </div>
+          <div class="summary-box">
+            <div class="text-muted-sm mb-1">Cause</div>
+            <div>{{ workorder.cause|default:'No cause provided.' }}</div>
+          </div>
+          <div class="summary-box">
+            <div class="text-muted-sm mb-1">Correction</div>
+            <div>{{ workorder.correction|default:'No correction provided.' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wo-card">
+        <div class="section-title">Assigned Mechanics</div>
+        <div class="text-muted-sm mb-2">Open portals, share links, or review status.</div>
+        {% if assignments %}
+          <div class="assign-list">
+            {% for assignment in assignments %}
+              <div class="assign-card">
+                <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                  <div>
+                    <div class="fw-bold">{{ assignment.mechanic.name }}</div>
+                    <div class="text-muted-sm">Assigned {{ assignment.date_assigned|date:"M j, Y g:i A" }}</div>
+                  </div>
+                  {% if assignment.requires_rework %}
+                    <span class="pill pill-warning">Needs Updates</span>
+                  {% elif assignment.submitted %}
+                    <span class="pill pill-success">Submitted</span>
+                  {% else %}
+                    <span class="pill pill-warning">Pending</span>
+                  {% endif %}
+                </div>
+                <div class="assign-actions mt-3">
+                  <a href="{{ assignment.portal_url }}" target="_blank" class="btn btn-outline-primary btn-sm">Open Portal</a>
+                  <button type="button" class="btn btn-outline-secondary btn-sm copy-assignment-link" data-link="{{ assignment.portal_url }}">Copy Link</button>
+                  {% if assignment.submitted or assignment.requires_rework %}
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#reworkModal-{{ assignment.id }}">
+                      {% if assignment.requires_rework %}Update Instructions{% else %}Request Rework{% endif %}
+                    </button>
+                  {% endif %}
+                </div>
+                {% if assignment.collaborators %}
+                  <div class="text-muted-sm mt-2">Collaborating with:
+                    {% for teammate in assignment.collaborators %}
+                      <span class="badge bg-light text-dark border">{{ teammate.mechanic.name }}</span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% if assignment.requires_rework and assignment.rework_instructions %}
+                  <div class="alert alert-warning mt-3 mb-0">
+                    <div class="fw-semibold">Updated instructions</div>
+                    <div class="mb-1">{{ assignment.rework_instructions|linebreaksbr }}</div>
+                    {% if assignment.rework_requested_at %}
+                      <div class="text-muted-sm">Requested {{ assignment.rework_requested_at|date:"M j, Y g:i A" }}</div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-block">No mechanics assigned yet.</div>
+        {% endif %}
+      </div>
+
+      <div class="wo-card">
+        <div class="section-title">Mechanic Timeline</div>
+        <div class="timeline-grid mb-2">
+          <div class="timeline-cell">
+            <div class="text-muted-sm">Started</div>
+            <div class="fw-bold">{{ workorder.mechanic_started_at|date:"M j, Y g:i A"|default:"-" }}</div>
+          </div>
+          <div class="timeline-cell">
+            <div class="text-muted-sm">Ended</div>
+            <div class="fw-bold">{{ workorder.mechanic_ended_at|date:"M j, Y g:i A"|default:"-" }}</div>
+          </div>
+          <div class="timeline-cell">
+            <div class="text-muted-sm">Status</div>
+            <span class="pill pill-mech">{{ workorder.get_mechanic_status_display|default:"Not Started" }}</span>
+          </div>
+        </div>
+        {% if workorder.mechanic_pause_log %}
+          <div class="table-responsive mt-2">
+            <table class="table table-sm table-striped mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Start</th><th>End</th><th>Reason</th><th>Duration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in workorder.mechanic_pause_log %}
+                  <tr>
+                    <td>{{ p.start|default:"-" }}</td>
+                    <td>{{ p.end|default:"-" }}</td>
+                    <td>{{ p.reason|default:"-" }}</td>
+                    <td>{{ p.duration|default:"-" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="wo-card job-card">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div class="section-title mb-0">Job Entries (Parts & Labor)</div>
+        {% if job_total %}
+          <div class="job-total">Job Total: ${{ job_total|floatformat:2 }}</div>
+        {% endif %}
+      </div>
+      {% if job_entries %}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle job-table mb-0">
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>Date</th>
+                <th class="text-nowrap">Qty</th>
+                <th class="text-nowrap">Rate</th>
+                <th class="text-nowrap text-end">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in job_entries %}
+                <tr>
+                  <td>
+                    <div class="fw-semibold">
+                      {% if entry.job %}{{ entry.job }}{% elif entry.product %}{{ entry.product.name }}{% else %}Unnamed job{% endif %}
+                    </div>
+                    <div class="job-meta">
+                      {% if entry.ticket %}Ticket {{ entry.ticket }}{% endif %}
+                      {% if entry.jobsite %}{% if entry.ticket %} &middot; {% endif %}Jobsite {{ entry.jobsite }}{% endif %}
+                      {% if entry.driver %}{% if entry.ticket or entry.jobsite %} &middot; {% endif %}Driver {{ entry.driver }}{% endif %}
+                    </div>
+                  </td>
+                  <td class="text-nowrap">{{ entry.date|date:"M j, Y"|default:"-" }}</td>
+                  <td class="text-nowrap">{{ entry.qty|default:"-" }}</td>
+                  <td class="text-nowrap">${{ entry.rate|default:0|floatformat:2 }}</td>
+                  <td class="text-nowrap text-end fw-semibold">${{ entry.amount|default:0|floatformat:2 }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-block mb-0">No job entries have been added yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% for assignment in assignments %}
+  <div class="modal fade" id="reworkModal-{{ assignment.id }}" tabindex="-1" role="dialog" aria-labelledby="reworkModalLabel-{{ assignment.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <form method="post" action="{% url 'accounts:workorder_assignment_reopen' workorder.id assignment.id %}" class="modal-content">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="reworkModalLabel-{{ assignment.id }}">Send back to {{ assignment.mechanic.name }}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small">Share the updates this mechanic needs to address before resubmitting.</p>
+          <div class="form-group">
+            {{ assignment.reassign_form.instructions.label_tag }}
+            {{ assignment.reassign_form.instructions }}
+          </div>
+          {% if assignment.requires_rework and assignment.rework_instructions %}
+            <div class="alert alert-warning mt-3 mb-0">
+              <div class="fw-semibold">Updated instructions for mechanic</div>
+              <div class="mb-1">{{ assignment.rework_instructions|linebreaksbr }}</div>
+              {% if assignment.rework_requested_at %}
+                <div class="text-muted small">Requested {{ assignment.rework_requested_at|date:'M j, Y g:i A' }}</div>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Send Back</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endfor %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.copy-assignment-link').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const link = btn.getAttribute('data-link');
+        navigator.clipboard.writeText(link).then(() => {
+          btn.textContent = 'Copied';
+          setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
+        });
+      });
+    });
+  });
+</script>
+{% endblock %}
+

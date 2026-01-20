@@ -1,0 +1,331 @@
+{% extends portal_base_template|default:"store/customer_portal_base.html" %}
+{% block title %}Workorders{% endblock %}
+{% block portal_content %}
+  <style>
+    .workorder-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+      padding: 1rem;
+    }
+    .wo-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .wo-search {
+      flex: 1;
+      min-width: 260px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 0.45rem 0.65rem;
+      background: #f8fafc;
+    }
+    .wo-search input {
+      border: none;
+      background: transparent;
+      width: 100%;
+      outline: none;
+    }
+    .pill-primary {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: none;
+      color: #fff;
+      border-radius: 12px;
+      padding: 0.45rem 0.95rem;
+      font-weight: 700;
+      font-size: 0.92rem;
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
+    }
+    .pill-secondary {
+      border-radius: 12px;
+      padding: 0.42rem 0.9rem;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 0.92rem;
+      box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+    }
+    .wo-table-wrapper {
+      overflow-x: auto;
+    }
+    .wo-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .wo-table th {
+      text-align: left;
+      padding: 0.75rem;
+      color: #64748b;
+      background: #f1f5f9;
+      font-weight: 700;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    .wo-table td {
+      padding: 0.75rem;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+    .wo-table tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+    .wo-table .wo-text,
+    .wo-table .wo-parts,
+    .wo-table .wo-suppliers {
+      min-width: 200px;
+      max-width: 320px;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .wo-table .wo-techs {
+      min-width: 160px;
+      max-width: 220px;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .wo-table .wo-date,
+    .wo-table .wo-odometer,
+    .wo-table .wo-id,
+    .wo-table .wo-unit {
+      white-space: nowrap;
+    }
+    .wo-table .wo-actions {
+      min-width: 120px;
+    }
+    .wo-table th.wo-text,
+    .wo-table th.wo-parts,
+    .wo-table th.wo-suppliers,
+    .wo-table th.wo-techs {
+      white-space: normal;
+    }
+    .badge-soft {
+      border-radius: 999px;
+      padding: 0.2rem 0.75rem;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    .badge-status {
+      background: #e0e7ff;
+      color: #1d4ed8;
+    }
+    .badge-status-completed {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .mechanic-summary {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .mechanic-names {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #0f172a;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.35rem;
+    }
+    .mechanic-names .mech-name {
+      color: #2563eb;
+    }
+    .portal-action-list {
+      margin-top: 0.35rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .wo-table .dropdown-toggle {
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      border-radius: 10px;
+      padding: 0.3rem 0.55rem;
+      color: #0f172a;
+    }
+    @media (max-width: 992px) {
+      .wo-table-wrapper {
+        max-height: 70vh;
+        overflow-y: auto;
+      }
+    }
+  </style>
+
+  <div class="page-shell">
+    <div class="page-header">
+      <div>
+        <h2 class="mb-0">Work Orders</h2>
+        <div class="text-muted small">Your service requests and progress updates.</div>
+      </div>
+      <div class="page-toolbar">
+      </div>
+    </div>
+
+    <div class="workorder-card">
+      <div class="wo-toolbar">
+        <form class="flex-grow-1">
+          <div class="wo-search">
+            <i class="fa fa-search text-muted"></i>
+            <input
+              type="text"
+              id="workorderSearch"
+              placeholder="Search workorders"
+              aria-label="Search workorders"
+            >
+          </div>
+        </form>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <button type="button" class="pill-secondary">Filter by Status</button>
+          <button type="button" class="pill-secondary">Date Range</button>
+        </div>
+      </div>
+
+      <div class="wo-table-wrapper">
+        <table class="wo-table" id="workorderTable">
+          <thead>
+            <tr>
+              <th class="wo-id">ID</th>
+              <th class="wo-unit">Unit</th>
+              <th class="wo-date">Workorder Date</th>
+              <th class="wo-odometer">Odometer</th>
+              <th class="wo-techs">Technician</th>
+              <th class="wo-text">Work Performed</th>
+              <th class="wo-parts">Parts Replaced</th>
+              <th class="wo-suppliers">Parts Provider</th>
+              <th class="text-center wo-actions">Work Order</th>
+              <th class="text-center wo-actions">Invoice</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for workorder in workorders %}
+              <tr data-row="workorder">
+                <td class="wo-id">{{ workorder.workorder_number }}</td>
+                <td class="wo-unit">
+                  {% if workorder.unit_no %}
+                    {{ workorder.unit_no }}
+                  {% elif workorder.vehicle and workorder.vehicle.unit_number %}
+                    {{ workorder.vehicle.unit_number }}
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+                </td>
+                <td class="wo-date">{{ workorder.scheduled_date|date:"M d, Y" }}</td>
+                <td class="wo-odometer">
+                  {% if workorder.mileage %}
+                    {{ workorder.mileage|floatformat:0 }}
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+                </td>
+                <td class="wo-techs">
+                  {% if workorder.technician_names %}
+                    {{ workorder.technician_names|join:", " }}
+                  {% else %}
+                    <span class="text-muted small">Unassigned</span>
+                  {% endif %}
+                </td>
+                <td class="wo-text">
+                  {% if workorder.work_performed %}
+                    {{ workorder.work_performed }}
+                  {% else %}
+                    <span class="text-muted small">Pending details</span>
+                  {% endif %}
+                </td>
+                <td class="wo-parts">
+                  {% if workorder.parts_replaced %}
+                    {{ workorder.parts_replaced|join:", " }}
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+                </td>
+                <td class="wo-suppliers">
+                  {% if workorder.parts_suppliers %}
+                    {{ workorder.parts_suppliers|join:", " }}
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+                </td>
+                <td class="text-center wo-actions">
+                  {% if workorder.status == 'completed' %}
+                    <a
+                      href="{% url 'accounts:customer_workorder_download' workorder.id %}"
+                      class="btn btn-outline-secondary btn-sm"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      <i class="fa-solid fa-file-pdf me-1"></i>PDF
+                    </a>
+                  {% else %}
+                    <span class="text-muted small">Pending</span>
+                  {% endif %}
+                </td>
+                <td class="text-center wo-actions">
+                  {% if workorder.invoice %}
+                    <a
+                      href="{% url 'accounts:customer_invoice_download' workorder.invoice.id %}"
+                      class="btn btn-outline-primary btn-sm"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      <i class="fa-solid fa-file-pdf me-1"></i>PDF
+                    </a>
+                  {% else %}
+                    <span class="text-muted small">Pending</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="10" class="text-center text-muted py-4">No workorders have been scheduled for your account yet.</td>
+              </tr>
+            {% endfor %}
+            <tr id="workorderNoResults" class="d-none">
+              <td colspan="10" class="text-center text-muted py-4">No workorders match your search.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  {{ block.super }}
+  <script>
+    (function () {
+      const searchInput = document.getElementById('workorderSearch');
+      const table = document.getElementById('workorderTable');
+      if (!searchInput || !table) return;
+
+      const rows = Array.from(table.querySelectorAll('tbody tr[data-row="workorder"]'));
+
+      const filterRows = () => {
+        const query = (searchInput.value || '').trim().toLowerCase();
+        let visible = 0;
+
+        rows.forEach((row) => {
+          const text = (row.textContent || '').toLowerCase();
+          const matches = !query || text.includes(query);
+          row.style.display = matches ? '' : 'none';
+          if (matches) visible += 1;
+        });
+
+        const noResults = document.getElementById('workorderNoResults');
+        if (noResults) {
+          noResults.classList.toggle('d-none', visible > 0 || !query);
+        }
+      };
+
+      searchInput.addEventListener('input', filterRows);
+    })();
+  </script>
+{% endblock %}
+

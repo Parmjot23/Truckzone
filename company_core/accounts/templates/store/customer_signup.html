@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Customer Signup{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="h4 mb-3 text-center">Create your {{ business_name }} customer account</h2>
+          <p class="text-muted text-center">Sign up to manage your purchases, download invoices, and view the latest products.</p>
+          {% if approval_required %}
+            <div class="alert alert-info">New customer portal registrations require approval. We will email you once access is granted.</div>
+          {% endif %}
+          {% if signup_disabled %}
+            <div class="alert alert-warning">Customer registration is temporarily unavailable. Please contact us for assistance.</div>
+          {% elif form %}
+            <form method="post" novalidate>
+              {% csrf_token %}
+              {% if form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">
+                  {% for error in form.non_field_errors %}
+                    <div>{{ error }}</div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+              {{ form.username|as_crispy_field }}
+              {{ form.email|as_crispy_field }}
+              {{ form.cc_emails|as_crispy_field }}
+              {{ form.name|as_crispy_field }}
+              {{ form.phone_number|as_crispy_field }}
+              {{ form.address|as_crispy_field }}
+              {{ form.gst_hst_number|as_crispy_field }}
+              {{ form.collect_gst_hst|as_crispy_field }}
+              {{ form.password1|as_crispy_field }}
+              {{ form.password2|as_crispy_field }}
+              {% if invite_token %}
+                <input type="hidden" name="invite" value="{{ invite_token }}" />
+              {% endif %}
+              {% if next %}
+                <input type="hidden" name="next" value="{{ next }}" />
+              {% endif %}
+              <button type="submit" class="btn btn-primary btn-block">Create account</button>
+            </form>
+            <div class="text-center mt-3">
+              Already have a customer account?
+              <a href="{% url 'accounts:login' %}{% if next %}?next={{ next }}{% endif %}">Log in</a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

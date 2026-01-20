@@ -1,0 +1,250 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">{{ employee.full_name }}</h2>
+            <div class="text-muted small">{{ employee.get_role_display }} - {{ employee.get_status_display }}</div>
+        </div>
+        <div class="page-toolbar">
+            <a href="{% url 'accounts:employee_update' employee.id %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+        </div>
+    </div>
+
+    {% include 'payroll/_nav.html' %}
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Tax Profile</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="save_tax_profile" value="1" />
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Province</label>
+                                {{ tax_form.province }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Additional withholding</label>
+                                {{ tax_form.additional_withholding }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Federal claim amount</label>
+                                {{ tax_form.federal_claim_amount }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Provincial claim amount</label>
+                                {{ tax_form.provincial_claim_amount }}
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ tax_form.cpp_exempt }}
+                                    <label class="form-check-label">CPP exempt</label>
+                                </div>
+                                <div class="small text-muted ms-4">Paystub line: CPP (employee).</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ tax_form.cpp2_exempt }}
+                                    <label class="form-check-label">CPP2 exempt</label>
+                                </div>
+                                <div class="small text-muted ms-4">Paystub line: CPP2 (employee).</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ tax_form.ei_exempt }}
+                                    <label class="form-check-label">EI exempt</label>
+                                </div>
+                                <div class="small text-muted ms-4">Paystub line: EI (employee).</div>
+                            </div>
+                        </div>
+                        <div class="small text-muted mt-2">
+                            When exempt, the matching paystub line shows $0.00.
+                        </div>
+
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary btn-sm">Save tax profile</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Recurring Deductions</h5>
+                    <div class="small text-muted mb-3">
+                        Employee contributions appear under "Other deductions" on the paystub. Employer
+                        contributions show as employer line items and do not reduce net pay.
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Name</label>
+                                {{ deduction_form.name }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Amount (per pay)</label>
+                                {{ deduction_form.amount }}
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    {{ deduction_form.is_pre_tax }}
+                                    <label class="form-check-label">Pre-tax deduction</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    {{ deduction_form.is_employee_contribution }}
+                                    <label class="form-check-label">Employee contribution</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    {{ deduction_form.is_employer_contribution }}
+                                    <label class="form-check-label">Employer contribution</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    {{ deduction_form.active }}
+                                    <label class="form-check-label">Active</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-outline-primary btn-sm">Add deduction</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">Current deductions</h6>
+                    <ul class="list-group list-group-flush">
+                        {% for item in deductions %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-semibold">{{ item.name }}</div>
+                                <div class="small text-muted">${{ item.amount }} per pay</div>
+                            </div>
+                            <span class="badge bg-light text-dark">{{ item.active|yesno:"Active,Inactive" }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">No deductions yet.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div>
+                    <h5 class="mb-0">Paystub preview</h5>
+                    <div class="text-muted small">
+                        {% if last_paystub %}
+                        Latest paystub: {{ last_paystub.payroll_run.period_start }} - {{ last_paystub.payroll_run.period_end }}
+                        {% else %}
+                        Example layout (amounts update after payroll runs).
+                        {% endif %}
+                    </div>
+                </div>
+                <span class="badge {% if last_paystub %}bg-success text-white{% else %}bg-light text-dark{% endif %}">
+                    {% if last_paystub %}Live{% else %}Example{% endif %}
+                </span>
+            </div>
+            <div class="row g-4 mt-2">
+                <div class="col-lg-7">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Paystub line</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for line in paystub_preview_lines %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">
+                                            {{ line.label }}
+                                            {% if line.exempt %}
+                                            <span class="badge bg-light text-dark ms-2">Exempt</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if line.note %}
+                                        <div class="small text-muted">{{ line.note }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end {% if line.is_placeholder %}text-muted{% endif %}">
+                                        {{ line.display }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        Pre-tax deductions reduce taxable income and do not appear as their own paystub line.
+                        {% if pre_tax_total %}
+                        Current pre-tax total: {{ pre_tax_total|currency }}.
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="small text-muted mb-2">Recurring deductions mapping</div>
+                    <ul class="list-group list-group-flush">
+                        {% for item in active_deductions %}
+                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="fw-semibold">{{ item.name }}</div>
+                                <div class="small text-muted">
+                                    {% if item.is_employee_contribution %}
+                                        {% if item.is_pre_tax %}
+                                            Pre-tax (reduces taxable income)
+                                        {% else %}
+                                            Paystub line: Other deductions (employee)
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if item.is_employer_contribution %}
+                                        {% if item.is_employee_contribution %} / {% endif %}
+                                        Employer contribution (line item)
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="text-end small">{{ item.amount|currency }}</div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">No recurring deductions yet.</li>
+                        {% endfor %}
+                    </ul>
+                    <div class="small text-muted mt-2">
+                        Other deductions on paystub:
+                        {% if last_paystub %}
+                        {{ last_paystub.other_deductions|currency }}
+                        {% else %}
+                        {{ post_tax_total|currency }}
+                        {% endif %}
+                    </div>
+                    {% if employer_total %}
+                    <div class="small text-muted">
+                        Employer contributions total: {{ employer_total|currency }}.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

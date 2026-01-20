@@ -1,0 +1,1060 @@
+{% extends 'customer_portal_base.html' %}
+{% block title %}Category Library{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+    {% include 'inventory/partials/_inventory_nav.html' %}
+    <div class="page-header">
+        <div>
+            <h2 class="mb-1">Category Library</h2>
+            <p class="text-muted mb-0">Group products into clean, reusable categories.</p>
+        </div>
+        <div class="page-toolbar">
+            <a href="{% url 'accounts:inventory_categories_template' %}" class="btn btn-outline-primary btn-sm">
+                <i class="fa-solid fa-file-arrow-down me-1"></i> Download Excel
+            </a>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#importCategoriesModal">
+                <i class="fa-solid fa-file-import me-1"></i> Import Excel
+            </button>
+            <a href="#addCategoryCard" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-plus me-1"></i> Add category
+            </a>
+        </div>
+    </div>
+
+    <div class="surface-card p-4" id="addCategoryCard">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+            <div>
+                <h2 class="h5 mb-1">Add a new category</h2>
+                <p class="text-muted mb-0">Use categories to organize parts and inventory.</p>
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <label for="newCategoryName" class="form-label">Category name</label>
+                <input type="text" class="form-control" id="newCategoryName" placeholder="e.g. Engine">
+            </div>
+            <div class="col-lg-3">
+                <label for="newCategoryGroup" class="form-label">Group</label>
+                <select class="form-select" id="newCategoryGroup">
+                    <option value="">No group</option>
+                    {% for group in category_groups %}
+                    <option value="{{ group.id }}">{{ group.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-3">
+                <label for="newCategoryParent" class="form-label">Parent category</label>
+                <select class="form-select" id="newCategoryParent">
+                    <option value="">No parent</option>
+                    {% for parent in categories %}
+                    <option value="{{ parent.id }}">{{ parent.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label for="newCategoryOrder" class="form-label">Sort order</label>
+                <input type="number" class="form-control" id="newCategoryOrder" min="0" placeholder="0">
+            </div>
+            <div class="col-lg-6">
+                <label for="newCategoryDescription" class="form-label">Description <span class="text-muted">(optional)</span></label>
+                <textarea class="form-control" id="newCategoryDescription" rows="2" placeholder="Add category details"></textarea>
+            </div>
+            <div class="col-lg-3">
+                <label for="newCategoryImage" class="form-label">Image</label>
+                <input type="file" class="form-control" id="newCategoryImage" accept="image/*">
+            </div>
+            <div class="col-lg-3 d-flex align-items-end">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="newCategoryActive" checked>
+                    <label class="form-check-label" for="newCategoryActive">Active</label>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mt-3">
+            <button type="button" class="btn btn-primary" id="addCategoryButton">Add to library</button>
+            <div id="newCategoryStatus" class="text-muted small">New entries save automatically when you add them.</div>
+        </div>
+    </div>
+
+    <div class="surface-card p-4">
+        <div class="row align-items-end gy-3 mb-2">
+            <div class="col-md-7 col-lg-6">
+                <label for="categorySearchInput" class="form-label fw-semibold">Search categories</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="search" class="form-control" id="categorySearchInput" placeholder="Search name or description" value="{{ search_query }}">
+                </div>
+            </div>
+            <div class="col-md-5 col-lg-4 ms-lg-auto">
+                <div class="d-flex flex-column align-items-md-end gap-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="bulkDeleteButton" disabled>
+                        <i class="fa-regular fa-trash-can me-1"></i> Delete selected
+                    </button>
+                    <div id="bulkDeleteStatus" class="small text-muted"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="categoriesEmptyState" class="alert alert-info mt-4{% if categories_count %} d-none{% endif %}">
+            No categories yet. Add one to organize your products.
+        </div>
+
+        <div class="table-responsive mt-3{% if not categories_count %} d-none{% endif %}" id="categoriesTableWrapper">
+            <table class="table table-striped align-middle" id="categoriesTable"
+                   data-save-url="{% url 'accounts:inventory_category_inline_save' %}"
+                   data-delete-url-template="{% url 'accounts:inventory_category_delete' 0 %}">
+                <thead>
+                    <tr>
+                        <th scope="col" class="text-center" style="width: 5%;">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="selectAllCategories" aria-label="Select all categories">
+                            </div>
+                        </th>
+                        <th scope="col" style="width: 22%;">Category</th>
+                        <th scope="col" style="width: 22%;">Group / Parent</th>
+                        <th scope="col" style="width: 12%;">Image</th>
+                        <th scope="col">Description</th>
+                        <th scope="col" style="width: 10%;">Status</th>
+                        <th scope="col" class="text-end" style="width: 12%;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="categoriesTableBody">
+                    {% for category in categories %}
+                    <tr class="category-row"
+                        data-category-id="{{ category.id }}"
+                        data-category-name="{{ category.name|default_if_none:''|escape }}"
+                        data-category-description="{{ category.description|default_if_none:''|escape }}"
+                        data-category-group-id="{{ category.group_id|default_if_none:'' }}"
+                        data-category-group-name="{{ category.group.name|default_if_none:''|escape }}"
+                        data-category-parent-id="{{ category.parent_id|default_if_none:'' }}"
+                        data-category-parent-name="{{ category.parent.name|default_if_none:''|escape }}"
+                        data-category-sort-order="{{ category.sort_order|default_if_none:'' }}"
+                        data-category-is-active="{{ category.is_active|yesno:'true,false' }}"
+                        data-category-image-url="{% if category.image %}{{ category.image.url }}{% endif %}">
+                        <td class="text-center align-top">
+                            <div class="form-check mb-0">
+                                <input type="checkbox" class="form-check-input category-select-checkbox" aria-label="Select category {{ category.name|default:'row' }}">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="category-display category-name-display fw-semibold"></div>
+                            <div class="category-edit d-none">
+                                <input type="text" class="form-control form-control-sm category-name-input" placeholder="Category name">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="category-display">
+                                <div class="category-group-display text-muted small"></div>
+                                <div class="category-parent-display text-muted small"></div>
+                                <div class="category-order-display text-muted small"></div>
+                            </div>
+                            <div class="category-edit d-none">
+                                <select class="form-select form-select-sm category-group-input">
+                                    <option value="">No group</option>
+                                    {% for group in category_groups %}
+                                    <option value="{{ group.id }}">{{ group.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select class="form-select form-select-sm mt-2 category-parent-input">
+                                    <option value="">No parent</option>
+                                    {% for parent in categories %}
+                                    <option value="{{ parent.id }}">{{ parent.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="number" class="form-control form-control-sm mt-2 category-order-input" min="0" placeholder="Sort order">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="category-display category-image-display">
+                                <div class="category-image-placeholder text-muted small">No image</div>
+                                <img class="category-image-thumb d-none" alt="" loading="lazy">
+                            </div>
+                            <div class="category-edit d-none">
+                                <input type="file" class="form-control form-control-sm category-image-input" accept="image/*">
+                            </div>
+                        </td>
+                        <td>
+                            <div class="category-display category-description-display text-muted small"></div>
+                            <div class="category-edit d-none">
+                                <textarea class="form-control form-control-sm category-description-input" rows="2" placeholder="Description"></textarea>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="category-display category-status-display text-muted small"></div>
+                            <div class="category-edit d-none">
+                                <div class="form-check">
+                                    <input class="form-check-input category-active-input" type="checkbox">
+                                    <label class="form-check-label">Active</label>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-end align-top">
+                            <div class="btn-group btn-group-sm category-view-actions" role="group" aria-label="Category actions">
+                                <button type="button" class="btn btn-outline-secondary category-edit-btn">Edit</button>
+                                <button type="button" class="btn btn-outline-danger category-delete-btn">Delete</button>
+                            </div>
+                            <div class="btn-group btn-group-sm category-edit-actions d-none" role="group" aria-label="Edit actions">
+                                <button type="button" class="btn btn-primary category-save-btn">Save</button>
+                                <button type="button" class="btn btn-outline-secondary category-cancel-btn">Cancel</button>
+                            </div>
+                            <div class="row-status text-muted small mt-2" aria-live="polite"></div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="categoriesNoResults" class="alert alert-secondary d-none mt-4 mb-0">
+            No categories match your search. Try a different term.
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="inlineCsrfToken" value="{{ csrf_token }}">
+
+<template id="categoryRowTemplate">
+    <tr class="category-row"
+        data-category-id=""
+        data-category-name=""
+        data-category-description=""
+        data-category-group-id=""
+        data-category-group-name=""
+        data-category-parent-id=""
+        data-category-parent-name=""
+        data-category-sort-order=""
+        data-category-is-active="true"
+        data-category-image-url="">
+        <td class="text-center align-top">
+            <div class="form-check mb-0">
+                <input type="checkbox" class="form-check-input category-select-checkbox" aria-label="Select category">
+            </div>
+        </td>
+        <td>
+            <div class="category-display category-name-display fw-semibold"></div>
+            <div class="category-edit d-none">
+                <input type="text" class="form-control form-control-sm category-name-input" placeholder="Category name">
+            </div>
+        </td>
+        <td>
+            <div class="category-display">
+                <div class="category-group-display text-muted small"></div>
+                <div class="category-parent-display text-muted small"></div>
+                <div class="category-order-display text-muted small"></div>
+            </div>
+            <div class="category-edit d-none">
+                <select class="form-select form-select-sm category-group-input">
+                    <option value="">No group</option>
+                    {% for group in category_groups %}
+                    <option value="{{ group.id }}">{{ group.name }}</option>
+                    {% endfor %}
+                </select>
+                <select class="form-select form-select-sm mt-2 category-parent-input">
+                    <option value="">No parent</option>
+                    {% for parent in categories %}
+                    <option value="{{ parent.id }}">{{ parent.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="number" class="form-control form-control-sm mt-2 category-order-input" min="0" placeholder="Sort order">
+            </div>
+        </td>
+        <td>
+            <div class="category-display category-image-display">
+                <div class="category-image-placeholder text-muted small">No image</div>
+                <img class="category-image-thumb d-none" alt="" loading="lazy">
+            </div>
+            <div class="category-edit d-none">
+                <input type="file" class="form-control form-control-sm category-image-input" accept="image/*">
+            </div>
+        </td>
+        <td>
+            <div class="category-display category-description-display text-muted small"></div>
+            <div class="category-edit d-none">
+                <textarea class="form-control form-control-sm category-description-input" rows="2" placeholder="Description"></textarea>
+            </div>
+        </td>
+        <td>
+            <div class="category-display category-status-display text-muted small"></div>
+            <div class="category-edit d-none">
+                <div class="form-check">
+                    <input class="form-check-input category-active-input" type="checkbox">
+                    <label class="form-check-label">Active</label>
+                </div>
+            </div>
+        </td>
+        <td class="text-end align-top">
+            <div class="btn-group btn-group-sm category-view-actions" role="group" aria-label="Category actions">
+                <button type="button" class="btn btn-outline-secondary category-edit-btn">Edit</button>
+                <button type="button" class="btn btn-outline-danger category-delete-btn">Delete</button>
+            </div>
+            <div class="btn-group btn-group-sm category-edit-actions d-none" role="group" aria-label="Edit actions">
+                <button type="button" class="btn btn-primary category-save-btn">Save</button>
+                <button type="button" class="btn btn-outline-secondary category-cancel-btn">Cancel</button>
+            </div>
+            <div class="row-status text-muted small mt-2" aria-live="polite"></div>
+        </td>
+    </tr>
+</template>
+
+<div class="modal fade" id="importCategoriesModal" tabindex="-1" aria-labelledby="importCategoriesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importCategoriesModalLabel">Import categories from Excel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'accounts:inventory_categories_import' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'accounts:inventory_categories' %}">
+                <div class="modal-body">
+                    <p class="small text-muted">Upload the Excel template exported from this page. We'll create new categories and update matches automatically.</p>
+                    <div class="mb-3">
+                        <label for="id_category_import_file" class="form-label fw-semibold">Excel file</label>
+                        <input type="file" class="form-control" id="id_category_import_file" name="file" accept=".xlsx,.xls">
+                        <small class="form-text text-muted">Supported format: .xlsx (Microsoft Excel).</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link text-decoration-none" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-file-import me-1"></i> Import categories
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    #categoriesTable {
+        min-width: 720px;
+    }
+
+    #categoriesTable td {
+        vertical-align: top;
+    }
+
+    #categoriesTable .category-display {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    #categoriesTable .category-edit textarea,
+    #categoriesTable .category-edit input {
+        font-size: 0.95rem;
+    }
+
+    .status-saving {
+        color: var(--bs-primary, #0d6efd) !important;
+    }
+
+    .status-error {
+        color: var(--bs-danger, #dc3545) !important;
+    }
+
+    .status-success {
+        color: var(--bs-success, #198754) !important;
+    }
+
+    .category-select-checkbox {
+        cursor: pointer;
+    }
+
+    .category-image-thumb {
+        width: 72px;
+        height: 48px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        display: block;
+    }
+
+    .category-image-placeholder {
+        min-height: 48px;
+    }
+
+    @media (max-width: 991.98px) {
+        #categoriesTable {
+            min-width: 100%;
+        }
+    }
+</style>
+
+<script>
+(function () {
+    let selectAllCheckbox = null;
+    let bulkDeleteButton = null;
+    let bulkDeleteStatus = null;
+    let currentSearchQuery = '';
+
+    function getTable() {
+        return document.getElementById('categoriesTable');
+    }
+
+    function getCsrfToken() {
+        const inlineTokenInput = document.getElementById('inlineCsrfToken');
+        if (inlineTokenInput && inlineTokenInput.value && inlineTokenInput.value !== 'NOTPROVIDED') {
+            return inlineTokenInput.value;
+        }
+        const name = 'csrftoken';
+        const cookies = document.cookie ? document.cookie.split('; ') : [];
+        for (let i = 0; i < cookies.length; i += 1) {
+            const parts = cookies[i].split('=');
+            const key = decodeURIComponent(parts[0]);
+            if (key === name) {
+                return decodeURIComponent(parts[1] || '');
+            }
+        }
+        return '';
+    }
+
+    function buildUrl(template, id) {
+        return template.replace(/\/0\//, '/' + id + '/');
+    }
+
+    function valueOrEmpty(value) {
+        if (value === null || value === undefined) {
+            return '';
+        }
+        return String(value);
+    }
+
+    function showStatus(target, message, state) {
+        if (!target) {
+            return;
+        }
+        target.textContent = message || '';
+        target.classList.remove('status-saving', 'status-error', 'status-success');
+        if (state) {
+            target.classList.add('status-' + state);
+        }
+    }
+
+    function normalizeCategory(raw) {
+        return {
+            id: valueOrEmpty(raw.id),
+            name: valueOrEmpty(raw.name),
+            description: valueOrEmpty(raw.description),
+            group_id: valueOrEmpty(raw.group_id || (raw.group && raw.group.id)),
+            group_name: valueOrEmpty(raw.group_name || (raw.group && raw.group.name)),
+            parent_id: valueOrEmpty(raw.parent_id || (raw.parent && raw.parent.id)),
+            parent_name: valueOrEmpty(raw.parent_name || (raw.parent && raw.parent.name)),
+            sort_order: valueOrEmpty(raw.sort_order),
+            is_active: typeof raw.is_active === 'boolean' ? raw.is_active : String(raw.is_active).toLowerCase() === 'true',
+            image_url: valueOrEmpty(raw.image_url),
+        };
+    }
+
+    function getCategoryFromRow(row) {
+        return normalizeCategory({
+            id: row.dataset.categoryId,
+            name: row.dataset.categoryName,
+            description: row.dataset.categoryDescription,
+            group_id: row.dataset.categoryGroupId,
+            group_name: row.dataset.categoryGroupName,
+            parent_id: row.dataset.categoryParentId,
+            parent_name: row.dataset.categoryParentName,
+            sort_order: row.dataset.categorySortOrder,
+            is_active: row.dataset.categoryIsActive,
+            image_url: row.dataset.categoryImageUrl,
+        });
+    }
+
+    function applyCategoryToRow(row, rawCategory) {
+        if (!row) {
+            return;
+        }
+        const category = normalizeCategory(rawCategory || {});
+        row.dataset.categoryId = category.id || '';
+        row.dataset.categoryName = category.name || '';
+        row.dataset.categoryDescription = category.description || '';
+        row.dataset.categoryGroupId = category.group_id || '';
+        row.dataset.categoryGroupName = category.group_name || '';
+        row.dataset.categoryParentId = category.parent_id || '';
+        row.dataset.categoryParentName = category.parent_name || '';
+        row.dataset.categorySortOrder = category.sort_order || '0';
+        row.dataset.categoryIsActive = category.is_active ? 'true' : 'false';
+        row.dataset.categoryImageUrl = category.image_url || '';
+
+        const nameDisplay = row.querySelector('.category-name-display');
+        const descriptionDisplay = row.querySelector('.category-description-display');
+        const groupDisplay = row.querySelector('.category-group-display');
+        const parentDisplay = row.querySelector('.category-parent-display');
+        const orderDisplay = row.querySelector('.category-order-display');
+        const statusDisplay = row.querySelector('.category-status-display');
+        const imagePlaceholder = row.querySelector('.category-image-placeholder');
+        const imageThumb = row.querySelector('.category-image-thumb');
+        if (nameDisplay) {
+            nameDisplay.textContent = category.name || 'Untitled category';
+        }
+        if (descriptionDisplay) {
+            descriptionDisplay.textContent = category.description || 'No description';
+        }
+        if (groupDisplay) {
+            groupDisplay.textContent = category.group_name ? 'Group: ' + category.group_name : 'No group';
+        }
+        if (parentDisplay) {
+            parentDisplay.textContent = category.parent_name ? 'Parent: ' + category.parent_name : 'No parent';
+        }
+        if (orderDisplay) {
+            orderDisplay.textContent = 'Order: ' + (category.sort_order || '0');
+        }
+        if (statusDisplay) {
+            statusDisplay.textContent = category.is_active ? 'Active' : 'Inactive';
+        }
+        if (imageThumb) {
+            if (category.image_url) {
+                imageThumb.src = category.image_url;
+                imageThumb.alt = category.name ? category.name + ' image' : 'Category image';
+                imageThumb.classList.remove('d-none');
+            } else {
+                imageThumb.removeAttribute('src');
+                imageThumb.alt = '';
+                imageThumb.classList.add('d-none');
+            }
+        }
+        if (imagePlaceholder) {
+            imagePlaceholder.classList.toggle('d-none', Boolean(category.image_url));
+        }
+
+        const nameInput = row.querySelector('.category-name-input');
+        const descriptionInput = row.querySelector('.category-description-input');
+        const groupInput = row.querySelector('.category-group-input');
+        const parentInput = row.querySelector('.category-parent-input');
+        const orderInput = row.querySelector('.category-order-input');
+        const activeInput = row.querySelector('.category-active-input');
+        const imageInput = row.querySelector('.category-image-input');
+        if (nameInput) {
+            nameInput.value = category.name || '';
+        }
+        if (descriptionInput) {
+            descriptionInput.value = category.description || '';
+        }
+        if (groupInput) {
+            groupInput.value = category.group_id || '';
+        }
+        if (parentInput) {
+            parentInput.value = category.parent_id || '';
+        }
+        if (orderInput) {
+            orderInput.value = category.sort_order || '0';
+        }
+        if (activeInput) {
+            activeInput.checked = !!category.is_active;
+        }
+        if (imageInput) {
+            imageInput.value = '';
+        }
+
+        const searchText = [
+            category.name,
+            category.description,
+            category.group_name,
+            category.parent_name,
+        ].filter(Boolean).join(' ').toLowerCase();
+        row.dataset.searchText = searchText;
+    }
+
+    function toggleRowMode(row, isEditing) {
+        row.querySelectorAll('.category-display').forEach(function (el) {
+            el.classList.toggle('d-none', isEditing);
+        });
+        row.querySelectorAll('.category-edit').forEach(function (el) {
+            el.classList.toggle('d-none', !isEditing);
+        });
+        const viewActions = row.querySelector('.category-view-actions');
+        const editActions = row.querySelector('.category-edit-actions');
+        if (viewActions) {
+            viewActions.classList.toggle('d-none', isEditing);
+        }
+        if (editActions) {
+            editActions.classList.toggle('d-none', !isEditing);
+        }
+    }
+
+    function enterEditMode(row) {
+        toggleRowMode(row, true);
+    }
+
+    function exitEditMode(row, revertChanges) {
+        if (revertChanges) {
+            applyCategoryToRow(row, getCategoryFromRow(row));
+        }
+        toggleRowMode(row, false);
+    }
+
+    function getVisibleRowCheckboxes() {
+        return Array.from(document.querySelectorAll('.category-row:not(.d-none) .category-select-checkbox'));
+    }
+
+    function updateBulkSelectionUi() {
+        const visibleCheckboxes = getVisibleRowCheckboxes();
+        const selectedCheckboxes = visibleCheckboxes.filter(function (checkbox) {
+            return checkbox.checked;
+        });
+        if (selectAllCheckbox) {
+            if (!visibleCheckboxes.length) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (selectedCheckboxes.length === visibleCheckboxes.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else if (selectedCheckboxes.length > 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+        }
+        if (bulkDeleteButton) {
+            bulkDeleteButton.disabled = selectedCheckboxes.length === 0;
+        }
+    }
+
+    function toggleEmptyState() {
+        const rows = document.querySelectorAll('.category-row');
+        const emptyState = document.getElementById('categoriesEmptyState');
+        const tableWrapper = document.getElementById('categoriesTableWrapper');
+        const hasRows = rows.length > 0;
+        if (emptyState) {
+            emptyState.classList.toggle('d-none', hasRows);
+        }
+        if (tableWrapper) {
+            tableWrapper.classList.toggle('d-none', !hasRows);
+        }
+        if (!hasRows) {
+            const noResults = document.getElementById('categoriesNoResults');
+            if (noResults) {
+                noResults.classList.add('d-none');
+            }
+        }
+    }
+
+    function filterCategories(query) {
+        const normalized = (query || '').trim().toLowerCase();
+        const rows = document.querySelectorAll('.category-row');
+        let visibleCount = 0;
+        rows.forEach(function (row) {
+            const searchText = row.dataset.searchText || '';
+            const matchesText = !normalized || searchText.includes(normalized);
+            if (matchesText) {
+                row.classList.remove('d-none');
+                visibleCount += 1;
+            } else {
+                row.classList.add('d-none');
+            }
+        });
+        const noResults = document.getElementById('categoriesNoResults');
+        if (noResults) {
+            if (normalized && visibleCount === 0 && rows.length > 0) {
+                noResults.classList.remove('d-none');
+            } else {
+                noResults.classList.add('d-none');
+            }
+        }
+        updateBulkSelectionUi();
+    }
+
+    function createRowElement(category) {
+        const template = document.getElementById('categoryRowTemplate');
+        if (!template || !template.content || !template.content.firstElementChild) {
+            return null;
+        }
+        const row = template.content.firstElementChild.cloneNode(true);
+        attachRowEvents(row);
+        applyCategoryToRow(row, category);
+        return row;
+    }
+
+    function insertCategoryRow(category) {
+        const tbody = document.getElementById('categoriesTableBody');
+        if (!tbody) {
+            return;
+        }
+        const row = createRowElement(category);
+        if (!row) {
+            return;
+        }
+        tbody.insertBefore(row, tbody.firstChild);
+        toggleEmptyState();
+        filterCategories(currentSearchQuery);
+        updateBulkSelectionUi();
+    }
+
+    function deleteRow(row, opts) {
+        const table = getTable();
+        if (!table) {
+            return;
+        }
+        const statusTarget = row.querySelector('.row-status');
+        const categoryId = row.dataset.categoryId;
+        const shouldConfirm = opts && opts.confirm === false ? false : true;
+        const onSuccess = opts && typeof opts.onSuccess === 'function' ? opts.onSuccess : null;
+        const onError = opts && typeof opts.onError === 'function' ? opts.onError : null;
+
+        if (!categoryId) {
+            row.remove();
+            toggleEmptyState();
+            filterCategories(currentSearchQuery);
+            updateBulkSelectionUi();
+            if (onSuccess) {
+                onSuccess();
+            }
+            return;
+        }
+        if (shouldConfirm && !confirm('Remove this category?')) {
+            return;
+        }
+        showStatus(statusTarget, 'Deleting...', 'saving');
+        fetch(buildUrl(table.dataset.deleteUrlTemplate, categoryId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Failed to delete category.');
+                }
+                row.remove();
+                toggleEmptyState();
+                filterCategories(currentSearchQuery);
+                updateBulkSelectionUi();
+                if (onSuccess) {
+                    onSuccess();
+                }
+            })
+            .catch(function () {
+                showStatus(statusTarget, 'Could not delete this category. Try again.', 'error');
+                updateBulkSelectionUi();
+                if (onError) {
+                    onError();
+                }
+            });
+    }
+
+    function getSelectedRows() {
+        return Array.from(document.querySelectorAll('.category-row')).filter(function (row) {
+            const checkbox = row.querySelector('.category-select-checkbox');
+            return checkbox && checkbox.checked;
+        });
+    }
+
+    function bulkDeleteSelectedRows() {
+        const selectedRows = getSelectedRows();
+        if (!selectedRows.length) {
+            return;
+        }
+        const message = selectedRows.length === 1
+            ? 'Remove the selected category?'
+            : 'Remove the ' + selectedRows.length + ' selected categories?';
+        if (!confirm(message)) {
+            return;
+        }
+        if (bulkDeleteStatus) {
+            showStatus(bulkDeleteStatus, 'Deleting...', 'saving');
+        }
+        let remaining = selectedRows.length;
+        let errorCount = 0;
+
+        function finalize(success) {
+            remaining -= 1;
+            if (!success) {
+                errorCount += 1;
+            }
+            if (remaining === 0) {
+                if (bulkDeleteStatus) {
+                    if (errorCount === 0) {
+                        showStatus(bulkDeleteStatus, 'Selected categories deleted.', 'success');
+                    } else if (errorCount === selectedRows.length) {
+                        showStatus(bulkDeleteStatus, 'Could not delete the selected categories. Try again.', 'error');
+                    } else {
+                        showStatus(bulkDeleteStatus, 'Some categories could not be deleted. Try again.', 'error');
+                    }
+                }
+                updateBulkSelectionUi();
+            }
+        }
+
+        selectedRows.forEach(function (row) {
+            deleteRow(row, {
+                confirm: false,
+                onSuccess: function () {
+                    finalize(true);
+                },
+                onError: function () {
+                    finalize(false);
+                },
+            });
+        });
+    }
+
+    function collectRowPayload(row) {
+        return {
+            id: row.dataset.categoryId || null,
+            name: (row.querySelector('.category-name-input')?.value || '').trim(),
+            description: (row.querySelector('.category-description-input')?.value || '').trim(),
+            group_id: row.querySelector('.category-group-input')?.value || '',
+            parent_id: row.querySelector('.category-parent-input')?.value || '',
+            sort_order: (row.querySelector('.category-order-input')?.value || '').trim(),
+            is_active: row.querySelector('.category-active-input')?.checked ?? true,
+        };
+    }
+
+    function getImageFile(input) {
+        if (!input || !input.files || !input.files.length) {
+            return null;
+        }
+        return input.files[0];
+    }
+
+    function buildFormData(payload, imageFile) {
+        const formData = new FormData();
+        Object.keys(payload).forEach(function (key) {
+            if (payload[key] === null || payload[key] === undefined) {
+                return;
+            }
+            formData.append(key, payload[key]);
+        });
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+        return formData;
+    }
+
+    function validatePayload(payload, statusTarget) {
+        if (!payload.name) {
+            showStatus(statusTarget, 'Category name is required.', 'error');
+            return false;
+        }
+        if (payload.sort_order) {
+            const orderValue = Number(payload.sort_order);
+            if (!Number.isInteger(orderValue) || orderValue < 0) {
+                showStatus(statusTarget, 'Sort order must be a non-negative whole number.', 'error');
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function saveRow(row) {
+        const table = getTable();
+        if (!table) {
+            return;
+        }
+        const statusTarget = row.querySelector('.row-status');
+        const payload = collectRowPayload(row);
+        const imageFile = getImageFile(row.querySelector('.category-image-input'));
+        if (!validatePayload(payload, statusTarget)) {
+            return;
+        }
+        showStatus(statusTarget, 'Saving...', 'saving');
+        const formData = buildFormData(payload, imageFile);
+        fetch(table.dataset.saveUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData,
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().then(function (data) {
+                        throw data;
+                    });
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                applyCategoryToRow(row, data.category);
+                exitEditMode(row, false);
+                showStatus(statusTarget, 'Saved.', 'success');
+                filterCategories(currentSearchQuery);
+            })
+            .catch(function (errorData) {
+                const message = errorData && errorData.errors
+                    ? Object.values(errorData.errors).flat().join(' ')
+                    : 'Could not save this category.';
+                showStatus(statusTarget, message, 'error');
+            });
+    }
+
+    function attachRowEvents(row) {
+        if (!row || row.dataset.initialized === 'true') {
+            return;
+        }
+        row.dataset.initialized = 'true';
+        const editButton = row.querySelector('.category-edit-btn');
+        const cancelButton = row.querySelector('.category-cancel-btn');
+        const saveButton = row.querySelector('.category-save-btn');
+        const deleteButton = row.querySelector('.category-delete-btn');
+        const selectCheckbox = row.querySelector('.category-select-checkbox');
+        if (editButton) {
+            editButton.addEventListener('click', function () {
+                enterEditMode(row);
+            });
+        }
+        if (cancelButton) {
+            cancelButton.addEventListener('click', function () {
+                exitEditMode(row, true);
+                showStatus(row.querySelector('.row-status'), '', null);
+            });
+        }
+        if (saveButton) {
+            saveButton.addEventListener('click', function () {
+                saveRow(row);
+            });
+        }
+        if (deleteButton) {
+            deleteButton.addEventListener('click', function () {
+                deleteRow(row);
+            });
+        }
+        if (selectCheckbox) {
+            selectCheckbox.addEventListener('change', function () {
+                updateBulkSelectionUi();
+            });
+        }
+    }
+
+    function handleNewCategory() {
+        const nameInput = document.getElementById('newCategoryName');
+        const descriptionInput = document.getElementById('newCategoryDescription');
+        const groupInput = document.getElementById('newCategoryGroup');
+        const parentInput = document.getElementById('newCategoryParent');
+        const orderInput = document.getElementById('newCategoryOrder');
+        const imageInput = document.getElementById('newCategoryImage');
+        const activeInput = document.getElementById('newCategoryActive');
+        const statusTarget = document.getElementById('newCategoryStatus');
+        const table = getTable();
+        if (!nameInput || !statusTarget || !table) {
+            return;
+        }
+        const payload = {
+            name: (nameInput.value || '').trim(),
+            description: (descriptionInput?.value || '').trim(),
+            group_id: groupInput?.value || '',
+            parent_id: parentInput?.value || '',
+            sort_order: (orderInput?.value || '').trim(),
+            is_active: activeInput?.checked ?? true,
+        };
+        if (!validatePayload(payload, statusTarget)) {
+            return;
+        }
+        showStatus(statusTarget, 'Saving...', 'saving');
+        const formData = buildFormData(payload, getImageFile(imageInput));
+        fetch(table.dataset.saveUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData,
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().then(function (data) {
+                        throw data;
+                    });
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                insertCategoryRow(data.category);
+                nameInput.value = '';
+                if (descriptionInput) {
+                    descriptionInput.value = '';
+                }
+                if (groupInput) {
+                    groupInput.value = '';
+                }
+                if (parentInput) {
+                    parentInput.value = '';
+                }
+                if (orderInput) {
+                    orderInput.value = '';
+                }
+                if (imageInput) {
+                    imageInput.value = '';
+                }
+                if (activeInput) {
+                    activeInput.checked = true;
+                }
+                nameInput.focus();
+                showStatus(statusTarget, 'Saved. Add another category when you are ready.', 'success');
+            })
+            .catch(function (errorData) {
+                const message = errorData && errorData.errors
+                    ? Object.values(errorData.errors).flat().join(' ')
+                    : 'Could not save this category.';
+                showStatus(statusTarget, message, 'error');
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        selectAllCheckbox = document.getElementById('selectAllCategories');
+        bulkDeleteButton = document.getElementById('bulkDeleteButton');
+        bulkDeleteStatus = document.getElementById('bulkDeleteStatus');
+
+        const rows = document.querySelectorAll('.category-row');
+        rows.forEach(function (row) {
+            attachRowEvents(row);
+            applyCategoryToRow(row, getCategoryFromRow(row));
+        });
+        toggleEmptyState();
+
+        const searchInput = document.getElementById('categorySearchInput');
+        if (searchInput) {
+            currentSearchQuery = searchInput.value || '';
+            searchInput.addEventListener('input', function () {
+                currentSearchQuery = searchInput.value || '';
+                filterCategories(currentSearchQuery);
+            });
+        }
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                const visibleCheckboxes = getVisibleRowCheckboxes();
+                visibleCheckboxes.forEach(function (checkbox) {
+                    checkbox.checked = selectAllCheckbox.checked;
+                });
+                updateBulkSelectionUi();
+            });
+        }
+
+        if (bulkDeleteButton) {
+            bulkDeleteButton.addEventListener('click', function () {
+                bulkDeleteSelectedRows();
+            });
+        }
+
+        const addButton = document.getElementById('addCategoryButton');
+        if (addButton) {
+            addButton.addEventListener('click', function () {
+                handleNewCategory();
+            });
+        }
+
+        ['newCategoryName', 'newCategoryDescription', 'newCategoryGroup', 'newCategoryParent', 'newCategoryOrder'].forEach(function (id) {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        handleNewCategory();
+                    }
+                });
+            }
+        });
+
+        filterCategories(currentSearchQuery);
+        updateBulkSelectionUi();
+    });
+})();
+</script>
+
+{% endblock %}

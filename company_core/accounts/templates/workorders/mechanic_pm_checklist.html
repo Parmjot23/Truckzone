@@ -1,0 +1,1347 @@
+{% load static custom_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Preventive Maintenance Checklist – Work Order #{{ workorder.id }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        body {
+            background: #eef2ff;
+            color: #1f2937;
+            margin: 0;
+        }
+        .pm-body--blank {
+            background: #f8fafc;
+        }
+        .pm-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
+        }
+        .pm-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .pm-toolbar .btn {
+            border-radius: 999px;
+            padding-inline: 18px;
+        }
+        .pm-toolbar-status {
+            min-height: 1.5rem;
+        }
+        .pm-toolbar-status .active {
+            display: inline-block;
+        }
+        .pm-sheet {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 45px rgba(79, 70, 229, 0.08);
+            padding: 32px;
+        }
+        .pm-header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            align-items: flex-start;
+            margin-bottom: 28px;
+        }
+        .pm-header-left {
+            flex: 1 1 320px;
+        }
+        .pm-header-left h1 {
+            font-weight: 700;
+            font-size: clamp(1.4rem, 2vw + 1rem, 2rem);
+            margin-bottom: 8px;
+            color: #312e81;
+        }
+        .pm-header-subtitle {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+        .pm-field-group {
+            margin-bottom: 12px;
+        }
+        .pm-field-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #6b7280;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .pm-input,
+        .pm-textarea {
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            background: #f9fafb;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .pm-input:focus,
+        .pm-textarea:focus {
+            border-color: #6366f1;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+            background: #ffffff;
+        }
+        .pm-textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+        .pm-input[readonly],
+        .pm-textarea[readonly] {
+            background: #f1f5f9;
+            cursor: not-allowed;
+        }
+        .pm-meta-card {
+            flex: 1 1 280px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 18px 20px;
+            background: linear-gradient(145deg, rgba(99, 102, 241, 0.08), rgba(244, 246, 255, 0.7));
+        }
+        .pm-meta-title {
+            font-size: 0.8rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #4338ca;
+            margin-bottom: 12px;
+        }
+        .pm-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 12px;
+        }
+        .pm-meta-item {
+            border: 1px solid rgba(79, 70, 229, 0.12);
+            border-radius: 12px;
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.75);
+        }
+        .pm-meta-item strong {
+            display: block;
+            font-size: 0.75rem;
+            color: #6366f1;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .pm-meta-item span {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #111827;
+        }
+        .pm-meta-item input.pm-input {
+            background: rgba(255, 255, 255, 0.86);
+        }
+        .pm-section {
+            margin-top: 32px;
+        }
+        .pm-section h3 {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #312e81;
+            margin-bottom: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pm-section h3::before {
+            content: "";
+            width: 36px;
+            height: 4px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #4338ca, #6366f1);
+        }
+        .pm-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+        }
+        .pm-table thead th {
+            background: linear-gradient(135deg, #4338ca, #6366f1);
+            color: #f9fafb;
+            font-size: 0.78rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 12px 14px;
+        }
+        .pm-table tbody td {
+            background: #ffffff;
+            border-bottom: 1px solid #eef2ff;
+            padding: 14px 16px;
+            vertical-align: top;
+            font-size: 0.95rem;
+        }
+        .pm-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .pm-item-index {
+            font-weight: 600;
+            color: #6366f1;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .pm-item-label {
+            font-weight: 600;
+            color: #111827;
+            max-width: 320px;
+        }
+        .pm-status,
+        .pm-notes {
+            min-width: 180px;
+        }
+        .status-selector {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .status-selector .btn {
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            border-width: 1px;
+        }
+        .status-display,
+        .notes-display,
+        .pm-print-value {
+            display: none;
+            font-size: 0.95rem;
+            min-height: 48px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            padding: 10px 12px;
+            background: rgba(249, 250, 251, 0.9);
+            white-space: pre-line;
+        }
+        .notes-input {
+            min-height: 72px;
+        }
+        .pm-measurement-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .pm-measurement-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .pm-measurement-cell {
+            flex: 1 1 160px;
+        }
+        .pm-measurement-cell label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #1d4ed8;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .pm-measurement-cell .pm-input {
+            border-radius: 10px;
+        }
+        .pm-measurement-cell .pm-print-value {
+            margin-top: 6px;
+        }
+        .pm-measurement-subfield {
+            margin-top: 10px;
+        }
+        .pm-measurement-subfield label {
+            font-size: 0.72rem;
+            letter-spacing: 0.06em;
+            color: #4b5563;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .pm-summary {
+            margin-top: 28px;
+            padding: 20px;
+            border-radius: 16px;
+            background: linear-gradient(120deg, rgba(79, 70, 229, 0.1), rgba(99, 102, 241, 0.05));
+            border: 1px dashed rgba(79, 70, 229, 0.25);
+        }
+        .pm-summary h4 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #312e81;
+            margin-bottom: 12px;
+        }
+        .pm-summary textarea {
+            border-radius: 12px;
+            border: 1px solid rgba(79, 70, 229, 0.2);
+            min-height: 120px;
+        }
+        .pm-footer {
+            margin-top: 36px;
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .pm-bottom-actions {
+            margin-top: 32px;
+        }
+        .pm-bottom-actions .btn {
+            border-radius: 999px;
+            padding-inline: 18px;
+        }
+        .pm-signature {
+            flex: 1 1 280px;
+        }
+        .pm-signature label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4b5563;
+        }
+        .pm-signature .pm-input {
+            margin-top: 6px;
+        }
+        .signature-line {
+            margin-top: 40px;
+            border-top: 2px solid rgba(17, 24, 39, 0.2);
+            padding-top: 8px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #6b7280;
+        }
+        .screen-only {
+            display: block;
+        }
+        .print-only {
+            display: none !important;
+        }
+        @media (max-width: 768px) {
+            .pm-sheet {
+                padding: 22px;
+            }
+            .pm-table thead {
+                display: none;
+            }
+            .pm-table, .pm-table tbody, .pm-table tr, .pm-table td {
+                display: block;
+                width: 100%;
+            }
+            .pm-table tbody tr {
+                margin-bottom: 18px;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                overflow: hidden;
+            }
+            .pm-table td {
+                border-bottom: 1px solid #e5e7eb !important;
+            }
+            .pm-table td:last-child {
+                border-bottom: none !important;
+            }
+            .pm-item-index {
+                margin-bottom: 4px;
+            }
+        }
+        @media print {
+            body {
+                background: #ffffff;
+            }
+            .pm-container {
+                padding: 0;
+            }
+            .pm-sheet {
+                box-shadow: none;
+                border-radius: 0;
+                padding: 24px 18px;
+            }
+            .pm-toolbar,
+            .screen-only,
+            .status-selector,
+            .notes-input,
+            .pm-input,
+            .pm-textarea {
+                display: none !important;
+            }
+            .print-only,
+            .status-display,
+            .notes-display,
+            .pm-print-value {
+                display: block !important;
+            }
+            .pm-table {
+                border: 1px solid #9ca3af;
+                border-radius: 0;
+            }
+            .pm-table tbody td {
+                border-bottom: 1px solid #d1d5db !important;
+            }
+            .pm-summary {
+                border: 1px solid #9ca3af;
+                background: #fff;
+            }
+        }
+    </style>
+</head>
+<body class="pm-body{% if blank %} pm-body--blank{% endif %}">
+    <div class="pm-container">
+        <div class="pm-toolbar screen-only">
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-secondary" href="{% url 'accounts:mechanic_fill_workorder' assignment.assignment_token %}" target="_blank" rel="noopener noreferrer">
+                    ← Back to Work Order
+                </a>
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                {% if not blank %}
+                <button class="btn btn-success" data-action="save">
+                    Save PM Inspection
+                </button>
+                <button class="btn btn-primary" data-action="download">
+                    Save &amp; Download PDF
+                </button>
+                <a class="btn btn-outline-secondary" href="{{ blank_pdf_url }}" target="_blank" rel="noopener noreferrer">
+                    Download Blank PM PDF
+                </a>
+                {% else %}
+                <button class="btn btn-primary" data-action="print">
+                    Print Checklist
+                </button>
+                <a class="btn btn-outline-secondary" href="{{ blank_pdf_url }}" target="_blank" rel="noopener noreferrer">
+                    Download Blank PM PDF
+                </a>
+                {% endif %}
+                <span class="pm-toolbar-status small text-success d-none" data-status-message></span>
+            </div>
+            {% if not blank %}
+            <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-2 mt-3">
+                <button type="button" class="btn btn-outline-primary" id="vehicle-history-button" data-bs-toggle="modal" data-bs-target="#vehicleHistoryModal">
+                    View Vehicle History
+                </button>
+                <small class="text-muted" id="vehicle-history-hint">History is available for the assigned vehicle.</small>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="pm-sheet" id="pmSheet">
+            <div class="pm-header">
+                <div class="pm-header-left">
+                    <h1>{{ business_info.name|default:business_name|default:default_business_name }} PM Inspection Sheet</h1>
+                    <p class="pm-header-subtitle">
+                        Document preventive maintenance work, capture DriveON compliance checkpoints, and produce a polished PDF report ready to share with dispatch and your customer.
+                    </p>
+                    <div class="pm-field-group">
+                        <label for="business-name">Business Name</label>
+                        <input id="business-name" class="pm-input" type="text" value="{{ business_info.name }}" data-print-target="#business-name-print" {% if blank %}readonly{% endif %}>
+                        <div id="business-name-print" class="pm-print-value">{{ business_info.name|default:"—" }}</div>
+                    </div>
+                    <div class="pm-field-group">
+                        <label for="business-address">Business Address</label>
+                        <textarea id="business-address" class="pm-textarea" data-print-target="#business-address-print" data-print-multiline="true" {% if blank %}readonly{% endif %}>{{ business_info.address }}</textarea>
+                        <div id="business-address-print" class="pm-print-value">{{ business_info.address|default:"—" }}</div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="pm-field-group">
+                                <label for="business-phone">Phone</label>
+                                <input id="business-phone" class="pm-input" type="text" value="{{ business_info.phone }}" data-print-target="#business-phone-print" {% if blank %}readonly{% endif %}>
+                                <div id="business-phone-print" class="pm-print-value">{{ business_info.phone|default:"—" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="pm-field-group">
+                                <label for="business-email">Email</label>
+                                <input id="business-email" class="pm-input" type="email" value="{{ business_info.email }}" data-print-target="#business-email-print" {% if blank %}readonly{% endif %}>
+                                <div id="business-email-print" class="pm-print-value">{{ business_info.email|default:"—" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="pm-field-group">
+                                <label for="business-website">Website</label>
+                                <input id="business-website" class="pm-input" type="text" value="{{ business_info.website }}" data-print-target="#business-website-print" {% if blank %}readonly{% endif %}>
+                                <div id="business-website-print" class="pm-print-value">{{ business_info.website|default:"—" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pm-meta-card">
+                    <div class="pm-meta-title">Work Order Snapshot</div>
+                    <div class="pm-meta-grid">
+                        <div class="pm-meta-item">
+                            <strong>Work Order</strong>
+                            <span>#{% if workorder.id %}{{ workorder.id }}{% else %}—{% endif %}</span>
+                        </div>
+                        <div class="pm-meta-item">
+                            <strong>Customer</strong>
+                            <input id="customer-name" class="pm-input" type="text" value="{{ customer_name }}" data-print-target="#customer-print" {% if blank %}readonly{% endif %}>
+                            <div id="customer-print" class="pm-print-value">{{ customer_name|default:"—" }}</div>
+                        </div>
+                        <div class="pm-meta-item">
+                            <strong>Location</strong>
+                            <textarea id="location-field" class="pm-textarea" data-print-target="#location-print" data-print-multiline="true" {% if blank %}readonly{% endif %}>{{ location }}</textarea>
+                            <div id="location-print" class="pm-print-value">{{ location|default:"—" }}</div>
+                        </div>
+                        <div class="pm-meta-item">
+                            <strong>Schedule Due</strong>
+                            <input id="schedule-date" class="pm-input" type="text" value="{{ scheduled_date_text }}" data-print-target="#schedule-print" {% if blank %}readonly{% endif %}>
+                            <div id="schedule-print" class="pm-print-value">{{ scheduled_date_text|default:"—" }}</div>
+                        </div>
+                        <div class="pm-meta-item">
+                            <strong>Inspection Date</strong>
+                            <input id="inspection-date-meta" class="pm-input" type="text" value="{{ inspection_date_text }}" data-print-target="#inspection-date-print" {% if blank %}readonly{% endif %}>
+                            <div id="inspection-date-print" class="pm-print-value">{{ inspection_date_text|default:"—" }}</div>
+                        </div>
+                        <div class="pm-meta-item">
+                            <strong>Inspected By</strong>
+                            <input id="inspected-by-meta" class="pm-input" type="text" value="{{ mechanic_name }}" data-print-target="#inspected-by-print" {% if blank %}readonly{% endif %}>
+                            <div id="inspected-by-print" class="pm-print-value">{{ mechanic_name|default:"—" }}</div>
+                        </div>
+                        <div class="pm-meta-item">
+                            <strong>Overall Status</strong>
+                            <div class="status-selector">
+                                <input type="radio" class="btn-check" name="overall-status" id="overall-status-pass" value="pass" data-label="Pass" {% if overall_status == 'pass' %}checked{% endif %} {% if blank %}disabled{% endif %}>
+                                <label class="btn btn-outline-success" for="overall-status-pass">Pass</label>
+                                <input type="radio" class="btn-check" name="overall-status" id="overall-status-fail" value="fail" data-label="Fail" {% if overall_status == 'fail' %}checked{% endif %} {% if blank %}disabled{% endif %}>
+                                <label class="btn btn-outline-danger" for="overall-status-fail">Fail</label>
+                            </div>
+                            <div class="status-display" data-overall-status-display>
+                                {% if overall_status == 'pass' %}
+                                    Pass
+                                {% elif overall_status == 'fail' %}
+                                    Fail
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-3"/>
+                    <div class="pm-meta-grid">
+                        <div class="pm-meta-item">
+                            <strong>Unit</strong>
+                            <input id="unit-number" class="pm-input" type="text" value="{{ vehicle_info.unit_number }}" data-print-target="#unit-print" {% if blank %}readonly{% endif %}>
+                            <div id="unit-print" class="pm-print-value">{{ vehicle_info.unit_number|default:"—" }}</div>
+                        </div>
+                        <div class="pm-meta-item">
+                            <strong>VIN</strong>
+                            <input id="vin-number" class="pm-input" type="text" value="{{ vehicle_info.vin }}" data-print-target="#vin-print" {% if blank %}readonly{% endif %}>
+                            <div id="vin-print" class="pm-print-value">{{ vehicle_info.vin|default:"—" }}</div>
+                        </div>
+                        <div class="pm-meta-item">
+                            <strong>Make &amp; Model</strong>
+                            <input id="make-model" class="pm-input" type="text" value="{{ vehicle_info.make_model }}" data-print-target="#make-print" {% if blank %}readonly{% endif %}>
+                            <div id="make-print" class="pm-print-value">{{ vehicle_info.make_model|default:"—" }}</div>
+                        </div>
+                        <div class="pm-meta-item">
+                            <strong>License Plate</strong>
+                            <input id="license-plate" class="pm-input" type="text" value="{{ vehicle_info.license_plate }}" data-print-target="#license-print" {% if blank %}readonly{% endif %}>
+                            <div id="license-print" class="pm-print-value">{{ vehicle_info.license_plate|default:"—" }}</div>
+                        </div>
+                        <div class="pm-meta-item">
+                            <strong>Mileage</strong>
+                            <input id="mileage" class="pm-input" type="text" value="{{ vehicle_info.mileage }}" data-print-target="#mileage-print" {% if blank %}readonly{% endif %}>
+                            <div id="mileage-print" class="pm-print-value">{{ vehicle_info.mileage|default:"—" }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% for section in checklist_sections %}
+            <section class="pm-section" data-section-code="{{ section.code }}">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h3 class="mb-0">{{ section.code }}. {{ section.title }}</h3>
+                    {% if not blank %}
+                    <button type="button" class="btn btn-sm btn-outline-success" data-section-pass="{{ section.code }}">
+                        Pass all in {{ section.code }}
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="table-responsive">
+                    <table class="pm-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">Item</th>
+                                <th>Inspection Point</th>
+                                <th style="width: 220px;">Status</th>
+                                <th style="width: 300px;">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in section.items %}
+                            <tr data-item-row data-item-id="{{ item.id }}" data-section="{{ section.code }}">
+                                <td class="pm-item-index">{{ section.code }}.{{ item.code }}</td>
+                                <td class="pm-item-label">{{ item.label }}</td>
+                                <td class="pm-status">
+                                    <div class="status-selector">
+                                        <input type="radio" class="btn-check" name="status-{{ item.id }}" id="{{ item.id }}-pass" value="pass" data-label="Pass" {% if blank %}disabled{% endif %}>
+                                        <label class="btn btn-outline-success" for="{{ item.id }}-pass">Pass</label>
+                                        <input type="radio" class="btn-check" name="status-{{ item.id }}" id="{{ item.id }}-fail" value="fail" data-label="Fail" {% if blank %}disabled{% endif %}>
+                                        <label class="btn btn-outline-danger" for="{{ item.id }}-fail">Fail</label>
+                                        <input type="radio" class="btn-check" name="status-{{ item.id }}" id="{{ item.id }}-na" value="na" data-label="N/A" {% if blank %}disabled{% endif %}>
+                                        <label class="btn btn-outline-secondary" for="{{ item.id }}-na">N/A</label>
+                                    </div>
+                                    <div class="status-display">—</div>
+                                </td>
+                                <td class="pm-notes">
+                                    <textarea class="form-control notes-input" placeholder="Add technician notes..." {% if blank %}readonly{% endif %}></textarea>
+                                    <div class="notes-display">—</div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% endfor %}
+
+            <section class="pm-section">
+                <h3>Pushrod Stroke Measurement</h3>
+                <div class="pm-measurement-grid">
+                    {% for row in pushrod_measurement_layout %}
+                    <div class="pm-measurement-row">
+                        {% for measurement_id in row %}
+                        {% with field=pushrod_measurement_map|get_item:measurement_id %}
+                        <div class="pm-measurement-cell">
+                            <label for="{{ measurement_id }}-input">{{ field.label }} ({{ field.unit }})</label>
+                            <input id="{{ measurement_id }}-input" class="pm-input" type="text"
+                                   data-measurement-section="pushrod_stroke"
+                                   data-measurement-id="{{ measurement_id }}"
+                                   data-print-target="#{{ measurement_id }}-print"
+                                   {% if blank %}readonly{% endif %}>
+                            <div id="{{ measurement_id }}-print" class="pm-print-value">—</div>
+                        </div>
+                        {% endwith %}
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="pm-section">
+                <h3>Tire Depth / Pressure</h3>
+                <div class="pm-measurement-grid">
+                    {% for row in tread_depth_layout %}
+                    <div class="pm-measurement-row">
+                        {% for measurement_id in row %}
+                        {% with field=tread_depth_map|get_item:measurement_id pressure_id=tire_pressure_lookup|get_item:measurement_id %}
+                        <div class="pm-measurement-cell">
+                            <label for="{{ measurement_id }}-input">{{ field.label }} ({{ field.unit }})</label>
+                            <input id="{{ measurement_id }}-input" class="pm-input" type="text"
+                                   data-measurement-section="tread_depth"
+                                   data-measurement-id="{{ measurement_id }}"
+                                   data-print-target="#{{ measurement_id }}-print"
+                                   {% if blank %}readonly{% endif %}>
+                            <div id="{{ measurement_id }}-print" class="pm-print-value">—</div>
+                            {% if pressure_id %}
+                            {% with pressure_field=tire_pressure_map|get_item:pressure_id %}
+                            <div class="pm-measurement-subfield">
+                                <label for="{{ pressure_id }}-input">Air Pressure ({{ pressure_field.unit }})</label>
+                                <input id="{{ pressure_id }}-input" class="pm-input" type="text"
+                                       data-measurement-section="tire_pressure"
+                                       data-measurement-id="{{ pressure_id }}"
+                                       data-print-target="#{{ pressure_id }}-print"
+                                       {% if blank %}readonly{% endif %}>
+                                <div id="{{ pressure_id }}-print" class="pm-print-value">—</div>
+                            </div>
+                            {% endwith %}
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="pm-section">
+                <h3>Chamber Size (Including Long or Short Stroke)</h3>
+                <div class="pm-measurement-grid">
+                    {% for row in chamber_size_layout %}
+                    <div class="pm-measurement-row">
+                        {% for measurement_id in row %}
+                        {% with field=chamber_size_map|get_item:measurement_id %}
+                        <div class="pm-measurement-cell">
+                            <label for="{{ measurement_id }}-input">{{ field.label }}{% if field.unit %} ({{ field.unit }}){% endif %}</label>
+                            <input id="{{ measurement_id }}-input" class="pm-input" type="text"
+                                   data-measurement-section="chamber_size"
+                                   data-measurement-id="{{ measurement_id }}"
+                                   data-print-target="#{{ measurement_id }}-print"
+                                   {% if blank %}readonly{% endif %}>
+                            <div id="{{ measurement_id }}-print" class="pm-print-value">—</div>
+                        </div>
+                        {% endwith %}
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <div class="pm-summary">
+                <h4>Overall Notes &amp; Follow-ups</h4>
+                <textarea id="additional-notes" class="pm-textarea" placeholder="Summarize findings, recommended repairs, parts requirements, or follow-ups." data-print-target="#additional-notes-print" data-print-multiline="true" {% if blank %}readonly{% endif %}></textarea>
+                <div id="additional-notes-print" class="pm-print-value">—</div>
+            </div>
+
+            <div class="pm-footer">
+                <div class="pm-signature">
+                    <label for="inspected-by">Technician</label>
+                    <input id="inspected-by" class="pm-input" type="text" value="{{ mechanic_name }}" data-print-target="#footer-inspected-by-print" {% if blank %}readonly{% endif %}>
+                    <div id="footer-inspected-by-print" class="pm-print-value">{{ mechanic_name|default:"—" }}</div>
+                    <div class="signature-line">Signature</div>
+                </div>
+                <div class="pm-signature">
+                    <label for="inspection-date">Date</label>
+                    <input id="inspection-date" class="pm-input" type="text" value="{{ inspection_date_text }}" data-print-target="#footer-inspection-date-print" {% if blank %}readonly{% endif %}>
+                    <div id="footer-inspection-date-print" class="pm-print-value">{{ inspection_date_text|default:"—" }}</div>
+                    <div class="signature-line">Date</div>
+                </div>
+            </div>
+            {% if not blank %}
+            <div class="pm-bottom-actions screen-only">
+                <div class="d-flex flex-wrap gap-2 justify-content-end">
+                    <button class="btn btn-success" data-action="save">
+                        Save PM Inspection
+                    </button>
+                    <button class="btn btn-primary" data-action="download">
+                        Save &amp; Download PDF
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not blank %}
+    <div class="modal fade" id="vehicleHistoryModal" tabindex="-1" aria-labelledby="vehicleHistoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="vehicleHistoryModalLabel">Vehicle History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="vehicle-history-status" class="alert alert-info mb-3">Vehicle history will appear once vehicle details are available.</div>
+                    <div id="vehicle-history-sections" class="d-none">
+                        <p class="text-muted mb-3" id="vehicle-history-vehicle-label"></p>
+                        <div class="mb-4">
+                            <h6 class="fw-semibold">Recent Jobs</h6>
+                            <div class="list-group list-group-flush" id="vehicle-history-jobs"></div>
+                            <div class="text-muted small" id="vehicle-history-jobs-empty">No recent labor entries recorded for this vehicle.</div>
+                        </div>
+                        <div>
+                            <h6 class="fw-semibold">Parts Used</h6>
+                            <div class="list-group list-group-flush" id="vehicle-history-parts"></div>
+                            <div class="text-muted small" id="vehicle-history-parts-empty">No recent parts usage recorded for this vehicle.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {{ inspection_json|json_script:"pmInspectionData" }}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+    <script>
+        (function () {
+            const isBlank = {{ blank|yesno:"true,false" }};
+            const saveUrl = '{{ save_url|default:"" }}';
+            const defaultPdfUrl = '{{ pdf_url }}';
+            const backToWorkorderUrl = "{% if assignment %}{% url 'accounts:mechanic_fill_workorder' assignment.assignment_token %}{% endif %}";
+            const defaultCustomer = '{{ customer_name|escapejs }}';
+            const defaultLocation = '{{ location|escapejs }}';
+            const defaultMechanic = '{{ mechanic_name|escapejs }}';
+            const defaultScheduledDate = '{{ scheduled_date_text|escapejs }}';
+            const defaultInspectionDate = '{{ inspection_date_text|escapejs }}';
+            const statusMessageEl = document.querySelector('[data-status-message]');
+
+            let initialData = {};
+            const dataElement = document.getElementById('pmInspectionData');
+            if (dataElement && dataElement.textContent) {
+                try {
+                    initialData = JSON.parse(dataElement.textContent);
+                } catch (error) {
+                    console.warn('Failed to parse PM inspection payload', error);
+                }
+            }
+
+            const vehicleHistoryButton = document.getElementById('vehicle-history-button');
+            const vehicleHistoryHint = document.getElementById('vehicle-history-hint');
+            const vehicleHistoryModalEl = document.getElementById('vehicleHistoryModal');
+            const vehicleHistoryStatus = document.getElementById('vehicle-history-status');
+            const vehicleHistorySections = document.getElementById('vehicle-history-sections');
+            const vehicleHistoryVehicleLabel = document.getElementById('vehicle-history-vehicle-label');
+            const vehicleHistoryJobs = document.getElementById('vehicle-history-jobs');
+            const vehicleHistoryJobsEmpty = document.getElementById('vehicle-history-jobs-empty');
+            const vehicleHistoryParts = document.getElementById('vehicle-history-parts');
+            const vehicleHistoryPartsEmpty = document.getElementById('vehicle-history-parts-empty');
+            let vehicleHistoryData = {};
+            try {
+                vehicleHistoryData = JSON.parse('{{ vehicle_history_json|escapejs }}');
+            } catch (error) {
+                vehicleHistoryData = {};
+            }
+
+            if (vehicleHistoryButton) {
+                const normalizeHistory = (rawState) => {
+                    const state = rawState && typeof rawState === 'object' ? rawState : {};
+                    const jobs = Array.isArray(state.jobs) ? state.jobs : [];
+                    const parts = Array.isArray(state.parts) ? state.parts : [];
+                    const vehicle = state.vehicle && typeof state.vehicle === 'object' ? state.vehicle : null;
+                    const normalizedVehicle = vehicle ? Object.assign({}, vehicle) : null;
+                    if (normalizedVehicle && !normalizedVehicle.label) {
+                        const pieces = [];
+                        if (normalizedVehicle.unit_number) {
+                            pieces.push(`Unit ${normalizedVehicle.unit_number}`);
+                        }
+                        if (normalizedVehicle.make_model) {
+                            pieces.push(normalizedVehicle.make_model);
+                        }
+                        if (!pieces.length && normalizedVehicle.vin) {
+                            pieces.push(normalizedVehicle.vin);
+                        }
+                        normalizedVehicle.label = pieces.join(' • ');
+                    }
+                    return {
+                        vehicle: normalizedVehicle,
+                        jobs,
+                        parts,
+                        has_history: Boolean(state.has_history || jobs.length || parts.length),
+                    };
+                };
+
+                const renderVehicleHistory = () => {
+                    const data = normalizeHistory(vehicleHistoryData);
+                    if (!vehicleHistoryStatus) {
+                        return;
+                    }
+                    const hasVehicle = Boolean(data.vehicle && data.vehicle.id);
+                    if (!hasVehicle) {
+                        vehicleHistoryStatus.className = 'alert alert-info mb-3';
+                        vehicleHistoryStatus.textContent = 'Vehicle history will appear once vehicle details are available.';
+                        vehicleHistoryStatus.classList.remove('d-none');
+                        if (vehicleHistorySections) {
+                            vehicleHistorySections.classList.add('d-none');
+                        }
+                        return;
+                    }
+
+                    if (vehicleHistoryVehicleLabel) {
+                        const label = data.vehicle.label || '';
+                        vehicleHistoryVehicleLabel.textContent = label ? `History for ${label}` : '';
+                    }
+
+                    if (vehicleHistoryJobs) {
+                        vehicleHistoryJobs.innerHTML = '';
+                        data.jobs.forEach((job) => {
+                            const row = document.createElement('div');
+                            row.className = 'list-group-item';
+                            const title = document.createElement('div');
+                            title.className = 'fw-semibold mb-1';
+                            title.textContent = job.description || 'Job';
+                            row.appendChild(title);
+                            const meta = document.createElement('div');
+                            meta.className = 'd-flex justify-content-between align-items-center text-muted small';
+                            const dateSpan = document.createElement('span');
+                            dateSpan.textContent = job.date || '';
+                            meta.appendChild(dateSpan);
+                            row.appendChild(meta);
+                            if (job.notes) {
+                                const notes = document.createElement('div');
+                                notes.className = 'small mt-2 text-muted';
+                                notes.textContent = job.notes;
+                                row.appendChild(notes);
+                            }
+                            vehicleHistoryJobs.appendChild(row);
+                        });
+                        if (vehicleHistoryJobsEmpty) {
+                            vehicleHistoryJobsEmpty.classList.toggle('d-none', data.jobs.length > 0);
+                        }
+                        vehicleHistoryJobs.classList.toggle('d-none', data.jobs.length === 0);
+                    }
+
+                    if (vehicleHistoryParts) {
+                        vehicleHistoryParts.innerHTML = '';
+                        data.parts.forEach((part) => {
+                            const row = document.createElement('div');
+                            row.className = 'list-group-item';
+                            const title = document.createElement('div');
+                            title.className = 'fw-semibold mb-1';
+                            title.textContent = part.description || 'Part';
+                            row.appendChild(title);
+                            const meta = document.createElement('div');
+                            meta.className = 'd-flex justify-content-between align-items-center text-muted small';
+                            const dateSpan = document.createElement('span');
+                            dateSpan.textContent = part.date || '';
+                            meta.appendChild(dateSpan);
+                            if (part.quantity) {
+                                const qty = document.createElement('span');
+                                qty.className = 'badge bg-light text-dark';
+                                qty.textContent = `Qty ${part.quantity}`;
+                                meta.appendChild(qty);
+                            }
+                            row.appendChild(meta);
+                            vehicleHistoryParts.appendChild(row);
+                        });
+                        if (vehicleHistoryPartsEmpty) {
+                            vehicleHistoryPartsEmpty.classList.toggle('d-none', data.parts.length > 0);
+                        }
+                        vehicleHistoryParts.classList.toggle('d-none', data.parts.length === 0);
+                    }
+
+                    if (vehicleHistorySections) {
+                        vehicleHistorySections.classList.remove('d-none');
+                    }
+                    if (vehicleHistoryStatus) {
+                        if (data.jobs.length || data.parts.length) {
+                            vehicleHistoryStatus.classList.add('d-none');
+                        } else {
+                            vehicleHistoryStatus.className = 'alert alert-info mb-3';
+                            vehicleHistoryStatus.textContent = 'No previous work recorded for this vehicle yet.';
+                            vehicleHistoryStatus.classList.remove('d-none');
+                        }
+                    }
+                };
+
+                const updateVehicleHistoryAvailability = () => {
+                    const data = normalizeHistory(vehicleHistoryData);
+                    const hasVehicle = Boolean(data.vehicle && data.vehicle.id);
+                    if (vehicleHistoryButton) {
+                        vehicleHistoryButton.disabled = !hasVehicle;
+                    }
+                    if (vehicleHistoryHint) {
+                        if (!hasVehicle) {
+                            vehicleHistoryHint.textContent = 'Vehicle history will appear once vehicle details are available.';
+                        } else if (data.has_history) {
+                            vehicleHistoryHint.textContent = 'Vehicle history ready to view.';
+                        } else {
+                            vehicleHistoryHint.textContent = 'No previous history recorded for this vehicle yet.';
+                        }
+                    }
+                    if (!hasVehicle && vehicleHistoryStatus) {
+                        vehicleHistoryStatus.className = 'alert alert-info mb-3';
+                        vehicleHistoryStatus.textContent = 'Vehicle history will appear once vehicle details are available.';
+                        vehicleHistoryStatus.classList.remove('d-none');
+                        if (vehicleHistorySections) {
+                            vehicleHistorySections.classList.add('d-none');
+                        }
+                    }
+                };
+
+                if (vehicleHistoryModalEl) {
+                    vehicleHistoryModalEl.addEventListener('show.bs.modal', () => {
+                        renderVehicleHistory();
+                    });
+                }
+
+                updateVehicleHistoryAvailability();
+            }
+
+            const updateMetaDisplays = () => {
+                document.querySelectorAll('[data-print-target]').forEach((field) => {
+                    const targetSelector = field.getAttribute('data-print-target');
+                    if (!targetSelector) return;
+                    const target = document.querySelector(targetSelector);
+                    if (!target) return;
+                    const multiline = field.getAttribute('data-print-multiline') === 'true';
+                    const value = (field.value || field.textContent || '').trim();
+                    if (multiline) {
+                        target.innerHTML = value ? value.replace(/\n/g, '<br>') : '&mdash;';
+                    } else {
+                        target.textContent = value || '—';
+                    }
+                });
+            };
+
+            const updateChecklistDisplays = () => {
+                document.querySelectorAll('[data-item-row]').forEach((row) => {
+                    const checked = row.querySelector('input[type="radio"]:checked');
+                    const statusDisplay = row.querySelector('.status-display');
+                    if (statusDisplay) {
+                        statusDisplay.textContent = checked ? checked.getAttribute('data-label') : '—';
+                    }
+                    const notesInput = row.querySelector('.notes-input');
+                    const notesDisplay = row.querySelector('.notes-display');
+                    if (notesDisplay) {
+                        const value = notesInput ? notesInput.value.trim() : '';
+                        notesDisplay.textContent = value || '—';
+                    }
+                });
+            };
+
+            const updateOverallStatusDisplay = () => {
+                const display = document.querySelector('[data-overall-status-display]');
+                if (!display) {
+                    return;
+                }
+                const status = getOverallStatus();
+                if (status === 'pass') {
+                    display.textContent = 'Pass';
+                } else if (status === 'fail') {
+                    display.textContent = 'Fail';
+                } else {
+                    display.textContent = '—';
+                }
+            };
+
+            const showStatus = (message, type = 'success') => {
+                if (!statusMessageEl) {
+                    if (message) {
+                        window.alert(message);
+                    }
+                    return;
+                }
+                statusMessageEl.textContent = message;
+                statusMessageEl.classList.remove('d-none', 'text-success', 'text-danger', 'active');
+                statusMessageEl.classList.add(type === 'error' ? 'text-danger' : 'text-success', 'active');
+                if (message) {
+                    setTimeout(() => {
+                        statusMessageEl.classList.add('d-none');
+                        statusMessageEl.classList.remove('active');
+                    }, 4000);
+                }
+            };
+
+            const clearStatus = () => {
+                if (statusMessageEl) {
+                    statusMessageEl.classList.add('d-none');
+                    statusMessageEl.classList.remove('active');
+                }
+            };
+
+            const getFieldValue = (selector) => {
+                const element = document.querySelector(selector);
+                if (!element) return '';
+                return (element.value || '').trim();
+            };
+
+            const getOverallStatus = () => {
+                const checked = document.querySelector('input[name="overall-status"]:checked');
+                return checked ? (checked.value || '').trim() : '';
+            };
+
+            const collectInspectionData = () => {
+                const checklist = {};
+                document.querySelectorAll('[data-item-row]').forEach((row) => {
+                    const itemId = row.getAttribute('data-item-id');
+                    if (!itemId) return;
+                    const checked = row.querySelector('input[type="radio"]:checked');
+                    const notesInput = row.querySelector('.notes-input');
+                    checklist[itemId] = {
+                        status: checked ? checked.value : '',
+                        notes: notesInput ? notesInput.value.trim() : '',
+                    };
+                });
+
+                const measurements = {};
+                document.querySelectorAll('[data-measurement-section]').forEach((input) => {
+                    const sectionKey = input.getAttribute('data-measurement-section');
+                    const measurementId = input.getAttribute('data-measurement-id');
+                    if (!sectionKey || !measurementId) {
+                        return;
+                    }
+                    if (!measurements[sectionKey]) {
+                        measurements[sectionKey] = {};
+                    }
+                    measurements[sectionKey][measurementId] = (input.value || '').trim();
+                });
+
+                return {
+                    business_info: {
+                        name: getFieldValue('#business-name'),
+                        address: getFieldValue('#business-address'),
+                        phone: getFieldValue('#business-phone'),
+                        email: getFieldValue('#business-email'),
+                        website: getFieldValue('#business-website'),
+                    },
+                    customer_name: getFieldValue('#customer-name'),
+                    location: (document.querySelector('#location-field')?.value || '').trim(),
+                    scheduled_date: getFieldValue('#schedule-date'),
+                    inspection_date: getFieldValue('#inspection-date-meta'),
+                    inspector_name: getFieldValue('#inspected-by-meta'),
+                    vehicle_info: {
+                        unit_number: getFieldValue('#unit-number'),
+                        vin: getFieldValue('#vin-number'),
+                        make_model: getFieldValue('#make-model'),
+                        license_plate: getFieldValue('#license-plate'),
+                        mileage: getFieldValue('#mileage'),
+                    },
+                    additional_notes: (document.getElementById('additional-notes')?.value || '').trim(),
+                    measurements,
+                    checklist,
+                    overall_status: getOverallStatus(),
+                };
+            };
+
+            const applyInitialData = () => {
+                if (!initialData || Object.keys(initialData).length === 0) {
+                    return;
+                }
+                const setValue = (selector, value) => {
+                    if (typeof value === 'undefined' || value === null) return;
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        element.value = value;
+                    }
+                };
+                if (initialData.business_info) {
+                    setValue('#business-name', initialData.business_info.name || '');
+                    setValue('#business-address', initialData.business_info.address || '');
+                    setValue('#business-phone', initialData.business_info.phone || '');
+                    setValue('#business-email', initialData.business_info.email || '');
+                    setValue('#business-website', initialData.business_info.website || '');
+                }
+                setValue('#customer-name', initialData.customer_name || '');
+                setValue('#location-field', initialData.location || '');
+                setValue('#schedule-date', initialData.scheduled_date || '');
+                setValue('#inspection-date-meta', initialData.inspection_date || '');
+                setValue('#inspection-date', initialData.inspection_date || '');
+                setValue('#inspected-by-meta', initialData.inspector_name || '');
+                setValue('#inspected-by', initialData.inspector_name || '');
+                if (initialData.vehicle_info) {
+                    setValue('#unit-number', initialData.vehicle_info.unit_number || '');
+                    setValue('#vin-number', initialData.vehicle_info.vin || '');
+                    setValue('#make-model', initialData.vehicle_info.make_model || '');
+                    setValue('#license-plate', initialData.vehicle_info.license_plate || '');
+                    setValue('#mileage', initialData.vehicle_info.mileage || '');
+                }
+                if (initialData.additional_notes) {
+                    setValue('#additional-notes', initialData.additional_notes);
+                }
+                const checklist = initialData.checklist || {};
+                Object.keys(checklist).forEach((itemId) => {
+                    const row = document.querySelector(`[data-item-row][data-item-id="${itemId}"]`);
+                    if (!row) return;
+                    const entry = checklist[itemId] || {};
+                    if (entry.status) {
+                        const radio = row.querySelector(`input[type="radio"][value="${entry.status}"]`);
+                        if (radio) {
+                            radio.checked = true;
+                        }
+                    }
+                    if (entry.notes) {
+                        const notesInput = row.querySelector('.notes-input');
+                        if (notesInput) {
+                            notesInput.value = entry.notes;
+                        }
+                    }
+                });
+
+                if (initialData.overall_status) {
+                    const overallRadio = document.querySelector(`input[name="overall-status"][value="${initialData.overall_status}"]`);
+                    if (overallRadio) {
+                        overallRadio.checked = true;
+                    }
+                }
+
+                const measurements = initialData.measurements || {};
+                Object.entries(measurements).forEach(([sectionKey, values]) => {
+                    if (!values || typeof values !== 'object') {
+                        return;
+                    }
+                    Object.entries(values).forEach(([measurementId, value]) => {
+                        const input = document.querySelector(
+                            `[data-measurement-section="${sectionKey}"][data-measurement-id="${measurementId}"]`,
+                        );
+                        if (input && typeof value === 'string') {
+                            input.value = value;
+                        }
+                    });
+                });
+            };
+
+            const setSectionStatus = (sectionCode, status) => {
+                document.querySelectorAll(`[data-item-row][data-section="${sectionCode}"]`).forEach((row) => {
+                    const radio = row.querySelector(`input[type="radio"][value="${status}"]`);
+                    if (radio && !radio.disabled) {
+                        radio.checked = true;
+                    }
+                });
+                updateChecklistDisplays();
+                updateOverallStatusDisplay();
+            };
+
+            const setAllSectionsStatus = (status) => {
+                document.querySelectorAll('[data-item-row]').forEach((row) => {
+                    const radio = row.querySelector(`input[type="radio"][value="${status}"]`);
+                    if (radio && !radio.disabled) {
+                        radio.checked = true;
+                    }
+                });
+                updateChecklistDisplays();
+                updateOverallStatusDisplay();
+            };
+
+            const ensureMetaDefaults = () => {
+                const setIfEmpty = (selector, value) => {
+                    const el = document.querySelector(selector);
+                    if (el && !el.value.trim() && value) {
+                        el.value = value;
+                    }
+                };
+                setIfEmpty('#customer-name', defaultCustomer);
+                setIfEmpty('#location-field', defaultLocation || document.querySelector('#business-address')?.value || '');
+                setIfEmpty('#schedule-date', defaultScheduledDate);
+                setIfEmpty('#inspection-date-meta', defaultInspectionDate);
+                setIfEmpty('#inspection-date', defaultInspectionDate);
+                setIfEmpty('#inspected-by-meta', defaultMechanic);
+                setIfEmpty('#inspected-by', defaultMechanic);
+            };
+
+            const persistInspection = async () => {
+                if (!saveUrl) {
+                    return null;
+                }
+                const response = await fetch(saveUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(collectInspectionData()),
+                });
+                let payload = {};
+                try {
+                    payload = await response.json();
+                } catch (error) {
+                    console.warn('PM inspection save returned non-JSON response', error);
+                }
+                if (!response.ok) {
+                    const errorMessage = (payload && payload.error) || 'Failed to save PM inspection.';
+                    throw new Error(errorMessage);
+                }
+                return payload;
+            };
+
+            const closeForm = () => {
+                if (window.opener && !window.opener.closed) {
+                    window.close();
+                    return;
+                }
+                if (window.history.length > 1) {
+                    window.history.back();
+                    return;
+                }
+                if (backToWorkorderUrl) {
+                    window.location.href = backToWorkorderUrl;
+                }
+            };
+
+            const handleSave = async (event, { download } = { download: false }) => {
+                event.preventDefault();
+                clearStatus();
+                try {
+                    const result = await persistInspection();
+                    if (result) {
+                        showStatus('PM inspection saved.');
+                        const nextPdfUrl = result.pdf_url || defaultPdfUrl;
+                        if (download && nextPdfUrl) {
+                            window.open(`${nextPdfUrl}?ts=${Date.now()}`, '_blank');
+                        }
+                        setTimeout(() => closeForm(), download ? 600 : 200);
+                        return;
+                    }
+                    setTimeout(() => closeForm(), download ? 600 : 200);
+                } catch (error) {
+                    console.error('Failed to save PM inspection', error);
+                    showStatus(error.message || 'Failed to save PM inspection.', 'error');
+                }
+            };
+
+            const syncField = (sourceSelector, targetSelector) => {
+                const source = document.querySelector(sourceSelector);
+                const target = document.querySelector(targetSelector);
+                if (!source || !target) return;
+                const update = () => {
+                    target.value = source.value;
+                };
+                source.addEventListener('input', update);
+                update();
+            };
+
+            applyInitialData();
+            ensureMetaDefaults();
+            syncField('#inspection-date-meta', '#inspection-date');
+            syncField('#inspected-by-meta', '#inspected-by');
+
+            document.querySelectorAll('[data-print-target]').forEach((field) => {
+                field.addEventListener('input', updateMetaDisplays);
+                field.addEventListener('change', updateMetaDisplays);
+            });
+
+            document.querySelectorAll('.notes-input').forEach((field) => {
+                field.addEventListener('input', updateChecklistDisplays);
+                field.addEventListener('change', updateChecklistDisplays);
+            });
+
+            document.querySelectorAll('input[type="radio"]').forEach((input) => {
+                input.addEventListener('change', () => {
+                    updateChecklistDisplays();
+                    updateOverallStatusDisplay();
+                    if (input.name === 'overall-status' && input.value === 'pass' && input.checked) {
+                        setAllSectionsStatus('pass');
+                    }
+                });
+            });
+
+            document.querySelectorAll('[data-section-pass]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const sectionCode = button.getAttribute('data-section-pass');
+                    if (!sectionCode) return;
+                    setSectionStatus(sectionCode, 'pass');
+                });
+            });
+
+            document.querySelectorAll('[data-action="print"]').forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    updateMetaDisplays();
+                    updateChecklistDisplays();
+                    updateOverallStatusDisplay();
+                    window.print();
+                });
+            });
+
+            if (!isBlank && saveUrl) {
+                document.querySelectorAll('[data-action="save"]').forEach((button) => {
+                    button.addEventListener('click', (event) => handleSave(event, { download: false }));
+                });
+                document.querySelectorAll('[data-action="download"]').forEach((button) => {
+                    button.addEventListener('click', (event) => handleSave(event, { download: true }));
+                });
+            }
+
+            window.addEventListener('beforeprint', () => {
+                updateMetaDisplays();
+                updateChecklistDisplays();
+                updateOverallStatusDisplay();
+            });
+
+            updateMetaDisplays();
+            updateChecklistDisplays();
+            updateOverallStatusDisplay();
+        })();
+    </script>
+</body>
+</html>

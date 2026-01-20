@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Choose Your Plan</h2>
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            <div class="card text-center shadow-lg border-0 mb-4">
+                <div class="card-body">
+                    <i class="fas fa-calendar-alt fa-3x mb-3 text-primary"></i>
+                    <h5 class="card-title">Monthly Plan</h5>
+                    <p class="card-text">$19/month</p>
+                    <a href="{% url 'accounts:payment' plan_name='monthly' %}" class="btn btn-primary">Choose Monthly</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center shadow-lg border-0 mb-4">
+                <div class="card-body">
+                    <i class="fas fa-calendar-check fa-3x mb-3 text-primary"></i>
+                    <h5 class="card-title">Annual Plan</h5>
+                    <p class="card-text">$199/year</p>
+                    <a href="{% url 'accounts:payment' plan_name='annually' %}" class="btn btn-primary">Choose Annual</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

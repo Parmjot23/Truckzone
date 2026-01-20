@@ -1,0 +1,46 @@
+{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">{% if mode == 'edit' %}Edit Payroll Run{% else %}New Payroll Run{% endif %}</h2>
+            <div class="text-muted small">Use submitted or approved timesheets for the selected period.</div>
+        </div>
+    </div>
+
+    {% include 'payroll/_nav.html' %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Period start</label>
+                        {{ form.period_start }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Period end</label>
+                        {{ form.period_end }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Pay date</label>
+                        {{ form.pay_date }}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Notes</label>
+                        {{ form.notes }}
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        {% if mode == 'edit' %}Save changes{% else %}Generate payroll{% endif %}
+                    </button>
+                    <a href="{% url 'accounts:payroll_run_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

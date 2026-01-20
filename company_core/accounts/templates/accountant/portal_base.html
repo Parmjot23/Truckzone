@@ -1,0 +1,40 @@
+{% extends "accountant/portal_base_layout.html" %}
+
+{% block content %}
+  <div class="accountant-shell">
+    <div class="container">
+      <div class="accountant-card mb-4">
+        <div class="row g-4 align-items-start">
+          <div class="col-lg-7">
+            <span class="badge rounded-pill text-bg-light text-uppercase fw-semibold mb-3">{{ accountant_access_label|default:"Read only" }}</span>
+            <h1 class="h3 fw-bold mb-2">Welcome {{ accountant_display_name|default:request.user.get_full_name|default:request.user.get_username }}</h1>
+            <p class="text-muted mb-0">
+              Review live books for {{ business_name|default:default_business_name }} and download tax-ready reports in PDF or Excel. Payroll deduction adjustments follow your access level.
+            </p>
+          </div>
+          <div class="col-lg-5">
+            <div class="border rounded-4 p-3 bg-light h-100">
+              <div class="text-uppercase text-muted small fw-semibold mb-2">Account details</div>
+              <div class="d-flex flex-column gap-2 small">
+                {% if accountant_firm %}
+                  <div><i class="fa-solid fa-building me-2 text-primary"></i>{{ accountant_firm }}</div>
+                {% endif %}
+                {% if accountant_timezone %}
+                  <div><i class="fa-solid fa-clock me-2 text-primary"></i>{{ accountant_timezone }}</div>
+                {% endif %}
+                {% if portal_support_phone %}
+                  <div><i class="fa-solid fa-phone me-2 text-primary"></i>{{ portal_support_phone }}</div>
+                {% endif %}
+                {% if portal_support_email %}
+                  <div><i class="fa-solid fa-envelope me-2 text-primary"></i>{{ portal_support_email }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% block portal_content %}{% endblock %}
+    </div>
+  </div>
+{% endblock %}

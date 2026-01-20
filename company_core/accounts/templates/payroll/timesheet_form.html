@@ -1,0 +1,545 @@
+{% extends 'customer_portal_base.html' %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">{% if mode == 'edit' %}Edit{% else %}Add{% endif %} Timesheet</h2>
+            <div class="text-muted small">Hourly time entries for payroll.</div>
+        </div>
+        {% if timesheet %}
+        <div class="page-toolbar">
+            <span class="badge bg-light text-dark">Status: {{ timesheet.get_status_display }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% include 'payroll/_nav.html' %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <label class="form-label mb-0">Employee</label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="timesheet-open">
+                                Open timesheet
+                            </button>
+                        </div>
+                        {{ form.employee }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Period start</label>
+                        {{ form.period_start }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Period end</label>
+                        {{ form.period_end }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        {{ form.status }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Notes</label>
+                        {{ form.notes }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if mechanic_snapshot %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div>
+                        <h5 class="mb-0">Mechanic submission</h5>
+                        <div class="text-muted small">
+                            Submitted {{ mechanic_snapshot.captured_at|date:"M j, Y, g:i a" }}.
+                            {% if comparison_label %}Comparing to {{ comparison_label|lower }}.{% endif %}
+                        </div>
+                    </div>
+                    {% if differences %}
+                        <span class="badge bg-warning text-dark">
+                            {{ differences|length }} difference{% if differences|length != 1 %}s{% endif %}
+                        </span>
+                    {% else %}
+                        <span class="badge bg-success">Matched</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if differences %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Admin record</th>
+                            <th>Mechanic submission</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for diff in differences %}
+                        <tr>
+                            <td>{{ diff.work_date }}</td>
+                            <td>
+                                <div class="{% if diff.diff_fields.start_time or diff.diff_fields.end_time or diff.diff_fields.hours %}text-danger{% endif %}">
+                                    {{ diff.reference.start_time|default:"-" }} - {{ diff.reference.end_time|default:"-" }}
+                                    <span class="text-muted">({{ diff.reference.hours|default:"0.00" }}h)</span>
+                                </div>
+                                {% if diff.reference.notes %}
+                                <div class="{% if diff.diff_fields.notes %}text-danger{% else %}text-muted{% endif %} small">
+                                    {{ diff.reference.notes }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="{% if diff.diff_fields.start_time or diff.diff_fields.end_time or diff.diff_fields.hours %}text-danger{% endif %}">
+                                    {{ diff.submitted.start_time|default:"-" }} - {{ diff.submitted.end_time|default:"-" }}
+                                    <span class="text-muted">({{ diff.submitted.hours|default:"0.00" }}h)</span>
+                                </div>
+                                {% if diff.submitted.notes %}
+                                <div class="{% if diff.diff_fields.notes %}text-danger{% else %}text-muted{% endif %} small">
+                                    {{ diff.submitted.notes }}
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="border-top px-3 py-2 text-muted small">
+                No differences between the submitted timesheet and {{ comparison_label|lower }}.
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <h5 class="card-title mb-0">Entries</h5>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <select id="shift-template-select" class="form-select form-select-sm">
+                            <option value="">Shift template</option>
+                            {% for template in shift_templates %}
+                            <option value="{{ template.id }}" data-start="{{ template.start_time|time:'H:i' }}" data-end="{{ template.end_time|time:'H:i' }}">
+                                {{ template.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="apply-shift-template">
+                            Fill empty rows
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="auto-fill-period">
+                            Auto-fill period
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="add-time-entry">Add entry</button>
+                    </div>
+                </div>
+                {{ formset.management_form }}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Start</th>
+                                <th>Finish</th>
+                                <th>Hours</th>
+                                <th>Notes</th>
+                                <th>Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody id="time-entry-body">
+                            {% for entry_form in formset %}
+                            <tr>
+                                <td>
+                                    {{ entry_form.work_date }}
+                                    {{ entry_form.id }}
+                                </td>
+                                <td>{{ entry_form.start_time }}</td>
+                                <td>{{ entry_form.end_time }}</td>
+                                <td>{{ entry_form.hours }}</td>
+                                <td>{{ entry_form.notes }}</td>
+                                <td>{{ entry_form.DELETE }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <template id="time-entry-template">
+                    <tr>
+                        <td>
+                            {{ formset.empty_form.work_date }}
+                            {{ formset.empty_form.id }}
+                        </td>
+                        <td>{{ formset.empty_form.start_time }}</td>
+                        <td>{{ formset.empty_form.end_time }}</td>
+                        <td>{{ formset.empty_form.hours }}</td>
+                        <td>{{ formset.empty_form.notes }}</td>
+                        <td>{{ formset.empty_form.DELETE }}</td>
+                    </tr>
+                </template>
+                {% if total_hours %}
+                <div class="text-muted small" id="total-hours-label">Total hours: {{ total_hours }}</div>
+                {% else %}
+                <div class="text-muted small" id="total-hours-label">Total hours: 0.00</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'accounts:timesheet_list' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="modal fade" id="daysOffModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select days off</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-muted small mb-2">Check days you want to skip.</div>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="days-off-weekends">Select weekends</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="days-off-clear">Clear</button>
+                </div>
+                <div id="days-off-list" class="d-grid gap-2"></div>
+                <div id="days-off-empty" class="text-muted small d-none">Select a valid period first.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="apply-days-off">Create entries</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const addBtn = document.getElementById('add-time-entry');
+        const autoFillBtn = document.getElementById('auto-fill-period');
+        const tbody = document.getElementById('time-entry-body');
+        const template = document.getElementById('time-entry-template');
+        const totalForms = document.getElementById('id_{{ formset.prefix }}-TOTAL_FORMS');
+        const totalHoursLabel = document.getElementById('total-hours-label');
+        const shiftSelect = document.getElementById('shift-template-select');
+        const shiftApplyBtn = document.getElementById('apply-shift-template');
+        const periodStartInput = document.getElementById('id_period_start');
+        const periodEndInput = document.getElementById('id_period_end');
+        const employeeSelect = document.getElementById('id_employee');
+        const openTimesheetBtn = document.getElementById('timesheet-open');
+        const daysOffModalEl = document.getElementById('daysOffModal');
+        const daysOffList = document.getElementById('days-off-list');
+        const daysOffEmpty = document.getElementById('days-off-empty');
+        const daysOffWeekendsBtn = document.getElementById('days-off-weekends');
+        const daysOffClearBtn = document.getElementById('days-off-clear');
+        const daysOffApplyBtn = document.getElementById('apply-days-off');
+        let daysOffModal = null;
+        let pendingDates = [];
+
+        if (!addBtn || !tbody || !template || !totalForms) {
+            return;
+        }
+
+        const parseDateInput = (value) => {
+            if (!value) return null;
+            const parts = value.split('-').map((part) => parseInt(part, 10));
+            if (parts.length !== 3 || parts.some(Number.isNaN)) {
+                return null;
+            }
+            return new Date(parts[0], parts[1] - 1, parts[2]);
+        };
+
+        const formatDateInput = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const getDateRange = (start, end) => {
+            const dates = [];
+            const cursor = new Date(start.getTime());
+            while (cursor <= end) {
+                dates.push(new Date(cursor.getTime()));
+                cursor.setDate(cursor.getDate() + 1);
+            }
+            return dates;
+        };
+
+        const parseTime = (value) => {
+            if (!value) return null;
+            const parts = value.split(':');
+            if (parts.length < 2) return null;
+            const hours = parseInt(parts[0], 10);
+            const minutes = parseInt(parts[1], 10);
+            if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+                return null;
+            }
+            return hours * 60 + minutes;
+        };
+
+        const calculateRowHours = (row) => {
+            const startInput = row.querySelector('input[name$="-start_time"]');
+            const endInput = row.querySelector('input[name$="-end_time"]');
+            const hoursInput = row.querySelector('input[name$="-hours"]');
+            if (!startInput || !endInput || !hoursInput) {
+                return;
+            }
+            const startMinutes = parseTime(startInput.value);
+            const endMinutes = parseTime(endInput.value);
+            if (startMinutes === null || endMinutes === null) {
+                return;
+            }
+            let diff = endMinutes - startMinutes;
+            if (diff < 0) {
+                diff += 24 * 60;
+            }
+            const hours = (diff / 60).toFixed(2);
+            hoursInput.value = hours;
+            updateTotalHours();
+        };
+
+        const applyShiftToRow = (row) => {
+            if (!shiftSelect) return;
+            const selected = shiftSelect.options[shiftSelect.selectedIndex];
+            if (!selected || !selected.dataset) return;
+            const startValue = selected.dataset.start;
+            const endValue = selected.dataset.end;
+            if (!startValue || !endValue) return;
+            const startInput = row.querySelector('input[name$="-start_time"]');
+            const endInput = row.querySelector('input[name$="-end_time"]');
+            if (!startInput || !endInput) return;
+            if (!startInput.value && !endInput.value) {
+                startInput.value = startValue;
+                endInput.value = endValue;
+                calculateRowHours(row);
+            }
+        };
+
+        const updateTotalHours = () => {
+            if (!totalHoursLabel) return;
+            let total = 0;
+            tbody.querySelectorAll('input[name$="-hours"]').forEach((input) => {
+                const value = parseFloat(input.value);
+                if (!Number.isNaN(value)) {
+                    total += value;
+                }
+            });
+            totalHoursLabel.textContent = `Total hours: ${total.toFixed(2)}`;
+        };
+
+        const addRow = () => {
+            const index = parseInt(totalForms.value, 10);
+            const html = template.innerHTML.replace(/__prefix__/g, index);
+            const temp = document.createElement('tbody');
+            temp.innerHTML = html;
+            const row = temp.firstElementChild;
+            if (row) {
+                tbody.appendChild(row);
+            }
+            totalForms.value = index + 1;
+            return row;
+        };
+
+        const getExistingDates = () => {
+            const dates = new Set();
+            tbody.querySelectorAll('input[name$="-work_date"]').forEach((input) => {
+                if (input.value) {
+                    dates.add(input.value);
+                }
+            });
+            return dates;
+        };
+
+        const getNextDateValue = () => {
+            const dateInputs = Array.from(tbody.querySelectorAll('input[name$="-work_date"]'));
+            for (let i = dateInputs.length - 1; i >= 0; i -= 1) {
+                if (dateInputs[i].value) {
+                    const lastDate = parseDateInput(dateInputs[i].value);
+                    if (!lastDate) {
+                        return null;
+                    }
+                    lastDate.setDate(lastDate.getDate() + 1);
+                    const endDate = parseDateInput(periodEndInput ? periodEndInput.value : '');
+                    if (endDate && lastDate > endDate) {
+                        return null;
+                    }
+                    return formatDateInput(lastDate);
+                }
+            }
+            return null;
+        };
+
+        const ensureDaysOffModal = () => {
+            if (!daysOffModal && daysOffModalEl && window.bootstrap) {
+                daysOffModal = new window.bootstrap.Modal(daysOffModalEl);
+            }
+        };
+
+        const createEntriesForDates = (dates, daysOff) => {
+            if (!dates.length) {
+                return;
+            }
+            const existingDates = getExistingDates();
+            dates.forEach((date) => {
+                const value = formatDateInput(date);
+                if (daysOff.has(value) || existingDates.has(value)) {
+                    return;
+                }
+                const row = addRow();
+                if (!row) {
+                    return;
+                }
+                const dateInput = row.querySelector('input[name$="-work_date"]');
+                if (dateInput) {
+                    dateInput.value = value;
+                }
+                applyShiftToRow(row);
+            });
+            updateTotalHours();
+        };
+
+        addBtn.addEventListener('click', () => {
+            const row = addRow();
+            if (row) {
+                const dateValue = getNextDateValue();
+                const dateInput = row.querySelector('input[name$="-work_date"]');
+                if (dateInput && dateValue) {
+                    dateInput.value = dateValue;
+                }
+                applyShiftToRow(row);
+            }
+        });
+
+        if (autoFillBtn && daysOffModalEl) {
+            const renderDaysOffList = (dates) => {
+                if (!daysOffList || !daysOffEmpty) {
+                    return;
+                }
+                daysOffList.innerHTML = '';
+                if (!dates.length) {
+                    daysOffEmpty.classList.remove('d-none');
+                    return;
+                }
+                daysOffEmpty.classList.add('d-none');
+                dates.forEach((date, index) => {
+                    const value = formatDateInput(date);
+                    const label = date.toLocaleDateString(undefined, {
+                        weekday: 'short',
+                        month: 'short',
+                        day: '2-digit',
+                    });
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'form-check';
+                    wrapper.innerHTML = `
+                        <input class="form-check-input" type="checkbox" value="${value}" id="day-off-${index}">
+                        <label class="form-check-label" for="day-off-${index}">${label} (${value})</label>
+                    `;
+                    daysOffList.appendChild(wrapper);
+                });
+            };
+
+            autoFillBtn.addEventListener('click', () => {
+                const startDate = parseDateInput(periodStartInput ? periodStartInput.value : '');
+                const endDate = parseDateInput(periodEndInput ? periodEndInput.value : '');
+                if (!startDate || !endDate || endDate < startDate) {
+                    window.alert('Select a valid period start and end date first.');
+                    return;
+                }
+                pendingDates = getDateRange(startDate, endDate);
+                renderDaysOffList(pendingDates);
+                ensureDaysOffModal();
+                if (daysOffModal) {
+                    daysOffModal.show();
+                    return;
+                }
+                createEntriesForDates(pendingDates, new Set());
+                pendingDates = [];
+            });
+
+            if (daysOffWeekendsBtn) {
+                daysOffWeekendsBtn.addEventListener('click', () => {
+                    if (!daysOffList) return;
+                    daysOffList.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+                        const date = parseDateInput(checkbox.value);
+                        if (!date) return;
+                        const day = date.getDay();
+                        checkbox.checked = day === 0 || day === 6;
+                    });
+                });
+            }
+
+            if (daysOffClearBtn) {
+                daysOffClearBtn.addEventListener('click', () => {
+                    if (!daysOffList) return;
+                    daysOffList.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+                        checkbox.checked = false;
+                    });
+                });
+            }
+
+            if (daysOffApplyBtn) {
+                daysOffApplyBtn.addEventListener('click', () => {
+                    if (!pendingDates.length) {
+                        return;
+                    }
+                    const daysOff = new Set();
+                    if (daysOffList) {
+                        daysOffList.querySelectorAll('input[type="checkbox"]:checked').forEach((checkbox) => {
+                            daysOff.add(checkbox.value);
+                        });
+                    }
+                    createEntriesForDates(pendingDates, daysOff);
+                    pendingDates = [];
+                    if (daysOffModal) {
+                        daysOffModal.hide();
+                    }
+                });
+            }
+        }
+
+        if (shiftApplyBtn) {
+            shiftApplyBtn.addEventListener('click', () => {
+                tbody.querySelectorAll('tr').forEach((row) => applyShiftToRow(row));
+            });
+        }
+
+        tbody.addEventListener('change', (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement)) {
+                return;
+            }
+            if (target.name.endsWith('-start_time') || target.name.endsWith('-end_time')) {
+                const row = target.closest('tr');
+                if (row) {
+                    calculateRowHours(row);
+                }
+            }
+        });
+
+        tbody.querySelectorAll('tr').forEach((row) => calculateRowHours(row));
+        updateTotalHours();
+
+        if (employeeSelect && openTimesheetBtn) {
+            const redirectBase = "{% url 'accounts:timesheet_employee_redirect' %}";
+            openTimesheetBtn.addEventListener('click', () => {
+                const value = employeeSelect.value;
+                if (!value) {
+                    return;
+                }
+                window.location = `${redirectBase}?employee_id=${value}`;
+            });
+        }
+    })();
+</script>
+{% endblock %}

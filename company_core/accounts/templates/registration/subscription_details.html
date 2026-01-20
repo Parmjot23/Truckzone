@@ -1,0 +1,57 @@
+{% extends "customer_portal_base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Subscription Details</h2>
+    {% if subscription %}
+    <ul class="list-group">
+        <li class="list-group-item">Product: <span class="text-primary">{{ product_name }}</span></li>
+        <li class="list-group-item">Status: 
+            {% if subscription.status == 'active' %}
+            <span class="text-primary">{{ subscription.status }}</span>
+            {% else %}
+            <span class="text-danger">{{ subscription.status }}</span>
+            {% endif %}
+        </li>
+        <li class="list-group-item">Next Billing Date: <span class="text-primary">{{ current_period_end|date:"Y-m-d" }}</span></li>
+        {% if subscription.cancel_at_period_end %}
+        <li class="list-group-item list-group-item-warning">Your subscription will end on <span class="text-danger">{{ current_period_end|date:"Y-m-d" }}</span></li>
+        {% endif %}
+    </ul>
+
+    <h3 class="mt-4">Invoices</h3>
+    {% if invoices %}
+    <table class="table table-bordered mt-3">
+        <thead>
+            <tr>
+                <th>Invoice Number</th>
+                <th>Amount Due</th>
+                <th>Currency</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Download</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for invoice in invoices %}
+            <tr>
+                <td>{{ invoice.number }}</td>
+                <td>{{ invoice.amount_due }}</td>
+                <td>{{ invoice.currency }}</td>
+                <td>{{ invoice.status }}</td>
+                <td>{{ invoice.date|date:"Y-m-d" }}</td>
+                <td>
+                    <a href="{{ invoice.invoice_url }}" class="btn btn-primary btn-sm" target="_blank">Download</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No invoices found.</p>
+    {% endif %}
+    {% else %}
+    <p>You do not have an active subscription.</p>
+    {% endif %}
+</div>
+{% endblock %}

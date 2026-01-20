@@ -1,0 +1,165 @@
+{% extends 'accounts/mach/mach_portal_base.html' %}
+{% load humanize %}
+{% load custom_filters %}
+
+{% block title %}
+    Activity History
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="mb-1">Activity history</h1>
+            <p class="text-muted mb-0">Review detailed staff activity and quickly drill down with filters.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'accounts:home' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to dashboard
+            </a>
+        </div>
+    </div>
+
+    <form method="get" class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-4">
+                    <label for="activity-search" class="form-label text-muted small text-uppercase">Search activity</label>
+                    <div class="input-group input-group-lg shadow-sm rounded-3">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="search" class="form-control border-start-0" id="activity-search" name="q" placeholder="Search by keyword, action, or object" value="{{ filters.q }}">
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label for="activity-actor" class="form-label text-muted small text-uppercase">Filter by user</label>
+                    <select class="form-select" id="activity-actor" name="actor">
+                        <option value="">All users</option>
+                        {% for actor in actors %}
+                            <option value="{{ actor.id }}" {% if filters.actor == actor.id|stringformat:'s' %}selected{% endif %}>
+                                {{ actor.get_full_name|default:actor.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label for="activity-category" class="form-label text-muted small text-uppercase">Category</label>
+                    <select class="form-select" id="activity-category" name="category">
+                        {% for value, label in category_choices %}
+                            <option value="{{ value }}" {% if filters.category == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="row g-3 align-items-end mt-0 mt-lg-3">
+                <div class="col-12 col-md-4 col-lg-3">
+                    <label for="activity-start" class="form-label text-muted small text-uppercase">Start date &amp; time</label>
+                    <input type="datetime-local" class="form-control" id="activity-start" name="start" value="{{ filters.start }}">
+                </div>
+                <div class="col-12 col-md-4 col-lg-3">
+                    <label for="activity-end" class="form-label text-muted small text-uppercase">End date &amp; time</label>
+                    <input type="datetime-local" class="form-control" id="activity-end" name="end" value="{{ filters.end }}">
+                </div>
+                <div class="col-12 col-md-4 col-lg-6 text-md-end">
+                    <div class="d-flex flex-wrap justify-content-start justify-content-md-end gap-2 mt-3 mt-md-0">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i> Apply filters
+                        </button>
+                        <a href="{% url 'accounts:activity_log_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h5 class="mb-0">Activity results</h5>
+                {% if total_count %}
+                    <small class="text-muted">{{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_count }} entries</small>
+                {% else %}
+                    <small class="text-muted">We couldn't find any activity that matches your filters.</small>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if activity_logs %}
+                <div class="list-group list-group-flush">
+                    {% for entry in activity_logs %}
+                        <div class="list-group-item py-3">
+                            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center gap-3 mb-1">
+                                        <span class="badge rounded-pill bg-primary-subtle text-primary text-uppercase">{{ entry.object_type|underscore_to_space|title }}</span>
+                                        <span class="fw-semibold">{{ entry.description }}</span>
+                                    </div>
+                                    <div class="text-muted small">
+                                        {% if entry.actor %}
+                                            <i class="fas fa-user-circle me-1"></i>{{ entry.actor.get_full_name|default:entry.actor.username }}
+                                        {% else %}
+                                            <i class="fas fa-robot me-1"></i>System
+                                        {% endif %}
+                                        &nbsp;•&nbsp;
+                                        <i class="fas fa-clock me-1"></i>{{ entry.created_at|date:'M d, Y g:i A' }}
+                                    </div>
+                                </div>
+                                {% if entry.metadata_items or entry.metadata_text %}
+                                    <div class="bg-light border rounded p-3 small activity-details-panel flex-lg-shrink-0" style="min-width: 260px;">
+                                        <div class="text-muted text-uppercase small mb-2">Details</div>
+                                        {% if entry.metadata_items %}
+                                            <ul class="list-unstyled mb-0 small">
+                                                {% for key, value in entry.metadata_items %}
+                                                    <li><span class="text-muted text-uppercase">{{ key|underscore_to_space }}</span>: {{ value }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <div class="small text-break">{{ entry.metadata_text }}</div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-5 text-center text-muted">
+                    <i class="fas fa-clipboard-list fa-2x mb-3"></i>
+                    <p class="mb-0">No activity matches your current filters. Try adjusting your search or reset to view all entries.</p>
+                </div>
+            {% endif %}
+        </div>
+        {% if page_obj.has_other_pages %}
+            <div class="card-footer bg-white">
+                <nav aria-label="Activity pagination">
+                    <ul class="pagination justify-content-end mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filters_querystring %}{{ filters_querystring }}&amp;{% endif %}page=1">First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filters_querystring %}{{ filters_querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">First</span></li>
+                            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                        {% endif %}
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filters_querystring %}{{ filters_querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filters_querystring %}{{ filters_querystring }}&amp;{% endif %}page={{ page_obj.paginator.num_pages }}">Last</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">Next</span></li>
+                            <li class="page-item disabled"><span class="page-link">Last</span></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

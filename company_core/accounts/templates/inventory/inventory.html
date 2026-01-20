@@ -1,0 +1,1858 @@
+{% extends 'customer_portal_base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+  /* Dark table headers */
+  .table thead th {
+    background-color: #343a40;
+    color: #fff;
+    font-weight: bold;
+  }
+
+  .inventory-sortable {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    user-select: none;
+  }
+
+  .inventory-sortable .inventory-sort-icon {
+    font-size: 0.75rem;
+  }
+
+  /* Optional: Hide or show filter sidebar by toggling .d-none */
+  #filterSidebar {
+    border-left: 1px solid #ddd;
+    padding-left: 1rem;
+  }
+
+  #globalSearchWrapper {
+    position: relative;
+  }
+
+  #globalSearchResults {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+    max-height: 250px;
+    overflow-y: auto;
+    display: none;
+  }
+
+  @media (max-width: 576px) {
+    .modal-dialog {
+      max-width: 100%;
+      margin: 0;
+    }
+  }
+
+  /* For pinned footers in all modals:
+     We'll remove modal-dialog-scrollable & do flex.
+     Each .modal-dialog will have a max-height & flex layout,
+     and .modal-content also flex:1 to pin header/footer. */
+
+  /* Keep page chrome fixed; scroll only the inventory content */
+  body {
+    overflow: hidden;
+  }
+  .customer-portal-main {
+    height: calc(100vh - var(--portal-topbar-height));
+    overflow: hidden;
+    padding-bottom: 0.75rem;
+  }
+  .inventory-layout {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .inventory-content-scroll {
+    flex: 1;
+    overflow: auto;
+    padding-right: 0.5rem;
+    position: relative;
+    padding-top: 0.25rem;
+  }
+  .inventory-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    background: var(--bg-body, #f8f9fa);
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 8px 12px -10px rgba(15, 23, 42, 0.25);
+  }
+  .inventory-table-scroll {
+    max-height: calc(100vh - 260px);
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+    padding: 0.25rem 0.75rem 0.5rem 0.75rem;
+  }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+{% include 'inventory/partials/_inventory_nav.html' %}
+<div class="inventory-layout">
+  <div class="container-fluid inventory-content-scroll">
+  <div class="inventory-topbar">
+    <div id="globalSearchWrapper" class="mb-3">
+      <input type="text" id="globalInventorySearch" class="form-control" placeholder="Search inventory...">
+      <div id="globalSearchResults" class="list-group"></div>
+    </div>
+    <!-- Nav Tabs -->
+    <ul class="nav nav-tabs" id="inventoryTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="transactions-tab" data-bs-toggle="tab" href="#transactions" role="tab"
+           aria-controls="transactions" aria-selected="true">Transactions</a>
+      </li>
+      <li class="nav-item" role="presentation">
+        <a class="nav-link" id="suppliers-tab" data-bs-toggle="tab" href="#suppliers" role="tab"
+           aria-controls="suppliers" aria-selected="false">Suppliers</a>
+      </li>
+      <li class="nav-item" role="presentation">
+        <a class="nav-link" id="products-tab" data-bs-toggle="tab" href="#products" role="tab"
+           aria-controls="products" aria-selected="false">Products</a>
+      </li>
+      <li class="nav-item" role="presentation">
+        <a class="nav-link" id="categories-tab" data-bs-toggle="tab" href="#categories" role="tab"
+           aria-controls="categories" aria-selected="false">Categories</a>
+      </li>
+      <li class="nav-item" role="presentation">
+        <a class="nav-link" id="locations-tab" data-bs-toggle="tab" href="#locations" role="tab"
+           aria-controls="locations" aria-selected="false">Locations</a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="tab-content" id="inventoryTabsContent">
+    <!-- TRANSACTIONS TAB -->
+    <div class="tab-pane fade show active" id="transactions" role="tabpanel" aria-labelledby="transactions-tab">
+      <div class="row mt-3">
+        <div id="transactionsContainer" class="col-12 col-md-12">
+          <!-- Title, Search, Filter Button -->
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Inventory Transactions</h2>
+            <div class="d-flex align-items-center">
+              <form class="form-inline mr-2" method="get">
+                <input class="form-control mr-sm-2" type="search" placeholder="Search..." name="q" value="{{ query }}">
+                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+              </form>
+              <button id="toggleFilterSidebar" class="btn btn-outline-secondary btn-sm">Show Filters</button>
+            </div>
+          </div>
+
+          <!-- Add Transaction Button -->
+          <div class="mb-3 d-flex flex-wrap">
+            <button class="btn btn-success mr-2" data-bs-toggle="modal" data-bs-target="#addTransactionModal">Add Transaction</button>
+          </div>
+
+          <!-- Transactions Table -->
+          <div class="table-responsive inventory-table-scroll">
+            <table class="table table-striped table-bordered w-100">
+              <thead class="thead-dark">
+                <tr>
+                  <th>
+                    Product
+                    <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addProductModal">+</button>
+                  </th>
+                  <th>P/N</th>
+                  <th>
+                    Supplier
+                    <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addSupplierModal">+</button>
+                  </th>
+                  <th>
+                    Category
+                    <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addCategoryModal">+</button>
+                  </th>
+                  <th>Transaction Type</th>
+                  <th>Quantity</th>
+                  <th>Date</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for transaction in transactions %}
+                <tr>
+                  <td>{{ transaction.product.name }}</td>
+                  <td>{{ transaction.product.sku }}</td>
+                  <td>{% if transaction.product.supplier %}{{ transaction.product.supplier.name }}{% endif %}</td>
+                  <td>{% if transaction.product.category %}{{ transaction.product.category.name }}{% endif %}</td>
+                  <td>{{ transaction.get_transaction_type_display }}</td>
+                  <td>{{ transaction.quantity }}</td>
+                  <td>{{ transaction.transaction_date|date:"Y-m-d H:i" }}</td>
+                  <td>{{ transaction.remarks }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="8">No transactions found.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Filter Sidebar -->
+        <div id="filterSidebar" class="col-12 col-md-3 d-none">
+          <h4>Filters</h4>
+          <form method="get" id="filterForm">
+            <div class="form-group">
+              <label for="supplier">Supplier</label>
+              <select class="form-control" name="supplier" id="supplier">
+                <option value="">All</option>
+                {% for sup in suppliers %}
+                <option value="{{ sup.id }}">{{ sup.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="product">Product</label>
+              <select class="form-control" name="product" id="product">
+                <option value="">All</option>
+                {% for prod in products %}
+                <option value="{{ prod.id }}">{{ prod.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="category">Category</label>
+              <select class="form-control" name="category" id="category">
+                <option value="">All</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="transaction_type">Transaction Type</label>
+              <select class="form-control" name="transaction_type" id="transaction_type">
+                <option value="">All</option>
+                <option value="IN">Stock In</option>
+                <option value="OUT">Stock Out</option>
+                <option value="ADJUSTMENT">Adjustment</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="date_from">From Date</label>
+              <input type="date" class="form-control" name="date_from" id="date_from">
+            </div>
+            <div class="form-group">
+              <label for="date_to">To Date</label>
+              <input type="date" class="form-control" name="date_to" id="date_to">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPPLIERS TAB -->
+    <div class="tab-pane fade" id="suppliers" role="tabpanel" aria-labelledby="suppliers-tab">
+      <div class="mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2>
+            Suppliers
+            <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addSupplierModal">+</button>
+          </h2>
+          <div class="d-flex align-items-center flex-wrap">
+            <input class="form-control mr-sm-2 mb-2 mb-sm-0" type="search" placeholder="Search..." id="supplierSearch">
+            <a class="btn btn-outline-secondary mr-2 mb-2 mb-sm-0" href="{% url 'accounts:inventory_suppliers_template' %}">
+              Download Excel
+            </a>
+            <button class="btn btn-outline-primary mr-2 mb-2 mb-sm-0" type="button" data-bs-toggle="modal" data-bs-target="#importSuppliersModal">
+              Import Suppliers
+            </button>
+            <button class="btn btn-danger mr-2 mb-2 mb-sm-0" type="button"
+                    data-bulk-action data-bulk-group="suppliers" data-bulk-modal="#bulkDeleteSuppliersModal"
+                    data-input-name="supplier_ids">
+              Delete Selected
+            </button>
+            <button class="btn btn-info mb-2 mb-sm-0" data-bs-toggle="modal" data-bs-target="#addSupplierModal">Add Supplier</button>
+          </div>
+        </div>
+        <div class="table-responsive inventory-table-scroll">
+          <table id="suppliersTable" class="table table-striped table-bordered">
+            <thead class="thead-dark">
+              <tr>
+                <th style="width: 40px;" class="text-center align-middle">
+                  <input type="checkbox" class="bulk-select-all" data-group="suppliers">
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="string">
+                    Name
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                  <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addSupplierModal">+</button>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="string">
+                    Contact Person
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="string">
+                    Email
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="string">
+                    Phone Number
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="string">
+                    Address
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for supplier in suppliers %}
+              <tr>
+                <td class="text-center align-middle">
+                  <input type="checkbox" class="bulk-select" data-group="suppliers" value="{{ supplier.id }}">
+                </td>
+                <td>{{ supplier.name }}</td>
+                <td>{{ supplier.contact_person }}</td>
+                <td>{{ supplier.email }}</td>
+                <td>{{ supplier.phone_number }}</td>
+                <td>{{ supplier.address }}</td>
+                <td>
+                  <button class="btn btn-sm btn-primary"
+                          data-bs-toggle="modal" data-bs-target="#editSupplierModal"
+                          data-id="{{ supplier.id }}">Edit</button>
+                  <button class="btn btn-sm btn-danger"
+                          data-bs-toggle="modal" data-bs-target="#deleteSupplierModal"
+                          data-id="{{ supplier.id }}">Delete</button>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7">No suppliers found.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS TAB -->
+    <div class="tab-pane fade" id="products" role="tabpanel" aria-labelledby="products-tab">
+      <div class="mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2>
+            Products
+            <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addProductModal">+</button>
+          </h2>
+          <div class="d-flex align-items-center flex-wrap">
+            <input class="form-control mr-sm-2 mb-2 mb-sm-0" type="search" placeholder="Search..." id="productSearch">
+            <a class="btn btn-outline-secondary mr-2 mb-2 mb-sm-0" href="{% url 'accounts:inventory_products_template' %}">
+              Download Excel
+            </a>
+            <button class="btn btn-outline-primary mr-2 mb-2 mb-sm-0" type="button" data-bs-toggle="modal" data-bs-target="#importProductsModal">
+              Import Products
+            </button>
+            <button class="btn btn-danger mr-2 mb-2 mb-sm-0" type="button"
+                    data-bulk-action data-bulk-group="products" data-bulk-modal="#bulkDeleteProductsModal"
+                    data-input-name="product_ids">
+              Delete Selected
+            </button>
+            <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#addProductModal">Add Product</button>
+          </div>
+        </div>
+        <div class="alert alert-info mb-3" role="alert">
+          Tip: Import your suppliers and locations into the system first so, when you download the template, their values are available to select from the dropdowns in Excel.
+        </div>
+        <div class="inventory-table-scroll">
+          <table id="productsTable" class="table table-striped table-bordered mb-0">
+            <thead class="thead-dark">
+              <tr>
+                <th style="width: 40px;" class="text-center align-middle">
+                  <input type="checkbox" class="bulk-select-all" data-group="products">
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="string">
+                    P/N
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>Image</th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="string">
+                    Name
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                  <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addProductModal">+</button>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="string">
+                    Description
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="string">
+                    Category
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                  <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addCategoryModal">+</button>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="string">
+                    Supplier
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                  <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addSupplierModal">+</button>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="number">
+                    Cost Price
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="number">
+                    Sale Price
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="number">
+                    Margin
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="number">
+                    Stock
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="number">
+                    Reorder Level
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="string">
+                    Location
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>
+                  <span class="inventory-sortable" data-sort-type="date">
+                    Warranty Expires
+                    <i class="fas fa-sort inventory-sort-icon"></i>
+                  </span>
+                </th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in products %}
+              <tr>
+                <td class="text-center align-middle">
+                  <input type="checkbox" class="bulk-select" data-group="products" value="{{ product.id }}">
+                </td>
+                <td>{{ product.sku }}</td>
+                <td>{% if product.image %}<img src="{{ product.image.url }}" alt="{{ product.name }}" width="50">{% endif %}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.description }}</td>
+                <td>{% if product.category %}{{ product.category.name }}{% endif %}</td>
+                <td>{% if product.supplier %}{{ product.supplier.name }}{% endif %}</td>
+                <td>{{ product.cost_price }}</td>
+                <td>{{ product.sale_price }}</td>
+                <td>{{ product.margin }}</td>
+                <td>{{ product.quantity_in_stock }}</td>
+                <td>{{ product.reorder_level }}</td>
+                <td>{{ product.location }}</td>
+                <td>{% if product.warranty_expiry_date %}{{ product.warranty_expiry_date|date:"Y-m-d" }}{% endif %}</td>
+                <td>
+                  <button class="btn btn-sm btn-primary"
+                          data-bs-toggle="modal" data-bs-target="#editProductModal"
+                          data-id="{{ product.id }}">Edit</button>
+                  <button class="btn btn-sm btn-danger"
+                          data-bs-toggle="modal" data-bs-target="#deleteProductModal"
+                          data-id="{{ product.id }}">Delete</button>
+                  <a class="btn btn-sm btn-secondary" href="{% url 'accounts:product_qr_pdf' product.id %}" target="_blank">QR Code</a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="15">No products found.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATEGORIES TAB -->
+    <div class="tab-pane fade" id="categories" role="tabpanel" aria-labelledby="categories-tab">
+      <div class="mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2>
+            Categories
+            <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addCategoryModal">+</button>
+          </h2>
+          <div class="d-flex align-items-center flex-wrap">
+            <input class="form-control mr-sm-2 mb-2 mb-sm-0" type="search" placeholder="Search..." id="categorySearch">
+            <a class="btn btn-outline-secondary mr-2 mb-2 mb-sm-0" href="{% url 'accounts:inventory_categories_template' %}">
+              Download Excel
+            </a>
+            <button class="btn btn-outline-primary mr-2 mb-2 mb-sm-0" type="button" data-bs-toggle="modal" data-bs-target="#importCategoriesModal">
+              Import Categories
+            </button>
+            <button class="btn btn-danger mr-2 mb-2 mb-sm-0" type="button"
+                    data-bulk-action data-bulk-group="categories" data-bulk-modal="#bulkDeleteCategoriesModal"
+                    data-input-name="category_ids">
+              Delete Selected
+            </button>
+            <button class="btn btn-info mb-2 mb-sm-0" data-bs-toggle="modal" data-bs-target="#addCategoryModal">Add Category</button>
+          </div>
+      </div>
+      <div class="table-responsive inventory-table-scroll">
+        <table id="categoriesTable" class="table table-striped table-bordered">
+          <thead class="thead-dark">
+              <tr>
+              <th style="width: 40px;" class="text-center align-middle">
+                <input type="checkbox" class="bulk-select-all" data-group="categories">
+              </th>
+              <th>
+                <span class="inventory-sortable" data-sort-type="string">
+                  Name
+                  <i class="fas fa-sort inventory-sort-icon"></i>
+                </span>
+                <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addCategoryModal">+</button>
+              </th>
+              <th>
+                <span class="inventory-sortable" data-sort-type="string">
+                  Description
+                  <i class="fas fa-sort inventory-sort-icon"></i>
+                </span>
+              </th>
+              <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for category in categories %}
+              <tr>
+                <td class="text-center align-middle">
+                  <input type="checkbox" class="bulk-select" data-group="categories" value="{{ category.id }}">
+                </td>
+                <td>{{ category.name }}</td>
+                <td>{{ category.description }}</td>
+                <td>
+                  <button class="btn btn-sm btn-primary"
+                          data-bs-toggle="modal" data-bs-target="#editCategoryModal"
+                          data-id="{{ category.id }}">Edit</button>
+                  <button class="btn btn-sm btn-danger"
+                          data-bs-toggle="modal" data-bs-target="#deleteCategoryModal"
+                          data-id="{{ category.id }}">Delete</button>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4">No categories found.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOCATIONS TAB -->
+  <div class="tab-pane fade" id="locations" role="tabpanel" aria-labelledby="locations-tab">
+    <div class="mt-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>
+          Locations
+          <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addLocationModal">+</button>
+        </h2>
+        <div class="d-flex align-items-center flex-wrap">
+          <input class="form-control mr-sm-2 mb-2 mb-sm-0" type="search" placeholder="Search..." id="locationSearch">
+          <a class="btn btn-outline-secondary mr-2 mb-2 mb-sm-0" href="{% url 'accounts:inventory_locations_template' %}">
+            Download Excel
+          </a>
+          <button class="btn btn-outline-primary mr-2 mb-2 mb-sm-0" type="button" data-bs-toggle="modal" data-bs-target="#importLocationsModal">
+            Import Locations
+          </button>
+          <button class="btn btn-danger mr-2 mb-2 mb-sm-0" type="button"
+                  data-bulk-action data-bulk-group="locations" data-bulk-modal="#bulkDeleteLocationsModal"
+                  data-input-name="location_ids">
+            Delete Selected
+          </button>
+          <button class="btn btn-info mb-2 mb-sm-0" data-bs-toggle="modal" data-bs-target="#addLocationModal">Add Location</button>
+        </div>
+      </div>
+      <div class="table-responsive inventory-table-scroll">
+        <table id="locationsTable" class="table table-striped table-bordered">
+          <thead class="thead-dark">
+            <tr>
+              <th style="width: 40px;" class="text-center align-middle">
+                <input type="checkbox" class="bulk-select-all" data-group="locations">
+              </th>
+              <th>
+                <span class="inventory-sortable" data-sort-type="string">
+                  Name
+                  <i class="fas fa-sort inventory-sort-icon"></i>
+                </span>
+                <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#addLocationModal">+</button>
+              </th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for location in locations %}
+            <tr>
+              <td class="text-center align-middle">
+                <input type="checkbox" class="bulk-select" data-group="locations" value="{{ location.id }}">
+              </td>
+              <td>{{ location.name }}</td>
+              <td>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editLocationModal" data-id="{{ location.id }}">Edit</button>
+                <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteLocationModal" data-id="{{ location.id }}">Delete</button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3">No locations found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ======================== -->
+<!--       MODALS BELOW       -->
+<!-- ======================== -->
+
+<!-- SCANNER MODAL -->
+<div class="modal fade" id="scannerModal" tabindex="-1" role="dialog" aria-labelledby="scannerModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-width: 100%; max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="scannerModalLabel">Scan Product QR</h5>
+        <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" style="flex:1 1 auto; overflow-y:auto;">
+        <div id="scanner" style="width:100%;"></div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRANSACTION MODALS -->
+<div class="modal fade" id="addTransactionModal" tabindex="-1" role="dialog" aria-labelledby="addTransactionModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:add_transaction' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="addTransactionModalLabel">Add Transaction</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          {{ transaction_form.non_field_errors }}
+          {{ transaction_form.product.label_tag }}
+          <div class="input-group mb-3">
+            {{ transaction_form.product }}
+            <div class="input-group-append">
+              <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addProductModal">+</button>
+            </div>
+          </div>
+          {{ transaction_form.transaction_type.label_tag }}
+          {{ transaction_form.transaction_type }}
+          {{ transaction_form.quantity.label_tag }}
+          {{ transaction_form.quantity }}
+          {{ transaction_form.transaction_date.label_tag }}
+          {{ transaction_form.transaction_date }}
+          {{ transaction_form.remarks.label_tag }}
+          {{ transaction_form.remarks }}
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Save Transaction</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editTransactionModal" tabindex="-1" role="dialog" aria-labelledby="editTransactionModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:edit_transaction' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="editTransactionModalLabel">Edit Transaction</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <!-- loaded via AJAX from get_transaction_form -->
+          <div id="editTransactionFormContent"></div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Update Transaction</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteTransactionModal" tabindex="-1" role="dialog" aria-labelledby="deleteTransactionModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:delete_transaction' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="deleteTransactionModalLabel">Delete Transaction</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <p>Are you sure you want to delete this transaction?</p>
+          <input type="hidden" name="transaction_id" id="deleteTransactionId">
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- SUPPLIER MODALS -->
+<div class="modal fade" id="addSupplierModal" tabindex="-1" role="dialog" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:add_supplier' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="addSupplierModalLabel">Add Supplier</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          {{ supplier_form.as_p }}
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Save Supplier</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editSupplierModal" tabindex="-1" role="dialog" aria-labelledby="editSupplierModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:edit_supplier' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="editSupplierModalLabel">Edit Supplier</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <!-- loaded via AJAX from get_supplier_form -->
+          <div id="editSupplierFormContent"></div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Update Supplier</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteSupplierModal" tabindex="-1" role="dialog" aria-labelledby="deleteSupplierModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:delete_supplier' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="deleteSupplierModalLabel">Delete Supplier</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <p>Are you sure you want to delete this supplier?</p>
+          <input type="hidden" name="supplier_id" id="deleteSupplierId">
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="importSuppliersModal" tabindex="-1" role="dialog" aria-labelledby="importSuppliersModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <form method="post" enctype="multipart/form-data" action="{% url 'accounts:inventory_suppliers_import' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="importSuppliersModalLabel">Import Suppliers from Excel</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-3">Download the Excel template, enter your supplier information, then upload the completed file here.</p>
+          <div class="form-group">
+            <label for="importSuppliersFile">Excel File (.xlsx)</label>
+            <input type="file" class="form-control-file" id="importSuppliersFile" name="file" accept=".xlsx" required>
+          </div>
+          <p class="small mb-2">Need the latest template? <a href="{% url 'accounts:inventory_suppliers_template' %}">Download it here.</a></p>
+          <p class="small text-muted mb-0">Ensure each row includes the supplier name. Contact details are optional.</p>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Upload</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="bulkDeleteSuppliersModal" tabindex="-1" role="dialog" aria-labelledby="bulkDeleteSuppliersModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:inventory_suppliers_bulk_delete' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="bulkDeleteSuppliersModalLabel">Delete Selected Suppliers</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <p>Are you sure you want to delete <span class="font-weight-bold" data-bulk-count>0</span> supplier(s)?</p>
+          <div class="bulk-hidden-inputs"></div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- PRODUCT MODALS -->
+<div class="modal fade" id="importProductsModal" tabindex="-1" role="dialog" aria-labelledby="importProductsModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <form method="post" enctype="multipart/form-data" action="{% url 'accounts:inventory_products_import' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="importProductsModalLabel">Import Products from Excel</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-3">Download the Excel template, enter your product information, then upload the completed file here.</p>
+          <div class="form-group">
+            <label for="importProductsFile">Excel File (.xlsx)</label>
+            <input type="file" class="form-control-file" id="importProductsFile" name="file" accept=".xlsx" required>
+          </div>
+          <p class="small mb-2">Need the latest template? <a href="{% url 'accounts:inventory_products_template' %}">Download it here.</a></p>
+          <p class="small text-muted mb-0">Ensure each row includes SKU, Name, Quantity, Reorder Level, and either both Cost Price and Sale Price or one of them plus the Margin value.</p>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Upload</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="addProductModal" tabindex="-1" role="dialog" aria-labelledby="addProductModalLabel" aria-hidden="true">
+  <!-- Pinned footer approach for a large form -->
+  <div class="modal-dialog modal-lg" role="document" style="max-height: 90vh; display: flex; flex-direction: column;">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" enctype="multipart/form-data" action="{% url 'accounts:add_product' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="addProductModalLabel">Add Product</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+        <!-- Body can scroll -->
+        <div class="modal-body" style="overflow-y: auto;">
+          {% include 'inventory/partials/_product_form.html' with form=product_form %}
+        </div>
+
+        <!-- Footer remains visible -->
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Save Product</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editProductModal" tabindex="-1" role="dialog" aria-labelledby="editProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" enctype="multipart/form-data" action="{% url 'accounts:edit_product' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="editProductModalLabel">Edit Product</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <!-- loaded via AJAX from get_product_form -->
+          <div id="editProductFormContent"></div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Update Product</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteProductModal" tabindex="-1" role="dialog" aria-labelledby="deleteProductModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:delete_product' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="deleteProductModalLabel">Delete Product</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <p>Are you sure you want to delete this product?</p>
+          <input type="hidden" name="product_id" id="deleteProductId">
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="bulkDeleteProductsModal" tabindex="-1" role="dialog" aria-labelledby="bulkDeleteProductsModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:inventory_products_bulk_delete' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="bulkDeleteProductsModalLabel">Delete Selected Products</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <p>Are you sure you want to delete <span class="font-weight-bold" data-bulk-count>0</span> product(s)?</p>
+          <div class="bulk-hidden-inputs"></div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- CATEGORY MODALS -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1" role="dialog" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:add_category' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="addCategoryModalLabel">Add Category</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          {{ category_form.as_p }}
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Save Category</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editCategoryModal" tabindex="-1" role="dialog" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:edit_category' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="editCategoryModalLabel">Edit Category</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <!-- loaded via AJAX from get_category_form -->
+          <div id="editCategoryFormContent"></div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Update Category</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteCategoryModal" tabindex="-1" role="dialog" aria-labelledby="deleteCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:delete_category' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="deleteCategoryModalLabel">Delete Category</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <p>Are you sure you want to delete this category?</p>
+          <input type="hidden" name="category_id" id="deleteCategoryId">
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="importCategoriesModal" tabindex="-1" role="dialog" aria-labelledby="importCategoriesModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <form method="post" enctype="multipart/form-data" action="{% url 'accounts:inventory_categories_import' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="importCategoriesModalLabel">Import Categories from Excel</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-3">Download the Excel template, enter your category details, then upload the completed file here.</p>
+          <div class="form-group">
+            <label for="importCategoriesFile">Excel File (.xlsx)</label>
+            <input type="file" class="form-control-file" id="importCategoriesFile" name="file" accept=".xlsx" required>
+          </div>
+          <p class="small mb-2">Need the latest template? <a href="{% url 'accounts:inventory_categories_template' %}">Download it here.</a></p>
+          <p class="small text-muted mb-0">Ensure each row has at least the category name. Descriptions are optional.</p>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Upload</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="bulkDeleteCategoriesModal" tabindex="-1" role="dialog" aria-labelledby="bulkDeleteCategoriesModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:inventory_categories_bulk_delete' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="bulkDeleteCategoriesModalLabel">Delete Selected Categories</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <p>Are you sure you want to delete <span class="font-weight-bold" data-bulk-count>0</span> category(ies)?</p>
+          <div class="bulk-hidden-inputs"></div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- LOCATION MODALS -->
+<div class="modal fade" id="addLocationModal" tabindex="-1" role="dialog" aria-labelledby="addLocationModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:add_location' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="addLocationModalLabel">Add Location</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          {{ location_form.as_p }}
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Save Location</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editLocationModal" tabindex="-1" role="dialog" aria-labelledby="editLocationModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:edit_location' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="editLocationModalLabel">Edit Location</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <!-- loaded via AJAX from get_location_form -->
+          <div id="editLocationFormContent"></div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Update Location</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteLocationModal" tabindex="-1" role="dialog" aria-labelledby="deleteLocationModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:delete_location' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="deleteLocationModalLabel">Delete Location</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <p>Are you sure you want to delete this location?</p>
+          <input type="hidden" name="location_id" id="deleteLocationId">
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="importLocationsModal" tabindex="-1" role="dialog" aria-labelledby="importLocationsModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <form method="post" enctype="multipart/form-data" action="{% url 'accounts:inventory_locations_import' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="importLocationsModalLabel">Import Locations from Excel</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-3">Download the Excel template, enter your location names, then upload the completed file here.</p>
+          <div class="form-group">
+            <label for="importLocationsFile">Excel File (.xlsx)</label>
+            <input type="file" class="form-control-file" id="importLocationsFile" name="file" accept=".xlsx" required>
+          </div>
+          <p class="small mb-2">Need the latest template? <a href="{% url 'accounts:inventory_locations_template' %}">Download it here.</a></p>
+          <p class="small text-muted mb-0">Each row should include the location name.</p>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-success">Upload</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="bulkDeleteLocationsModal" tabindex="-1" role="dialog" aria-labelledby="bulkDeleteLocationsModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-height: 90vh; display: flex; flex-direction: column;" role="document">
+    <div class="modal-content" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+      <form method="post" action="{% url 'accounts:inventory_locations_bulk_delete' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="bulkDeleteLocationsModalLabel">Delete Selected Locations</h5>
+          <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto;">
+          <p>Are you sure you want to delete <span class="font-weight-bold" data-bulk-count>0</span> location(s)?</p>
+          <div class="bulk-hidden-inputs"></div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="processingModal" tabindex="-1" role="dialog" aria-labelledby="processingModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-body text-center py-4">
+        <div class="mb-3">
+          <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Processing...</span>
+          </div>
+        </div>
+        <h5 class="mb-2" id="processingModalLabel">Processing your request</h5>
+        <p class="mb-0 text-muted">Please wait a moment while we save your changes.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% block extra_scripts %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+
+<script>
+  // Load QR scanner only once, using local fallback
+  if (typeof Html5Qrcode === 'undefined' && !document.getElementById('html5-qrcode-fallback')) {
+    var s = document.createElement('script');
+    s.src = "{% static 'js/html5-qrcode-fallback.js' %}";
+    s.id = 'html5-qrcode-fallback';
+    document.head.appendChild(s);
+  }
+</script>
+<script>
+  // Lightweight tab handling (works without Bootstrap data attributes)
+  document.addEventListener('DOMContentLoaded', function () {
+    const tabs = Array.from(document.querySelectorAll('#inventoryTabs a.nav-link'));
+    const panes = Array.from(document.querySelectorAll('#inventoryTabsContent .tab-pane'));
+
+    function showTab(hash) {
+      if (!hash || !document.querySelector(hash)) {
+        hash = '#transactions';
+      }
+      tabs.forEach((tab) => {
+        const target = tab.getAttribute('href');
+        const active = target === hash;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      panes.forEach((pane) => {
+        const active = ('#' + pane.id) === hash;
+        pane.classList.toggle('show', active);
+        pane.classList.toggle('active', active);
+      });
+      if (window.location.hash !== hash) {
+        history.replaceState(null, '', hash);
+      }
+    }
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        showTab(tab.getAttribute('href'));
+      });
+    });
+
+    // Activate tab from current hash on load
+    showTab(window.location.hash);
+  });
+</script>
+<script>
+  function inventoryUpdateSortIndicator($header, order) {
+    var icon = $header.find('.inventory-sort-icon').first();
+    if (!icon.length) {
+      return;
+    }
+    icon.removeClass('fa-sort fa-sort-up fa-sort-down');
+    if (order === 'asc') {
+      icon.addClass('fa-sort-up');
+    } else if (order === 'desc') {
+      icon.addClass('fa-sort-down');
+    } else {
+      icon.addClass('fa-sort');
+    }
+  }
+
+  function inventoryRawCellValue($cell) {
+    if (!$cell.length) {
+      return '';
+    }
+    var dataValue = $cell.data('sortValue');
+    return dataValue !== undefined ? dataValue : $cell.text().trim();
+  }
+
+  function inventoryNormalizeValue(value) {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    return String(value).trim();
+  }
+
+  function inventoryComputeSortValue(value, type) {
+    var normalized = inventoryNormalizeValue(value);
+    if (type === 'number') {
+      if (!normalized) {
+        return 0;
+      }
+      var numeric = parseFloat(normalized.replace(/[^0-9.\-]+/g, ''));
+      return isNaN(numeric) ? 0 : numeric;
+    }
+    if (type === 'date') {
+      if (!normalized) {
+        return 0;
+      }
+      var timestamp = Date.parse(normalized);
+      return isNaN(timestamp) ? 0 : timestamp;
+    }
+    return normalized.toUpperCase();
+  }
+
+  function inventorySortTableRows($table, columnIndex, type, order) {
+    var $tbody = $table.find('tbody');
+    var rows = $tbody.find('tr').map(function(index, row) {
+      return { element: row, index: index };
+    }).get();
+
+    rows.sort(function(a, b) {
+      var $rowA = $(a.element);
+      var $rowB = $(b.element);
+
+      var $cellA = $rowA.children('td').eq(columnIndex);
+      var $cellB = $rowB.children('td').eq(columnIndex);
+
+      var rawA = inventoryRawCellValue($cellA);
+      var rawB = inventoryRawCellValue($cellB);
+
+      var valueStrA = inventoryNormalizeValue(rawA);
+      var valueStrB = inventoryNormalizeValue(rawB);
+
+      var emptyA = valueStrA === '';
+      var emptyB = valueStrB === '';
+
+      if (emptyA && emptyB) {
+        return a.index - b.index;
+      }
+      if (emptyA) {
+        return order === 'asc' ? 1 : -1;
+      }
+      if (emptyB) {
+        return order === 'asc' ? -1 : 1;
+      }
+
+      var sortValA = inventoryComputeSortValue(rawA, type);
+      var sortValB = inventoryComputeSortValue(rawB, type);
+
+      var comparison;
+      if (type === 'number' || type === 'date') {
+        comparison = sortValA - sortValB;
+      } else {
+        if (sortValA < sortValB) {
+          comparison = -1;
+        } else if (sortValA > sortValB) {
+          comparison = 1;
+        } else {
+          comparison = 0;
+        }
+      }
+
+      if (comparison === 0) {
+        return a.index - b.index;
+      }
+
+      return order === 'asc' ? comparison : -comparison;
+    });
+
+    rows.forEach(function(item) {
+      $tbody.append(item.element);
+    });
+  }
+
+  function initInventoryTableSorting() {
+    $('.inventory-sortable').each(function() {
+      var $trigger = $(this);
+      var $header = $trigger.closest('th');
+      if (!$header.length) {
+        return;
+      }
+      inventoryUpdateSortIndicator($header, 'none');
+      $trigger.off('click.inventorySort').on('click.inventorySort', function() {
+        var $clickedHeader = $(this).closest('th');
+        var $table = $clickedHeader.closest('table');
+        if (!$table.length) {
+          return;
+        }
+        var columnIndex = $clickedHeader.index();
+        var sortType = $(this).data('sortType') || 'string';
+        var currentOrder = $clickedHeader.attr('data-sort-order') || 'none';
+        var nextOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+
+        $table.find('thead th').each(function() {
+          $(this).attr('data-sort-order', 'none');
+          inventoryUpdateSortIndicator($(this), 'none');
+        });
+
+        $clickedHeader.attr('data-sort-order', nextOrder);
+        inventoryUpdateSortIndicator($clickedHeader, nextOrder);
+        inventorySortTableRows($table, columnIndex, sortType, nextOrder);
+      });
+    });
+  }
+
+  // 1) On page load, check `?tab=xxx` param and activate correct tab.
+  $(document).ready(function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');  // e.g. "suppliers"
+    if (activeTab) {
+      $('#inventoryTabs a[href="#' + activeTab + '"]').tab('show');
+    }
+
+    initInventoryTableSorting();
+
+    const processingModal = $('#processingModal');
+    $('form').on('submit', function () {
+      const method = ($(this).attr('method') || 'get').toLowerCase();
+      if (processingModal.length && method === 'post') {
+        processingModal.modal('show');
+      }
+    });
+
+    function updateSelectAllState(group) {
+      var groupCheckboxes = $('input.bulk-select[data-group="' + group + '"]');
+      var selectAll = $('.bulk-select-all[data-group="' + group + '"]');
+      if (!groupCheckboxes.length) {
+        selectAll.prop('checked', false);
+        return;
+      }
+      var allChecked = groupCheckboxes.length === groupCheckboxes.filter(':checked').length;
+      selectAll.prop('checked', allChecked);
+    }
+
+    $('.bulk-select-all').on('change', function() {
+      var group = $(this).data('group');
+      var checked = $(this).is(':checked');
+      $('input.bulk-select[data-group="' + group + '"]').prop('checked', checked).trigger('change');
+    });
+
+    $(document).on('change', 'input.bulk-select', function() {
+      var group = $(this).data('group');
+      updateSelectAllState(group);
+    });
+
+    $('[data-bulk-action]').on('click', function() {
+      var button = $(this);
+      var group = button.data('bulk-group');
+      var modalSelector = button.data('bulk-modal');
+      var inputName = button.data('input-name');
+      var selected = $('input.bulk-select[data-group="' + group + '"]:checked').map(function() {
+        return $(this).val();
+      }).get();
+
+      if (!selected.length) {
+        alert('Please select at least one item to delete.');
+        return;
+      }
+
+      var modal = $(modalSelector);
+      var container = modal.find('.bulk-hidden-inputs');
+      container.empty();
+      selected.forEach(function(id) {
+        container.append('<input type="hidden" name="' + inputName + '" value="' + id + '">');
+      });
+      modal.find('[data-bulk-count]').text(selected.length);
+      modal.modal('show');
+    });
+
+    $('.bulk-select-all').each(function() {
+      updateSelectAllState($(this).data('group'));
+    });
+  });
+
+  // 2) Nested modals fix for z-index
+  // Watch memory usage if many modals remain open.
+  $(document).on('show.bs.modal', '.modal', function () {
+    var zIndex = 1040 + (10 * $('.modal:visible').length);
+    $(this).css('z-index', zIndex);
+    setTimeout(function () {
+      $('.modal-backdrop').not('.modal-stack')
+          .css('z-index', zIndex - 1)
+          .addClass('modal-stack');
+    }, 0);
+  });
+  $(document).on('hidden.bs.modal', '.modal', function () {
+    if ($('.modal:visible').length > 0) {
+      $('body').addClass('modal-open');
+    }
+  });
+
+  // 3) Toggle filter sidebar
+  $('#toggleFilterSidebar').on('click', function() {
+    $('#filterSidebar').toggleClass('d-none');
+    var sidebarHidden = $('#filterSidebar').hasClass('d-none');
+    $(this).text(sidebarHidden ? 'Show Filters' : 'Hide Filters');
+    var container = $('#transactionsContainer');
+    if (sidebarHidden) {
+      container.removeClass('col-md-9').addClass('col-md-12');
+    } else {
+      container.removeClass('col-md-12').addClass('col-md-9');
+    }
+  });
+
+  // Initialize width based on sidebar visibility
+  if ($('#filterSidebar').hasClass('d-none')) {
+    $('#transactionsContainer').removeClass('col-md-9').addClass('col-md-12');
+  }
+
+  // 4) AJAX calls for "Edit" modals
+
+  // Transactions
+  $('#editTransactionModal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var transactionId = button.data('id');
+    $.ajax({
+      url: "{% url 'accounts:get_transaction_form' %}",
+      data: { 'transaction_id': transactionId },
+      success: function(response) {
+        $('#editTransactionFormContent').html(response.html);
+      }
+    });
+  });
+  $('#deleteTransactionModal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var tid = button.data('id');
+    $('#deleteTransactionId').val(tid);
+  });
+
+  // Suppliers
+  $('#editSupplierModal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var supplierId = button.data('id');
+    $.ajax({
+      url: "{% url 'accounts:get_supplier_form' %}",
+      data: { 'supplier_id': supplierId },
+      success: function(response) {
+        $('#editSupplierFormContent').html(response.html);
+      }
+    });
+  });
+  $('#deleteSupplierModal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var sid = button.data('id');
+    $('#deleteSupplierId').val(sid);
+  });
+
+  // Products
+  $(document).on('click', '[data-bs-toggle="modal"][data-bs-target="#editProductModal"]', function (event) {
+    var productId = $(this).data('id');
+    var modal = $('#editProductModal');
+    var content = modal.find('#editProductFormContent');
+
+    if (!productId) {
+      content.html('<div class="alert alert-warning mb-0">Unable to determine which product to edit.</div>');
+      return;
+    }
+
+    content.html(
+      '<div class="text-center py-3">' +
+        '<div class="spinner-border text-primary" role="status">' +
+          '<span class="sr-only">Loading...</span>' +
+        '</div>' +
+      '</div>'
+    );
+
+    $.ajax({
+      url: "{% url 'accounts:get_product_form' %}",
+      data: { 'product_id': productId },
+      dataType: 'json',
+      success: function(response) {
+        content.html(response.html);
+      },
+      error: function() {
+        content.html('<div class="alert alert-danger mb-0">Unable to load the product details. Please refresh the page and try again.</div>');
+      }
+    });
+  });
+
+  $('#editProductModal').on('hidden.bs.modal', function () {
+    $('#editProductFormContent').empty();
+  });
+  $('#deleteProductModal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var pid = button.data('id');
+    $('#deleteProductId').val(pid);
+  });
+
+  // Categories
+  $('#editCategoryModal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var categoryId = button.data('id');
+    $.ajax({
+      url: "{% url 'accounts:get_category_form' %}",
+      data: { 'category_id': categoryId },
+      success: function(response) {
+        $('#editCategoryFormContent').html(response.html);
+      }
+    });
+  });
+  $('#deleteCategoryModal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var cid = button.data('id');
+    $('#deleteCategoryId').val(cid);
+  });
+
+  // Locations
+  $('#editLocationModal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var locationId = button.data('id');
+    $.ajax({
+      url: "{% url 'accounts:get_location_form' %}",
+      data: { 'location_id': locationId },
+      success: function(response) {
+        $('#editLocationFormContent').html(response.html);
+      }
+    });
+  });
+  $('#deleteLocationModal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var lid = button.data('id');
+    $('#deleteLocationId').val(lid);
+  });
+
+  // Simple table search filtering
+  function filterTable(tableId, query) {
+    var lower = query.toLowerCase();
+    $('#' + tableId + ' tbody tr').each(function() {
+      var text = $(this).text().toLowerCase();
+      $(this).toggle(text.indexOf(lower) !== -1);
+    });
+  }
+
+  $('#supplierSearch').on('keyup', function() {
+    filterTable('suppliersTable', $(this).val());
+  });
+  $('#productSearch').on('keyup', function() {
+    filterTable('productsTable', $(this).val());
+  });
+  $('#categorySearch').on('keyup', function() {
+    filterTable('categoriesTable', $(this).val());
+  });
+  $('#locationSearch').on('keyup', function() {
+    filterTable('locationsTable', $(this).val());
+  });
+
+  function updateFilterOptions() {
+    $.getJSON('{% url "accounts:inventory_filter_options" %}', {
+      supplier: $('#supplier').val(),
+      category: $('#category').val(),
+      product: $('#product').val()
+    }, function(data) {
+      var currentSupplier = $('#supplier').val();
+      var currentCategory = $('#category').val();
+      var currentProduct = $('#product').val();
+
+      var supOpts = '<option value="">All</option>';
+      data.suppliers.forEach(function(item){
+        supOpts += '<option value="' + item.id + '">' + item.name + '</option>';
+      });
+      $('#supplier').html(supOpts);
+      if (currentSupplier) { $('#supplier').val(currentSupplier); }
+
+      var catOpts = '<option value="">All</option>';
+      data.categories.forEach(function(item){
+        catOpts += '<option value="' + item.id + '">' + item.name + '</option>';
+      });
+      $('#category').html(catOpts);
+      if (currentCategory) { $('#category').val(currentCategory); }
+
+      var prodOpts = '<option value="">All</option>';
+      data.products.forEach(function(item){
+        prodOpts += '<option value="' + item.id + '">' + item.name + '</option>';
+      });
+      $('#product').html(prodOpts);
+      if (currentProduct) { $('#product').val(currentProduct); }
+    });
+  }
+
+  $('#supplier, #category, #product').on('change', updateFilterOptions);
+
+  // Global inventory live search
+  var activeIndex = -1;
+
+  function hideSearchResults() {
+    $('#globalSearchResults').hide().empty();
+    activeIndex = -1;
+  }
+
+  $('#globalInventorySearch').on('keyup', function(e) {
+    var query = $(this).val();
+
+    if (e.key === 'Escape') {
+      hideSearchResults();
+      return;
+    }
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      var items = $('#globalSearchResults .search-item');
+      if (!items.length || $('#globalSearchResults').is(':hidden')) { return; }
+      if (e.key === 'ArrowDown') {
+        activeIndex = (activeIndex + 1) % items.length;
+      } else {
+        activeIndex = (activeIndex - 1 + items.length) % items.length;
+      }
+      items.removeClass('active');
+      items.eq(activeIndex).addClass('active');
+      return;
+    }
+
+    if (query.length < 2) {
+      hideSearchResults();
+      return;
+    }
+
+    $.getJSON('{% url "accounts:inventory_search" %}', { q: query }, function(data) {
+      var list = '';
+      if (data.results.length) {
+        data.results.forEach(function(item) {
+          list += '<a href="#" class="list-group-item list-group-item-action search-item" data-id="' + item.id + '" data-type="' + item.type + '">' + item.label + '</a>';
+        });
+      } else {
+        list = '<div class="list-group-item">No results</div>';
+      }
+      $('#globalSearchResults').html(list).show();
+      activeIndex = -1;
+    });
+  });
+
+  $('#globalInventorySearch').on('blur', function() {
+    setTimeout(hideSearchResults, 200);
+  });
+
+  $(document).on('click', '.search-item', function(e) {
+    e.preventDefault();
+    var id = $(this).data('id');
+    var type = $(this).data('type');
+    if (type === 'product') {
+      $('#products-tab').tab('show');
+      var row = $('#productsTable').find('button[data-id="' + id + '"]').closest('tr');
+      if (row.length) {
+        $('html, body').animate({ scrollTop: row.offset().top - 100 }, 500);
+        row.addClass('table-warning');
+        setTimeout(function(){ row.removeClass('table-warning'); }, 2000);
+      }
+    }
+    hideSearchResults();
+  });
+
+  $(document).click(function(e) {
+    if (!$(e.target).closest('#globalSearchWrapper').length) {
+      hideSearchResults();
+    }
+  });
+
+  $('#globalInventorySearch').on('keydown', function(e) {
+    if (e.key === 'Enter') {
+      var items = $('#globalSearchResults .search-item');
+      if (activeIndex >= 0 && activeIndex < items.length) {
+        items.eq(activeIndex).trigger('click');
+        e.preventDefault();
+      }
+    }
+  });
+
+
+  var qrScanner;
+  $('#scannerModal').on('shown.bs.modal', function(){
+    if (typeof Html5Qrcode === 'undefined') {
+      $('#scanner').html('<div class="alert alert-warning mb-0">QR scanner unavailable in this browser.</div>');
+      return;
+    }
+    qrScanner = new Html5Qrcode('scanner');
+    Html5Qrcode.getCameras().then(function(devices){
+      var id = devices && devices[0] ? devices[0].id : null;
+      qrScanner.start(
+        id,
+        {fps: 10, qrbox: 250},
+        function(decoded){
+          qrScanner.stop().then(function(){
+            window.location.href = decoded;
+          });
+        }
+      ).catch(function(err){ console.log(err); });
+    }).catch(function(err){ console.log(err); });
+  }).on('hidden.bs.modal', function(){
+    if(qrScanner){
+      qrScanner.stop().catch(function(){});
+    }
+  });
+</script>
+{% endblock extra_scripts %}
+{% endblock content %}

@@ -1,0 +1,290 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice Statement</title>
+    <style>
+        :root {
+            --brand: {{ profile.invoice_header_color|default:"#1f4b99" }};
+            --border: #e5e7eb;
+            --muted: #6b7280;
+            --page-bg: #f5f7fb;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #111827;
+            background: var(--page-bg);
+            margin: 0;
+            padding: 0;
+        }
+        .page {
+            background: #ffffff;
+            padding: 24px 28px 30px;
+            border: 1px solid var(--border);
+        }
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .header-left {
+            width: 60%;
+            vertical-align: top;
+        }
+        .header-right {
+            width: 40%;
+            text-align: right;
+            vertical-align: top;
+        }
+        .company-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+        .company-meta {
+            color: var(--muted);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        .statement-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--brand);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .statement-type {
+            font-size: 12px;
+            font-weight: bold;
+            color: #111827;
+            margin-top: 6px;
+        }
+        .meta-line {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .section {
+            margin-top: 18px;
+        }
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            border: 1px solid var(--border);
+        }
+        .summary-table td {
+            padding: 10px 12px;
+            border-right: 1px solid var(--border);
+        }
+        .summary-table td:last-child {
+            border-right: none;
+        }
+        .summary-label {
+            font-size: 10px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .summary-value {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .note-box {
+            margin-top: 16px;
+            padding: 12px;
+            background: #f8fafc;
+            border-left: 4px solid var(--brand);
+        }
+        .note-box p {
+            margin: 6px 0 0 0;
+            color: #374151;
+        }
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 18px;
+            font-size: 11px;
+        }
+        .invoice-table th {
+            background: var(--brand);
+            color: #ffffff;
+            padding: 8px 6px;
+            text-align: left;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            font-size: 10px;
+        }
+        .invoice-table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid var(--border);
+        }
+        .invoice-table tr:nth-child(even) td {
+            background: #f9fafb;
+        }
+        .total-row td {
+            font-weight: bold;
+            background: #f3f4f6;
+        }
+        .text-right {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <table class="header-table">
+            <tr>
+                <td class="header-left">
+                    {% if profile.show_logo and company_logo_url %}
+                        <img src="{{ company_logo_url }}" alt="Company Logo" class="company-logo" style="max-width: 160px;">
+                    {% endif %}
+                    <div class="company-name">{{ profile.company_name|default:business_name|default:default_business_name }}</div>
+                    <div class="company-meta">
+                        {% if profile.show_address and profile.company_address %}
+                            <div>{{ profile.company_address|linebreaksbr }}</div>
+                        {% endif %}
+                        {% if profile.company_email %}<div>Email: {{ profile.company_email }}</div>{% endif %}
+                        {% if profile.company_phone %}<div>Phone: {{ profile.company_phone }}</div>{% endif %}
+                        {% if profile.gst_hst_number %}<div>GST/HST: {{ profile.gst_hst_number }}</div>{% endif %}
+                    </div>
+                </td>
+                <td class="header-right">
+                    <div class="statement-title">Invoice Statement</div>
+                    <div class="statement-type">
+                        {% if invoice_type == 'paid' %}Paid invoices
+                        {% elif invoice_type == 'all' %}All invoices
+                        {% else %}Pending invoices{% endif %}
+                    </div>
+                    <div class="meta-line">Period: {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</div>
+                    <div class="meta-line">Generated: {% now "M d, Y" %}</div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="section">
+            <div class="section-title">Customer</div>
+            <div><strong>{{ customer.name }}</strong></div>
+            <div>{{ customer_email }}</div>
+        </div>
+
+        <table class="summary-table" role="presentation">
+            <tr>
+                <td>
+                    <div class="summary-label">Total invoiced</div>
+                    <div class="summary-value">{{ total_amount|currency }}</div>
+                </td>
+                <td>
+                    <div class="summary-label">Total paid</div>
+                    <div class="summary-value">{{ total_paid|currency }}</div>
+                </td>
+                <td>
+                    <div class="summary-label">Balance due</div>
+                    <div class="summary-value">{{ total_balance_due|currency }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="note-box">
+            <strong>Statement notes</strong>
+            {% if invoice_type == 'pending' %}
+                <p>This statement lists invoices with open balances. Please remit payment by the due date shown.</p>
+            {% elif invoice_type == 'paid' %}
+                <p>This statement includes fully paid invoices only. Thank you for your prompt payment.</p>
+            {% else %}
+                <p>This statement includes paid and outstanding invoices. Balances shown reflect payments received to date.</p>
+            {% endif %}
+            <p>If you have questions about any invoice, please contact us using the details above.</p>
+        </div>
+
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Invoice No</th>
+                    <th>Unit No</th>
+                    {% if invoice_type == 'pending' %}
+                        <th>Due Date</th>
+                        <th class="text-right">Total Amount</th>
+                        <th class="text-right">Total Paid</th>
+                        <th class="text-right">Balance Due</th>
+                    {% elif invoice_type == 'paid' %}
+                        <th>Paid Date</th>
+                        <th class="text-right">Total Amount</th>
+                        <th class="text-right">Total Paid</th>
+                    {% else %}
+                        <th>Status</th>
+                        <th class="text-right">Total Amount</th>
+                        <th class="text-right">Total Paid</th>
+                        <th class="text-right">Balance Due</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr>
+                    <td>{{ invoice.date|date:"M d, Y" }}</td>
+                    <td>{{ invoice.invoice_number }}</td>
+                    <td>{{ invoice.unit_no|default:"-" }}</td>
+                    {% if invoice_type == 'pending' %}
+                        <td>{{ invoice.due_date|date:"M d, Y"|default:"-" }}</td>
+                        <td class="text-right">{{ invoice.total_amount|currency }}</td>
+                        <td class="text-right">{{ invoice.total_paid|currency }}</td>
+                        <td class="text-right">{{ invoice.balance_due|currency }}</td>
+                    {% elif invoice_type == 'paid' %}
+                        <td>
+                            {% if invoice.date_fully_paid %}
+                                {{ invoice.date_fully_paid|date:"M d, Y" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="text-right">{{ invoice.total_amount|currency }}</td>
+                        <td class="text-right">{{ invoice.total_paid|currency }}</td>
+                    {% else %}
+                        <td>
+                            {% if invoice.balance_due <= 0 %}
+                                Paid
+                            {% elif invoice.total_paid > 0 %}
+                                Partially Paid
+                            {% else %}
+                                Pending
+                            {% endif %}
+                        </td>
+                        <td class="text-right">{{ invoice.total_amount|currency }}</td>
+                        <td class="text-right">{{ invoice.total_paid|currency }}</td>
+                        <td class="text-right">{{ invoice.balance_due|currency }}</td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    {% if invoice_type == 'pending' %}
+                        <td colspan="4">Totals</td>
+                        <td class="text-right">{{ total_amount|currency }}</td>
+                        <td class="text-right">{{ total_paid|currency }}</td>
+                        <td class="text-right">{{ total_balance_due|currency }}</td>
+                    {% elif invoice_type == 'paid' %}
+                        <td colspan="4">Totals</td>
+                        <td class="text-right">{{ total_amount|currency }}</td>
+                        <td class="text-right">{{ total_paid|currency }}</td>
+                    {% else %}
+                        <td colspan="4">Totals</td>
+                        <td class="text-right">{{ total_amount|currency }}</td>
+                        <td class="text-right">{{ total_paid|currency }}</td>
+                        <td class="text-right">{{ total_balance_due|currency }}</td>
+                    {% endif %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

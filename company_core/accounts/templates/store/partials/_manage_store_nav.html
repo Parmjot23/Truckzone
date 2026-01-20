@@ -1,0 +1,24 @@
+{% with current=request.resolver_match.url_name %}
+<nav class="page-top-nav" aria-label="Store management navigation">
+  <a href="{% url 'accounts:store_hub' %}" class="btn btn-sm {% if current == 'store_hub' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-store me-1"></i>
+    Store Hub
+  </a>
+  <a href="{% url 'accounts:store_manage' %}" class="btn btn-sm {% if current == 'store_manage' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-sliders me-1"></i>
+    Storefront
+  </a>
+  <a href="{% url 'accounts:store_hero' %}" class="btn btn-sm {% if current == 'store_hero' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-images me-1"></i>
+    Homepage Hero
+  </a>
+  <a href="{% url 'accounts:store_hero' %}#flyer-settings" class="btn btn-sm btn-outline-secondary">
+    <i class="fa-solid fa-file-lines me-1"></i>
+    Flyer
+  </a>
+  <a href="{% url 'accounts:store_product_list' %}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">
+    <i class="fa-solid fa-up-right-from-square me-1"></i>
+    Public Store
+  </a>
+</nav>
+{% endwith %}

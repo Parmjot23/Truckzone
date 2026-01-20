@@ -1,0 +1,392 @@
+{% extends 'customer_portal_base.html' %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<style>
+    .settings-shell { display: flex; flex-direction: column; gap: 1rem; }
+    .tab-strip {
+        display: inline-flex;
+        gap: 0.35rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.35rem;
+    }
+    .tab-link {
+        border: none;
+        background: transparent;
+        padding: 0.45rem 0.9rem;
+        border-radius: 10px;
+        font-weight: 700;
+        color: #6b7280;
+    }
+    .tab-link.active { background: #e0e7ff; color: #1d4ed8; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; }
+    .settings-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 1rem;
+        background: #fff;
+        box-shadow: 0 10px 24px rgba(15,23,42,0.06);
+    }
+    .settings-card h5 { margin-bottom: 0.35rem; font-weight: 700; }
+    .pill-primary {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        border: none;
+        color: #fff;
+        border-radius: 12px;
+        padding: 0.45rem 0.95rem;
+        font-weight: 700;
+        font-size: 0.92rem;
+        box-shadow: 0 12px 24px rgba(37,99,235,0.18);
+    }
+    .pill-secondary {
+        border-radius: 12px;
+        padding: 0.42rem 0.9rem;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #0f172a;
+        font-weight: 700;
+        font-size: 0.92rem;
+        box-shadow: 0 10px 18px rgba(15,23,42,0.06);
+    }
+</style>
+
+<div class="page-shell settings-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Settings</h2>
+            <p class="text-muted mb-0">Manage your account, invoices, display, and integrations from one place.</p>
+        </div>
+        <div class="page-toolbar">
+            <div class="tab-strip mb-0" role="tablist">
+                <button class="tab-link active" data-target="account" type="button">Account</button>
+                <button class="tab-link" data-target="invoices" type="button">Invoices</button>
+                <button class="tab-link" data-target="display" type="button">Display</button>
+                <button class="tab-link" data-target="integrations" type="button">Integrations</button>
+                <button class="tab-link" data-target="security" type="button">Security</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" id="panel-account">
+        <h5 class="mb-3">Profile & Billing</h5>
+        <div class="card-grid">
+            <div class="settings-card">
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    <a href="{% url 'accounts:profile_view' %}" class="pill-secondary btn-sm">Profile & Company</a>
+                    <a href="{% url 'accounts:profile_completion' %}" class="pill-secondary btn-sm">Complete profile</a>
+                </div>
+                <h5>Profile & Company</h5>
+                <p class="text-muted small mb-2">Update company details, logos, contacts, and billing defaults.</p>
+                <div class="text-muted small">
+                    <div><strong>Business:</strong> {{ profile.company_name|default:"Not set" }}</div>
+                    <div><strong>Email:</strong> {{ profile.company_email|default:"Not set" }}</div>
+                    <div><strong>Phone:</strong> {{ profile.company_phone|default:"Not set" }}</div>
+                    <div><strong>Province:</strong> {{ profile.province|default:"Not set" }}</div>
+                </div>
+            </div>
+            <div class="settings-card">
+                <h5>Billing defaults</h5>
+                <p class="text-muted small mb-2">Set standard terms and contact defaults before sending invoices.</p>
+                <a href="{% url 'accounts:customize_invoice' %}" class="pill-secondary btn-sm">Edit billing defaults</a>
+            </div>
+            <div class="settings-card">
+                <h5>Connected businesses</h5>
+                <p class="text-muted small mb-2">Link multiple business accounts to share customers and inventory lists.</p>
+                {% if connected_group %}
+                    <div class="text-muted small mb-2"><strong>Group:</strong> {{ connected_group.name|default:"Connected businesses" }}</div>
+                {% else %}
+                    <div class="text-muted small mb-2">No connected group yet.</div>
+                {% endif %}
+
+                {% if connected_members %}
+                    <div class="text-muted small mb-2"><strong>Members</strong></div>
+                    <ul class="list-unstyled small mb-2">
+                        {% for member in connected_members %}
+                            <li class="d-flex align-items-center justify-content-between mb-1">
+                                <span>{{ member.display_name }} <span class="text-muted">@{{ member.username }}</span></span>
+                                {% if member.is_current %}
+                                    <span class="badge bg-primary">You</span>
+                                {% elif connected_can_manage %}
+                                    <form method="post" action="{% url 'accounts:connected_business_remove' member.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">Remove</button>
+                                    </form>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                {% if connected_can_manage %}
+                    <form method="post" action="{% url 'accounts:connected_business_update' %}">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <label class="form-label small" for="connectedGroupName">Group name</label>
+                            <input type="text" class="form-control" id="connectedGroupName" name="name" value="{{ connected_group.name }}">
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="shareCustomers" name="share_customers"
+                                   {% if connected_group %}{% if connected_group.share_customers %}checked{% endif %}{% else %}checked{% endif %}>
+                            <label class="form-check-label small" for="shareCustomers">Share customer lists</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="shareProducts" name="share_products"
+                                   {% if connected_group and connected_group.share_products %}checked{% endif %}>
+                            <label class="form-check-label small" for="shareProducts">Share inventory lists</label>
+                        </div>
+                        <div class="form-check ms-3">
+                            <input class="form-check-input" type="checkbox" id="shareProductStock" name="share_product_stock"
+                                   {% if connected_group %}{% if connected_group.share_product_stock %}checked{% endif %}{% else %}checked{% endif %}>
+                            <label class="form-check-label small" for="shareProductStock">Share stock on hand</label>
+                            <div class="form-text small text-muted">When off, stock quantities stay separate per store.</div>
+                        </div>
+                        <button type="submit" class="pill-primary btn-sm mt-2">Save sharing</button>
+                    </form>
+
+                    <form method="post" action="{% url 'accounts:connected_business_add' %}" class="mt-3">
+                        {% csrf_token %}
+                        <label class="form-label small" for="connectedBusinessIdentifier">Add business (username or email)</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="connectedBusinessIdentifier" name="identifier" placeholder="username or email">
+                            <button type="submit" class="pill-secondary btn-sm">Add</button>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="text-muted small">Only the business owner can manage connected businesses.</div>
+                {% endif %}
+            </div>
+            <div class="settings-card">
+                <h5>Copy inventory</h5>
+                <p class="text-muted small mb-2">Copy categories, suppliers, brands, models, VINs, locations, and products into another connected business. Existing items stay unchanged.</p>
+                {% if connected_can_manage %}
+                    {% if connected_members|length > 1 %}
+                        <form method="post" action="{% url 'accounts:connected_business_copy_inventory' %}">
+                            {% csrf_token %}
+                            <div class="row g-2">
+                                <div class="col-12 col-lg-6">
+                                    <label class="form-label small" for="inventoryCopySource">Source business</label>
+                                    <select class="form-select" id="inventoryCopySource" name="source_business_id">
+                                        {% for member in connected_members %}
+                                            <option value="{{ member.id }}" {% if member.is_current %}selected{% endif %}>{{ member.display_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-12 col-lg-6">
+                                    <label class="form-label small" for="inventoryCopyTarget">Destination business</label>
+                                    <select class="form-select" id="inventoryCopyTarget" name="target_business_id">
+                                        {% for member in connected_members %}
+                                            <option value="{{ member.id }}">{{ member.display_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="pill-primary btn-sm mt-3" onclick="return confirm('Copy inventory to the selected business?');">
+                                Copy inventory
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="text-muted small">Add at least one more business to enable inventory copy.</div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-muted small">Only the business owner can copy inventory.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card d-none" id="panel-invoices">
+        <h5 class="mb-3">Invoices</h5>
+        <div class="card-grid">
+            <div class="settings-card">
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    <a href="{% url 'accounts:customize_invoice' %}" class="pill-secondary btn-sm">Invoice appearance</a>
+                    <a href="{% url 'accounts:qr_code_style' %}" class="pill-secondary btn-sm">QR code style</a>
+                </div>
+                <h5>Brand & layout</h5>
+                <p class="text-muted small mb-1">Control logo, header colour, fonts, QR code style, and footer notes.</p>
+            </div>
+            <div class="settings-card">
+                <h5>Payments & terms</h5>
+                <p class="text-muted small mb-1">Set default payment terms and reminders so new invoices stay consistent.</p>
+                <a href="{% url 'accounts:customize_invoice' %}" class="pill-secondary btn-sm">Open invoice settings</a>
+            </div>
+            <div class="settings-card">
+                <h5>Invoice numbering</h5>
+                <p class="text-muted small mb-2">Set the next invoice number in your sequence. Leave blank to return to automatic numbering.</p>
+                <form method="post" action="{% url 'accounts:update_invoice_sequence' %}">
+                    {% csrf_token %}
+                    <label for="invoiceSequenceNext" class="sr-only">Next invoice number</label>
+                    <div class="input-group mb-2">
+                        <input type="number" min="1" class="form-control" id="invoiceSequenceNext" name="invoice_sequence_next" value="{{ profile.invoice_sequence_next|default_if_none:'' }}" placeholder="Auto">
+                        <div class="input-group-append">
+                            <span class="input-group-text">next</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="pill-primary btn-sm">Save sequence</button>
+                </form>
+                <div class="text-muted small mt-2">Current next number: {{ profile.invoice_sequence_next|default_if_none:"Auto" }}</div>
+            </div>
+            {% if user_profile %}
+            <div class="settings-card">
+                <h5>Default margin</h5>
+                <p class="text-muted small mb-2">Set the percentage margin applied to products without a sale price.</p>
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2">
+                    <form method="post" action="{% url 'accounts:inventory_update_margin' %}" class="form-inline flex-wrap">
+                        {% csrf_token %}
+                        <label for="defaultMarginPercent" class="sr-only">Margin (%)</label>
+                        <div class="input-group mr-2 mb-2 mb-lg-0">
+                            <input type="number" step="0.01" min="0" class="form-control" id="defaultMarginPercent" name="default_margin_percent" value="{{ user_profile.default_inventory_margin_percent|default_if_none:profile.default_inventory_margin_percent|default_if_none:'0.00' }}">
+                            <div class="input-group-append">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="pill-primary btn-sm mb-2 mb-lg-0">Save margin</button>
+                    </form>
+                    <form method="post" action="{% url 'accounts:inventory_apply_margin' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="pill-secondary btn-sm" onclick="return confirm('Update sale prices for all products using the saved margin?');">
+                            Update all sale prices
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="settings-card d-none" id="panel-display">
+        <h5 class="mb-3">Display</h5>
+        <div class="card-grid">
+            <div class="settings-card">
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    <a href="{% url 'accounts:display_preferences' %}" class="pill-secondary btn-sm">Interface scale</a>
+                </div>
+                <h5>Display & Scale</h5>
+                <p class="text-muted small mb-1">Control how compact the portal appears for your team.</p>
+                <div class="text-muted small">Current scale: {{ profile.ui_scale_percentage|default:"100" }}%</div>
+            </div>
+            <div class="settings-card">
+                <h5>Theme</h5>
+                <p class="text-muted small mb-1">Switch between light/dark or respect device preferences.</p>
+                <span class="badge bg-light text-dark border">Uses global toggle</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card d-none" id="panel-integrations">
+        <h5 class="mb-3">Integrations</h5>
+        <div class="card-grid">
+            <div class="settings-card">
+                <h5>Stripe Payments</h5>
+                <p class="text-muted small mb-1">Accept card payments and send payouts to your bank.</p>
+                {% if not stripe_configured %}
+                    <div class="text-muted small">Configure your developer account to enable Stripe.</div>
+                {% else %}
+                    <div class="text-muted small">Status: {% if stripe_connected %}Connected{% else %}Not connected{% endif %}</div>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        {% if stripe_connected %}
+                            <a href="{% url 'accounts:disconnect_stripe' %}" class="pill-secondary btn-sm">Disconnect Stripe</a>
+                        {% else %}
+                            <a href="{% url 'accounts:connect_stripe' %}" class="pill-secondary btn-sm">Connect Stripe</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="settings-card">
+                <h5>Payments (Clover)</h5>
+                <p class="text-muted small mb-1">Generate payment links and sync POS payments.</p>
+                <div class="text-muted small">Status: {% if clover_connected %}Connected{% else %}Not connected{% endif %}</div>
+                {% if not clover_configured %}
+                    <div class="text-muted small">Configure your developer account to enable Clover.</div>
+                {% endif %}
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    {% if clover_connected %}
+                        <a href="{% url 'accounts:clover_disconnect' %}" class="pill-secondary btn-sm">Disconnect Clover</a>
+                    {% else %}
+                        <a href="{% url 'accounts:clover_connect' %}" class="pill-secondary btn-sm">Connect Clover</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="settings-card">
+                <h5>Banking (Flinks)</h5>
+                <p class="text-muted small mb-1">Pull transactions and review them before creating bills.</p>
+                {% if not banking_configured %}
+                    <div class="text-muted small">Configure your developer account to enable Flinks.</div>
+                {% else %}
+                    <div class="text-muted small">Status: {% if banking_connected %}Connected{% else %}Not connected{% endif %}</div>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        {% if banking_connected %}
+                            <a href="{% url 'accounts:banking_disconnect' %}" class="pill-secondary btn-sm">Disconnect Banking</a>
+                        {% else %}
+                            <a href="{% url 'accounts:banking_settings' %}" class="pill-secondary btn-sm">Connect Banking</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="settings-card">
+                <h5>QuickBooks</h5>
+                <p class="text-muted small mb-1">Sync invoices, customers, and payments.</p>
+                {% if not quickbooks_configured %}
+                    <div class="text-muted small">Configure your developer account to enable QuickBooks.</div>
+                {% else %}
+                    <div class="text-muted small">Status: {% if quickbooks_connected %}Connected{% else %}Not connected{% endif %}</div>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        {% if quickbooks_connected %}
+                            <a href="{% url 'accounts:quickbooks_disconnect' %}" class="pill-secondary btn-sm">Disconnect QuickBooks</a>
+                        {% else %}
+                            <a href="{% url 'accounts:quickbooks_settings' %}" class="pill-secondary btn-sm">Connect QuickBooks</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card d-none" id="panel-security">
+        <h5 class="mb-3">Security</h5>
+        <div class="card-grid">
+            <div class="settings-card">
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    <a href="{% url 'accounts:password_change' %}" class="pill-secondary btn-sm">Change password</a>
+                    <a href="{% url 'accounts:logout' %}" class="pill-secondary btn-sm">Sign out</a>
+                </div>
+                <h5>Security</h5>
+                <p class="text-muted small mb-1">Keep your account secure with updated credentials.</p>
+            </div>
+            <div class="settings-card">
+                <h5>Sessions</h5>
+                <p class="text-muted small mb-1">Review active sessions and sign out remotely (coming soon).</p>
+                <span class="badge bg-secondary">Planned</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelectorAll('.tab-link');
+    const panels = {
+        account: document.getElementById('panel-account'),
+        invoices: document.getElementById('panel-invoices'),
+        display: document.getElementById('panel-display'),
+        integrations: document.getElementById('panel-integrations'),
+        security: document.getElementById('panel-security'),
+    };
+
+    function showTab(target) {
+        tabs.forEach(t => t.classList.remove('active'));
+        Object.values(panels).forEach(p => p.classList.add('d-none'));
+        const btn = Array.from(tabs).find(t => t.dataset.target === target);
+        if (btn) btn.classList.add('active');
+        if (panels[target]) panels[target].classList.remove('d-none');
+    }
+
+    tabs.forEach(t => {
+        t.addEventListener('click', () => showTab(t.dataset.target));
+    });
+
+    showTab('account');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,523 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+{% block title %}Customers{% endblock %}
+{% block content %}
+<style>
+    .shell-card {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+        padding: 1rem;
+    }
+    .table-modern th {
+        font-weight: 700;
+        color: #64748b;
+        font-size: 0.9rem;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    .table-modern td {
+        vertical-align: middle;
+        border-top: none;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.95rem;
+    }
+    .table-modern tr:nth-child(even) td { background: #f8fafc; }
+    .pill-btn {
+        border-radius: 999px;
+        padding: 0.2rem 0.75rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: 1px solid #cbd5e1;
+        background: #e0e7ff;
+        color: #1d4ed8;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .pill-btn:hover {
+        color: #1d4ed8;
+        background: #c7d2fe;
+        text-decoration: none;
+    }
+    .table-actions .dropdown-toggle {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 10px;
+        padding: 0.35rem 0.55rem;
+        color: #0f172a;
+    }
+    .table-search {
+        max-width: 320px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.35rem 0.65rem;
+        background: #f8fafc;
+    }
+    .table-search input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        outline: none;
+    }
+    .date-range-custom {
+        display: none;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .date-range-custom.show { display: flex; }
+</style>
+
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h2 class="mb-0">Customers</h2>
+            <div class="text-muted">Overview of customer balances, vehicles, and actions.</div>
+        </div>
+        <div class="page-toolbar d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#mergeCustomerModal">
+                <i class="fa-solid fa-code-merge"></i> Merge contacts
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+                <i class="fas fa-user-plus"></i> Add customer
+            </button>
+        </div>
+    </div>
+
+    <div class="shell-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <form method="GET" action="{% url 'accounts:customer_list' %}" id="search-form" class="flex-grow-1">
+                <div class="d-flex align-items-center table-search">
+                    <i class="fa fa-search text-muted me-2"></i>
+                    <input type="text" name="q" value="{{ search_query }}" id="search-input" placeholder="Search by name or email...">
+                </div>
+                <div class="mt-2 d-flex gap-2 align-items-center flex-wrap">
+                    <label class="text-muted small mb-0">Period:</label>
+                    <select id="dateRangeFilter" name="date_range" class="form-select form-select-sm" style="max-width: 200px;" data-select2-skip="true">
+                        {% for value,label in date_range_options %}
+                            <option value="{{ value }}"{% if current_date_range == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <div id="custom-date-range" class="date-range-custom{% if current_date_range == 'custom' %} show{% endif %}">
+                        <input type="date" class="form-control form-control-sm" name="start_date" id="start-date" value="{{ selected_start_date|date:'Y-m-d' }}">
+                        <span class="text-muted small">to</span>
+                        <input type="date" class="form-control form-control-sm" name="end_date" id="end-date" value="{{ selected_end_date|date:'Y-m-d' }}">
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-modern align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Rank</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Email</th>
+                        <th scope="col" class="text-end">Balance Due</th>
+                        <th scope="col" class="text-end">Total Paid</th>
+                        <th scope="col" class="text-end">Overdue Total</th>
+                        <th scope="col" class="text-end">Total Amount</th>
+                        <th scope="col" class="text-center">Vehicles</th>
+                        <th scope="col" class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="customer-list">
+                    {% include 'app/customer_list_content.html' %} 
+                </tbody>
+            </table>
+        </div>
+        <div id="customer-pagination">
+            {% include 'app/customer_list_pagination.html' %}
+        </div>
+        <div id="no-customers-message" class="text-center py-4 text-muted" {% if not page_obj.object_list %}style="display: block;"{% else %}style="display: none;"{% endif %}>
+            No customers found. Try adjusting your search or filters.
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const searchForm = document.getElementById('search-form');
+    const searchInput = document.getElementById('search-input');
+    const dateRange = document.getElementById('dateRangeFilter');
+    const customRange = document.getElementById('custom-date-range');
+    const startDate = document.getElementById('start-date');
+    const endDate = document.getElementById('end-date');
+    const tableBody = document.getElementById('customer-list');
+    const pagination = document.getElementById('customer-pagination');
+    const noResults = document.getElementById('no-customers-message');
+    const DATE_RANGE_COOKIE_NAME = 'invoice_date_range';
+
+    let activeRequestId = 0;
+    let activeController = null;
+
+    function debounce(func, delay) {
+        let debounceTimer;
+        return function() {
+            const context = this;
+            const args = arguments;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => func.apply(context, args), delay);
+        };
+    }
+
+    function toggleCustomRange() {
+        if (!customRange || !dateRange) return;
+        customRange.classList.toggle('show', dateRange.value === 'custom');
+    }
+
+    function setDateRangePreference(value) {
+        if (!DATE_RANGE_COOKIE_NAME) return;
+        const maxAge = 60 * 60 * 24 * 365;
+        if (!value || value === 'custom') {
+            document.cookie = `${DATE_RANGE_COOKIE_NAME}=; max-age=0; path=/`;
+            return;
+        }
+        document.cookie = `${DATE_RANGE_COOKIE_NAME}=${encodeURIComponent(value)}; max-age=${maxAge}; path=/`;
+    }
+
+    function fetchCustomers(url) {
+        if (!searchForm || !tableBody) return;
+        const params = new URLSearchParams(new FormData(searchForm));
+        const targetUrl = url || `${searchForm.action}?${params.toString()}`;
+        const requestId = ++activeRequestId;
+        if (activeController) activeController.abort();
+        activeController = new AbortController();
+
+        fetch(targetUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            signal: activeController.signal
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                if (requestId !== activeRequestId) return;
+                tableBody.innerHTML = data.html || '';
+                if (pagination) pagination.innerHTML = data.pagination_html || '';
+                if (noResults) {
+                    noResults.style.display = data.has_results ? 'none' : 'block';
+                }
+            })
+            .catch(error => {
+                if (error.name === 'AbortError') return;
+                console.error('Error fetching customers:', error);
+            });
+    }
+
+    toggleCustomRange();
+
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(() => fetchCustomers(), 300));
+    }
+    if (searchForm) {
+        searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            fetchCustomers();
+        });
+    }
+    if (dateRange) {
+        dateRange.addEventListener('change', () => {
+            setDateRangePreference(dateRange.value);
+            toggleCustomRange();
+            fetchCustomers();
+        });
+    }
+    startDate?.addEventListener('change', () => {
+        if (dateRange?.value === 'custom') fetchCustomers();
+    });
+    endDate?.addEventListener('change', () => {
+        if (dateRange?.value === 'custom') fetchCustomers();
+    });
+
+    pagination?.addEventListener('click', (e) => {
+        const link = e.target.closest('a.page-link');
+        if (!link) return;
+        e.preventDefault();
+        fetchCustomers(link.href);
+    });
+
+    function getCsrfToken() {
+        const name = 'csrftoken=';
+        const parts = document.cookie.split(';');
+        for (const p of parts) {
+            const part = p.trim();
+            if (part.startsWith(name)) return decodeURIComponent(part.substring(name.length));
+        }
+        return '';
+    }
+
+    document.body.addEventListener('click', (e) => {
+        const btn = e.target.closest('.send-signup-btn');
+        if (!btn) return;
+        const customerId = btn.dataset.id;
+        const email = btn.dataset.email || '';
+        btn.disabled = true;
+        fetch("{% url 'accounts:send_customer_signup' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ customer_id: customerId })
+        })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+            const msg = data.message || 'Signup email sent.';
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${data.success ? 'success' : 'danger'} mt-2`;
+            alert.textContent = msg;
+            btn.closest('td')?.appendChild(alert);
+            setTimeout(() => alert.remove(), 3500);
+        })
+        .catch(() => {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger mt-2';
+            alert.textContent = 'Unable to send signup email right now.';
+            btn.closest('td')?.appendChild(alert);
+            setTimeout(() => alert.remove(), 3500);
+        })
+        .finally(() => {
+            btn.disabled = false;
+        });
+    });
+
+    // Handle add-customer modal submit via AJAX to avoid showing raw JSON
+    const addCustomerForm = document.getElementById('add-customer-form');
+    if (addCustomerForm) {
+        addCustomerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(addCustomerForm);
+            fetch(addCustomerForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => {
+                if (!data.success) {
+                    document.getElementById('customer-form-errors').textContent = 'Unable to save customer.';
+                    return;
+                }
+                const modalEl = document.getElementById('addCustomerModal');
+                const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modal.hide();
+                fetchCustomers();
+            })
+            .catch(() => {
+                document.getElementById('customer-form-errors').textContent = 'Unable to save customer right now.';
+            });
+        });
+    }
+
+    const mergeForm = document.getElementById('merge-customers-form');
+    const mergeSource = document.getElementById('merge-source-customer');
+    const mergeTarget = document.getElementById('merge-target-customer');
+    const mergeError = document.getElementById('merge-customers-error');
+
+    function syncMergeOptions() {
+        if (!mergeSource || !mergeTarget) return;
+        const sourceVal = mergeSource.value;
+        const targetVal = mergeTarget.value;
+        Array.from(mergeSource.options).forEach((option) => {
+            option.disabled = !!targetVal && option.value === targetVal;
+        });
+        Array.from(mergeTarget.options).forEach((option) => {
+            option.disabled = !!sourceVal && option.value === sourceVal;
+        });
+    }
+
+    if (mergeSource && mergeTarget) {
+        mergeSource.addEventListener('change', () => {
+            if (mergeTarget.value === mergeSource.value) {
+                mergeTarget.value = '';
+            }
+            syncMergeOptions();
+        });
+        mergeTarget.addEventListener('change', () => {
+            if (mergeSource.value === mergeTarget.value) {
+                mergeSource.value = '';
+            }
+            syncMergeOptions();
+        });
+        syncMergeOptions();
+    }
+
+    if (mergeForm) {
+        mergeForm.addEventListener('submit', (e) => {
+            if (!mergeSource || !mergeTarget) return;
+            if (mergeError) mergeError.textContent = '';
+            if (!mergeSource.value || !mergeTarget.value) {
+                e.preventDefault();
+                if (mergeError) mergeError.textContent = 'Select two contacts to merge.';
+                return;
+            }
+            if (mergeSource.value === mergeTarget.value) {
+                e.preventDefault();
+                if (mergeError) mergeError.textContent = 'Choose two different contacts.';
+                return;
+            }
+            const sourceText = mergeSource.options[mergeSource.selectedIndex]?.text || 'the source contact';
+            const targetText = mergeTarget.options[mergeTarget.selectedIndex]?.text || 'the target contact';
+            if (!confirm(`Merge ${sourceText} into ${targetText}? This cannot be undone.`)) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+</script>
+<style>
+  #addCustomerModal .form-label { font-weight: 600; color: #111827; }
+  #addCustomerModal input, #addCustomerModal textarea, #addCustomerModal select { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 10px; }
+  #addCustomerModal textarea { min-height: 90px; }
+</style>
+<div class="modal fade" id="mergeCustomerModal" tabindex="-1" aria-labelledby="mergeCustomerModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form id="merge-customers-form" method="post" action="{% url 'accounts:merge_customers' %}">
+      {% csrf_token %}
+      <div class="modal-content bg-white rounded-lg shadow-xl">
+        <div class="modal-header bg-gray-100 py-3 px-4 rounded-top">
+          <h5 class="modal-title fw-semibold mb-0" id="mergeCustomerModalLabel">Merge contacts</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="text-muted small mb-3">
+            Merge transactions from one contact into another. The source contact will be deleted.
+          </div>
+          <div class="alert alert-warning d-flex gap-2 align-items-start">
+            <i class="fa-solid fa-triangle-exclamation mt-1"></i>
+            <div class="small">
+              Make sure to save any address, phone numbers, or other details from the source contact.
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Merge transactions from</label>
+            <select class="form-select" name="source_customer" id="merge-source-customer" required>
+              <option value="">Select a contact</option>
+              {% for merge_customer in merge_customers %}
+                <option value="{{ merge_customer.id }}">
+                  {{ merge_customer.name }}{% if merge_customer.email %} ({{ merge_customer.email }}){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Into</label>
+            <select class="form-select" name="target_customer" id="merge-target-customer" required>
+              <option value="">Select a contact</option>
+              {% for merge_customer in merge_customers %}
+                <option value="{{ merge_customer.id }}">
+                  {{ merge_customer.name }}{% if merge_customer.email %} ({{ merge_customer.email }}){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <div id="merge-customers-error" class="text-danger small mt-2"></div>
+          </div>
+        </div>
+        <div class="modal-footer bg-gray-50 py-3 px-4 rounded-bottom d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">Merge contacts</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form id="add-customer-form" method="post" action="{% url 'accounts:add_customer' %}">
+      {% csrf_token %}
+      <div class="modal-content bg-white rounded-lg shadow-xl">
+        <div class="modal-header bg-gray-100 py-3 px-4 rounded-top">
+          <h5 class="modal-title fw-semibold mb-0" id="addCustomerModalLabel">Add New Customer</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Name</label>
+              {{ customer_form.name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              {{ customer_form.email }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">CC emails</label>
+              {{ customer_form.cc_emails }}
+              <div class="text-muted small">Optional: comma-separated emails for billing updates.</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Address</label>
+              {{ customer_form.address }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Phone number</label>
+              {{ customer_form.phone_number }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">GST/HST number</label>
+              {{ customer_form.gst_hst_number }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Charge rate (per hour)</label>
+              {{ customer_form.charge_rate }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Collect GST/HST?</label>
+              <div class="border rounded p-2">
+                {{ customer_form.collect_gst_hst_choice }}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-check mb-2">
+                {{ customer_form.register_portal }}
+                <label class="form-check-label ms-1">Enable customer portal access</label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Portal username</label>
+              {{ customer_form.portal_username }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Temporary password</label>
+              {{ customer_form.portal_password }}
+            </div>
+          </div>
+          <div id="customer-form-errors" class="text-danger mt-3 small"></div>
+        </div>
+        <div class="modal-footer bg-gray-50 py-3 px-4 rounded-bottom d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary" id="save-customer-button">Save Customer</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal fade" id="customerModal" tabindex="-1" role="dialog" aria-labelledby="customerModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content bg-white rounded-lg shadow-xl">
+      <div class="modal-header bg-gray-100 py-4 px-6 rounded-t-lg">
+        <h5 class="modal-title text-xl font-semibold text-gray-800" id="customerModalLabel">Customer Details</h5>
+        <button type="button" class="close text-gray-700 hover:text-gray-900" data-bs-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true" class="text-2xl">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body p-6">
+        <p id="customer-details" class="text-gray-700"></p>
+        <div id="customer-detail-errors" class="text-red-500 mt-3 text-sm"></div>
+      </div>
+      <div class="modal-footer bg-gray-50 py-4 px-6 rounded-b-lg flex justify-end space-x-3">
+        <button type="button" class="btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-150" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-150" id="edit-customer-button">Edit Customer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

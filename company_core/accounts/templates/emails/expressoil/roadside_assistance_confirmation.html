@@ -1,0 +1,87 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Your Roadside Assistance Request</title>
+  <style>
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: #f7f7f7;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .header {
+      background: #2980b9;
+      padding: 20px;
+      text-align: center;
+      color: #fff;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .content {
+      padding: 20px;
+    }
+    .content p {
+      margin: 0 0 15px;
+      line-height: 1.6;
+    }
+    .details {
+      margin: 20px 0;
+      padding: 10px;
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+    .details ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .details li {
+      margin-bottom: 8px;
+    }
+    .footer {
+      background: #e67e22;
+      padding: 10px;
+      text-align: center;
+      color: #fff;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>{{ business_name|default:default_business_name }}</h1>
+    </div>
+    <div class="content">
+      <p>Dear Customer,</p>
+      <p>We have received your roadside assistance request. Here are the details we received:</p>
+      <div class="details">
+        <ul>
+          <li><strong>Location:</strong> {{ location }}</li>
+          <li><strong>Description:</strong> {{ description }}</li>
+          <li><strong>Phone:</strong> {{ phone }}</li>
+          <li><strong>Email:</strong> {{ email }}</li>
+        </ul>
+      </div>
+      <p>Our team will reach out to you shortly. If you have any questions in the meantime, feel free to reply to this email.</p>
+      <p>Thank you for choosing {{ business_name|default:default_business_name }}!</p>
+    </div>
+    <div class="footer">
+      &copy; {{ current_year }} {{ business_name|default:default_business_name }}. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>

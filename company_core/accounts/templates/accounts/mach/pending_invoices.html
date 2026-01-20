@@ -1,0 +1,89 @@
+{% extends 'accounts/mach/mach_portal_base.html' %}
+{% load custom_filters %}
+{% block title %}
+    Pending Invoices
+{% endblock %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <h2 class="mb-0">Pending invoices</h2>
+        <div class="page-toolbar">
+            <a href="{% url 'accounts:add_dailylog' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus-circle"></i> New invoice
+            </a>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <form method="GET" id="search-form" class="page-search w-100 w-md-auto">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-0"><i class="fa fa-search text-muted"></i></span>
+                    <input type="text" name="search" id="search-input" class="form-control" placeholder="Search by any field">
+                </div>
+                <div class="mt-2">
+                    <select class="form-select form-select-sm" name="date_range" id="date-range-filter" style="max-width: 220px;">
+                        {% for value,label in date_range_options %}
+                            <option value="{{ value }}"{% if current_date_range == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div id="pending-invoice-list">
+            {% include 'app/pendinginvoice_list_content.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        const dateRangeFilter = document.getElementById('date-range-filter');
+
+        function fetchPendingList() {
+            const formData = new FormData(form);
+            const searchParams = new URLSearchParams(formData).toString();
+            fetch(`${form.action || window.location.pathname}?${searchParams}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('pending-invoice-list').innerHTML = data.html;
+            });
+        }
+
+        searchInput?.addEventListener('input', fetchPendingList);
+        dateRangeFilter?.addEventListener('change', fetchPendingList);
+
+        document.getElementById('pending-invoice-list').addEventListener('submit', function(event) {
+            if (event.target.matches('.mark-as-paid-form')) {
+                event.preventDefault();
+                const form = event.target;
+                const formData = new FormData(form);
+                const url = form.action;
+                fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const row = form.closest('tr');
+                        row.remove();
+                    } else {
+                        alert(data.message || 'Failed to mark invoice as paid.');
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

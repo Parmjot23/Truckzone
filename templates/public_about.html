@@ -1,0 +1,665 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}About Us - {{ business_name|default:default_business_name }}{% endblock %}
+
+
+{% block body_class %}page-about{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* =============================================
+       ABOUT PAGE - BOLD NEW DESIGN
+       ============================================= */
+
+    :root {
+        --2g-blue: #0047AB;
+        --2g-blue-light: #2563EB;
+        --2g-blue-dark: #003080;
+        --2g-black: #0A0A0A;
+        --2g-charcoal: #1A1A1A;
+        --2g-slate: #2D2D2D;
+        --2g-white: #FFFFFF;
+        --2g-off-white: #F5F7FA;
+    }
+
+    /* Hero Section */
+    .about-hero {
+        min-height: 60vh;
+        display: flex;
+        align-items: center;
+        position: relative;
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.5) 100%),
+        url("{% static 'images/hero_about_background.png' %}");
+        background-size: cover;
+        background-position: center;
+        overflow: hidden;
+    }
+
+    .about-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background:
+            linear-gradient(135deg, rgba(0, 71, 171, 0.2) 0%, transparent 50%),
+            linear-gradient(225deg, rgba(0, 0, 0, 0.6) 0%, transparent 50%);
+    }
+
+    .about-hero::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 40%;
+        height: 100%;
+        background: var(--2g-blue);
+        clip-path: polygon(40% 0, 100% 0, 100% 100%, 0% 100%);
+    }
+
+    @media (max-width: 991px) {
+        .about-hero::after {
+            display: none;
+        }
+    }
+
+    .about-hero-content {
+        position: relative;
+        z-index: 10;
+    }
+
+    .about-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: rgba(0, 71, 171, 0.2);
+        border: 1px solid rgba(0, 71, 171, 0.4);
+        padding: 0.5rem 1.25rem;
+        border-radius: 50px;
+        margin-bottom: 1.5rem;
+    }
+
+    .about-hero-badge span {
+        color: var(--2g-white);
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .about-hero h1 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(2.5rem, 6vw, 4rem);
+        font-weight: 800;
+        color: var(--2g-white);
+        line-height: 1.1;
+        margin-bottom: 1rem;
+    }
+
+    .about-hero p {
+        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.8);
+        max-width: 600px;
+        line-height: 1.7;
+    }
+
+    /* Story Section */
+    .story-section {
+        padding: 6rem 0;
+        background: var(--2g-off-white);
+    }
+
+    .story-content h2 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(1.75rem, 4vw, 2.5rem);
+        font-weight: 800;
+        color: var(--2g-charcoal);
+        margin-bottom: 1.5rem;
+    }
+
+    .story-content p {
+        color: #64748B;
+        font-size: 1.05rem;
+        line-height: 1.8;
+        margin-bottom: 1rem;
+    }
+
+    .story-image {
+        position: relative;
+        border-radius: 20px;
+        overflow: hidden;
+        height: 100%;
+        min-height: 400px;
+    }
+
+    .story-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .story-image-bg {
+        background: linear-gradient(135deg, var(--2g-blue) 0%, var(--2g-blue-dark) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+    }
+
+    /* Values Section */
+    .values-section {
+        padding: 6rem 0;
+        background: var(--2g-charcoal);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .values-section::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -20%;
+        width: 60%;
+        height: 200%;
+        background: radial-gradient(ellipse at center, rgba(0, 71, 171, 0.1) 0%, transparent 60%);
+    }
+
+    .section-header {
+        text-align: center;
+        margin-bottom: 4rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .section-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--2g-blue-light);
+        padding: 0.5rem 1.25rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 1rem;
+    }
+
+    .section-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 800;
+        color: var(--2g-white);
+        margin-bottom: 1rem;
+    }
+
+    .section-subtitle {
+        font-size: 1.1rem;
+        color: rgba(255, 255, 255, 0.7);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* Value Cards */
+    .value-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 2.5rem;
+        text-align: center;
+        transition: all 0.4s ease;
+        height: 100%;
+        position: relative;
+    }
+
+    .value-card:hover {
+        border-color: var(--2g-blue);
+        transform: translateY(-8px);
+        background: rgba(0, 71, 171, 0.05);
+    }
+
+    .value-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1.5rem;
+        background: linear-gradient(135deg, var(--2g-blue) 0%, var(--2g-blue-light) 100%);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .value-icon i {
+        font-size: 2rem;
+        color: var(--2g-white);
+    }
+
+    .value-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--2g-white);
+        margin-bottom: 0.75rem;
+    }
+
+    .value-text {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.95rem;
+        line-height: 1.7;
+    }
+
+    /* Services Overview */
+    .inventory-overview {
+        padding: 6rem 0;
+        background: var(--2g-white);
+    }
+
+    .inventory-overview .section-eyebrow {
+        background: linear-gradient(135deg, rgba(0, 71, 171, 0.1), rgba(0, 71, 171, 0.05));
+        color: var(--2g-blue);
+    }
+
+    .inventory-overview .section-title {
+        color: var(--2g-charcoal);
+    }
+
+    .inventory-overview .section-subtitle {
+        color: #64748B;
+    }
+
+    .inventory-card {
+        background: var(--2g-off-white);
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        height: 100%;
+        border: 1px solid #E8ECF2;
+    }
+
+    .inventory-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+        border-color: transparent;
+    }
+
+    .inventory-icon {
+        width: 70px;
+        height: 70px;
+        margin: 0 auto 1.25rem;
+        background: linear-gradient(135deg, var(--2g-blue) 0%, var(--2g-blue-light) 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .inventory-icon i {
+        font-size: 1.75rem;
+        color: var(--2g-white);
+    }
+
+    .inventory-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--2g-charcoal);
+        margin-bottom: 0.5rem;
+    }
+
+    .inventory-text {
+        color: #64748B;
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+
+    /* Why Choose Section */
+    .why-section {
+        padding: 6rem 0;
+        background: linear-gradient(135deg, var(--2g-blue) 0%, var(--2g-blue-dark) 100%);
+        position: relative;
+    }
+
+    .why-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .why-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .why-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-4px);
+    }
+
+    .why-icon {
+        width: 56px;
+        height: 56px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .why-icon i {
+        font-size: 1.5rem;
+        color: var(--2g-white);
+    }
+
+    .why-content h4 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--2g-white);
+        margin-bottom: 0.35rem;
+    }
+
+    .why-content p {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    /* CTA Section */
+    .about-cta {
+        padding: 6rem 0;
+        background: var(--2g-charcoal);
+        text-align: center;
+    }
+
+    .about-cta h2 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 800;
+        color: var(--2g-white);
+        margin-bottom: 1rem;
+    }
+
+    .about-cta p {
+        font-size: 1.15rem;
+        color: rgba(255, 255, 255, 0.8);
+        max-width: 600px;
+        margin: 0 auto 2rem;
+    }
+
+    .btn-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 2.5rem;
+        background: var(--2g-blue);
+        color: var(--2g-white);
+        font-weight: 700;
+        font-size: 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: 0 8px 30px rgba(0, 71, 171, 0.4);
+    }
+
+    .btn-cta:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 40px rgba(0, 71, 171, 0.5);
+        color: var(--2g-white);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="about-hero">
+    <div class="container about-hero-content py-5">
+        <div class="row">
+            <div class="col-lg-7">
+                <div class="about-hero-badge">
+                    <i class="fas fa-info-circle" style="color: #2563EB;"></i>
+                    <span>About Us</span>
+                </div>
+                <h1>{{ business_name|default:default_business_name }}<br>Truck Parts</h1>
+                <p>
+                    Your trusted partner for heavy-duty truck parts, accessories, and fleet supplies.
+                    Keeping your fleet moving with the right components, fast.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Story Section -->
+<section class="story-section">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <div class="story-image story-image-bg">
+                    <img src="{{ company_logo_url|default:default_company_logo_url }}"
+                        alt="{{ business_name|default:default_business_name }}" style="max-width: 80%;">
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="story-content">
+                    <h2>Built for Heavy-Duty Parts Supply</h2>
+                    <p>
+                        {{ business_name|default:default_business_name }} was founded to make heavy-duty parts sourcing
+                        faster and more reliable for fleets, owner-operators, and parts managers.
+                    </p>
+                    <p>
+                        From fast-moving wear items to specialized components, our catalog is organized to help
+                        you find the right part quickly and keep downtime to a minimum.
+                    </p>
+                    <p>
+                        Our parts team focuses on accurate fitment, trusted brands, and responsive support so every
+                        order
+                        keeps your equipment road-ready.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Values Section -->
+<section class="values-section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">
+                <i class="fas fa-heart"></i>
+                Our Values
+            </span>
+            <h2 class="section-title">What Drives Us</h2>
+            <p class="section-subtitle">
+                The core principles that guide our business every day.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="value-card">
+                    <div class="value-icon">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <h3 class="value-title">Our Mission</h3>
+                    <p class="value-text">
+                        To deliver reliable heavy-duty parts and fitment support that keep fleets moving safely and
+                        efficiently.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="value-card">
+                    <div class="value-icon">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <h3 class="value-title">Our Vision</h3>
+                    <p class="value-text">
+                        To be the most trusted heavy-duty parts partner in the region, known for accuracy, availability,
+                        and fair pricing.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="value-card">
+                    <div class="value-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <h3 class="value-title">Our Promise</h3>
+                    <p class="value-text">
+                        Reliability, quality, and transparency guide every order. We go the extra mile to ensure every
+                        part fits and performs.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Inventory Overview -->
+<section class="inventory-overview">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">
+                <i class="fas fa-boxes"></i>
+                What We Stock
+            </span>
+            <h2 class="section-title">Parts for Every System</h2>
+            <p class="section-subtitle">
+                From routine upkeep to heavy rebuilds, we stock the parts fleets rely on most.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-6 col-lg-3">
+                <div class="inventory-card">
+                    <div class="inventory-icon">
+                        <i class="fas fa-gear"></i>
+                    </div>
+                    <h4 class="inventory-title">Engine & Emissions</h4>
+                    <p class="inventory-text">Gaskets, filters, sensors, and exhaust components</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="inventory-card">
+                    <div class="inventory-icon">
+                        <i class="fas fa-gears"></i>
+                    </div>
+                    <h4 class="inventory-title">Drivetrain</h4>
+                    <p class="inventory-text">Transmission, clutch, and driveline essentials</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="inventory-card">
+                    <div class="inventory-icon">
+                        <i class="fas fa-truck-moving"></i>
+                    </div>
+                    <h4 class="inventory-title">Brakes & Suspension</h4>
+                    <p class="inventory-text">Brake chambers, drums, springs, and shocks</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="inventory-card">
+                    <div class="inventory-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h4 class="inventory-title">Electrical & Lighting</h4>
+                    <p class="inventory-text">Starters, alternators, wiring, and LEDs</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Why Choose Section -->
+<section class="why-section">
+    <div class="container position-relative" style="z-index: 1;">
+        <div class="section-header">
+            <span class="section-eyebrow" style="background: rgba(255,255,255,0.1); color: white;">
+                <i class="fas fa-star"></i>
+                Why Choose Us
+            </span>
+            <h2 class="section-title">The {{ business_name|default:default_business_name }} Difference</h2>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="why-item">
+                    <div class="why-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="why-content">
+                        <h4>Fitment Accuracy</h4>
+                        <p>We verify specs so the right part arrives the first time.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="why-item">
+                    <div class="why-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="why-content">
+                        <h4>Fleet-Friendly Pricing</h4>
+                        <p>Transparent pricing with account discounts for volume buyers.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="why-item">
+                    <div class="why-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <div class="why-content">
+                        <h4>Parts Specialists</h4>
+                        <p>Dedicated parts team with deep heavy-duty product knowledge.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="why-item">
+                    <div class="why-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="why-content">
+                        <h4>Trusted Brands</h4>
+                        <p>OEM-grade and aftermarket options built for durability.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="about-cta">
+    <div class="container">
+        <h2>Ready to Get Started?</h2>
+        <p>Contact us today for parts availability, quotes, or fleet pricing.</p>
+        <a href="{% url 'accounts:public_contact' %}" class="btn-cta">
+            <i class="fas fa-envelope"></i>
+            Contact Us
+        </a>
+    </div>
+</section>
+
+{% endblock %}

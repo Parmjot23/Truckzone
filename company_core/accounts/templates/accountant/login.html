@@ -1,0 +1,40 @@
+{% extends "accountant/portal_auth_base.html" %}
+{% load crispy_forms_tags %}
+{% block auth_page_title %}Accountant Portal Login{% endblock %}
+{% block auth_content %}
+  <div class="accountant-auth-hero">
+    <span class="badge"><i class="fa-solid fa-file-invoice-dollar me-2"></i>Accountant access</span>
+    <h1>Sign in to prepare filings for {{ business_name|default:default_business_name }}</h1>
+    <p>Download tax-ready PDF and Excel reports with read-only access to the books.</p>
+  </div>
+  <div class="row justify-content-center">
+    <div class="col-lg-5 col-md-7">
+      <div class="accountant-auth-card p-4 p-lg-5">
+        <h2 class="h4 text-center mb-4">Accountant login</h2>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form|crispy }}
+          <input type="hidden" name="next" value="{{ next|default:'' }}">
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">Sign in</button>
+          </div>
+        </form>
+        {% if form.errors %}
+          <div class="alert alert-danger mt-3 mb-0">
+            {% if form.non_field_errors %}
+              {% for error in form.non_field_errors %}
+                <div>{{ error|safe }}</div>
+              {% endfor %}
+            {% else %}
+              Your username and password did not match. Please try again.
+            {% endif %}
+          </div>
+        {% endif %}
+        <div class="mt-4 small text-center">
+          <p class="mb-2">Need help? Contact {{ business_name|default:default_business_name }} support.</p>
+          <p class="mb-0"><a href="{% url 'accounts:password_reset' %}">Forgot your password?</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,1599 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light"{% block html_attrs %}{% endblock %}>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Dashboard{% endblock %}</title>
+
+    <link rel="icon" type="image/png" href="{{ default_company_logo_url }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        :root {
+            --ui-scale-factor: 1;
+            --app-base-scale: 0.7;
+            --app-scale-factor: var(--app-base-scale);
+            --sidebar-width-collapsed: 74px;
+            --sidebar-width-expanded: 260px;
+            --topbar-height: 68px;
+            --primary: #0f172a;
+            --primary-accent: #2563eb;
+            --muted: #6b7280;
+            --surface: #ffffff;
+            --surface-alt: #f6f8fb;
+            --border: #e5e7eb;
+            --shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
+            --radius-lg: 18px;
+            --radius-md: 12px;
+            --sidebar-surface: #0f172a;
+            --sidebar-border: rgba(255,255,255,0.04);
+            --sidebar-hover: rgba(255,255,255,0.08);
+            --sidebar-active: rgba(37, 99, 235, 0.35);
+            --sidebar-icon-bg: transparent;
+            --sidebar-icon-active: rgba(37,99,235,0.35);
+            --sidebar-text: #e2e8f0;
+            --sidebar-muted: #cbd5e1;
+            --sidebar-shadow: 6px 0 30px rgba(15, 23, 42, 0.35);
+        }
+
+        [data-theme="dark"] {
+            --primary: #e5e7eb;
+            --primary-accent: #60a5fa;
+            --muted: #9ca3af;
+            --surface: #0b1220;
+            --surface-alt: #0f172a;
+            --border: #1f2937;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            --sidebar-surface: #0b1220;
+            --sidebar-border: rgba(255,255,255,0.08);
+            --sidebar-hover: rgba(255,255,255,0.08);
+            --sidebar-active: rgba(37, 99, 235, 0.35);
+            --sidebar-icon-bg: transparent;
+            --sidebar-icon-active: rgba(37,99,235,0.35);
+            --sidebar-text: #e5e7eb;
+            --sidebar-muted: #d7dced;
+            --sidebar-shadow: 6px 0 30px rgba(0, 0, 0, 0.45);
+        }
+
+        * { box-sizing: border-box; }
+
+        html {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar-initializing .app-sidebar,
+        .sidebar-initializing .app-main {
+            transition: none !important;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Manrope', 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--surface-alt);
+            color: var(--primary);
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+        body.ui-scale-active {
+            --app-scale-factor: calc(var(--app-base-scale) * var(--ui-scale-factor));
+        }
+
+        .app-shell {
+            display: flex;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-shell.scaled-ui {
+            position: fixed;
+            inset: 0;
+            transform: scale(var(--app-scale-factor));
+            transform-origin: top left;
+            width: calc(100vw / var(--app-scale-factor));
+            height: calc(100vh / var(--app-scale-factor));
+            overflow: hidden;
+        }
+
+        .app-sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: var(--sidebar-width-collapsed);
+            background: var(--sidebar-surface);
+            border-right: 1px solid var(--sidebar-border);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.25s ease;
+            z-index: 1040;
+            box-shadow: var(--sidebar-shadow);
+            color: var(--sidebar-text);
+            overflow: visible;
+            padding: 0;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+        }
+
+        .app-sidebar.expanded { width: var(--sidebar-width-expanded); }
+
+        body.sidebar-start-expanded .app-sidebar {
+            width: var(--sidebar-width-expanded);
+        }
+
+        body.sidebar-start-expanded .app-main {
+            margin-left: var(--sidebar-width-expanded);
+        }
+
+        body.sidebar-start-expanded .sidebar-label {
+            opacity: 1;
+        }
+
+        .sidebar-brand {
+            height: var(--topbar-height);
+            padding: 0 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow: hidden;
+            white-space: nowrap;
+            background: transparent;
+            color: var(--sidebar-text);
+            width: 100%;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-brand img {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+        }
+
+        .sidebar-brand span {
+            flex: 1 1 auto;
+            min-width: 0;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--sidebar-text);
+            letter-spacing: -0.01em;
+            max-width: 100%;
+            line-height: 1.15;
+            max-height: calc(1.15em * 2);
+            overflow: hidden;
+            overflow-wrap: anywhere;
+            white-space: normal;
+            display: block;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .app-sidebar.expanded .sidebar-brand span { opacity: 1; }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1.25rem 0.85rem 1.25rem 0.85rem;
+            overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .sidebar-nav::-webkit-scrollbar { display: none; }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.62rem 0.9rem;
+            color: var(--sidebar-muted);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.18s ease;
+            white-space: nowrap;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            border: none;
+            background: transparent;
+            position: relative;
+            font-size: 0.95rem;
+            line-height: 1.3;
+        }
+
+        .sidebar-link:hover {
+            color: #fff;
+            background: var(--sidebar-hover);
+        }
+
+        .sidebar-link.active {
+            color: #fff;
+            background: var(--sidebar-active);
+        }
+
+        .sidebar-link i {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+
+        .sidebar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .sidebar-group-header {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .sidebar-group-header .sidebar-link {
+            flex: 1;
+        }
+
+        .sidebar-subtoggle {
+            border: none;
+            background: transparent;
+            color: var(--sidebar-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s ease, background 0.2s ease;
+            cursor: pointer;
+        }
+
+        .sidebar-subtoggle i {
+            transition: transform 0.2s ease;
+        }
+
+        .sidebar-group.open .sidebar-subtoggle i {
+            transform: rotate(180deg);
+        }
+
+        .sidebar-subtoggle:hover,
+        .sidebar-subtoggle:focus-visible {
+            color: #fff;
+            background: var(--sidebar-hover);
+        }
+
+        .sidebar-subnav {
+            display: none;
+            flex-direction: column;
+            gap: 0.2rem;
+            margin-left: 0.35rem;
+        }
+
+        .sidebar-group.open .sidebar-subnav {
+            display: flex;
+        }
+
+        .sidebar-sublink {
+            padding-left: 2.6rem;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-sublink i {
+            font-size: 0.95rem;
+            opacity: 0.85;
+        }
+
+        .app-sidebar:not(.expanded):not(.mobile-open) .sidebar-subtoggle,
+        .app-sidebar:not(.expanded):not(.mobile-open) .sidebar-subnav {
+            display: none !important;
+        }
+
+        .sidebar-label {
+            opacity: 0;
+            transition: opacity 0.18s ease;
+        }
+
+        .app-sidebar.expanded .sidebar-label { opacity: 1; }
+
+        .sidebar-footer {
+            padding: 1rem 0.85rem 1.25rem 0.85rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.16);
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            align-items: center;
+        }
+
+        .sidebar-footer-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.45rem;
+            border-radius: 12px;
+            font-weight: 600;
+            color: var(--sidebar-muted);
+            text-decoration: none;
+            transition: background 0.2s ease, color 0.2s ease;
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        .sidebar-footer-link i {
+            font-size: 0.85rem;
+        }
+
+        .sidebar-footer-link:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+
+        .sidebar-footer-form {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .app-sidebar.expanded .sidebar-footer {
+            flex-direction: row;
+            justify-content: flex-start;
+        }
+
+        .app-sidebar:not(.expanded) .sidebar-footer-link {
+            justify-content: center;
+        }
+
+        .sidebar-hover-strip {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: -5px;
+            width: 10px;
+            cursor: pointer;
+            background: transparent;
+            z-index: 1500;
+            transition: box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .sidebar-hover-strip:hover {
+            box-shadow: inset -3px 0 0 #2563eb;
+            background: rgba(37,99,235,0.1);
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 50%;
+            right: -14px;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid rgba(37,99,235,0.8);
+            background: var(--sidebar-surface);
+            color: var(--sidebar-text);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 22px rgba(15,23,42,0.25);
+            transition: opacity 0.15s ease, box-shadow 0.2s ease, color 0.2s ease;
+            z-index: 2000;
+            padding: 0;
+            opacity: 0;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-hover-strip:hover ~ .sidebar-toggle,
+        .sidebar-toggle:hover,
+        .sidebar-toggle:focus-visible {
+            opacity: 1;
+            right: -14px;
+        }
+
+        .sidebar-toggle:hover {
+            color: #fff;
+            border-color: #2563eb;
+            box-shadow: 0 10px 26px rgba(37,99,235,0.45);
+        }
+
+        .mobile-sidebar-toggle {
+            position: fixed;
+            top: 12px;
+            left: 14px;
+            z-index: 2001;
+            padding: 0.55rem 0.7rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--primary);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 28px rgba(15,23,42,0.16);
+        }
+
+        .app-main {
+            flex: 1;
+            margin-left: var(--sidebar-width-collapsed);
+            transition: margin-left 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .app-sidebar.expanded ~ .app-main {
+            margin-left: var(--sidebar-width-expanded);
+        }
+
+        .app-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            height: var(--topbar-height);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1.5rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .topbar-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            letter-spacing: -0.01em;
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-left: auto;
+        }
+
+        .ghost-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--primary);
+            padding: 0.45rem 0.9rem;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.18s ease;
+        }
+
+        .ghost-btn:hover {
+            border-color: var(--primary-accent);
+            color: var(--primary-accent);
+            background: rgba(37, 99, 235, 0.08);
+        }
+
+        .pill-btn {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #fff;
+            border: none;
+            padding: 0.48rem 1rem;
+            border-radius: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+        }
+
+        .pill-btn:hover { color: #fff; filter: brightness(1.05); }
+
+        .theme-toggle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--surface-alt);
+            color: var(--primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover { color: var(--primary-accent); border-color: var(--primary-accent); }
+
+        .app-content {
+            padding: 1rem 1.25rem;
+            flex: 1;
+            width: 100%;
+            margin: 0;
+        }
+
+        /* Full-width containers and tables across dashboard pages */
+        .app-content .container,
+        .app-content .container-fluid,
+        .app-content .container-lg,
+        .app-content .container-md,
+        .app-content .container-sm,
+        .app-content .container-xl,
+        .app-content .container-xxl {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding-left: 1.25rem;
+            padding-right: 1.25rem;
+        }
+
+        .app-content .table-responsive {
+            width: 100%;
+        }
+
+        .app-content table {
+            width: 100%;
+            min-width: 100%;
+        }
+
+        /* Normalize tables across dashboard */
+        .table thead th {
+            background: #f8fafc;
+            color: #111827;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .table td,
+        .table th {
+            vertical-align: middle;
+        }
+
+        /* Shared page scaffolding */
+        .page-shell {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin: 0;
+        }
+
+        .page-header h1,
+        .page-header h2,
+        .page-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .page-toolbar,
+        .page-tabs {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .page-tabs .btn,
+        .page-tabs .nav-link {
+            border-radius: 10px;
+            padding: 0.45rem 0.9rem;
+            font-weight: 700;
+        }
+
+        .page-top-nav {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+            margin-bottom: 0.75rem;
+        }
+
+        .page-top-nav .btn {
+            white-space: nowrap;
+        }
+
+        /* Compact, consistent action buttons across page headers */
+        .page-header .btn,
+        .page-toolbar .btn,
+        .page-header .pill-primary,
+        .page-header .pill-secondary,
+        .page-toolbar .pill-primary,
+        .page-toolbar .pill-secondary {
+            border-radius: 12px;
+            padding: 0.42rem 0.95rem;
+            font-weight: 700;
+            font-size: 0.92rem;
+            line-height: 1.2;
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+        }
+
+        .page-header .btn-sm,
+        .page-toolbar .btn-sm {
+            padding: 0.35rem 0.85rem;
+            font-size: 0.9rem;
+        }
+
+        .page-header .btn-primary,
+        .page-toolbar .btn-primary,
+        .pill-primary {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border: none;
+            color: #fff;
+            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
+        }
+
+        .page-header .btn-outline-primary,
+        .page-toolbar .btn-outline-primary,
+        .page-header .btn-outline-secondary,
+        .page-toolbar .btn-outline-secondary,
+        .pill-secondary {
+            background: #fff;
+            border: 1px solid var(--border);
+            color: #0f172a;
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+        }
+
+        .page-header .btn i,
+        .page-toolbar .btn i,
+        .pill-primary i,
+        .pill-secondary i {
+            margin-right: 0.35rem;
+        }
+
+        .page-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 1rem;
+        }
+
+        .data-table {
+            width: 100%;
+        }
+
+        .data-table thead th {
+            background: #f8fafc;
+            color: #111827;
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+            border-bottom: 1px solid #e5e7eb;
+            padding-top: 0.65rem;
+            padding-bottom: 0.65rem;
+        }
+
+        .data-table tbody td {
+            padding-top: 0.65rem;
+            padding-bottom: 0.65rem;
+        }
+
+        .page-search {
+            min-width: 240px;
+            max-width: 360px;
+        }
+
+        .page-search .form-control {
+            border-radius: 999px;
+            padding-left: 2.6rem;
+            height: 42px;
+        }
+
+        .page-search .form-control:focus {
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .surface-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+        }
+
+        .app-footer {
+            padding: 1.2rem 1.5rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        body.accountant-portal .app-topbar {
+            margin-left: 0;
+        }
+
+        body.accountant-portal .app-sidebar,
+        body.accountant-portal .mobile-sidebar-toggle {
+            display: none !important;
+        }
+
+        body.accountant-portal .app-main {
+            margin-left: 0 !important;
+        }
+
+        body.accountant-portal .app-footer {
+            display: none !important;
+        }
+
+        .toast-messages .alert {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        @media (max-width: 991.98px) {
+            .app-sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                width: var(--sidebar-width-expanded);
+                box-shadow: 18px 0 32px rgba(15,23,42,0.18);
+            }
+            .app-sidebar .sidebar-label {
+                opacity: 1;
+            }
+            .app-sidebar.mobile-open { transform: translateX(0); }
+            .sidebar-toggle { display: none; }
+            .app-main,
+            .app-sidebar.expanded ~ .app-main {
+                margin-left: 0;
+            }
+            .mobile-sidebar-toggle { display: inline-flex; }
+            .sidebar-footer {
+                flex-direction: row;
+                justify-content: space-between;
+                width: 100%;
+            }
+            .sidebar-footer-link {
+                margin: 0;
+            }
+        }
+
+        .app-loading-indicator {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 160ms ease;
+            z-index: 3000;
+        }
+        .app-loading-indicator.is-visible {
+            opacity: 1;
+        }
+        .app-loading-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+        }
+        .app-loading-ring {
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            border: 2px solid rgba(37, 99, 235, 0.2);
+            border-top-color: var(--primary-accent);
+            animation: app-loading-spin 0.9s linear infinite;
+        }
+        .app-loading-text {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--primary);
+        }
+        @keyframes app-loading-spin {
+            to { transform: rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .app-loading-ring { animation: none; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="sidebar-initializing{% if ui_scale_is_active %} ui-scale-active{% endif %}{% block body_class %}{% endblock %}"{% if ui_scale_is_active %} style="--ui-scale-factor: {{ ui_scale_factor }};"{% endif %}>
+    <script>
+        (function() {
+            try {
+                const storedSidebar = localStorage.getItem('portalSidebarExpanded');
+                const shouldExpand = storedSidebar === null ? window.innerWidth > 991 : storedSidebar === 'true';
+                if (shouldExpand) {
+                    document.body.classList.add('sidebar-start-expanded');
+                }
+            } catch (err) {
+                // localStorage may not be available yet.
+            }
+        })();
+    </script>
+    <div id="appLoadingIndicator" class="app-loading-indicator" aria-live="polite" aria-busy="true">
+        <div class="app-loading-pill" role="status" aria-label="Loading">
+            <span class="app-loading-ring" aria-hidden="true"></span>
+            <span class="app-loading-text">Loading</span>
+        </div>
+    </div>
+    <div class="app-shell ui-scale-target scaled-ui">
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-brand">
+                {% if request.user.is_authenticated and request.user.profile.company_logo and company_logo_url %}
+                    <img src="{{ company_logo_url }}" alt="">
+                {% endif %}
+                <span>{{ business_name|default:default_business_name }}</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                {% with occupation=request.user.profile.occupation|default:""|lower %}
+                <a href="{% url 'accounts:home' %}" class="sidebar-link" data-nav="dashboard" aria-label="Dashboard" title="Dashboard">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span class="sidebar-label">Dashboard</span>
+                </a>
+                <a href="{% url 'accounts:customer_list' %}" class="sidebar-link" data-nav="customers" aria-label="Customers" title="Customers">
+                    <i class="fa-solid fa-users"></i>
+                    <span class="sidebar-label">Customers</span>
+                </a>
+                <a href="{% url 'accounts:supplier_list' %}" class="sidebar-link" data-nav="suppliers" aria-label="Suppliers" title="Suppliers">
+                    <i class="fa-solid fa-handshake-angle"></i>
+                    <span class="sidebar-label">Suppliers</span>
+                </a>
+                <div class="sidebar-group" data-sidebar-group="invoices">
+                    <div class="sidebar-group-header">
+                        <a href="{% url 'accounts:groupedinvoice_list' %}" class="sidebar-link" data-nav="invoices" aria-label="Invoices" title="Invoices">
+                            <i class="fa-solid fa-file-invoice"></i>
+                            <span class="sidebar-label">Invoices</span>
+                        </a>
+                        <button type="button" class="sidebar-subtoggle" data-submenu-toggle aria-label="Toggle invoices menu" aria-expanded="false" aria-controls="invoicesSubnav">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar-subnav" id="invoicesSubnav">
+                        <a href="{% url 'accounts:pending_invoice_list' %}" class="sidebar-link sidebar-sublink" data-nav="pending" aria-label="Pending invoices" title="Pending invoices">
+                            <i class="fa-regular fa-clock"></i>
+                            <span class="sidebar-label">Pending invoices</span>
+                        </a>
+                        <a href="{% url 'accounts:overdue_invoice_list' %}" class="sidebar-link sidebar-sublink" data-nav="overdue" aria-label="Overdue invoices" title="Overdue invoices">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span class="sidebar-label">Overdue invoices</span>
+                        </a>
+                    </div>
+                </div>
+                {% if occupation != 'parts_store' %}
+                <a href="{% url 'accounts:workorder_list' %}" class="sidebar-link" data-nav="workorders" aria-label="Workorders" title="Workorders">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                    <span class="sidebar-label">Workorders</span>
+                </a>
+                {% endif %}
+                <div class="sidebar-group" data-sidebar-group="bills">
+                    <div class="sidebar-group-header">
+                        <a href="{% url 'accounts:mechexpense_list' %}" class="sidebar-link" data-nav="bills" aria-label="Bills" title="Bills">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                            <span class="sidebar-label">Bills</span>
+                        </a>
+                        <button type="button" class="sidebar-subtoggle" data-submenu-toggle aria-label="Toggle bills menu" aria-expanded="false" aria-controls="billsSubnav">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar-subnav" id="billsSubnav">
+                        <a href="{% url 'accounts:supplier_credit_list' %}" class="sidebar-link sidebar-sublink" data-nav="supplier-credits" aria-label="Supplier credits" title="Supplier credits">
+                            <i class="fa-solid fa-undo-alt"></i>
+                            <span class="sidebar-label">Supplier credits</span>
+                        </a>
+                        <a href="{% url 'accounts:supplier_cheque_list' %}" class="sidebar-link sidebar-sublink" data-nav="supplier-cheques" aria-label="Supplier cheques" title="Supplier cheques">
+                            <i class="fa-solid fa-money-check"></i>
+                            <span class="sidebar-label">Supplier cheques</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="sidebar-group" data-sidebar-group="inventory">
+                    <div class="sidebar-group-header">
+                        <a href="{% url 'accounts:inventory_hub' %}" class="sidebar-link" data-nav="inventory" aria-label="Inventory" title="Inventory">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                            <span class="sidebar-label">Inventory</span>
+                        </a>
+                        <button type="button" class="sidebar-subtoggle" data-submenu-toggle aria-label="Toggle inventory menu" aria-expanded="false" aria-controls="inventorySubnav">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar-subnav" id="inventorySubnav">
+                        <a href="{% url 'accounts:inventory_products' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-products" aria-label="Products" title="Products">
+                            <i class="fa-solid fa-box"></i>
+                            <span class="sidebar-label">Products</span>
+                        </a>
+                        <a href="{% url 'accounts:inventory_category_groups' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-category-groups" aria-label="Category groups" title="Category groups">
+                            <i class="fa-solid fa-layer-group"></i>
+                            <span class="sidebar-label">Category Groups</span>
+                        </a>
+                        <a href="{% url 'accounts:inventory_categories' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-categories" aria-label="Categories" title="Categories">
+                            <i class="fa-solid fa-tags"></i>
+                            <span class="sidebar-label">Categories</span>
+                        </a>
+                        <a href="{% url 'accounts:inventory_attributes' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-attributes" aria-label="Attributes" title="Attributes">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span class="sidebar-label">Attributes</span>
+                        </a>
+                        <a href="{% url 'accounts:inventory_brands' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-brands" aria-label="Brands" title="Brands">
+                            <i class="fa-solid fa-certificate"></i>
+                            <span class="sidebar-label">Brands</span>
+                        </a>
+                        <a href="{% url 'accounts:inventory_models' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-models" aria-label="Models" title="Models">
+                            <i class="fa-solid fa-truck"></i>
+                            <span class="sidebar-label">Models</span>
+                        </a>
+                        <a href="{% url 'accounts:inventory_vins' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-vins" aria-label="VINs" title="VINs">
+                            <i class="fa-solid fa-barcode"></i>
+                            <span class="sidebar-label">VINs</span>
+                        </a>
+                        <a href="{% url 'accounts:inventory_suppliers' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-suppliers" aria-label="Suppliers" title="Suppliers">
+                            <i class="fa-solid fa-truck-field"></i>
+                            <span class="sidebar-label">Suppliers</span>
+                        </a>
+                        <a href="{% url 'accounts:service_list' %}" class="sidebar-link sidebar-sublink" data-nav="services" aria-label="Services" title="Services">
+                            <i class="fa-solid fa-list-check"></i>
+                            <span class="sidebar-label">Services</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="sidebar-group" data-sidebar-group="store-management">
+                    <div class="sidebar-group-header">
+                        <a href="{% url 'accounts:store_hub' %}" class="sidebar-link" data-nav="store-management" aria-label="Manage store" title="Manage store">
+                            <i class="fa-solid fa-store"></i>
+                            <span class="sidebar-label">Manage Store</span>
+                        </a>
+                        <button type="button" class="sidebar-subtoggle" data-submenu-toggle aria-label="Toggle store menu" aria-expanded="false" aria-controls="storeSubnav">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar-subnav" id="storeSubnav">
+                        <a href="{% url 'accounts:store_manage' %}" class="sidebar-link sidebar-sublink" data-nav="storefront-manage" aria-label="Storefront settings" title="Storefront settings">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span class="sidebar-label">Storefront</span>
+                        </a>
+                        <a href="{% url 'accounts:store_hero' %}" class="sidebar-link sidebar-sublink" data-nav="storefront-hero" aria-label="Homepage hero" title="Homepage hero">
+                            <i class="fa-solid fa-images"></i>
+                            <span class="sidebar-label">Homepage Hero</span>
+                        </a>
+                        <a href="{% url 'accounts:store_product_list' %}" class="sidebar-link sidebar-sublink" data-nav="storefront-public" aria-label="Public storefront" title="Public storefront" target="_blank" rel="noopener">
+                            <i class="fa-solid fa-up-right-from-square"></i>
+                            <span class="sidebar-label">Public Store</span>
+                        </a>
+                    </div>
+                </div>
+                {% if occupation != 'parts_store' %}
+                <a href="{% url 'accounts:maintenance_center' %}" class="sidebar-link" data-nav="maintenance" aria-label="Maintenance" title="Maintenance">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                    <span class="sidebar-label">Maintenance</span>
+                </a>
+                {% endif %}
+                {% if occupation != 'parts_store' %}
+                <a href="{% url 'accounts:vehicle_management' %}#fleet" class="sidebar-link" data-nav="vehicles" aria-label="Vehicles" title="Vehicles">
+                    <i class="fa-solid fa-truck-front"></i>
+                    <span class="sidebar-label">Vehicles</span>
+                </a>
+                {% endif %}
+                {% if occupation != 'parts_store' %}
+                <a href="{% url 'accounts:payroll_settings' %}" class="sidebar-link" data-nav="payroll" aria-label="Payroll" title="Payroll">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span class="sidebar-label">Payroll</span>
+                </a>
+                {% endif %}
+                <a href="{% url 'accounts:accountant_hub' %}" class="sidebar-link" data-nav="accountant" aria-label="My accountant" title="My accountant">
+                    <i class="fa-solid fa-user-tie"></i>
+                    <span class="sidebar-label">My accountant</span>
+                </a>
+                {% endwith %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="{% url 'accounts:mechanic_list' %}" class="sidebar-link sidebar-footer-link" data-nav="mechanics" aria-label="Mechanics" title="Mechanics">
+                    <i class="fa-solid fa-user-gear"></i>
+                </a>
+                <a href="{% url 'accounts:account_settings' %}" class="sidebar-link sidebar-footer-link" data-nav="settings" aria-label="Settings" title="Settings">
+                    <i class="fa-solid fa-gear"></i>
+                </a>
+                <a href="{% url 'accounts:communication_hub' %}" class="sidebar-link sidebar-footer-link" data-nav="communications" aria-label="Communication Hub" title="Communication Hub">
+                    <i class="fa-solid fa-comments"></i>
+                </a>
+                <form action="{% url 'accounts:logout' %}" method="post" class="sidebar-footer-form" aria-label="Logout">
+                    {% csrf_token %}
+                    <button type="submit" class="sidebar-footer-link" title="Logout" aria-label="Logout">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </form>
+            </div>
+
+            <div class="sidebar-hover-strip" aria-hidden="true"></div>
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </aside>
+
+        <button class="mobile-sidebar-toggle d-lg-none" id="mobileSidebarToggle" aria-label="Open navigation">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <div class="app-main">
+            {% if portal_read_only %}
+            <div class="app-topbar">
+                <div class="topbar-title">Accountant Portal</div>
+                <div class="topbar-actions">
+                    <button type="button" class="ghost-btn" data-nav-action="back">
+                        <i class="fa-solid fa-arrow-left"></i> Back
+                    </button>
+                    <button type="button" class="ghost-btn" data-nav-action="forward">
+                        <i class="fa-solid fa-arrow-right"></i> Forward
+                    </button>
+                    <a class="pill-btn" href="{% url 'accounts:accountant_portal_dashboard' %}">
+                        <i class="fa-solid fa-chart-line"></i> Portal
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            <main class="app-content">
+                {% if messages %}
+                <div class="toast-messages mb-3">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </main>
+
+            <footer class="app-footer">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span>&copy; {% now "Y" %} {{ business_name|default:default_business_name }}</span>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Idle timeout warning modal -->
+    <div class="modal fade" id="idleTimeoutModal" tabindex="-1" aria-labelledby="idleTimeoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="idleTimeoutModalLabel">Still there?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="fw-semibold mb-1">You’ve been inactive.</div>
+                    <div class="text-muted">Do you need more time?</div>
+                    <div class="mt-3 p-3 rounded border bg-light">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="fw-semibold">Auto logout in</div>
+                            <div class="fw-bold" id="idleTimeoutCountdown">02:00</div>
+                        </div>
+                        <div class="small text-muted mt-1">Tip: Click “Stay logged in” to keep your session active.</div>
+                        <div class="small text-danger mt-2 d-none" id="idleTimeoutError">Connection issue—trying to keep you signed in…</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" id="idleLogoutNowBtn">Log out now</button>
+                    <button type="button" class="btn btn-primary" id="idleStayLoggedInBtn">Stay logged in</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% if portal_read_only %}
+    <script>
+        (function () {
+            const handle = (action) => {
+                if (action === 'back') {
+                    window.history.back();
+                } else if (action === 'forward') {
+                    window.history.forward();
+                }
+            };
+
+            document.querySelectorAll('[data-nav-action]').forEach((btn) => {
+                btn.addEventListener('click', () => handle(btn.getAttribute('data-nav-action')));
+            });
+        })();
+    </script>
+    {% endif %}
+    <script>
+        (() => {
+            const sidebar = document.getElementById('appSidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const mobileToggle = document.getElementById('mobileSidebarToggle');
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = themeToggle ? themeToggle.querySelector('i') : null;
+            const toggleIcon = sidebarToggle ? sidebarToggle.querySelector('i') : null;
+            const storedSidebar = localStorage.getItem('portalSidebarExpanded');
+            const storedTheme = localStorage.getItem('portalTheme') || 'light';
+            const shouldStartExpanded = storedSidebar === null ? window.innerWidth > 991 : storedSidebar === 'true';
+
+            const setToggleIcon = (expanded) => {
+                if (!toggleIcon) return;
+                if (expanded) {
+                    toggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-left');
+                } else {
+                    toggleIcon.classList.replace('fa-chevron-left', 'fa-chevron-right');
+                }
+            };
+
+            const setMobileIcon = (isOpen) => {
+                const icon = mobileToggle ? mobileToggle.querySelector('i') : null;
+                if (!icon) return;
+                icon.classList.toggle('fa-bars', !isOpen);
+                icon.classList.toggle('fa-xmark', isOpen);
+            };
+
+            if (shouldStartExpanded) {
+                sidebar.classList.add('expanded');
+                setToggleIcon(true);
+            } else {
+                setToggleIcon(false);
+            }
+            document.body.classList.remove('sidebar-start-expanded');
+            document.body.classList.remove('sidebar-initializing');
+
+            document.documentElement.setAttribute('data-theme', storedTheme);
+            if (themeIcon && storedTheme === 'dark') {
+                themeIcon.classList.replace('fa-moon', 'fa-sun');
+            }
+
+            sidebarToggle?.addEventListener('click', () => {
+                const expanded = sidebar.classList.toggle('expanded');
+                localStorage.setItem('portalSidebarExpanded', expanded);
+                setToggleIcon(expanded);
+            });
+
+            mobileToggle?.addEventListener('click', () => {
+                const isOpen = sidebar.classList.toggle('mobile-open');
+                setMobileIcon(isOpen);
+            });
+
+            document.addEventListener('click', (evt) => {
+                if (window.innerWidth <= 991 && sidebar.classList.contains('mobile-open')) {
+                    const clickedToggle = mobileToggle && mobileToggle.contains(evt.target);
+                    if (!sidebar.contains(evt.target) && !clickedToggle) {
+                        sidebar.classList.remove('mobile-open');
+                        setMobileIcon(false);
+                    }
+                }
+            });
+
+            themeToggle?.addEventListener('click', () => {
+                const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', current);
+                localStorage.setItem('portalTheme', current);
+                if (current === 'dark') {
+                    themeIcon.classList.replace('fa-moon', 'fa-sun');
+                } else {
+                    themeIcon.classList.replace('fa-sun', 'fa-moon');
+                }
+            });
+
+            const path = window.location.pathname;
+            document.querySelectorAll('.sidebar-link.active').forEach(link => link.classList.remove('active'));
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                const href = link.getAttribute('href');
+                if (!href) return;
+                try {
+                    const url = new URL(href, window.location.origin);
+                    if (path.startsWith(url.pathname)) {
+                        link.classList.add('active');
+                    }
+                } catch (err) {
+                    // skip invalid URLs (e.g., anchors or javascript handlers)
+                }
+            });
+
+            const submenuToggles = document.querySelectorAll('[data-submenu-toggle]');
+            const toggleSubmenu = (group, isOpen) => {
+                if (!group) return;
+                group.classList.toggle('open', isOpen);
+                const toggleBtn = group.querySelector('[data-submenu-toggle]');
+                if (toggleBtn) {
+                    toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                }
+            };
+
+            submenuToggles.forEach((btn) => {
+                btn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const group = btn.closest('.sidebar-group');
+                    if (!group) return;
+                    toggleSubmenu(group, !group.classList.contains('open'));
+                });
+            });
+
+            // Submenus open only via the toggle arrows.
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const loader = document.getElementById('appLoadingIndicator');
+            if (!loader) return;
+
+            const SHOW_DELAY_MS = 180;
+            const MIN_VISIBLE_MS = 250;
+            let activeCount = 0;
+            let showTimer = null;
+            let hideTimer = null;
+            let shownAt = 0;
+
+            const show = () => {
+                if (loader.classList.contains('is-visible')) return;
+                loader.classList.add('is-visible');
+                shownAt = Date.now();
+            };
+
+            const hide = () => {
+                loader.classList.remove('is-visible');
+                shownAt = 0;
+            };
+
+            const scheduleShow = () => {
+                if (showTimer) return;
+                showTimer = setTimeout(() => {
+                    showTimer = null;
+                    if (activeCount > 0) show();
+                }, SHOW_DELAY_MS);
+            };
+
+            const scheduleHide = () => {
+                if (showTimer) {
+                    clearTimeout(showTimer);
+                    showTimer = null;
+                }
+                if (!loader.classList.contains('is-visible')) return;
+                const elapsed = shownAt ? Date.now() - shownAt : 0;
+                const wait = Math.max(MIN_VISIBLE_MS - elapsed, 0);
+                if (hideTimer) clearTimeout(hideTimer);
+                hideTimer = setTimeout(() => {
+                    hideTimer = null;
+                    if (activeCount === 0) hide();
+                }, wait);
+            };
+
+            const begin = () => {
+                if (hideTimer) {
+                    clearTimeout(hideTimer);
+                    hideTimer = null;
+                }
+                activeCount += 1;
+                scheduleShow();
+            };
+
+            const end = () => {
+                activeCount = Math.max(0, activeCount - 1);
+                if (activeCount === 0) scheduleHide();
+            };
+
+            const normalizeHeader = (headers, name) => {
+                if (!headers) return '';
+                const target = name.toLowerCase();
+                if (typeof headers.get === 'function') {
+                    return headers.get(name) || headers.get(target) || '';
+                }
+                if (Array.isArray(headers)) {
+                    for (const pair of headers) {
+                        if (!pair || pair.length < 2) continue;
+                        if (String(pair[0]).toLowerCase() === target) return pair[1];
+                    }
+                    return '';
+                }
+                if (typeof headers === 'object') {
+                    return headers[name] || headers[target] || '';
+                }
+                return '';
+            };
+
+            const extractUrl = (input) => {
+                if (!input) return '';
+                if (typeof input === 'string') return input;
+                if (typeof input.url === 'string') return input.url;
+                return '';
+            };
+
+            const shouldSkip = (input, init) => {
+                const url = extractUrl(input);
+                if (url && url.indexOf('session_ping') !== -1) return true;
+                const headers = (init && init.headers) || (input && input.headers);
+                const skipHeader = normalizeHeader(headers, 'X-App-Loader');
+                if (skipHeader && String(skipHeader).toLowerCase() === 'skip') return true;
+                return false;
+            };
+
+            if (window.fetch) {
+                const originalFetch = window.fetch.bind(window);
+                window.fetch = function (input, init) {
+                    if (shouldSkip(input, init)) {
+                        return originalFetch(input, init);
+                    }
+                    begin();
+                    return originalFetch(input, init)
+                        .then((response) => {
+                            end();
+                            return response;
+                        })
+                        .catch((error) => {
+                            end();
+                            throw error;
+                        });
+                };
+            }
+
+            if (window.XMLHttpRequest) {
+                const originalOpen = XMLHttpRequest.prototype.open;
+                const originalSend = XMLHttpRequest.prototype.send;
+                const originalSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+
+                XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+                    this._appLoaderUrl = url;
+                    return originalOpen.call(this, method, url, async, user, password);
+                };
+
+                XMLHttpRequest.prototype.setRequestHeader = function (name, value) {
+                    if (String(name).toLowerCase() === 'x-app-loader' && String(value).toLowerCase() === 'skip') {
+                        this._appLoaderSkip = true;
+                    }
+                    return originalSetHeader.call(this, name, value);
+                };
+
+                XMLHttpRequest.prototype.send = function (body) {
+                    const url = this._appLoaderUrl ? String(this._appLoaderUrl) : '';
+                    if (this._appLoaderSkip || (url && url.indexOf('session_ping') !== -1)) {
+                        return originalSend.call(this, body);
+                    }
+                    begin();
+                    this.addEventListener('loadend', () => end(), { once: true });
+                    return originalSend.call(this, body);
+                };
+            }
+
+            window.AppLoading = {
+                start: () => { begin(); show(); },
+                stop: () => { activeCount = 0; hide(); }
+            };
+        })();
+    </script>
+
+    <script>
+        (function () {
+            // ---- Config (feel free to tweak) ----
+            const IDLE_WARNING_AFTER_MS = 25 * 60 * 1000; // show modal after 25 minutes of no activity
+            const IDLE_LOGOUT_COUNTDOWN_SECONDS = 120; // 2 minutes countdown
+            const KEEPALIVE_EVERY_MS = 4 * 60 * 1000; // keep server warm while user is active
+
+            const pingUrl = "{% url 'accounts:session_ping' %}";
+            const loginUrl = "{% url 'accounts:login' %}";
+
+            const logoutForm = document.querySelector('.sidebar-footer-form');
+            const logoutUrl = logoutForm?.getAttribute('action') || "{% url 'accounts:logout' %}";
+            const logoutCsrf = logoutForm?.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
+
+            const modalEl = document.getElementById('idleTimeoutModal');
+            const countdownEl = document.getElementById('idleTimeoutCountdown');
+            const errorEl = document.getElementById('idleTimeoutError');
+            const stayBtn = document.getElementById('idleStayLoggedInBtn');
+            const logoutNowBtn = document.getElementById('idleLogoutNowBtn');
+
+            if (!modalEl || !countdownEl || !stayBtn || !logoutNowBtn || !window.bootstrap) return;
+            const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+
+            let lastActivityAt = Date.now();
+            let warningShown = false;
+            let countdownRemaining = IDLE_LOGOUT_COUNTDOWN_SECONDS;
+            let countdownTimer = null;
+            let lastKeepaliveAt = 0;
+
+            const pad2 = (n) => String(n).padStart(2, '0');
+            const fmt = (seconds) => {
+                const m = Math.floor(seconds / 60);
+                const s = seconds % 60;
+                return `${pad2(m)}:${pad2(s)}`;
+            };
+
+            function markActivity() {
+                // While the warning modal is open, require explicit user action (Stay logged in)
+                if (modalEl.classList.contains('show')) return;
+                lastActivityAt = Date.now();
+                warningShown = false;
+            }
+
+            const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'pointerdown', 'wheel'];
+            activityEvents.forEach((evt) => document.addEventListener(evt, markActivity, { passive: true }));
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) markActivity(); });
+
+            async function pingSession() {
+                try {
+                    if (errorEl) errorEl.classList.add('d-none');
+                    const controller = new AbortController();
+                    const t = setTimeout(() => controller.abort(), 8000);
+                    const resp = await fetch(pingUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'X-App-Loader': 'skip',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            ...(logoutCsrf ? { 'X-CSRFToken': logoutCsrf } : {}),
+                        },
+                        signal: controller.signal,
+                    });
+                    clearTimeout(t);
+                    if (!resp.ok) throw new Error('Ping failed');
+                    return true;
+                } catch (e) {
+                    if (errorEl) errorEl.classList.remove('d-none');
+                    return false;
+                }
+            }
+
+            async function doLogout() {
+                try {
+                    // Try a normal POST logout (same as clicking the button) but with a timeout.
+                    const controller = new AbortController();
+                    const t = setTimeout(() => controller.abort(), 12000);
+                    const body = logoutForm ? new FormData(logoutForm) : null;
+                    await fetch(logoutUrl, {
+                        method: 'POST',
+                        body,
+                        credentials: 'same-origin',
+                        headers: {
+                            'X-App-Loader': 'skip',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            ...(logoutCsrf ? { 'X-CSRFToken': logoutCsrf } : {}),
+                        },
+                        keepalive: true,
+                        signal: controller.signal,
+                    });
+                    clearTimeout(t);
+                } catch (e) {
+                    // If the server is cold/slow, still redirect to login; the next request will finalize state.
+                } finally {
+                    window.location.assign(loginUrl);
+                }
+            }
+
+            function startCountdown() {
+                stopCountdown();
+                countdownRemaining = IDLE_LOGOUT_COUNTDOWN_SECONDS;
+                countdownEl.textContent = fmt(countdownRemaining);
+                countdownTimer = setInterval(() => {
+                    countdownRemaining = Math.max(0, countdownRemaining - 1);
+                    countdownEl.textContent = fmt(countdownRemaining);
+                    if (countdownRemaining <= 0) {
+                        stopCountdown();
+                        doLogout();
+                    }
+                }, 1000);
+            }
+            function stopCountdown() {
+                if (countdownTimer) clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+
+            function maybeShowWarning() {
+                if (warningShown) return;
+                const idleFor = Date.now() - lastActivityAt;
+                if (idleFor < IDLE_WARNING_AFTER_MS) return;
+                warningShown = true;
+                startCountdown();
+                modal.show();
+            }
+
+            stayBtn.addEventListener('click', async () => {
+                stayBtn.disabled = true;
+                try {
+                    // Ping first (keeps session + warms backend), then reset timers.
+                    await pingSession();
+                    lastActivityAt = Date.now();
+                    warningShown = false;
+                    stopCountdown();
+                    modal.hide();
+                } finally {
+                    stayBtn.disabled = false;
+                }
+            });
+
+            logoutNowBtn.addEventListener('click', () => doLogout());
+
+            // Background keepalive to reduce “first request after idle” timeouts (including logout).
+            setInterval(async () => {
+                if (document.hidden) return;
+                const now = Date.now();
+                const idleFor = now - lastActivityAt;
+                if (idleFor > IDLE_WARNING_AFTER_MS) return; // don't spam while truly idle; show warning instead
+                if (now - lastKeepaliveAt < KEEPALIVE_EVERY_MS) return;
+                lastKeepaliveAt = now;
+                await pingSession();
+            }, 15000);
+
+            // Main idle watcher
+            setInterval(maybeShowWarning, 1000);
+        })();
+    </script>
+    <script>
+        (function () {
+            const moveModalToBody = (modal) => {
+                if (!modal || modal.parentElement === document.body) {
+                    return;
+                }
+                document.body.appendChild(modal);
+            };
+
+            const checkNodeForModals = (node) => {
+                if (!(node instanceof Element)) {
+                    return;
+                }
+                if (node.classList.contains('modal')) {
+                    moveModalToBody(node);
+                    return;
+                }
+                node.querySelectorAll('.modal').forEach(moveModalToBody);
+            };
+
+            const relocateExistingModals = () => {
+                document.querySelectorAll('.app-shell .modal').forEach(moveModalToBody);
+            };
+
+            const observeShell = () => {
+                const shell = document.querySelector('.app-shell');
+                if (!shell) {
+                    return;
+                }
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        mutation.addedNodes.forEach(checkNodeForModals);
+                    });
+                });
+                observer.observe(shell, { childList: true, subtree: true });
+            };
+
+            relocateExistingModals();
+            observeShell();
+        })();
+    </script>
+    {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/select2_autoinit.js' %}"></script>
+</body>
+</html>

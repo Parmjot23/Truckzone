@@ -1,0 +1,140 @@
+{% extends portal_base_template|default:"store/customer_portal_base.html" %}
+{% block title %}Upcoming Maintenance{% endblock %}
+{% block portal_content %}
+<div class="customer-portal-section">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+      <h2 class="h4 mb-1">Upcoming Maintenance</h2>
+      <p class="text-muted mb-0">View and manage scheduled maintenance tasks for your vehicles.</p>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body pb-0">
+      <label for="maintenanceSearch" class="form-label small text-uppercase fw-semibold text-muted">Search maintenance</label>
+      <div class="input-group input-group-sm mb-3">
+        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+        <input
+          type="search"
+          id="maintenanceSearch"
+          class="form-control"
+          placeholder="Search by unit, task, due date, or priority..."
+          autocomplete="off"
+          aria-label="Search maintenance tasks"
+        >
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-striped mb-0 align-middle" id="maintenanceTable">
+        <thead class="thead-light">
+          <tr>
+            <th scope="col">Unit No</th>
+            <th scope="col">Task Title</th>
+            <th scope="col">Due Date</th>
+            <th scope="col">Downtime (Hours/Days)</th>
+            <th scope="col">Priority</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for task in maintenance_tasks %}
+            <tr data-row="maintenance">
+              <td data-label="Unit No">
+                  {% if task.vehicle and task.vehicle.unit_number %}
+                    {{ task.vehicle.unit_number }}
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+              </td>
+              <td data-label="Task Title">
+                  <strong>{{ task.title }}</strong>
+              </td>
+              <td data-label="Due Date">
+                  {% if task.due_date %}
+                    {% if task.is_overdue %}
+                        <span class="text-danger fw-bold"><i class="fas fa-exclamation-circle"></i> {{ task.due_date|date:"M d, Y" }}</span>
+                    {% else %}
+                        {{ task.due_date|date:"M d, Y" }}
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">No date set</span>
+                  {% endif %}
+              </td>
+              <td data-label="Downtime (Hours/Days)">
+                  {% if task.due_date %}
+                    {% if task.due_date == today %}
+                      Today
+                    {% elif task.is_overdue %}
+                      Overdue by {{ task.due_date|timesince:today }}
+                    {% else %}
+                      In {{ task.due_date|timeuntil:today }}
+                    {% endif %}
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+              </td>
+              <td data-label="Priority">
+                {% if task.priority == 'high' %}
+                    <span class="badge bg-danger">High</span>
+                {% elif task.priority == 'medium' %}
+                    <span class="badge bg-warning text-dark">Medium</span>
+                {% else %}
+                    <span class="badge bg-info text-dark">Low</span>
+                {% endif %}
+              </td>
+              <td data-label="Actions">
+                  <a href="{% url 'accounts:customer_vehicle_detail' task.vehicle.id %}" class="btn btn-sm btn-outline-primary">
+                      View Vehicle
+                  </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr data-empty-row="true">
+              <td colspan="6" class="text-center py-4">
+                  <p class="text-muted mb-0">No upcoming maintenance tasks found.</p>
+              </td>
+            </tr>
+          {% endfor %}
+          <tr id="maintenanceNoResults" class="d-none">
+            <td colspan="6" class="text-center py-4 text-muted">No maintenance tasks match your search.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  {{ block.super }}
+  <script>
+    (function () {
+      var searchInput = document.getElementById('maintenanceSearch');
+      var table = document.getElementById('maintenanceTable');
+      if (!searchInput || !table) return;
+
+      var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr[data-row=\"maintenance\"]'));
+      var noResultsRow = document.getElementById('maintenanceNoResults');
+
+      function filterRows() {
+        var query = (searchInput.value || '').toLowerCase().trim();
+        var visible = 0;
+
+        rows.forEach(function (row) {
+          var text = (row.dataset.searchText || row.textContent || '').toLowerCase();
+          var matches = !query || text.indexOf(query) !== -1;
+          row.style.display = matches ? '' : 'none';
+          if (matches) visible += 1;
+        });
+
+        if (noResultsRow) {
+          noResultsRow.classList.toggle('d-none', visible > 0 || !query);
+        }
+      }
+
+      searchInput.addEventListener('input', filterRows);
+    })();
+  </script>
+{% endblock %}
+
+
