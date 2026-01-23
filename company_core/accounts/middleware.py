@@ -115,6 +115,7 @@ class CustomerPortalIsolationMiddleware(MiddlewareMixin):
             "accounts:public_about",
             "accounts:public_services",
             "accounts:public_contact",
+            "accounts:public_faq",
             "accounts:public_booking",
             "accounts:booking_slots",
             "accounts:public_emergency",

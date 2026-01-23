@@ -8,41 +8,47 @@
             <div class="sidebar-title">Refine Search</div>
 
             {% if brands %}
-            <div class="filter-group">
+            <div class="filter-group{% if brands|length > 12 %} filter-group--columns{% endif %}">
                 <div class="filter-group-title">Brands</div>
-                {% for brand in brands %}
-                <label class="filter-option">
-                    <input type="checkbox" name="brand" value="{{ brand.id }}"
-                        {% if brand.id|stringformat:"s" in selected_brand_ids %}checked{% endif %}>
-                    <span>{{ brand.name }}</span>
-                </label>
-                {% endfor %}
+                <div class="filter-options">
+                    {% for brand in brands %}
+                    <label class="filter-option">
+                        <input type="checkbox" name="brand" value="{{ brand.id }}"
+                            {% if brand.id|stringformat:"s" in selected_brand_ids %}checked{% endif %}>
+                        <span>{{ brand.name }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
 
             {% if models %}
-            <div class="filter-group">
+            <div class="filter-group{% if models|length > 12 %} filter-group--columns{% endif %}">
                 <div class="filter-group-title">Models</div>
-                {% for model in models %}
-                <label class="filter-option">
-                    <input type="checkbox" name="model" value="{{ model.id }}"
-                        {% if model.id|stringformat:"s" in selected_model_ids %}checked{% endif %}>
-                    <span>{{ model.name }}</span>
-                </label>
-                {% endfor %}
+                <div class="filter-options">
+                    {% for model in models %}
+                    <label class="filter-option">
+                        <input type="checkbox" name="model" value="{{ model.id }}"
+                            {% if model.id|stringformat:"s" in selected_model_ids %}checked{% endif %}>
+                        <span>{{ model.name }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
 
             {% if vins %}
-            <div class="filter-group">
+            <div class="filter-group{% if vins|length > 12 %} filter-group--columns{% endif %}">
                 <div class="filter-group-title">VIN</div>
-                {% for vin in vins %}
-                <label class="filter-option">
-                    <input type="checkbox" name="vin" value="{{ vin.id }}"
-                        {% if vin.id|stringformat:"s" in selected_vin_ids %}checked{% endif %}>
-                    <span>{{ vin.vin }}</span>
-                </label>
-                {% endfor %}
+                <div class="filter-options">
+                    {% for vin in vins %}
+                    <label class="filter-option">
+                        <input type="checkbox" name="vin" value="{{ vin.id }}"
+                            {% if vin.id|stringformat:"s" in selected_vin_ids %}checked{% endif %}>
+                        <span>{{ vin.vin }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
 
@@ -63,8 +69,6 @@
                     {% endif %}
                 {% endfor %}
             {% endif %}
-
-            <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
         </form>
     </aside>
 
@@ -188,7 +192,7 @@
                                 </form>
                             </div>
                             <div class="cart-action-in">
-                                <span class="product-card-meta text-success">Already in cart</span>
+                                <span class="product-card-meta text-success">Added to cart</span>
                                 <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-primary btn-sm">
                                     <i class="fas fa-shopping-cart"></i>
                                     <span>View cart</span>
@@ -277,7 +281,7 @@
                                     </form>
                                 </div>
                                 <div class="cart-action-in">
-                                    <span class="product-card-meta text-success">Already in cart</span>
+                                    <span class="product-card-meta text-success">Added to cart</span>
                                     <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-primary btn-sm">
                                         <i class="fas fa-shopping-cart"></i>
                                         <span>View cart</span>

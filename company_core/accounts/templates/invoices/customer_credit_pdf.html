@@ -1,0 +1,100 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Customer Credit Memo</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #111827; margin: 0; padding: 0; background: #f8fafc; }
+    .page { background: #ffffff; padding: 24px 28px; border: 1px solid #e5e7eb; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+    .header img { max-height: 60px; }
+    .title { font-size: 20px; font-weight: 700; margin: 0; color: #0f172a; }
+    .meta { color: #6b7280; margin: 4px 0 0 0; }
+    .section { margin-top: 18px; }
+    .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: #6b7280; margin-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+    th { background: #f3f4f6; font-weight: 600; }
+    .text-right { text-align: right; }
+    .totals { max-width: 320px; margin-left: auto; margin-top: 16px; }
+    .totals-row { display: flex; justify-content: space-between; font-weight: 600; padding: 4px 0; }
+    .totals-row.highlight { background: #eef2ff; padding: 6px 8px; border-radius: 8px; }
+    .note { margin-top: 12px; color: #4b5563; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <div class="title">Customer Credit Memo</div>
+        <div class="meta">Credit No: {{ credit.credit_no }}</div>
+        <div class="meta">Date: {{ credit.date|date:"M d, Y" }}</div>
+      </div>
+      {% if company_logo_url_pdf %}
+      <div>
+        <img src="{{ company_logo_url_pdf }}" alt="Company Logo">
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="section">
+      <div class="section-title">Customer</div>
+      <div><strong>{{ customer_name|default:"-" }}</strong></div>
+      {% if customer and customer.email %}
+        <div>{{ customer.email }}</div>
+      {% endif %}
+      {% if customer and customer.address %}
+        <div>{{ customer.address }}</div>
+      {% endif %}
+    </div>
+
+    {% if credit.memo %}
+    <div class="section">
+      <div class="section-title">Memo</div>
+      <div class="note">{{ credit.memo }}</div>
+    </div>
+    {% endif %}
+
+    <div class="section">
+      <div class="section-title">Returned Items</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Part No</th>
+            <th>Description</th>
+            <th class="text-right">Qty</th>
+            <th class="text-right">Price</th>
+            <th class="text-right">Amount</th>
+            <th>Invoice</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.part_no|default:"" }}</td>
+            <td>{{ item.description|default:"" }}</td>
+            <td class="text-right">{{ item.qty }}</td>
+            <td class="text-right">{{ item.price|currency }}</td>
+            <td class="text-right">{{ item.amount|currency }}</td>
+            <td>{% if item.source_invoice %}{{ item.source_invoice.invoice_number|default:item.source_invoice.id }}{% else %}-{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="totals">
+      <div class="totals-row">
+        <span>Total (Excl. Tax)</span><span>{{ total_amount_excl_tax|currency }}</span>
+      </div>
+      <div class="totals-row">
+        <span>Tax</span><span>{{ total_tax|currency }}</span>
+      </div>
+      <div class="totals-row highlight">
+        <span>Total Credit</span><span>{{ total_amount_incl_tax|currency }}</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

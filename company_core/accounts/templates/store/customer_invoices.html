@@ -65,7 +65,7 @@
                   <a href="{% url 'accounts:customer_invoice_download' invoice.pk %}" class="btn btn-sm btn-outline-secondary">
                     <i class="fas fa-download me-1"></i> Download
                   </a>
-                  {% if invoice.payment_link %}
+                  {% if invoice.payment_link and invoice.balance_due_amount > 0 %}
                     <a href="{{ invoice.payment_link }}" target="_blank" class="btn btn-sm btn-primary">
                       {% if invoice.is_subscription %}Manage billing{% else %}Pay now{% endif %}
                     </a>
@@ -114,6 +114,49 @@
       </nav>
     {% endif %}
   </div>
+
+  {% if credit_rows %}
+    <div class="card border-0 shadow-sm mt-4">
+      <div class="card-header bg-transparent border-0">
+        <h2 class="h5 mb-0">Customer credits (returns)</h2>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped mb-0 align-middle">
+          <thead class="thead-light">
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Credit #</th>
+              <th scope="col">Memo</th>
+              <th scope="col">Returned items</th>
+              <th scope="col">Credit total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in credit_rows %}
+              <tr>
+                <td data-label="Date">{{ row.credit.date|date:"M d, Y" }}</td>
+                <td data-label="Credit #">{{ row.credit.credit_no|default:"-" }}</td>
+                <td data-label="Memo">{{ row.credit.memo|default:"-" }}</td>
+                <td data-label="Returned items">
+                  <ul class="list-unstyled mb-0">
+                    {% for item in row.items %}
+                      <li>
+                        {{ item.qty }}x {{ item.label }}
+                        {% if item.invoice_number %}
+                          (Invoice {{ item.invoice_number }})
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </td>
+                <td data-label="Credit total">-${{ row.total_incl_tax|floatformat:2 }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}
 

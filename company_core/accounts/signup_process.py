@@ -290,8 +290,10 @@ def handle_checkout_session_completed(data):
             )
             invoice.update_date_fully_paid()
 
-            # Mark as PaidInvoice if fully paid
-            if invoice.balance_due() <= decimal.Decimal("0.01"):
+            # Mark as PaidInvoice only when payments cover the invoice total.
+            total_amount = invoice.total_amount or decimal.Decimal("0.00")
+            total_paid = invoice.total_paid()
+            if total_paid + decimal.Decimal("0.01") >= total_amount:
                 PaidInvoice.objects.get_or_create(grouped_invoice=invoice)
 
     # Store Stripe Invoice ID from metadata if present

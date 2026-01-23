@@ -11,6 +11,7 @@ from .models import (
     GroupedInvoice,
     WorkOrder,
     Product,
+    ProductStock,
     InventoryTransaction,
     ActivityLog,
     VehicleMaintenanceTask,
@@ -21,7 +22,7 @@ from django.shortcuts import redirect
 from decimal import Decimal
 from django.db import transaction
 from .activity import get_current_actor
-from .utils import get_business_user
+from .utils import get_business_user, get_stock_owner
 
 
 logger = logging.getLogger(__name__)
@@ -379,6 +380,23 @@ def log_product_activity(sender, instance: Product, created: bool, **kwargs):
         description=description,
         object_id=identifier,
         metadata=metadata,
+    )
+
+
+@receiver(post_save, sender=Product)
+def ensure_product_stock(sender, instance: Product, created: bool, **kwargs):
+    if kwargs.get("raw") or not created:
+        return
+    if not instance.user_id:
+        return
+    stock_owner = get_stock_owner(instance.user) or instance.user
+    ProductStock.objects.get_or_create(
+        product=instance,
+        user=stock_owner,
+        defaults={
+            "quantity_in_stock": instance.quantity_in_stock or 0,
+            "reorder_level": instance.reorder_level or 0,
+        },
     )
 
 

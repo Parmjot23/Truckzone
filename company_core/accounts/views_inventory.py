@@ -31,6 +31,7 @@ from .models import (
     CategoryAttributeOption,
     Supplier,
     Product,
+    ProductStock,
     InventoryTransaction,
     InventoryLocation,
     Profile,
@@ -38,7 +39,15 @@ from .models import (
     ProductModel,
     ProductVin,
 )
-from .utils import get_product_user_ids, get_product_stock_user_ids
+from .utils import (
+    apply_stock_fields,
+    annotate_products_with_stock,
+    get_product_user_ids,
+    get_product_stock_user_ids,
+    get_stock_owner,
+    get_store_user_ids,
+    upsert_product_stock,
+)
 from .forms import (
     CategoryForm,
     CategoryGroupForm,
@@ -170,6 +179,23 @@ def _get_inventory_stock_user_ids(request):
     return request._inventory_stock_user_ids
 
 
+def _get_inventory_transaction_user_ids(request):
+    if not hasattr(request, "_inventory_transaction_user_ids"):
+        request._inventory_transaction_user_ids = get_store_user_ids(request.user)
+    return request._inventory_transaction_user_ids
+
+
+def _transaction_scope_filter(user_ids):
+    return Q(user__in=user_ids) | Q(user__isnull=True, product__user__in=user_ids)
+
+
+def _product_transaction_scope_filter(user_ids):
+    return Q(transactions__user__in=user_ids) | Q(
+        transactions__user__isnull=True,
+        transactions__product__user__in=user_ids,
+    )
+
+
 @login_required
 def inventory_view(request):
     tab = request.GET.get("tab")
@@ -188,42 +214,50 @@ def inventory_view(request):
 @login_required
 def inventory_hub(request):
     user = request.user
-    stock_user_ids = _get_inventory_stock_user_ids(request)
+    product_user_ids = _get_inventory_user_ids(request)
+    transaction_user_ids = _get_inventory_transaction_user_ids(request)
     now = timezone.now()
     window_days = 30
     window_start_date = now.date() - timedelta(days=window_days - 1)
     recent_period_start = now - timedelta(days=window_days)
 
-    products = Product.objects.filter(user__in=stock_user_ids).select_related("category", "supplier")
+    products = (
+        Product.objects.filter(user__in=product_user_ids)
+        .select_related("category", "supplier")
+    )
+    products = annotate_products_with_stock(products, request.user)
     transactions = (
-        InventoryTransaction.objects.filter(product__user__in=stock_user_ids)
+        InventoryTransaction.objects.filter(_transaction_scope_filter(transaction_user_ids))
         .select_related("product", "product__category")
     )
 
     price_expr = Coalesce("sale_price", "cost_price")
     value_expr = ExpressionWrapper(
-        F("quantity_in_stock") * price_expr,
+        F("stock_quantity") * price_expr,
         output_field=DecimalField(max_digits=14, decimal_places=2),
     )
 
     totals = products.aggregate(
         total_value=Sum(value_expr),
-        total_qty=Sum("quantity_in_stock"),
+        total_qty=Sum("stock_quantity"),
     )
     total_inventory_value = totals.get("total_value") or Decimal("0.00")
     total_quantity = totals.get("total_qty") or 0
 
-    low_stock_qs = products.filter(quantity_in_stock__lt=F("reorder_level"))
+    low_stock_qs = products.filter(stock_quantity__lt=F("stock_reorder"))
     low_stock_count = low_stock_qs.count()
-    out_of_stock_count = products.filter(quantity_in_stock__lte=0).count()
+    out_of_stock_count = products.filter(stock_quantity__lte=0).count()
 
     top_selling = (
         products.annotate(
             qty_sold=Sum(
                 "transactions__quantity",
-                filter=Q(
-                    transactions__transaction_type="OUT",
-                    transactions__transaction_date__gte=recent_period_start,
+                filter=(
+                    Q(
+                        transactions__transaction_type="OUT",
+                        transactions__transaction_date__gte=recent_period_start,
+                    )
+                    & _product_transaction_scope_filter(transaction_user_ids)
                 ),
             )
         )
@@ -231,12 +265,14 @@ def inventory_hub(request):
         .order_by("-qty_sold", "name")
         .first()
     )
+    if top_selling:
+        apply_stock_fields([top_selling])
 
     category_rows = (
         products.values("category__name")
         .annotate(
             value=Sum(value_expr),
-            qty=Sum("quantity_in_stock"),
+            qty=Sum("stock_quantity"),
         )
         .order_by("-value")
     )
@@ -354,9 +390,9 @@ def inventory_hub(request):
 @login_required
 def inventory_transactions_view(request):
     query = request.GET.get("q", "").strip()
-    stock_user_ids = _get_inventory_stock_user_ids(request)
+    transaction_user_ids = _get_inventory_transaction_user_ids(request)
     transactions = (
-        InventoryTransaction.objects.filter(product__user__in=stock_user_ids)
+        InventoryTransaction.objects.filter(_transaction_scope_filter(transaction_user_ids))
         .select_related("product", "product__supplier", "product__category")
         .order_by("-transaction_date")
     )
@@ -413,7 +449,10 @@ def inventory_products_view(request):
     if brand_ids:
         products_qs = products_qs.filter(brand_id__in=brand_ids)
 
+    products_qs = annotate_products_with_stock(products_qs, request.user)
+
     products_page, querystring = _paginate_queryset(request, products_qs, per_page=100)
+    apply_stock_fields(products_page.object_list)
     categories = Category.objects.filter(user__in=product_user_ids).order_by("name")
     category_groups = CategoryGroup.objects.filter(user__in=product_user_ids).order_by("sort_order", "name")
     suppliers = Supplier.objects.filter(user__in=product_user_ids).order_by("name")
@@ -658,9 +697,10 @@ def get_transaction_form(request):
     transaction_id = request.GET.get("transaction_id")
     if not transaction_id:
         return HttpResponseBadRequest("Transaction ID not provided.")
-    stock_user_ids = _get_inventory_stock_user_ids(request)
+    transaction_user_ids = _get_inventory_transaction_user_ids(request)
     transaction = get_object_or_404(
-        InventoryTransaction, id=transaction_id, product__user__in=stock_user_ids
+        InventoryTransaction.objects.filter(_transaction_scope_filter(transaction_user_ids)),
+        id=transaction_id,
     )
     form = InventoryTransactionForm(user=request.user, instance=transaction)
     html = render_to_string(
@@ -693,15 +733,21 @@ def get_product_form(request):
     stock_user_ids = _get_inventory_stock_user_ids(request)
     stock_visible = product.user_id in stock_user_ids
     attributes_only = request.GET.get("attributes_only")
+    context = {"form": None, "stock_visible": stock_visible}
     if attributes_only:
         form = ProductAttributeForm(user=request.user, instance=product)
         template_name = "inventory/partials/_product_attribute_form.html"
+        context["attribute_types"] = CategoryAttribute._meta.get_field("attribute_type").choices
     else:
         form = ProductForm(user=request.user, instance=product)
+        stock_owner = get_stock_owner(request.user)
+        if stock_owner:
+            stock_record = ProductStock.objects.filter(product=product, user=stock_owner).first()
+            form.initial["quantity_in_stock"] = stock_record.quantity_in_stock if stock_record else 0
+            form.initial["reorder_level"] = stock_record.reorder_level if stock_record else 0
         template_name = "inventory/partials/_product_form.html"
-    html = render_to_string(
-        template_name, {"form": form, "stock_visible": stock_visible}, request=request
-    )
+    context["form"] = form
+    html = render_to_string(template_name, context, request=request)
     return JsonResponse({"html": html})
 
 
@@ -757,17 +803,13 @@ def add_transaction(request):
         form = InventoryTransactionForm(user=request.user, data=request.POST)
         if form.is_valid():
             transaction = form.save(commit=False)
-            stock_user_ids = _get_inventory_stock_user_ids(request)
-            if transaction.product.user_id not in stock_user_ids:
-                messages.error(
-                    request, "Not authorized to add a transaction for this product."
-                )
-            else:
-                try:
-                    transaction.save()
-                    messages.success(request, "Transaction added successfully.")
-                except ValidationError as e:
-                    messages.error(request, e.message)
+            try:
+                if not transaction.user_id:
+                    transaction.user = request.user
+                transaction.save()
+                messages.success(request, "Transaction added successfully.")
+            except ValidationError as e:
+                messages.error(request, e.message)
         else:
             messages.error(
                 request, "Error adding transaction. Please check form for errors."
@@ -780,16 +822,21 @@ def add_transaction(request):
 def edit_transaction(request):
     if request.method == "POST":
         transaction_id = request.POST.get("transaction_id")
-        stock_user_ids = _get_inventory_stock_user_ids(request)
+        transaction_user_ids = _get_inventory_transaction_user_ids(request)
         transaction = get_object_or_404(
-            InventoryTransaction, id=transaction_id, product__user__in=stock_user_ids
+            InventoryTransaction.objects.filter(_transaction_scope_filter(transaction_user_ids)),
+            id=transaction_id,
         )
+        existing_user_id = transaction.user_id
         form = InventoryTransactionForm(
             user=request.user, data=request.POST, instance=transaction
         )
         if form.is_valid():
             try:
-                form.save()
+                transaction = form.save(commit=False)
+                if not transaction.user_id:
+                    transaction.user_id = existing_user_id or request.user.id
+                transaction.save()
                 messages.success(request, "Transaction updated successfully.")
             except ValidationError as e:
                 messages.error(request, e.message)
@@ -805,9 +852,10 @@ def edit_transaction(request):
 def delete_transaction(request):
     if request.method == "POST":
         transaction_id = request.POST.get("transaction_id")
-        stock_user_ids = _get_inventory_stock_user_ids(request)
+        transaction_user_ids = _get_inventory_transaction_user_ids(request)
         transaction = get_object_or_404(
-            InventoryTransaction, id=transaction_id, product__user__in=stock_user_ids
+            InventoryTransaction.objects.filter(_transaction_scope_filter(transaction_user_ids)),
+            id=transaction_id,
         )
         transaction.delete()
         messages.success(request, "Transaction deleted successfully.")
@@ -1574,12 +1622,19 @@ def delete_vin(request, pk):
 ##############################
 # Product CRUD               #
 ##############################
-def _serialize_product(product, *, stock_user_ids=None):
+def _serialize_product(product, *, stock_user_ids=None, stock_owner=None):
     stock_visible = True
-    if stock_user_ids is not None:
+    quantity_in_stock = product.quantity_in_stock
+    reorder_level = product.reorder_level
+    if stock_owner:
+        stock_record = ProductStock.objects.filter(product=product, user=stock_owner).first()
+        quantity_in_stock = stock_record.quantity_in_stock if stock_record else 0
+        reorder_level = stock_record.reorder_level if stock_record else 0
+    elif stock_user_ids is not None:
         stock_visible = product.user_id in stock_user_ids
-    quantity_in_stock = product.quantity_in_stock if stock_visible else ""
-    reorder_level = product.reorder_level if stock_visible else ""
+        if not stock_visible:
+            quantity_in_stock = ""
+            reorder_level = ""
     return {
         "id": product.pk,
         "name": product.name,
@@ -1657,10 +1712,9 @@ def save_product_inline(request):
             return JsonResponse({"error": "Invalid product identifier provided."}, status=400)
         product_user_ids = _get_inventory_user_ids(request)
         product_instance = get_object_or_404(Product, pk=product_pk, user__in=product_user_ids)
-    stock_user_ids = _get_inventory_stock_user_ids(request)
-    stock_editable = True
-    if product_instance and product_instance.user_id not in stock_user_ids:
-        stock_editable = False
+    stock_owner = get_stock_owner(request.user)
+    original_quantity = product_instance.quantity_in_stock if product_instance else None
+    original_reorder = product_instance.reorder_level if product_instance else None
 
     item_type = (payload.get("item_type") or "inventory").strip()
     item_type_choices = dict(Product._meta.get_field("item_type").choices)
@@ -1669,9 +1723,6 @@ def save_product_inline(request):
 
     quantity_raw = payload.get("quantity_in_stock")
     reorder_raw = payload.get("reorder_level")
-    if product_instance and not stock_editable:
-        quantity_raw = product_instance.quantity_in_stock or 0
-        reorder_raw = product_instance.reorder_level or 0
     form_data = {
         "name": _normalize(payload.get("name")),
         "sku": _normalize(payload.get("sku")),
@@ -1700,10 +1751,31 @@ def save_product_inline(request):
 
     product = form.save(commit=False)
     if not product.user_id:
-        product.user = request.user
+        product.user = stock_owner or request.user
+    if product_instance and stock_owner and product_instance.user_id != stock_owner.id:
+        product.quantity_in_stock = original_quantity or 0
+        product.reorder_level = original_reorder or 0
     product.save()
 
-    response_data = {"product": _serialize_product(product, stock_user_ids=stock_user_ids)}
+    stock_quantity = form.cleaned_data.get("quantity_in_stock") or 0
+    stock_reorder = form.cleaned_data.get("reorder_level") or 0
+    if form.cleaned_data.get("item_type") != "inventory":
+        stock_quantity = 0
+        stock_reorder = 0
+    upsert_product_stock(
+        product,
+        request.user,
+        quantity_in_stock=stock_quantity,
+        reorder_level=stock_reorder,
+    )
+
+    response_data = {
+        "product": _serialize_product(
+            product,
+            stock_user_ids=_get_inventory_stock_user_ids(request),
+            stock_owner=stock_owner,
+        )
+    }
     status_code = 200 if product_instance else 201
     return JsonResponse(response_data, status=status_code)
 
@@ -1715,7 +1787,7 @@ def bulk_update_products(request):
     if not product_ids:
         return JsonResponse({"error": "Select at least one product to update."}, status=400)
 
-    stock_user_ids = _get_inventory_stock_user_ids(request)
+    stock_owner = get_stock_owner(request.user)
     products = list(
         Product.objects.filter(
             user__in=_get_inventory_user_ids(request),
@@ -1798,9 +1870,6 @@ def bulk_update_products(request):
                 base_data = _product_form_data(product)
                 form_data = base_data.copy()
                 form_data.update(updates)
-                if product.user_id not in stock_user_ids:
-                    form_data["quantity_in_stock"] = base_data.get("quantity_in_stock", "0")
-                    form_data["reorder_level"] = base_data.get("reorder_level", "0")
                 files = None
                 if image_file:
                     image_file.seek(0)
@@ -1816,15 +1885,48 @@ def bulk_update_products(request):
                     raise ValidationError("Bulk update failed.")
                 updated_product = form.save(commit=False)
                 if not updated_product.user_id:
-                    updated_product.user = request.user
+                    updated_product.user = stock_owner or request.user
+                if stock_owner and product.user_id != stock_owner.id:
+                    updated_product.quantity_in_stock = product.quantity_in_stock or 0
+                    updated_product.reorder_level = product.reorder_level or 0
                 updated_product.save()
                 updated_products.append(updated_product)
+                stock_quantity = (
+                    form.cleaned_data.get("quantity_in_stock")
+                    if "quantity_in_stock" in updates
+                    else None
+                )
+                stock_reorder = (
+                    form.cleaned_data.get("reorder_level")
+                    if "reorder_level" in updates
+                    else None
+                )
+                if form.cleaned_data.get("item_type") != "inventory":
+                    if "quantity_in_stock" in updates:
+                        stock_quantity = 0
+                    if "reorder_level" in updates:
+                        stock_reorder = 0
+                upsert_product_stock(
+                    updated_product,
+                    request.user,
+                    quantity_in_stock=stock_quantity,
+                    reorder_level=stock_reorder,
+                )
     except ValidationError:
         error_payload = errors or {"__all__": ["Could not update selected products."]}
         return JsonResponse({"errors": error_payload}, status=400)
 
     return JsonResponse(
-        {"products": [_serialize_product(product, stock_user_ids=stock_user_ids) for product in updated_products]}
+        {
+            "products": [
+                _serialize_product(
+                    product,
+                    stock_user_ids=_get_inventory_stock_user_ids(request),
+                    stock_owner=stock_owner,
+                )
+                for product in updated_products
+            ]
+        }
     )
 
 @login_required
@@ -1833,10 +1935,22 @@ def add_product(request):
     if request.method == "POST":
         form = ProductForm(user=request.user, data=request.POST, files=request.FILES)
         if form.is_valid():
+            stock_owner = get_stock_owner(request.user)
             product = form.save(commit=False)
-            product.user = request.user
+            product.user = stock_owner or request.user
             product.save()
             form.save_attribute_values(product)
+            stock_quantity = form.cleaned_data.get("quantity_in_stock") or 0
+            stock_reorder = form.cleaned_data.get("reorder_level") or 0
+            if form.cleaned_data.get("item_type") != "inventory":
+                stock_quantity = 0
+                stock_reorder = 0
+            upsert_product_stock(
+                product,
+                request.user,
+                quantity_in_stock=stock_quantity,
+                reorder_level=stock_reorder,
+            )
             messages.success(request, "Product added successfully.")
         else:
             messages.error(
@@ -1915,15 +2029,28 @@ def edit_product(request):
             id=product_id,
             user__in=_get_inventory_user_ids(request),
         )
-        form_data = request.POST.copy()
-        stock_user_ids = _get_inventory_stock_user_ids(request)
-        if product.user_id not in stock_user_ids:
-            form_data["quantity_in_stock"] = str(product.quantity_in_stock or 0)
-            form_data["reorder_level"] = str(product.reorder_level or 0)
-        form = ProductForm(user=request.user, data=form_data, files=request.FILES, instance=product)
+        stock_owner = get_stock_owner(request.user)
+        original_quantity = product.quantity_in_stock
+        original_reorder = product.reorder_level
+        form = ProductForm(user=request.user, data=request.POST, files=request.FILES, instance=product)
         if form.is_valid():
-            product = form.save()
+            product = form.save(commit=False)
+            if stock_owner and product.user_id != stock_owner.id:
+                product.quantity_in_stock = original_quantity or 0
+                product.reorder_level = original_reorder or 0
+            product.save()
             form.save_attribute_values(product)
+            stock_quantity = form.cleaned_data.get("quantity_in_stock") or 0
+            stock_reorder = form.cleaned_data.get("reorder_level") or 0
+            if form.cleaned_data.get("item_type") != "inventory":
+                stock_quantity = 0
+                stock_reorder = 0
+            upsert_product_stock(
+                product,
+                request.user,
+                quantity_in_stock=stock_quantity,
+                reorder_level=stock_reorder,
+            )
             messages.success(request, "Product updated successfully.")
         else:
             error_details = []
@@ -2047,7 +2174,6 @@ def export_products_template(request):
     """Download an Excel template populated with the user's current products."""
 
     product_user_ids = _get_inventory_user_ids(request)
-    stock_user_ids = _get_inventory_stock_user_ids(request)
     workbook = Workbook()
     worksheet = workbook.active
     worksheet.title = "Products"
@@ -2072,11 +2198,15 @@ def export_products_template(request):
     worksheet.freeze_panes = "A3"
 
     item_type_labels = dict(Product._meta.get_field("item_type").choices)
-    products = Product.objects.filter(user__in=product_user_ids).order_by("name")
+    products = (
+        annotate_products_with_stock(
+            Product.objects.filter(user__in=product_user_ids).order_by("name"),
+            request.user,
+        )
+    )
     for product in products:
-        stock_visible = product.user_id in stock_user_ids
-        quantity_value = product.quantity_in_stock if stock_visible else ""
-        reorder_value = product.reorder_level if stock_visible else ""
+        quantity_value = product.stock_quantity
+        reorder_value = product.stock_reorder
         if product.margin is not None:
             margin_value = str(product.margin)
         elif product.cost_price is not None and product.sale_price is not None:
@@ -3015,7 +3145,8 @@ def import_products_from_excel(request):
                 product = Product(user=request.user)
                 is_new = True
 
-            product.user = request.user
+            stock_owner = get_stock_owner(request.user)
+            product.user = stock_owner or request.user
             product.sku = sku or None
             product.name = name
             product.description = description or ""
@@ -3042,6 +3173,14 @@ def import_products_from_excel(request):
 
             product.clean()
             product.save()
+            stock_quantity = quantity if product.item_type == "inventory" else 0
+            stock_reorder = reorder_level if product.item_type == "inventory" else 0
+            upsert_product_stock(
+                product,
+                request.user,
+                quantity_in_stock=stock_quantity,
+                reorder_level=stock_reorder,
+            )
 
             if is_new:
                 created_count += 1
@@ -4308,11 +4447,12 @@ def product_qr_pdf(request, product_id):
 def qr_stock_in(request, product_id):
     """Display a quick inventory transaction form for QR code scans."""
 
-    product = get_object_or_404(
-        Product,
-        id=product_id,
-        user__in=_get_inventory_stock_user_ids(request),
+    product_queryset = annotate_products_with_stock(
+        Product.objects.filter(user__in=_get_inventory_stock_user_ids(request)),
+        request.user,
     )
+    product = get_object_or_404(product_queryset, id=product_id)
+    apply_stock_fields([product])
     transaction_types = InventoryTransaction.TRANSACTION_TYPES
 
     if request.method == "POST":
@@ -4429,26 +4569,35 @@ def filter_options(request):
 @login_required
 def inventory_analytics(request):
     stock_user_ids = _get_inventory_stock_user_ids(request)
+    transaction_user_ids = _get_inventory_transaction_user_ids(request)
     period_days = int(request.GET.get('days', 30))
     start_date = timezone.now() - timedelta(days=period_days)
 
     products = Product.objects.filter(user__in=stock_user_ids)
+    products = annotate_products_with_stock(products, request.user)
+    transaction_scope = _transaction_scope_filter(transaction_user_ids)
 
     turnover_data = []
     for p in products:
-        sold = p.transactions.filter(
-            transaction_type='OUT',
-            transaction_date__gte=start_date
-        ).aggregate(total=Sum('quantity'))['total'] or 0
-        avg_stock = (p.quantity_in_stock + sold) / 2 if sold else p.quantity_in_stock
+        sold = (
+            p.transactions.filter(
+                transaction_scope,
+                transaction_type='OUT',
+                transaction_date__gte=start_date,
+            )
+            .aggregate(total=Sum('quantity'))['total']
+            or 0
+        )
+        avg_stock = (p.stock_quantity + sold) / 2 if sold else p.stock_quantity
         turnover = sold / avg_stock if avg_stock else 0
         turnover_data.append({'product': p, 'qty_sold': sold, 'turnover': round(turnover, 2)})
 
+    apply_stock_fields([entry["product"] for entry in turnover_data])
     top_sellers = sorted(turnover_data, key=lambda x: x['qty_sold'], reverse=True)[:5]
     slow_movers = sorted(turnover_data, key=lambda x: x['qty_sold'])[:5]
 
-    value_expr_cost = ExpressionWrapper(F('quantity_in_stock') * F('cost_price'), output_field=DecimalField(max_digits=12, decimal_places=2))
-    value_expr_sale = ExpressionWrapper(F('quantity_in_stock') * F('sale_price'), output_field=DecimalField(max_digits=12, decimal_places=2))
+    value_expr_cost = ExpressionWrapper(F('stock_quantity') * F('cost_price'), output_field=DecimalField(max_digits=12, decimal_places=2))
+    value_expr_sale = ExpressionWrapper(F('stock_quantity') * F('sale_price'), output_field=DecimalField(max_digits=12, decimal_places=2))
 
     totals = products.aggregate(
         total_cost=Sum(value_expr_cost),
@@ -4458,7 +4607,7 @@ def inventory_analytics(request):
 
     low_stock = products.filter(
         item_type='inventory',
-        quantity_in_stock__lt=F('reorder_level'),
+        stock_quantity__lt=F('stock_reorder'),
     )
     unsold_days = period_days * 6
     cutoff = timezone.now() - timedelta(days=unsold_days)
@@ -4466,11 +4615,14 @@ def inventory_analytics(request):
         products.annotate(
             last_sale=Max(
                 'transactions__transaction_date',
-                filter=Q(transactions__transaction_type='OUT')
+                filter=Q(transactions__transaction_type='OUT') & _product_transaction_scope_filter(transaction_user_ids)
             )
         )
         .filter(Q(last_sale__lt=cutoff) | Q(last_sale__isnull=True))
     )
+
+    low_stock = apply_stock_fields(list(low_stock))
+    unsold = apply_stock_fields(list(unsold))
 
     context = {
         'turnover_data': turnover_data,

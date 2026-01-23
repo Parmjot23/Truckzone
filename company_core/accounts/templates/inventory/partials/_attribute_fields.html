@@ -3,7 +3,29 @@
 <div class="row g-3">
   {% for field in form.attribute_fields %}
   <div class="col-md-6">
-    {{ field.label_tag }}
+    <div class="attribute-field-header">
+      {{ field.label_tag }}
+      <button
+        type="button"
+        class="btn btn-link btn-sm attribute-edit-link"
+        data-attribute-edit
+        data-attribute-id="{{ field.field.attribute_metadata.id|default_if_none:'' }}"
+        data-attribute-name="{{ field.field.attribute_metadata.name|default_if_none:''|escape }}"
+        data-attribute-description="{{ field.field.attribute_metadata.description|default_if_none:''|escape }}"
+        data-attribute-unit="{{ field.field.attribute_metadata.value_unit|default_if_none:''|escape }}"
+        data-attribute-type="{{ field.field.attribute_metadata.attribute_type|default_if_none:'select' }}"
+        data-attribute-options="{{ field.field.attribute_metadata.options_text|default_if_none:''|escape }}"
+        data-attribute-sort-order="{{ field.field.attribute_metadata.sort_order|default_if_none:'' }}"
+        data-attribute-category-id="{{ field.field.attribute_metadata.category_id|default_if_none:'' }}"
+        data-attribute-category-name="{{ field.field.attribute_metadata.category_name|default_if_none:''|escape }}"
+        data-attribute-filterable="{{ field.field.attribute_metadata.is_filterable|yesno:'true,false' }}"
+        data-attribute-comparable="{{ field.field.attribute_metadata.is_comparable|yesno:'true,false' }}"
+        data-attribute-active="{{ field.field.attribute_metadata.is_active|yesno:'true,false' }}"
+        aria-label="Edit {{ field.field.attribute_metadata.name|default_if_none:'attribute' }}"
+      >
+        Edit
+      </button>
+    </div>
     {{ field }}
     {% if field.help_text %}
     <small class="form-text text-muted">{{ field.help_text }}</small>

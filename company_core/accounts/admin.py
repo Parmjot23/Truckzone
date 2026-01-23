@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from .models import (
     Mechanic, WorkOrder, WorkOrderRecord, Customer, ExpenseRecord, IncomeRecord, InvoiceDetail, IncomeRecord2, GroupedInvoice,
     Profile, PendingInvoice, PaidInvoice, MechExpense, MechExpenseItem, Payment, Category,
-    Supplier, SupplierCredit, SupplierCreditItem, SupplierCheque, SupplierChequeLine, BusinessBankAccount,
+    Supplier, SupplierCredit, SupplierCreditItem, CustomerCredit, CustomerCreditItem, SupplierCheque, SupplierChequeLine, BusinessBankAccount,
     Product, InventoryTransaction, Driver, GroupedEstimate, EstimateRecord, WorkOrderAssignment, Vehicle, JobHistory,
     VehicleMaintenanceTask, FleetVehicle, MaintenanceRecord, QuickBooksSettings, ActivityLog, Service, CloverConnection,
     BankingIntegrationSettings, BankConnection, BankTransaction, PayrollSettings, Employee, EmployeeTaxProfile,
@@ -1058,6 +1058,8 @@ admin.site.register(MechExpense, MechExpenseAdmin)
 admin.site.register(MechExpenseItem, MechExpenseItemAdmin)
 admin.site.register(SupplierCredit)
 admin.site.register(SupplierCreditItem)
+admin.site.register(CustomerCredit)
+admin.site.register(CustomerCreditItem)
 admin.site.register(SupplierCheque)
 admin.site.register(SupplierChequeLine)
 admin.site.register(BusinessBankAccount)

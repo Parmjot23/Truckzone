@@ -894,6 +894,10 @@
                             <i class="fa-solid fa-triangle-exclamation"></i>
                             <span class="sidebar-label">Overdue invoices</span>
                         </a>
+                        <a href="{% url 'accounts:customer_credit_list' %}" class="sidebar-link sidebar-sublink" data-nav="customer-credits" aria-label="Customer credits" title="Customer credits">
+                            <i class="fa-solid fa-undo-alt"></i>
+                            <span class="sidebar-label">Customer credits</span>
+                        </a>
                     </div>
                 </div>
                 {% if occupation != 'parts_store' %}
@@ -987,9 +991,9 @@
                             <i class="fa-solid fa-sliders"></i>
                             <span class="sidebar-label">Storefront</span>
                         </a>
-                        <a href="{% url 'accounts:store_hero' %}" class="sidebar-link sidebar-sublink" data-nav="storefront-hero" aria-label="Homepage hero" title="Homepage hero">
-                            <i class="fa-solid fa-images"></i>
-                            <span class="sidebar-label">Homepage Hero</span>
+                        <a href="{% url 'accounts:store_hero' %}" class="sidebar-link sidebar-sublink" data-nav="storefront-hero" aria-label="Promotions" title="Promotions">
+                            <i class="fa-solid fa-tags"></i>
+                            <span class="sidebar-label">Promotions</span>
                         </a>
                         <a href="{% url 'accounts:store_product_list' %}" class="sidebar-link sidebar-sublink" data-nav="storefront-public" aria-label="Public storefront" title="Public storefront" target="_blank" rel="noopener">
                             <i class="fa-solid fa-up-right-from-square"></i>

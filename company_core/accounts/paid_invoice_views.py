@@ -1,4 +1,5 @@
 from typing import Dict, Any, Optional
+from decimal import Decimal
 import threading
 
 from django.contrib.auth.decorators import login_required
@@ -15,7 +16,7 @@ except (ImportError, OSError):
     WEASYPRINT_AVAILABLE = False
     CSS = None
 import logging
-from .models import GroupedInvoice, Profile, InvoiceActivity
+from .models import GroupedInvoice, Profile, InvoiceActivity, ensure_decimal
 from .invoice_activity import log_invoice_activity, build_email_open_tracking_url
 from .ai_service import generate_dynamic_invoice_note
 from .utils import resolve_company_logo_url
@@ -62,7 +63,31 @@ def _invoice_context(
     leave it False (default) for PDFs.
     """
     profile  = invoice.user.profile
-    tax_total = sum(j.tax_collected for j in invoice.income_records.all())
+    records = list(invoice.income_records.all())
+    line_items = []
+    discount_total = Decimal('0.00')
+    for record in records:
+        rate = ensure_decimal(getattr(record, 'rate', None))
+        qty = ensure_decimal(getattr(record, 'qty', None))
+        original_rate = rate
+        product = getattr(record, 'product', None)
+        if product:
+            if product.sale_price is not None:
+                original_rate = ensure_decimal(product.sale_price)
+            elif product.promotion_price is not None and product.promotion_price > rate:
+                original_rate = ensure_decimal(product.promotion_price)
+        discount_amount = Decimal('0.00')
+        if original_rate > rate:
+            discount_amount = (original_rate - rate) * qty
+        is_free = rate == Decimal('0.00') and qty > 0
+        line_items.append({
+            'record': record,
+            'original_rate': original_rate,
+            'discount_amount': discount_amount,
+            'is_free': is_free,
+        })
+        discount_total += discount_amount
+    tax_total = sum(j.tax_collected for j in records)
     if paid:
         # prefer the explicit paid_date field if you have one;
         # fall back to the most-recent payment record.
@@ -91,6 +116,8 @@ def _invoice_context(
         'subtotal'     : invoice.total_amount - tax_total,
         'tax'          : tax_total,
         'total_amount' : invoice.total_amount,
+        'line_items'   : line_items,
+        'discount_total': discount_total,
         'total_paid_amount': total_paid_value,
         'total_paid'   : total_paid_value,
         'balance_due'  : invoice.balance_due(),            # will be 0.00 when paid

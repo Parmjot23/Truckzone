@@ -285,6 +285,34 @@
                 </tr>
             </tbody>
         </table>
+
+        {% if credit_rows %}
+        <div class="section">
+            <div class="section-title">Customer Credits (Returns)</div>
+            <table class="invoice-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Credit No</th>
+                        <th>Memo</th>
+                        <th>Returned Items</th>
+                        <th class="text-right">Credit Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in credit_rows %}
+                    <tr>
+                        <td>{{ entry.credit.date|date:"M d, Y" }}</td>
+                        <td>{{ entry.credit.credit_no }}</td>
+                        <td>{{ entry.credit.memo|default:"-" }}</td>
+                        <td>{{ entry.item_summary|default:"-" }}</td>
+                        <td class="text-right">{{ entry.display_total|currency }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
     </div>
 </body>
 </html>

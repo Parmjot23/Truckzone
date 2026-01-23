@@ -44,53 +44,244 @@
                     <p>{{ subheading }}</p>
                     {% endif %}
                 </div>
-                <div class="storefront-hero-actions">
-                    {% if storefront_selected_profile %}
-                        {% if storefront_has_multiple_locations %}
-                        <div class="dropdown">
-                            <button class="btn btn-light dropdown-toggle storefront-store-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-store"></i>
-                                <span class="store-label">My Store:</span>
-                                <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+                {% if hero_cards %}
+                <div class="storefront-hero-promos">
+                    <div class="storefront-hero-promos-label">Promo Products &amp; Packages</div>
+                    <div class="storefront-hero-promo-slider" data-promo-slider>
+                        <div class="storefront-hero-promo-track">
+                            {% for card in hero_cards %}
+                            {% if card.kind == 'product' %}
+                            {% with product=card.product %}
+                            <article class="storefront-promo-card{% if forloop.first %} is-active{% endif %}" data-promo-slide>
+                                <div class="storefront-promo-card-media">
+                                    {% if product.image %}
+                                    <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                                    {% else %}
+                                    <i class="fas fa-box"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="storefront-promo-card-body">
+                                    <div class="storefront-promo-card-type">Promo product</div>
+                                    <div class="storefront-promo-card-title">{{ product.name }}</div>
+                                    {% if show_prices_hero %}
+                                    <div class="storefront-promo-card-price">
+                                        {% if product.has_promotion %}
+                                            {% if product.sale_price %}
+                                            <span class="storefront-promo-card-price-old">
+                                                ${{ product.sale_price|floatformat:2 }}
+                                            </span>
+                                            {% endif %}
+                                            <span>${{ product.promotion_price|floatformat:2 }}</span>
+                                        {% elif product.sale_price %}
+                                        <span>${{ product.sale_price|floatformat:2 }}</span>
+                                        {% else %}
+                                        <span>Call for price</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="storefront-promo-card-actions">
+                                        {% if customer_account %}
+                                        <div class="cart-slot{% if product.id|stringformat:'s' in cart_product_ids %} is-in-cart{% endif %}" data-cart-slot data-product-id="{{ product.id }}">
+                                            <div class="cart-action-add">
+                                                <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" data-add-to-cart>
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="quantity" value="1">
+                                                    <button type="submit" class="storefront-promo-card-link" data-loading-label="Adding..." data-success-label="Added" {% if product.quantity_in_stock <= 0 %}disabled{% endif %}>
+                                                        <span class="btn-text">Add to cart</span>
+                                                        <i class="fas fa-cart-plus"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                            <div class="cart-action-in">
+                                                <span class="storefront-promo-card-in-cart"><i class="fas fa-check-circle"></i> Added to cart</span>
+                                                <a class="storefront-promo-card-link" href="{% url 'accounts:store_cart' %}">
+                                                    View cart
+                                                    <i class="fas fa-arrow-right"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <a class="storefront-promo-card-link storefront-promo-card-link--secondary" href="{% url 'accounts:store_product_detail' product.id %}">
+                                            View product
+                                            <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                        {% else %}
+                                        <a class="storefront-promo-card-link" href="{% url 'accounts:store_product_detail' product.id %}">
+                                            View product
+                                            <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if card.slide.discount_percent %}
+                                <div class="storefront-promo-card-badge">Save {{ card.slide.discount_percent }}%</div>
+                                {% elif product.has_promotion %}
+                                    {% if product.promotion_discount_percent %}
+                                    <div class="storefront-promo-card-badge">Save {{ product.promotion_discount_percent }}%</div>
+                                    {% else %}
+                                    <div class="storefront-promo-card-badge">Promo</div>
+                                    {% endif %}
+                                {% endif %}
+                            </article>
+                            {% endwith %}
+                            {% else %}
+                            {% with package=card.package %}
+                            <article class="storefront-promo-card storefront-promo-card--package{% if forloop.first %} is-active{% endif %}" data-promo-slide>
+                                <div class="storefront-promo-card-media">
+                                    <i class="fas fa-boxes-stacked"></i>
+                                </div>
+                                <div class="storefront-promo-card-body">
+                                    <div class="storefront-promo-card-type">Package deal</div>
+                                    <div class="storefront-promo-card-title">{{ package.title }}</div>
+                                    <div class="storefront-promo-card-subtitle">
+                                        {{ package.subtitle|default:"Bundle savings for fleet-ready orders." }}
+                                    </div>
+                                    <div class="storefront-promo-card-items">
+                                        {% if package.primary_product %}
+                                        <div class="storefront-promo-card-item">
+                                            <div class="storefront-promo-card-item-media">
+                                                {% if package.primary_product.image %}
+                                                <img src="{{ package.primary_product.image.url }}" alt="{{ package.primary_product.name }}" loading="lazy">
+                                                {% else %}
+                                                <i class="fas fa-box"></i>
+                                                {% endif %}
+                                            </div>
+                                            <span class="storefront-promo-card-item-name">{{ package.primary_product.name }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if package.secondary_product %}
+                                        <div class="storefront-promo-card-item">
+                                            <div class="storefront-promo-card-item-media">
+                                                {% if package.secondary_product.image %}
+                                                <img src="{{ package.secondary_product.image.url }}" alt="{{ package.secondary_product.name }}" loading="lazy">
+                                                {% else %}
+                                                <i class="fas fa-box"></i>
+                                                {% endif %}
+                                            </div>
+                                            <span class="storefront-promo-card-item-name">{{ package.secondary_product.name }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if package.free_product %}
+                                        <div class="storefront-promo-card-item">
+                                            <div class="storefront-promo-card-item-media">
+                                                {% if package.free_product.image %}
+                                                <img src="{{ package.free_product.image.url }}" alt="{{ package.free_product.name }}" loading="lazy">
+                                                {% else %}
+                                                <i class="fas fa-gift"></i>
+                                                {% endif %}
+                                            </div>
+                                            <span class="storefront-promo-card-item-name">{{ package.free_product.name }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="storefront-promo-card-actions">
+                                        {% if package.primary_product %}
+                                        {% with primary=package.primary_product secondary=package.secondary_product free=package.free_product %}
+                                        {% if customer_account %}
+                                        {% if primary.quantity_in_stock > 0 %}
+                                        {% if secondary %}
+                                        {% if secondary.quantity_in_stock > 0 %}
+                                        <div class="storefront-promo-card-bundle{% if primary.id|stringformat:'s' in cart_product_ids %}{% if secondary and not secondary.id|stringformat:'s' in cart_product_ids %}{% elif free and not free.id|stringformat:'s' in cart_product_ids %}{% else %} is-in-cart{% endif %}{% endif %}" data-package-status="package-deal-{{ package.id }}">
+                                            <div class="bundle-action-add">
+                                                <a class="storefront-promo-card-link"
+                                                    href="{% url 'accounts:store_product_detail' package.primary_product.id %}"
+                                                    data-package-add-all data-package-target="package-deal-{{ package.id }}">
+                                                    <span class="btn-text">Add bundle to cart</span>
+                                                    <i class="fas fa-cart-plus"></i>
+                                                </a>
+                                            </div>
+                                            <div class="bundle-action-in">
+                                                <span class="storefront-promo-card-in-cart"><i class="fas fa-check-circle"></i> Bundle added to cart</span>
+                                                <a class="storefront-promo-card-link" href="{% url 'accounts:store_cart' %}">
+                                                    View cart
+                                                    <i class="fas fa-arrow-right"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <span class="storefront-promo-card-link is-disabled">Out of stock</span>
+                                        {% endif %}
+                                        {% else %}
+                                        <div class="storefront-promo-card-bundle{% if primary.id|stringformat:'s' in cart_product_ids %}{% if free and not free.id|stringformat:'s' in cart_product_ids %}{% else %} is-in-cart{% endif %}{% endif %}" data-package-status="package-deal-{{ package.id }}">
+                                            <div class="bundle-action-add">
+                                                <a class="storefront-promo-card-link"
+                                                    href="{% url 'accounts:store_product_detail' package.primary_product.id %}"
+                                                    data-package-add-all data-package-target="package-deal-{{ package.id }}">
+                                                    <span class="btn-text">Add bundle to cart</span>
+                                                    <i class="fas fa-cart-plus"></i>
+                                                </a>
+                                            </div>
+                                            <div class="bundle-action-in">
+                                                <span class="storefront-promo-card-in-cart"><i class="fas fa-check-circle"></i> Bundle added to cart</span>
+                                                <a class="storefront-promo-card-link" href="{% url 'accounts:store_cart' %}">
+                                                    View cart
+                                                    <i class="fas fa-arrow-right"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        {% else %}
+                                        <span class="storefront-promo-card-link is-disabled">Out of stock</span>
+                                        {% endif %}
+                                        {% else %}
+                                        <a class="storefront-promo-card-link"
+                                            href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">
+                                            Log in to add
+                                            <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% endwith %}
+                                        {% else %}
+                                        <a class="storefront-promo-card-link" href="{% url 'accounts:store_product_list' %}">
+                                            Shop all parts
+                                            <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="storefront-promo-card-badge">
+                                    {% if package.free_product and package.discount_percent %}
+                                    Free {{ package.free_product.name }} + {{ package.discount_percent }}% off
+                                    {% elif package.free_product %}
+                                    Free {{ package.free_product.name }}
+                                    {% elif package.discount_percent %}
+                                    Save {{ package.discount_percent }}%
+                                    {% else %}
+                                    Bundle deal
+                                    {% endif %}
+                                </div>
+                            </article>
+                            {% endwith %}
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% if hero_cards|length > 1 %}
+                        <div class="storefront-hero-promo-controls">
+                            <button class="storefront-hero-promo-control" type="button" data-promo-prev
+                                aria-label="Previous promo">
+                                <i class="fas fa-chevron-left" aria-hidden="true"></i>
                             </button>
-                            <div class="dropdown-menu dropdown-menu-end storefront-store-menu">
-                                {% for profile in storefront_locations %}
-                                <form method="post" action="{% url 'accounts:storefront_location_set' %}">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                    <button class="dropdown-item{% if storefront_selected_profile and profile.user_id == storefront_selected_profile.user_id %} active{% endif %}"
-                                        type="submit" name="storefront_location" value="{{ profile.user_id }}">
-                                        {{ profile.storefront_label }}
-                                    </button>
-                                </form>
+                            <div class="storefront-hero-promo-dots" data-promo-dots>
+                                {% for card in hero_cards %}
+                                <button class="storefront-hero-promo-dot{% if forloop.first %} is-active{% endif %}"
+                                    type="button" data-promo-dot="{{ forloop.counter0 }}"
+                                    aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+                                    aria-label="Promo {{ forloop.counter }}"></button>
                                 {% endfor %}
                             </div>
-                        </div>
-                        {% else %}
-                        <div class="btn btn-light storefront-store-toggle storefront-store-static">
-                            <i class="fas fa-store"></i>
-                            <span class="store-label">My Store:</span>
-                            <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
+                            <button class="storefront-hero-promo-control" type="button" data-promo-next
+                                aria-label="Next promo">
+                                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                            </button>
                         </div>
                         {% endif %}
-                    {% endif %}
-                    {% if customer_account %}
-                    <a href="{% url 'accounts:customer_dashboard' %}" class="btn btn-light">My Account</a>
-                    <a href="{% url 'accounts:store_cart' %}" class="btn btn-primary">View Cart</a>
-                    {% else %}
-                    <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_product_list' %}" class="btn btn-light">Sign In</a>
-                    <a href="{% url 'accounts:customer_signup' %}?next={% url 'accounts:store_product_list' %}" class="btn btn-primary">Create Account</a>
-                    {% endif %}
+                    </div>
                 </div>
+                {% endif %}
             </div>
-            <form class="storefront-search" method="get" action="{% url 'accounts:store_search' %}"
-                data-storefront-search-form data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}">
-                <input type="search" name="q" value="{{ search_query }}" placeholder="Search parts, SKUs, or keywords"
-                    data-storefront-search-input data-storefront-search-sync data-storefront-main-search autocomplete="off">
-                <button type="submit">Search</button>
-            </form>
         </div>
     </section>
+
+    {% include 'store/partials/_package_deal_modals.html' %}
 
     <section class="storefront-section">
         <div class="container" data-storefront-results>
@@ -102,4 +293,8 @@
 
 {% block extra_js %}
 <script src="{% static 'js/storefront_search.js' %}" defer></script>
+<script src="{% static 'js/storefront_promo_slider.js' %}" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
+<script src="{% static 'js/storefront_confetti.js' %}" defer></script>
+<script src="{% static 'js/storefront_package_modal.js' %}" defer></script>
 {% endblock %}

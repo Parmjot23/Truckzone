@@ -10,10 +10,13 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 import json
+import requests
 
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.cache import cache
 from django.core.paginator import Paginator
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.db.models import (
     Q,
@@ -27,15 +30,17 @@ from django.db.models import (
     ExpressionWrapper,
     F,
     DecimalField,
+    Case,
+    When,
 )
-from django.db.models.functions import Coalesce, TruncMonth
+from django.db.models.functions import Coalesce, TruncMonth, Cast
 from django.forms import modelformset_factory, inlineformset_factory
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.urls import reverse, resolve
 from django.urls.exceptions import Resolver404
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 try:
     from weasyprint import HTML, CSS
@@ -51,6 +56,8 @@ from openpyxl.utils import get_column_letter
 from .decorators import customer_login_required
 from .models import (
         Product,
+        ProductStock,
+        StorefrontCartItem,
         ProductAlternateSku,
         Category,
         CategoryGroup,
@@ -69,6 +76,11 @@ from .models import (
         IncomeRecord2,
         PendingInvoice,
         Payment,
+        CustomerCredit,
+        CustomerCreditItem,
+        PAYMENT_LINK_PROVIDER_STRIPE,
+        PAYMENT_LINK_PROVIDER_CLOVER,
+        PAYMENT_LINK_PROVIDER_NONE,
         WorkOrder,
         Vehicle,
         VehicleMaintenanceTask,
@@ -78,6 +90,7 @@ from .models import (
         PublicBooking,
         PublicContactMessage,
         InvoiceActivity,
+        calculate_tax_total,
     )
 from . import paid_invoice_views
 from .view_invoices import send_grouped_invoice_email, _build_invoice_context, _render_pdf
@@ -97,7 +110,12 @@ from .forms import (
     StorefrontPriceVisibilityForm,
 )
 from .utils import (
+    apply_stock_fields,
+    annotate_products_with_stock,
     get_business_user,
+    get_customer_user_ids,
+    get_product_user_ids,
+    get_stock_owner,
     get_storefront_owner,
     get_storefront_profiles,
     is_parts_store_business,
@@ -144,6 +162,12 @@ def _customer_portal_nav_items(request, active_slug):
                 'url': reverse('accounts:customer_invoice_list'),
             },
             {
+                'slug': 'returns',
+                'label': 'Returns',
+                'icon': 'fa-undo',
+                'url': reverse('accounts:customer_returns'),
+            },
+            {
                 'slug': 'statements',
                 'label': 'Statements',
                 'icon': 'fa-file-lines',
@@ -182,6 +206,12 @@ def _customer_portal_nav_items(request, active_slug):
                 'label': 'Invoices',
                 'icon': 'fa-file-invoice-dollar',
                 'url': reverse('accounts:customer_invoice_list'),
+            },
+            {
+                'slug': 'returns',
+                'label': 'Returns',
+                'icon': 'fa-undo',
+                'url': reverse('accounts:customer_returns'),
             },
             {
                 'slug': 'workorders',
@@ -246,11 +276,112 @@ def _customer_portal_layout_context(request, active_slug):
     }
 
 
+def _annotate_invoice_credit_totals(queryset):
+    amount_field = DecimalField(max_digits=10, decimal_places=2)
+    credit_amount_expr = Case(
+        When(customer_credit__tax_included=True, then=Cast('amount', amount_field)),
+        default=ExpressionWrapper(
+            Cast('amount', amount_field) + Cast('tax_paid', amount_field),
+            output_field=amount_field,
+        ),
+        output_field=amount_field,
+    )
+    credit_total = CustomerCreditItem.objects.filter(
+        source_invoice=OuterRef('pk')
+    ).values('source_invoice').annotate(
+        total=Coalesce(
+            Sum(credit_amount_expr),
+            Value(Decimal('0.00')),
+            output_field=amount_field,
+        )
+    ).values('total')
+    return queryset.annotate(
+        credit_total=Coalesce(
+            Subquery(credit_total, output_field=amount_field),
+            Value(Decimal('0.00')),
+            output_field=amount_field,
+        )
+    )
+
+
+def _get_customer_credit_total(customer_account):
+    amount_field = DecimalField(max_digits=10, decimal_places=2)
+    credit_amount_expr = Case(
+        When(customer_credit__tax_included=True, then=Cast('amount', amount_field)),
+        default=ExpressionWrapper(
+            Cast('amount', amount_field) + Cast('tax_paid', amount_field),
+            output_field=amount_field,
+        ),
+        output_field=amount_field,
+    )
+    total = CustomerCreditItem.objects.filter(
+        customer_credit__customer=customer_account,
+        customer_credit__user=customer_account.user,
+    ).aggregate(
+        total=Coalesce(
+            Sum(credit_amount_expr),
+            Value(Decimal('0.00')),
+            output_field=amount_field,
+        )
+    )['total']
+    return total or Decimal('0.00')
+
+
+def _build_customer_credit_rows(customer_account, *, start_date=None, end_date=None, limit=None):
+    credits_qs = CustomerCredit.objects.filter(
+        user=customer_account.user,
+        customer=customer_account,
+    ).prefetch_related(
+        'items',
+        'items__product',
+        'items__source_invoice',
+    ).order_by('-date', '-id')
+    if start_date:
+        credits_qs = credits_qs.filter(date__gte=start_date)
+    if end_date:
+        credits_qs = credits_qs.filter(date__lte=end_date)
+    if limit:
+        credits_qs = credits_qs[:limit]
+
+    credit_rows = []
+    total_credit = Decimal('0.00')
+    for credit in credits_qs:
+        total_incl_tax, total_tax, total_excl_tax = credit.calculate_totals()
+        total_incl_tax = Decimal(str(total_incl_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_tax = Decimal(str(total_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_excl_tax = Decimal(str(total_excl_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_credit += total_incl_tax
+        item_rows = []
+        for item in credit.items.all():
+            label = (item.description or '').strip()
+            if not label:
+                label = (item.part_no or '').strip()
+            if not label and item.product:
+                label = (item.product.name or '').strip()
+            if not label:
+                label = 'Item'
+            item_rows.append({
+                'qty': item.qty or 0,
+                'label': label,
+                'invoice_number': item.source_invoice.invoice_number if item.source_invoice else None,
+            })
+        credit_rows.append({
+            'credit': credit,
+            'items': item_rows,
+            'total_incl_tax': total_incl_tax,
+            'total_tax': total_tax,
+            'total_excl_tax': total_excl_tax,
+        })
+
+    return credit_rows, total_credit
+
+
 def _summarize_customer_invoices(customer_account, *, today=None):
     """Build summary stats and recent invoices for customer portal views."""
 
     today = today or timezone.localdate()
-    invoice_totals = customer_account.invoices.aggregate(
+    invoices_qs = customer_account.invoices.all()
+    invoice_totals = invoices_qs.aggregate(
         total_invoiced=Coalesce(Sum('total_amount'), Decimal('0.00')),
     )
     payment_totals = Payment.objects.filter(invoice__customer=customer_account).aggregate(
@@ -259,7 +390,8 @@ def _summarize_customer_invoices(customer_account, *, today=None):
 
     total_invoiced = invoice_totals['total_invoiced'] or Decimal('0.00')
     total_paid = payment_totals['total_paid'] or Decimal('0.00')
-    outstanding_balance = total_invoiced - total_paid
+    total_credit = _get_customer_credit_total(customer_account)
+    outstanding_balance = total_invoiced - total_paid - total_credit
 
     invoices_qs = (
         customer_account.invoices.select_related('user')
@@ -285,6 +417,7 @@ def _summarize_customer_invoices(customer_account, *, today=None):
     invoice_summary = {
         'total_invoiced': total_invoiced,
         'total_paid': total_paid,
+        'total_credit': total_credit,
         'outstanding_balance': outstanding_balance,
         'invoice_count': len(all_invoices),
         'open_count': open_count,
@@ -410,7 +543,10 @@ def _statement_totals(invoices):
     subtotal = sum((invoice.subtotal for invoice in invoices), Decimal('0.00'))
     tax = sum((invoice.tax_total for invoice in invoices), Decimal('0.00'))
     total = sum((invoice.total_amount for invoice in invoices), Decimal('0.00'))
-    paid = sum((invoice.total_paid for invoice in invoices), Decimal('0.00'))
+    paid = sum(
+        (invoice.total_paid or Decimal('0.00') for invoice in invoices),
+        Decimal('0.00'),
+    )
 
     return {
         'count': len(invoices),
@@ -522,15 +658,222 @@ def _statement_excel_response(customer_account, invoices, *, start_date, end_dat
     return response
 
 
+def _get_customer_portal_account(request):
+    user = getattr(request, "user", None)
+    if not user or not getattr(user, "is_authenticated", False):
+        return None
+    try:
+        return user.customer_portal
+    except ObjectDoesNotExist:
+        return None
+
+
+def _sync_session_cart_to_db(request, customer_account, store_owner):
+    if not request or not getattr(request, "session", None):
+        return
+    if getattr(request, "_storefront_cart_synced", False):
+        return
+    request._storefront_cart_synced = True
+
+    session_cart = request.session.get("cart", {}) or {}
+    if not session_cart or not customer_account or not store_owner:
+        return
+
+    quantities = {}
+    for product_id, qty in session_cart.items():
+        try:
+            product_id_int = int(product_id)
+            qty_int = int(qty)
+        except (TypeError, ValueError):
+            continue
+        if qty_int <= 0:
+            continue
+        quantities[product_id_int] = quantities.get(product_id_int, 0) + qty_int
+
+    if not quantities:
+        request.session.pop("cart", None)
+        return
+
+    product_qs = _storefront_product_queryset(request, owner=store_owner).filter(
+        id__in=list(quantities.keys())
+    )
+    product_map = {product.id: product for product in product_qs}
+
+    for product_id, qty in quantities.items():
+        product = product_map.get(product_id)
+        if not product:
+            continue
+        available_qty = getattr(product, "stock_quantity", product.quantity_in_stock)
+        qty = min(qty, available_qty)
+        if qty <= 0:
+            continue
+        cart_item, created = StorefrontCartItem.objects.get_or_create(
+            customer=customer_account,
+            store_owner=store_owner,
+            product=product,
+            defaults={"quantity": qty},
+        )
+        if not created:
+            available_qty = getattr(product, "stock_quantity", product.quantity_in_stock)
+            new_qty = min(cart_item.quantity + qty, available_qty)
+            if new_qty != cart_item.quantity:
+                cart_item.quantity = new_qty
+                cart_item.save(update_fields=["quantity", "updated_at"])
+
+    request.session.pop("cart", None)
+
+
+def _get_cart_count(customer_account, store_owner):
+    if not customer_account or not store_owner:
+        return 0
+    total = StorefrontCartItem.objects.filter(
+        customer=customer_account,
+        store_owner=store_owner,
+    ).aggregate(total=Coalesce(Sum("quantity"), 0))["total"]
+    return int(total or 0)
+
+
+def _clear_cart(customer_account, store_owner):
+    if not customer_account or not store_owner:
+        return
+    StorefrontCartItem.objects.filter(
+        customer=customer_account,
+        store_owner=store_owner,
+    ).delete()
+
+
 def _get_cart(request):
-    """Return the cart dict stored in session."""
-    return request.session.setdefault('cart', {})
+    """Return the cart dict stored for the customer and storefront."""
+    customer_account = _get_customer_portal_account(request)
+    if not customer_account:
+        return {}
+    store_owner = get_storefront_owner(request)
+    _sync_session_cart_to_db(request, customer_account, store_owner)
+    cart_items = StorefrontCartItem.objects.filter(
+        customer=customer_account,
+        store_owner=store_owner,
+    )
+    return {str(item.product_id): item.quantity for item in cart_items}
 
 
 def _get_cart_product_ids(request):
     """Return cart product ids as strings for template checks."""
-    cart = request.session.get('cart', {}) or {}
-    return {str(product_id) for product_id in cart.keys()}
+    customer_account = _get_customer_portal_account(request)
+    if not customer_account:
+        return set()
+    store_owner = get_storefront_owner(request)
+    _sync_session_cart_to_db(request, customer_account, store_owner)
+    product_ids = StorefrontCartItem.objects.filter(
+        customer=customer_account,
+        store_owner=store_owner,
+    ).values_list("product_id", flat=True)
+    return {str(product_id) for product_id in product_ids}
+
+
+def _build_storefront_cart_items(cart, product_qs):
+    """Build cart items with pricing metadata for storefront views."""
+    items = []
+    subtotal = Decimal('0.00')
+    subtotal_before_discounts = Decimal('0.00')
+    discount_total = Decimal('0.00')
+    sellers = set()
+    cart_quantities = {}
+
+    for product_id, qty in cart.items():
+        product = product_qs.filter(pk=product_id).first()
+        if not product:
+            continue
+        if hasattr(product, "stock_quantity"):
+            product.quantity_in_stock = product.stock_quantity
+            product.reorder_level = product.stock_reorder
+        try:
+            quantity = int(qty)
+        except (TypeError, ValueError):
+            continue
+        if quantity <= 0:
+            continue
+        available_qty = getattr(product, "stock_quantity", product.quantity_in_stock)
+        quantity = min(quantity, available_qty)
+        unit_price = _resolve_storefront_price(product)
+        if unit_price is None:
+            continue
+        base_price = product.sale_price if product.sale_price is not None else unit_price
+        line_subtotal = unit_price * quantity
+        line_base_total = base_price * quantity
+        line_discount = line_base_total - line_subtotal
+        if line_discount < Decimal('0.00'):
+            line_discount = Decimal('0.00')
+
+        subtotal += line_subtotal
+        subtotal_before_discounts += line_base_total
+        discount_total += line_discount
+
+        items.append({
+            'product': product,
+            'quantity': quantity,
+            'subtotal': line_subtotal,
+            'unit_price': unit_price,
+            'original_unit_price': base_price,
+            'discount_total': line_discount,
+            'is_free': False,
+        })
+        sellers.add(product.user)
+        cart_quantities[product.id] = quantity
+
+    return items, subtotal, subtotal_before_discounts, discount_total, sellers, cart_quantities
+
+
+def _resolve_storefront_free_items(store_owner, cart_quantities):
+    """Return free bonus items for qualifying storefront packages."""
+    if not store_owner or not cart_quantities:
+        return []
+
+    stock_owner = get_stock_owner(store_owner)
+    packages = (
+        StorefrontHeroPackage.objects.filter(user=store_owner, is_active=True)
+        .select_related('primary_product', 'secondary_product', 'free_product')
+    )
+    free_items = []
+    for package in packages:
+        if not package.free_product_id:
+            continue
+        if not package.primary_product_id or not package.secondary_product_id:
+            continue
+        primary_qty = cart_quantities.get(package.primary_product_id, 0)
+        secondary_qty = cart_quantities.get(package.secondary_product_id, 0)
+        if primary_qty <= 0 or secondary_qty <= 0:
+            continue
+        free_qty = min(primary_qty, secondary_qty)
+        free_product = package.free_product
+        if not free_product or free_qty <= 0:
+            continue
+        if free_product.quantity_in_stock is not None:
+            available_qty = free_product.quantity_in_stock
+            if stock_owner:
+                stock_record = ProductStock.objects.filter(product=free_product, user=stock_owner).first()
+                available_qty = stock_record.quantity_in_stock if stock_record else 0
+            free_qty = min(free_qty, available_qty)
+            free_product.quantity_in_stock = available_qty
+        if free_qty <= 0:
+            continue
+
+        base_price = free_product.sale_price if free_product.sale_price is not None else free_product.promotion_price
+        if base_price is None:
+            base_price = Decimal('0.00')
+        free_value = base_price * free_qty
+        free_items.append({
+            'product': free_product,
+            'quantity': free_qty,
+            'subtotal': Decimal('0.00'),
+            'unit_price': Decimal('0.00'),
+            'original_unit_price': base_price,
+            'discount_total': Decimal('0.00'),
+            'free_value': free_value,
+            'is_free': True,
+            'package_title': package.title,
+        })
+
+    return free_items
 
 
 @require_POST
@@ -554,17 +897,37 @@ def set_storefront_location(request):
             selected_id = None
 
     previous_id = request.session.get("storefront_owner_id")
+    previous_id_int = None
+    if previous_id is not None:
+        try:
+            previous_id_int = int(previous_id)
+        except (TypeError, ValueError):
+            previous_id_int = None
+
+    previous_owner = None
+    if previous_id_int in allowed_ids:
+        for profile in profiles:
+            if profile.user_id == previous_id_int:
+                previous_owner = profile.user
+                break
+
+    customer_account = _get_customer_portal_account(request)
 
     if selected_id and selected_id in allowed_ids:
-        if previous_id and str(previous_id) != str(selected_id):
+        if previous_id_int is not None and previous_id_int != selected_id:
+            if customer_account and previous_owner:
+                _sync_session_cart_to_db(request, customer_account, previous_owner)
             request.session.pop("cart", None)
         request.session["storefront_owner_id"] = selected_id
     else:
-        if previous_id:
+        if previous_id_int is not None:
+            if customer_account and previous_owner:
+                _sync_session_cart_to_db(request, customer_account, previous_owner)
             request.session.pop("cart", None)
         request.session.pop("storefront_owner_id", None)
 
     store_owner = get_storefront_owner(request)
+    store_user_ids = get_product_user_ids(store_owner) if store_owner else []
     parsed_next = urlparse(next_url)
     path = parsed_next.path or ""
     if path:
@@ -578,8 +941,8 @@ def set_storefront_location(request):
                 group_id = match.kwargs.get("group_id")
                 if group_id:
                     group_qs = CategoryGroup.objects.filter(id=group_id, is_active=True)
-                    if store_owner:
-                        group_qs = group_qs.filter(user=store_owner)
+                    if store_user_ids:
+                        group_qs = group_qs.filter(user__in=store_user_ids)
                     if not group_qs.exists():
                         messages.info(
                             request,
@@ -590,8 +953,8 @@ def set_storefront_location(request):
                 category_id = match.kwargs.get("category_id")
                 if category_id:
                     category_qs = Category.objects.filter(id=category_id, is_active=True)
-                    if store_owner:
-                        category_qs = category_qs.filter(user=store_owner)
+                    if store_user_ids:
+                        category_qs = category_qs.filter(user__in=store_user_ids)
                     if not category_qs.exists():
                         messages.info(
                             request,
@@ -605,8 +968,8 @@ def set_storefront_location(request):
                         id=product_id,
                         is_published_to_store=True,
                     )
-                    if store_owner:
-                        product_qs = product_qs.filter(user=store_owner)
+                    if store_user_ids:
+                        product_qs = product_qs.filter(user__in=store_user_ids)
                     if not product_qs.exists():
                         messages.info(
                             request,
@@ -617,13 +980,377 @@ def set_storefront_location(request):
     return redirect(next_url)
 
 
+OPEN_METEO_GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
+OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+
+PROVINCE_NAME_MAP = {
+    "AB": "Alberta",
+    "BC": "British Columbia",
+    "MB": "Manitoba",
+    "NB": "New Brunswick",
+    "NL": "Newfoundland and Labrador",
+    "NT": "Northwest Territories",
+    "NS": "Nova Scotia",
+    "NU": "Nunavut",
+    "ON": "Ontario",
+    "PE": "Prince Edward Island",
+    "QC": "Quebec",
+    "SK": "Saskatchewan",
+    "YT": "Yukon",
+}
+
+US_STATE_NAMES = {
+    "AL": "Alabama",
+    "AK": "Alaska",
+    "AZ": "Arizona",
+    "AR": "Arkansas",
+    "CA": "California",
+    "CO": "Colorado",
+    "CT": "Connecticut",
+    "DE": "Delaware",
+    "FL": "Florida",
+    "GA": "Georgia",
+    "HI": "Hawaii",
+    "ID": "Idaho",
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "IA": "Iowa",
+    "KS": "Kansas",
+    "KY": "Kentucky",
+    "LA": "Louisiana",
+    "ME": "Maine",
+    "MD": "Maryland",
+    "MA": "Massachusetts",
+    "MI": "Michigan",
+    "MN": "Minnesota",
+    "MS": "Mississippi",
+    "MO": "Missouri",
+    "MT": "Montana",
+    "NE": "Nebraska",
+    "NV": "Nevada",
+    "NH": "New Hampshire",
+    "NJ": "New Jersey",
+    "NM": "New Mexico",
+    "NY": "New York",
+    "NC": "North Carolina",
+    "ND": "North Dakota",
+    "OH": "Ohio",
+    "OK": "Oklahoma",
+    "OR": "Oregon",
+    "PA": "Pennsylvania",
+    "RI": "Rhode Island",
+    "SC": "South Carolina",
+    "SD": "South Dakota",
+    "TN": "Tennessee",
+    "TX": "Texas",
+    "UT": "Utah",
+    "VT": "Vermont",
+    "VA": "Virginia",
+    "WA": "Washington",
+    "WV": "West Virginia",
+    "WI": "Wisconsin",
+    "WY": "Wyoming",
+}
+
+
+def _normalize_weather_text(value):
+    return re.sub(r"\s+", " ", value or "").strip()
+
+
+def _normalize_weather_key(value):
+    return _normalize_weather_text(value).lower()
+
+
+def _extract_postal_code(address):
+    if not address:
+        return ""
+    canada_match = re.search(r"[A-Z]\d[A-Z]\s?\d[A-Z]\d", address, re.IGNORECASE)
+    if canada_match:
+        return re.sub(r"\s+", " ", canada_match.group(0).upper()).strip()
+    us_match = re.search(r"\b\d{5}(?:-\d{4})?\b", address)
+    if us_match:
+        return us_match.group(0)
+    return ""
+
+
+def _extract_province_code(address):
+    if not address:
+        return ""
+    match = re.search(r"\b[A-Z]{2}\b", address.upper())
+    if not match:
+        return ""
+    code = match.group(0)
+    if code in PROVINCE_NAME_MAP or code in US_STATE_NAMES:
+        return code
+    return ""
+
+
+def _extract_city_name(address):
+    if not address:
+        return ""
+    parts = [part.strip() for part in re.split(r",|\n", address) if part.strip()]
+    if len(parts) >= 2:
+        return parts[1]
+    return ""
+
+
+def _compose_weather_address(street, city, province, postal):
+    parts = []
+    if street:
+        parts.append(street)
+    if city:
+        parts.append(city)
+    if province and (street or city or postal):
+        parts.append(province)
+    if postal:
+        parts.append(postal)
+    return ", ".join(parts)
+
+
+def _build_store_weather_parts(profile):
+    address_value = _normalize_weather_text(getattr(profile, "company_address", ""))
+    street = _normalize_weather_text(getattr(profile, "street_address", ""))
+    city = _normalize_weather_text(getattr(profile, "city", "")) or _extract_city_name(address_value)
+    province = _normalize_weather_text(getattr(profile, "province", "")) or _extract_province_code(address_value)
+    postal = _normalize_weather_text(getattr(profile, "postal_code", "")) or _extract_postal_code(address_value)
+    composed_address = address_value or _compose_weather_address(street, city, province, postal)
+    return {
+        "address": composed_address,
+        "street": street,
+        "city": city,
+        "province": province,
+        "postal": postal,
+    }
+
+
+def _resolve_country_code(province):
+    code = (province or "").upper()
+    if code in PROVINCE_NAME_MAP:
+        return "CA"
+    if code in US_STATE_NAMES:
+        return "US"
+    return ""
+
+
+def _resolve_province_name(province):
+    code = (province or "").upper()
+    if code in PROVINCE_NAME_MAP:
+        return PROVINCE_NAME_MAP[code]
+    if code in US_STATE_NAMES:
+        return US_STATE_NAMES[code]
+    return province or ""
+
+
+def _geocode_query(query):
+    params = {
+        "name": query,
+        "count": 10,
+        "language": "en",
+        "format": "json",
+    }
+    response = requests.get(OPEN_METEO_GEOCODE_URL, params=params, timeout=10)
+    response.raise_for_status()
+    payload = response.json()
+    return payload.get("results") or []
+
+
+def _pick_geocode_result(results, parts):
+    if not results:
+        return None
+    country_code = _resolve_country_code(parts.get("province"))
+    province_name = _normalize_weather_key(_resolve_province_name(parts.get("province")))
+    city_name = _normalize_weather_key(parts.get("city"))
+
+    candidates = results
+    if country_code:
+        candidates = [item for item in candidates if item.get("country_code") == country_code]
+    if province_name:
+        province_matches = [
+            item for item in candidates
+            if _normalize_weather_key(item.get("admin1")) == province_name
+        ]
+        if province_matches:
+            candidates = province_matches
+    if city_name:
+        city_matches = [
+            item for item in candidates
+            if _normalize_weather_key(item.get("name")) == city_name
+        ]
+        if city_matches:
+            candidates = city_matches
+    return candidates[0] if candidates else results[0]
+
+
+def _geocode_store(parts):
+    queries = []
+    city = parts.get("city")
+    province = parts.get("province")
+    postal = parts.get("postal")
+    address = parts.get("address")
+    if city and province:
+        queries.append(f"{city}, {province}")
+    if city:
+        queries.append(city)
+    if postal:
+        queries.append(postal)
+    if address:
+        queries.append(address)
+
+    seen = set()
+    for query in queries:
+        normalized = _normalize_weather_key(query)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        results = _geocode_query(query)
+        picked = _pick_geocode_result(results, parts)
+        if picked and picked.get("latitude") is not None and picked.get("longitude") is not None:
+            return {
+                "latitude": float(picked["latitude"]),
+                "longitude": float(picked["longitude"]),
+            }
+    return None
+
+
+def _fetch_weather(coords):
+    params = {
+        "latitude": f"{coords['latitude']:.4f}",
+        "longitude": f"{coords['longitude']:.4f}",
+        "current": "temperature_2m,weathercode,is_day,snowfall,precipitation",
+        "hourly": "snowfall",
+        "daily": "sunrise,sunset",
+        "forecast_days": 1,
+        "timezone": "auto",
+        "temperature_unit": "celsius",
+    }
+    response = requests.get(OPEN_METEO_FORECAST_URL, params=params, timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+
+def _parse_weather_time(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _find_closest_weather_index(times, target_time):
+    if not times or not target_time:
+        return None
+    target_dt = _parse_weather_time(target_time)
+    if not target_dt:
+        return None
+    best_index = None
+    best_diff = None
+    for index, value in enumerate(times):
+        time_dt = _parse_weather_time(value)
+        if not time_dt:
+            continue
+        diff = abs((time_dt - target_dt).total_seconds())
+        if best_diff is None or diff < best_diff:
+            best_diff = diff
+            best_index = index
+    return best_index
+
+
+def _resolve_snowfall_amount(data):
+    current = data.get("current") or data.get("current_weather") or {}
+    snowfall = current.get("snowfall")
+    if isinstance(snowfall, (int, float)):
+        return float(snowfall)
+    hourly = data.get("hourly") or {}
+    snow = hourly.get("snowfall") or []
+    times = hourly.get("time") or []
+    if not snow or not times or len(snow) != len(times):
+        return None
+    target_time = current.get("time") or times[0]
+    index = _find_closest_weather_index(times, target_time)
+    if index is None:
+        return None
+    try:
+        return float(snow[index])
+    except (TypeError, ValueError):
+        return None
+
+
+def _resolve_snowfall_units(data):
+    current_units = data.get("current_units") or {}
+    hourly_units = data.get("hourly_units") or {}
+    return current_units.get("snowfall") or hourly_units.get("snowfall") or ""
+
+
+@require_GET
+def storefront_weather(request):
+    store_owner = get_storefront_owner(request)
+    if not store_owner:
+        return JsonResponse({"error": "store_missing"}, status=404)
+
+    cache_key = f"storefront_weather:{store_owner.id}"
+    cached = cache.get(cache_key)
+    if cached:
+        return JsonResponse(cached)
+
+    profile = getattr(store_owner, "profile", None)
+    if not profile:
+        return JsonResponse({"error": "profile_missing"}, status=404)
+
+    parts = _build_store_weather_parts(profile)
+    if not parts["address"] and not parts["city"] and not parts["postal"]:
+        return JsonResponse({"error": "address_missing"}, status=400)
+
+    try:
+        coords = _geocode_store(parts)
+    except (requests.RequestException, ValueError):
+        return JsonResponse({"error": "geocode_failed"}, status=502)
+    if not coords:
+        return JsonResponse({"error": "geocode_failed"}, status=404)
+
+    try:
+        data = _fetch_weather(coords)
+    except (requests.RequestException, ValueError):
+        return JsonResponse({"error": "weather_unavailable"}, status=502)
+
+    current = data.get("current") or data.get("current_weather") or {}
+    temperature = current.get("temperature_2m", current.get("temperature"))
+    weather_code = current.get("weathercode")
+    is_day_raw = current.get("is_day")
+    if isinstance(is_day_raw, (int, float)):
+        is_day = bool(int(is_day_raw))
+    else:
+        is_day = bool(is_day_raw)
+    sunrise_list = (data.get("daily") or {}).get("sunrise") or []
+    sunset_list = (data.get("daily") or {}).get("sunset") or []
+    sunrise = sunrise_list[0] if sunrise_list else None
+    sunset = sunset_list[0] if sunset_list else None
+    payload = {
+        "temperature": temperature,
+        "weatherCode": weather_code,
+        "isDay": is_day,
+        "sunrise": sunrise,
+        "sunset": sunset,
+        "timeZone": data.get("timezone") or "UTC",
+        "snowfall": _resolve_snowfall_amount(data),
+        "snowfallUnit": _resolve_snowfall_units(data),
+    }
+    cache.set(cache_key, payload, 600)
+    return JsonResponse(payload)
+
+
 def _storefront_product_queryset(request=None, *, owner=None):
     """Base queryset for products that are eligible to appear in the public store."""
 
     store_owner = owner or get_storefront_owner(request)
     queryset = Product.objects.filter(is_published_to_store=True)
     if store_owner:
-        queryset = queryset.filter(user=store_owner)
+        store_user_ids = get_product_user_ids(store_owner)
+        if store_user_ids:
+            queryset = queryset.filter(user__in=store_user_ids)
+        else:
+            queryset = queryset.filter(user=store_owner)
+        queryset = annotate_products_with_stock(queryset, store_owner)
     return queryset
 
 
@@ -800,6 +1527,37 @@ def _build_storefront_marketing_context(request, available_products, *, store_ow
             flyer_packages = hero_packages
             flyer_has_content = bool(flyer_slides or flyer_packages)
 
+    stock_owner = get_stock_owner(store_owner) if store_owner else None
+    if stock_owner:
+        apply_stock_fields(featured_products)
+        slide_product_ids = [slide.product_id for slide in hero_slides if slide.product_id]
+        package_product_ids = []
+        for package in hero_packages:
+            for product_id in (package.primary_product_id, package.secondary_product_id, package.free_product_id):
+                if product_id:
+                    package_product_ids.append(product_id)
+        stock_product_ids = set(slide_product_ids + package_product_ids)
+        if stock_product_ids:
+            stock_rows = ProductStock.objects.filter(
+                user=stock_owner,
+                product_id__in=stock_product_ids,
+            )
+            stock_map = {row.product_id: row for row in stock_rows}
+            for slide in hero_slides:
+                product = slide.product
+                if not product:
+                    continue
+                stock_record = stock_map.get(product.id)
+                product.quantity_in_stock = stock_record.quantity_in_stock if stock_record else 0
+                product.reorder_level = stock_record.reorder_level if stock_record else 0
+            for package in hero_packages:
+                for product in (package.primary_product, package.secondary_product, package.free_product):
+                    if not product:
+                        continue
+                    stock_record = stock_map.get(product.id)
+                    product.quantity_in_stock = stock_record.quantity_in_stock if stock_record else 0
+                    product.reorder_level = stock_record.reorder_level if stock_record else 0
+
     hero_cards = []
     for slide in hero_slides:
         hero_cards.append({'kind': 'product', 'product': slide.product, 'slide': slide})
@@ -827,11 +1585,24 @@ def _customer_matches_store(customer_account, store_owner):
         return False
     if customer_account.user_id == store_owner.id:
         return True
-    return get_business_user(customer_account.user) == get_business_user(store_owner)
+    customer_business = get_business_user(customer_account.user) or customer_account.user
+    store_business = get_business_user(store_owner) or store_owner
+    if customer_business and store_business and customer_business.id == store_business.id:
+        return True
+    if not customer_business or not store_business:
+        return False
+    shared_customer_user_ids = set(get_customer_user_ids(customer_business))
+    return store_business.id in shared_customer_user_ids
 
 
 def _storefront_categories_queryset(available_products, *, owner=None, include_empty=False):
     if include_empty and owner:
+        store_user_ids = get_product_user_ids(owner)
+        if store_user_ids:
+            return Category.objects.filter(
+                user__in=store_user_ids,
+                is_active=True,
+            ).select_related('group', 'parent')
         return Category.objects.filter(user=owner, is_active=True).select_related('group', 'parent')
 
     return (
@@ -844,7 +1615,11 @@ def _storefront_categories_queryset(available_products, *, owner=None, include_e
 def _storefront_groups_queryset(available_products, *, owner=None, include_empty=False):
     queryset = CategoryGroup.objects.filter(is_active=True)
     if owner:
-        queryset = queryset.filter(user=owner)
+        store_user_ids = get_product_user_ids(owner)
+        if store_user_ids:
+            queryset = queryset.filter(user__in=store_user_ids)
+        else:
+            queryset = queryset.filter(user=owner)
     if include_empty:
         return queryset.order_by('sort_order', 'name')
 
@@ -1005,11 +1780,6 @@ def _build_product_list_context(
         )
 
     filter_base = products
-    brands = list(
-        ProductBrand.objects.filter(products__in=filter_base, is_active=True)
-        .distinct()
-        .order_by('sort_order', 'name')
-    )
     models = list(
         ProductModel.objects.filter(products__in=filter_base, is_active=True)
         .distinct()
@@ -1046,14 +1816,19 @@ def _build_product_list_context(
             .order_by('sort_order', 'name')
         )
 
-        attribute_products_base = products
-
+        selected_attribute_values = {}
         for attribute in attributes:
             param_name = f"attr_{attribute.id}"
-            selected_value = (request.GET.get(param_name) or "").strip()
-            if selected_value:
+            selected_attribute_values[attribute.id] = (request.GET.get(param_name) or "").strip()
+
+        def apply_attribute_filters(attribute_products, selected_values):
+            filtered_products = attribute_products
+            for attribute in attributes:
+                selected_value = selected_values.get(attribute.id, "")
+                if not selected_value:
+                    continue
                 if attribute.attribute_type == "select":
-                    products = products.filter(
+                    filtered_products = filtered_products.filter(
                         attribute_values__attribute=attribute,
                         attribute_values__option_id=selected_value,
                     )
@@ -1066,86 +1841,140 @@ def _build_product_list_context(
                     else:
                         bool_value = None
                     if bool_value is not None:
-                        products = products.filter(
+                        filtered_products = filtered_products.filter(
                             attribute_values__attribute=attribute,
                             attribute_values__value_boolean=bool_value,
                         )
                 elif attribute.attribute_type == "number":
                     try:
                         number_value = Decimal(selected_value)
-                    except (ArithmeticError, ValueError):
+                    except (ArithmeticError, ValueError, TypeError):
                         number_value = None
                     if number_value is not None:
-                        products = products.filter(
+                        filtered_products = filtered_products.filter(
                             attribute_values__attribute=attribute,
                             attribute_values__value_number=number_value,
                         )
                 else:
-                    products = products.filter(
+                    filtered_products = filtered_products.filter(
                         attribute_values__attribute=attribute,
                         attribute_values__value_text__iexact=selected_value,
                     )
+            return filtered_products
 
-            options = []
+        def build_attribute_options(attribute_products):
+            options_by_attribute = {}
+            for attribute in attributes:
+                options = []
+                if attribute.attribute_type == "select":
+                    option_ids = (
+                        ProductAttributeValue.objects.filter(
+                            product__in=attribute_products,
+                            attribute=attribute,
+                            option__isnull=False,
+                        )
+                        .values_list("option_id", flat=True)
+                        .distinct()
+                    )
+                    option_qs = (
+                        attribute.options.filter(is_active=True, id__in=option_ids)
+                        .order_by("sort_order", "value")
+                    )
+                    options = [{"value": str(option.id), "label": option.value} for option in option_qs]
+                elif attribute.attribute_type == "boolean":
+                    bool_values = (
+                        ProductAttributeValue.objects.filter(
+                            product__in=attribute_products,
+                            attribute=attribute,
+                            value_boolean__isnull=False,
+                        )
+                        .values_list("value_boolean", flat=True)
+                        .distinct()
+                    )
+                    if True in bool_values:
+                        options.append({"value": "true", "label": "Yes"})
+                    if False in bool_values:
+                        options.append({"value": "false", "label": "No"})
+                elif attribute.attribute_type == "number":
+                    number_values = (
+                        ProductAttributeValue.objects.filter(
+                            product__in=attribute_products,
+                            attribute=attribute,
+                            value_number__isnull=False,
+                        )
+                        .values_list("value_number", flat=True)
+                        .distinct()
+                        .order_by("value_number")[:50]
+                    )
+                    for number_value in number_values:
+                        if number_value is None:
+                            continue
+                        raw_value = str(number_value)
+                        label = f"{raw_value} {attribute.value_unit}".strip() if attribute.value_unit else raw_value
+                        options.append({"value": raw_value, "label": label})
+                else:
+                    text_values = (
+                        ProductAttributeValue.objects.filter(
+                            product__in=attribute_products,
+                            attribute=attribute,
+                        )
+                        .exclude(value_text="")
+                        .values_list("value_text", flat=True)
+                        .distinct()
+                        .order_by("value_text")[:50]
+                    )
+                    options = [{"value": value, "label": value} for value in text_values if value]
+                options_by_attribute[attribute.id] = options
+            return options_by_attribute
+
+        def attribute_has_full_coverage(attribute_products, attribute, total_count):
+            if total_count <= 0:
+                return False
+            coverage_qs = ProductAttributeValue.objects.filter(
+                product__in=attribute_products,
+                attribute=attribute,
+            )
             if attribute.attribute_type == "select":
-                option_ids = (
-                    ProductAttributeValue.objects.filter(
-                        product__in=attribute_products_base,
-                        attribute=attribute,
-                        option__isnull=False,
-                    )
-                    .values_list("option_id", flat=True)
-                    .distinct()
-                )
-                option_qs = (
-                    attribute.options.filter(is_active=True, id__in=option_ids)
-                    .order_by("sort_order", "value")
-                )
-                options = [{"value": str(option.id), "label": option.value} for option in option_qs]
+                coverage_qs = coverage_qs.filter(option__isnull=False)
             elif attribute.attribute_type == "boolean":
-                bool_values = (
-                    ProductAttributeValue.objects.filter(
-                        product__in=attribute_products_base,
-                        attribute=attribute,
-                        value_boolean__isnull=False,
-                    )
-                    .values_list("value_boolean", flat=True)
-                    .distinct()
-                )
-                if True in bool_values:
-                    options.append({"value": "true", "label": "Yes"})
-                if False in bool_values:
-                    options.append({"value": "false", "label": "No"})
+                coverage_qs = coverage_qs.filter(value_boolean__isnull=False)
             elif attribute.attribute_type == "number":
-                number_values = (
-                    ProductAttributeValue.objects.filter(
-                        product__in=attribute_products_base,
-                        attribute=attribute,
-                        value_number__isnull=False,
-                    )
-                    .values_list("value_number", flat=True)
-                    .distinct()
-                    .order_by("value_number")[:50]
-                )
-                for number_value in number_values:
-                    if number_value is None:
-                        continue
-                    raw_value = str(number_value)
-                    label = f"{raw_value} {attribute.value_unit}".strip() if attribute.value_unit else raw_value
-                    options.append({"value": raw_value, "label": label})
+                coverage_qs = coverage_qs.filter(value_number__isnull=False)
             else:
-                text_values = (
-                    ProductAttributeValue.objects.filter(
-                        product__in=attribute_products_base,
-                        attribute=attribute,
-                    )
-                    .exclude(value_text="")
-                    .values_list("value_text", flat=True)
-                    .distinct()
-                    .order_by("value_text")[:50]
-                )
-                options = [{"value": value, "label": value} for value in text_values if value]
+                coverage_qs = coverage_qs.exclude(value_text="").exclude(value_text__isnull=True)
+            return coverage_qs.values("product_id").distinct().count() == total_count
 
+        attribute_products_base = products
+        options_by_attribute = {}
+        while True:
+            filtered_products = apply_attribute_filters(attribute_products_base, selected_attribute_values)
+            if attributes:
+                filtered_products = filtered_products.distinct()
+
+            filtered_count = filtered_products.count()
+            options_by_attribute = build_attribute_options(filtered_products)
+            auto_selected = None
+            for attribute in attributes:
+                if selected_attribute_values.get(attribute.id):
+                    continue
+                options = options_by_attribute.get(attribute.id, [])
+                if len(options) == 1 and attribute_has_full_coverage(
+                    filtered_products,
+                    attribute,
+                    filtered_count,
+                ):
+                    auto_selected = (attribute.id, options[0]["value"])
+                    break
+
+            if not auto_selected:
+                products = filtered_products
+                break
+            selected_attribute_values[auto_selected[0]] = auto_selected[1]
+
+        for attribute in attributes:
+            param_name = f"attr_{attribute.id}"
+            selected_value = selected_attribute_values.get(attribute.id, "")
+            options = options_by_attribute.get(attribute.id, [])
             if options or selected_value:
                 attribute_filters.append(
                     {
@@ -1156,8 +1985,15 @@ def _build_product_list_context(
                     }
                 )
 
-        if attributes:
-            products = products.distinct()
+    brand_filters = Q(products__in=products)
+    if brand_ids:
+        brand_filters |= Q(id__in=brand_ids, products__in=available_products)
+    brands = list(
+        ProductBrand.objects.filter(is_active=True)
+        .filter(brand_filters)
+        .distinct()
+        .order_by('sort_order', 'name')
+    )
 
     if sort_value in {"price_low", "price_high"}:
         price_expr = Coalesce('promotion_price', 'sale_price', 'cost_price')
@@ -1179,9 +2015,17 @@ def _build_product_list_context(
     paginator = Paginator(products, per_page)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    apply_stock_fields(page_obj.object_list)
 
     params = request.GET.copy()
     params.pop('page', None)
+    params.pop('partial', None)
+    for entry in attribute_filters:
+        selected_value = (entry.get("selected") or "").strip()
+        if selected_value:
+            params[entry["param"]] = selected_value
+        else:
+            params.pop(entry["param"], None)
     query_string = params.urlencode()
 
     view_grid_params = params.copy()
@@ -1238,11 +2082,13 @@ def _get_authenticated_customer_info(user):
         email = customer_profile.email or user.email or ''
         phone = customer_profile.phone_number or ''
         address = customer_profile.address or ''
+        cc_emails = customer_profile.get_cc_emails()
         return {
             'name': name,
             'email': email,
             'phone': phone,
             'address': address,
+            'cc_emails': cc_emails,
         }
 
     profile = getattr(user, 'profile', None)
@@ -1279,6 +2125,7 @@ def _get_authenticated_customer_info(user):
         'email': email,
         'phone': phone,
         'address': address,
+        'cc_emails': [],
     }
 
 
@@ -1327,6 +2174,13 @@ def _render_product_list_page(request, available_products, *, group=None, catego
         "active_group": group,
         "active_category": category,
     })
+    context.update(
+        _build_storefront_marketing_context(
+            request,
+            available_products,
+            store_owner=store_owner,
+        )
+    )
     store_owner = get_storefront_owner(request)
     price_flags = resolve_storefront_price_flags(request, store_owner)
     context["show_prices_catalog"] = price_flags["catalog"]
@@ -1371,10 +2225,24 @@ def product_list(request):
             "categories": group_categories,
         })
 
+    brand_logo_qs = (
+        ProductBrand.objects.filter(is_active=True)
+        .exclude(logo__isnull=True)
+        .exclude(logo="")
+    )
+    if store_owner:
+        store_user_ids = get_product_user_ids(store_owner)
+        if store_user_ids:
+            brand_logo_qs = brand_logo_qs.filter(user__in=store_user_ids)
+        else:
+            brand_logo_qs = brand_logo_qs.filter(user=store_owner)
+    brand_logos = list(brand_logo_qs.order_by("sort_order", "name"))
+
     context = {
         "breadcrumbs": _build_storefront_breadcrumbs(),
         "category_groups": category_groups,
         "grouped_categories": grouped_categories,
+        "brand_logos": brand_logos,
         "search_query": (request.GET.get('q') or '').strip(),
         "customer_account": getattr(request.user, 'customer_portal', None) if request.user.is_authenticated else None,
         "cart_product_ids": _get_cart_product_ids(request) if request.user.is_authenticated else set(),
@@ -1397,7 +2265,11 @@ def store_group_detail(request, group_id):
     show_empty_categories = category_flags["show_empty_categories"]
     group_queryset = CategoryGroup.objects.filter(id=group_id, is_active=True)
     if store_owner:
-        group_queryset = group_queryset.filter(user=store_owner)
+        store_user_ids = get_product_user_ids(store_owner)
+        if store_user_ids:
+            group_queryset = group_queryset.filter(user__in=store_user_ids)
+        else:
+            group_queryset = group_queryset.filter(user=store_owner)
     group = get_object_or_404(group_queryset)
 
     categories = [
@@ -1422,6 +2294,13 @@ def store_group_detail(request, group_id):
         "search_query": (request.GET.get('q') or '').strip(),
         "customer_account": getattr(request.user, 'customer_portal', None) if request.user.is_authenticated else None,
     }
+    context.update(
+        _build_storefront_marketing_context(
+            request,
+            available_products,
+            store_owner=store_owner,
+        )
+    )
     return render(request, 'store/group_detail.html', context)
 
 
@@ -1436,7 +2315,11 @@ def store_category_detail(request, category_id):
         is_active=True,
     )
     if store_owner:
-        category_queryset = category_queryset.filter(user=store_owner)
+        store_user_ids = get_product_user_ids(store_owner)
+        if store_user_ids:
+            category_queryset = category_queryset.filter(user__in=store_user_ids)
+        else:
+            category_queryset = category_queryset.filter(user=store_owner)
     category = get_object_or_404(category_queryset)
     categories = list(
         _storefront_categories_queryset(
@@ -1466,6 +2349,13 @@ def store_category_detail(request, category_id):
         "search_query": (request.GET.get('q') or '').strip(),
         "customer_account": getattr(request.user, 'customer_portal', None) if request.user.is_authenticated else None,
     }
+    context.update(
+        _build_storefront_marketing_context(
+            request,
+            available_products,
+            store_owner=store_owner,
+        )
+    )
     return render(request, 'store/category_detail.html', context)
 
 
@@ -1479,10 +2369,13 @@ def store_search_suggestions(request):
     """Return lightweight product suggestions for live storefront search."""
     query = (request.GET.get('q') or '').strip()
     if len(query) < 2:
-        return JsonResponse({'query': query, 'results': [], 'has_more': False})
+        return JsonResponse({'query': query, 'results': [], 'categories': [], 'has_more': False})
 
     available_products = _storefront_product_queryset(request)
     products = available_products.select_related('category', 'brand')
+    store_owner = get_storefront_owner(request)
+    category_flags = resolve_storefront_category_flags(request, store_owner)
+    show_empty_categories = category_flags["show_empty_categories"]
 
     alternate_ids = ProductAlternateSku.objects.filter(
         sku__icontains=query,
@@ -1570,13 +2463,13 @@ def store_search_suggestions(request):
     except (TypeError, ValueError):
         limit = 8
     limit = max(1, min(limit, 12))
+    category_limit = 5
 
     products = products.order_by('-is_featured', 'name')
     product_list = list(products[: limit + 1])
     has_more = len(product_list) > limit
     product_list = product_list[:limit]
 
-    store_owner = get_storefront_owner(request)
     price_flags = resolve_storefront_price_flags(request, store_owner)
     show_prices = price_flags.get('catalog', False)
 
@@ -1601,8 +2494,9 @@ def store_search_suggestions(request):
         else:
             note = "Sign in to view price"
 
-        if product.quantity_in_stock and product.quantity_in_stock > 0:
-            stock_label = f"{product.quantity_in_stock} in stock"
+        available_qty = getattr(product, "stock_quantity", product.quantity_in_stock)
+        if available_qty and available_qty > 0:
+            stock_label = f"{available_qty} in stock"
         else:
             stock_label = "Out of stock"
 
@@ -1620,9 +2514,36 @@ def store_search_suggestions(request):
             'stock_label': stock_label,
         })
 
+    categories = (
+        _storefront_categories_queryset(
+            available_products,
+            owner=store_owner,
+            include_empty=show_empty_categories,
+        )
+        .filter(
+            Q(name__icontains=query)
+            | Q(group__name__icontains=query)
+            | Q(parent__name__icontains=query)
+        )
+        .order_by('sort_order', 'name')
+    )
+    category_list = list(categories[:category_limit])
+    category_results = []
+    for category in category_list:
+        category_path = _build_category_path(category)
+        parent_labels = [cat.name for cat in category_path[:-1]]
+        category_results.append({
+            'id': category.id,
+            'name': category.name,
+            'group': category.group.name if category.group else '',
+            'path': " / ".join(parent_labels),
+            'url': reverse('accounts:store_category_detail', args=[category.id]),
+        })
+
     return JsonResponse({
         'query': query,
         'results': results,
+        'categories': category_results,
         'has_more': has_more,
     })
 
@@ -1639,10 +2560,16 @@ def customer_dashboard(request):
     )
 
     if is_parts_store_business():
+        recent_credit_rows, recent_credit_total = _build_customer_credit_rows(
+            customer_account,
+            limit=3,
+        )
         context = {
             'customer_account': customer_account,
             'invoice_summary': invoice_summary,
             'recent_invoices': recent_invoices,
+            'recent_credit_rows': recent_credit_rows,
+            'recent_credit_total': recent_credit_total,
         }
         context.update(_customer_portal_layout_context(request, active_slug='shop'))
         return render(request, 'store/customer_dashboard_storefront.html', context)
@@ -1801,6 +2728,7 @@ def product_detail(request, pk):
         .prefetch_related('alternate_skus'),
         pk=pk,
     )
+    apply_stock_fields([product])
     attribute_values = list(
         product.attribute_values
         .select_related('attribute', 'option')
@@ -1825,7 +2753,9 @@ def product_detail(request, pk):
         label=product.name,
     )
 
-    query_string = request.GET.urlencode()
+    query_params = request.GET.copy()
+    query_params.pop('partial', None)
+    query_string = query_params.urlencode()
     if query_string:
         if category_path:
             back_url = f"{reverse('accounts:store_category_detail', args=[category_path[-1].id])}?{query_string}"
@@ -1861,23 +2791,38 @@ def product_detail(request, pk):
 
 @customer_login_required
 def add_to_cart(request, product_id):
-    """Add a product to the session cart."""
+    """Add a product to the customer's cart."""
     product = get_object_or_404(
-        _storefront_product_queryset(request).filter(quantity_in_stock__gt=0),
+        _storefront_product_queryset(request).filter(stock_quantity__gt=0),
         pk=product_id,
     )
-    cart = _get_cart(request)
     qty = int(request.POST.get('quantity', 1))
-    qty = max(1, min(qty, product.quantity_in_stock))
-    cart[str(product_id)] = cart.get(str(product_id), 0) + qty
-    request.session.modified = True
+    available_qty = getattr(product, "stock_quantity", product.quantity_in_stock)
+    qty = max(1, min(qty, available_qty))
+    customer_account = request.user.customer_portal
+    store_owner = get_storefront_owner(request)
+    _sync_session_cart_to_db(request, customer_account, store_owner)
+
+    cart_item = StorefrontCartItem.objects.filter(
+        customer=customer_account,
+        store_owner=store_owner,
+        product=product,
+    ).first()
+    if cart_item:
+        available_qty = getattr(product, "stock_quantity", product.quantity_in_stock)
+        new_qty = min(cart_item.quantity + qty, available_qty)
+        if new_qty != cart_item.quantity:
+            cart_item.quantity = new_qty
+            cart_item.save(update_fields=["quantity", "updated_at"])
+    else:
+        StorefrontCartItem.objects.create(
+            customer=customer_account,
+            store_owner=store_owner,
+            product=product,
+            quantity=qty,
+        )
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        cart_count = 0
-        for item_qty in cart.values():
-            try:
-                cart_count += int(item_qty)
-            except (TypeError, ValueError):
-                continue
+        cart_count = _get_cart_count(customer_account, store_owner)
         return JsonResponse(
             {
                 'status': 'success',
@@ -1891,122 +2836,184 @@ def add_to_cart(request, product_id):
 @customer_login_required
 def cart_view(request):
     """Display cart contents."""
-    cart = request.session.get('cart', {})
+    cart = _get_cart(request)
     customer_account = request.user.customer_portal
-    items = []
-    total = Decimal('0.00')
-    for product_id, qty in cart.items():
-        product = _storefront_product_queryset(request).filter(pk=product_id).first()
-        if not product:
-            continue
-        quantity = min(int(qty), product.quantity_in_stock)
-        unit_price = _resolve_storefront_price(product)
-        if unit_price is None:
-            continue
-        subtotal = unit_price * quantity
-        total += subtotal
-        items.append({'product': product, 'quantity': quantity, 'subtotal': subtotal, 'unit_price': unit_price})
+    store_owner = get_storefront_owner(request)
+    product_qs = _storefront_product_queryset(request, owner=store_owner)
+    paid_items, total, subtotal_before_discounts, discount_total, _, cart_quantities = _build_storefront_cart_items(
+        cart,
+        product_qs,
+    )
+    free_items = _resolve_storefront_free_items(store_owner, cart_quantities)
+    items = paid_items + free_items
     return render(
         request,
         'store/cart.html',
-        {'items': items, 'total': total, 'customer_account': customer_account},
+        {
+            'items': items,
+            'total': total,
+            'customer_account': customer_account,
+            'subtotal_before_discounts': subtotal_before_discounts,
+            'discount_total': discount_total,
+            'free_items': free_items,
+        },
     )
 
 
 @customer_login_required
 def update_cart(request, product_id):
     """Update quantity or remove an item from the cart."""
-    cart = _get_cart(request)
+    customer_account = request.user.customer_portal
+    store_owner = get_storefront_owner(request)
+    _sync_session_cart_to_db(request, customer_account, store_owner)
+    cart_item = StorefrontCartItem.objects.filter(
+        customer=customer_account,
+        store_owner=store_owner,
+        product_id=product_id,
+    ).first()
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'remove':
-            cart.pop(str(product_id), None)
+            if cart_item:
+                cart_item.delete()
         elif action in {'increment', 'decrement'}:
-            try:
-                current_qty = int(cart.get(str(product_id), 0))
-            except (TypeError, ValueError):
-                current_qty = 0
+            current_qty = cart_item.quantity if cart_item else 0
 
-            product = _storefront_product_queryset(request).filter(pk=product_id).first()
+            product = _storefront_product_queryset(request, owner=store_owner).filter(pk=product_id).first()
             if not product:
-                cart.pop(str(product_id), None)
+                if cart_item:
+                    cart_item.delete()
             else:
                 if action == 'increment':
                     new_qty = current_qty + 1
                 else:
                     new_qty = 1 if current_qty <= 1 else current_qty - 1
 
-                cart[str(product_id)] = min(new_qty, product.quantity_in_stock)
+                available_qty = getattr(product, "stock_quantity", product.quantity_in_stock)
+                new_qty = min(new_qty, available_qty)
+                if new_qty <= 0:
+                    if cart_item:
+                        cart_item.delete()
+                elif cart_item:
+                    if new_qty != cart_item.quantity:
+                        cart_item.quantity = new_qty
+                        cart_item.save(update_fields=["quantity", "updated_at"])
+                else:
+                    StorefrontCartItem.objects.create(
+                        customer=customer_account,
+                        store_owner=store_owner,
+                        product=product,
+                        quantity=new_qty,
+                    )
         else:
             try:
                 qty = int(request.POST.get('quantity', 1))
                 if qty > 0:
-                    product = _storefront_product_queryset(request).filter(pk=product_id).first()
+                    product = _storefront_product_queryset(request, owner=store_owner).filter(pk=product_id).first()
                     if product:
-                        cart[str(product_id)] = min(qty, product.quantity_in_stock)
+                        available_qty = getattr(product, "stock_quantity", product.quantity_in_stock)
+                        qty = min(qty, available_qty)
+                        if qty <= 0:
+                            if cart_item:
+                                cart_item.delete()
+                        elif cart_item:
+                            if qty != cart_item.quantity:
+                                cart_item.quantity = qty
+                                cart_item.save(update_fields=["quantity", "updated_at"])
+                        else:
+                            StorefrontCartItem.objects.create(
+                                customer=customer_account,
+                                store_owner=store_owner,
+                                product=product,
+                                quantity=qty,
+                            )
                     else:
-                        cart.pop(str(product_id), None)
+                        if cart_item:
+                            cart_item.delete()
                 else:
-                    cart.pop(str(product_id), None)
+                    if cart_item:
+                        cart_item.delete()
             except ValueError:
                 pass
-        request.session.modified = True
     return redirect('accounts:store_cart')
 
 
 @customer_login_required
 def checkout(request):
     """Checkout view that creates an invoice and sends it via email."""
-    cart = request.session.get('cart', {})
+    cart = _get_cart(request)
     if not cart:
         return redirect('accounts:public_home')
 
-    items = []
-    total = Decimal('0.00')
-    sellers = set()
-    for product_id, qty in cart.items():
-        product = _storefront_product_queryset(request).filter(pk=product_id).first()
-        if not product:
-            continue
-        quantity = min(int(qty), product.quantity_in_stock)
-        unit_price = _resolve_storefront_price(product)
-        if unit_price is None:
-            continue
-        subtotal = unit_price * quantity
-        total += subtotal
-        items.append({'product': product, 'quantity': quantity, 'subtotal': subtotal, 'unit_price': unit_price})
-        sellers.add(product.user)
+    store_owner = get_storefront_owner(request)
+    product_qs = _storefront_product_queryset(request, owner=store_owner)
+    paid_items, subtotal, subtotal_before_discounts, discount_total, sellers, cart_quantities = _build_storefront_cart_items(
+        cart,
+        product_qs,
+    )
+    free_items = _resolve_storefront_free_items(store_owner, cart_quantities)
+    items = paid_items + free_items
 
-    if not items:
+    if not paid_items:
         messages.error(
             request,
             'Your cart no longer contains products that are available for purchase.',
         )
-        request.session['cart'] = {}
+        _clear_cart(request.user.customer_portal, store_owner)
+        request.session.pop("cart", None)
         return redirect('accounts:store_cart')
 
     customer_info = _get_authenticated_customer_info(request.user)
-    missing_fields = {key: not bool(value) for key, value in customer_info.items()}
+    customer_info['cc_emails_raw'] = ", ".join(customer_info.get('cc_emails', []))
+    if request.method == 'POST':
+        customer_info = customer_info.copy()
+        customer_info['name'] = (request.POST.get('billing_name') or customer_info['name']).strip()
+        customer_info['email'] = (request.POST.get('billing_email') or customer_info['email']).strip()
+        customer_info['phone'] = (request.POST.get('billing_phone') or '').strip()
+        customer_info['address'] = (request.POST.get('billing_address') or '').strip()
+        cc_emails_raw = (request.POST.get('billing_cc_emails') or '').strip()
+        cc_emails = Customer.parse_cc_emails(cc_emails_raw)
+        customer_info['cc_emails'] = cc_emails
+        customer_info['cc_emails_raw'] = ", ".join(cc_emails)
+    missing_fields = {
+        'email': not bool(customer_info.get('email')),
+        'phone': not bool(customer_info.get('phone')),
+        'address': not bool(customer_info.get('address')),
+    }
     error = None
     customer_account = getattr(request.user, 'customer_portal', None)
 
-    if len(sellers) != 1:
-        return render(request, 'store/checkout.html', {
-            'items': items,
-            'total': total,
-            'customer_info': customer_info,
-            'missing_fields': missing_fields,
-            'error': 'Products from multiple sellers cannot be purchased together.',
-            'customer_account': customer_account,
-        })
-
-    seller = sellers.pop()
+    if not store_owner:
+        if len(sellers) != 1:
+            return render(request, 'store/checkout.html', {
+                'items': items,
+                'subtotal_before_discounts': subtotal_before_discounts,
+                'discount_total': discount_total,
+                'subtotal': subtotal,
+                'customer_info': customer_info,
+                'missing_fields': missing_fields,
+                'error': 'Products from multiple sellers cannot be purchased together.',
+                'customer_account': customer_account,
+                'free_items': free_items,
+            })
+        seller = sellers.pop()
+    else:
+        seller = store_owner
 
     if missing_fields['email']:
         error = 'Please update your account email before completing checkout.'
 
     if customer_account and not _customer_matches_store(customer_account, seller):
         error = 'This account is not associated with this business.'
+
+    tax_label = 'Tax'
+    tax_total = Decimal('0.00')
+    seller_profile = getattr(seller, 'profile', None)
+    if seller_profile:
+        tax_label = seller_profile.get_tax_name() if hasattr(seller_profile, 'get_tax_name') else 'Tax'
+        if seller_profile.province:
+            tax_total = calculate_tax_total(subtotal, seller_profile.province)
+    total_due = subtotal + tax_total
 
     if request.method == 'POST' and not error:
         if not customer_account:
@@ -2021,6 +3028,8 @@ def checkout(request):
                 updates['phone_number'] = customer_info['phone']
             if customer_account.email != customer_info['email']:
                 updates['email'] = customer_info['email']
+            if customer_account.cc_emails != customer_info.get('cc_emails_raw', ''):
+                updates['cc_emails'] = customer_info.get('cc_emails_raw', '')
             if updates:
                 for field, value in updates.items():
                     setattr(customer_account, field, value)
@@ -2035,13 +3044,24 @@ def checkout(request):
                 bill_to_address=customer_info['address'] or None,
             )
 
-            for item in items:
+            for item in paid_items:
                 IncomeRecord2.objects.create(
                     grouped_invoice=invoice,
                     product=item['product'],
                     job=item['product'].name,
                     qty=Decimal(item['quantity']),
                     rate=item['unit_price'],
+                )
+            for item in free_items:
+                bonus_label = item['product'].name
+                if item.get('package_title'):
+                    bonus_label = f"{bonus_label} (Free with {item['package_title']})"
+                IncomeRecord2.objects.create(
+                    grouped_invoice=invoice,
+                    product=item['product'],
+                    job=bonus_label,
+                    qty=Decimal(item['quantity']),
+                    rate=Decimal('0.00'),
                 )
 
             invoice.ensure_inventory_transactions()
@@ -2056,16 +3076,23 @@ def checkout(request):
             finally:
                 request.user = original_user
 
-            request.session['cart'] = {}
+            _clear_cart(request.user.customer_portal, store_owner)
+            request.session.pop("cart", None)
             return redirect('accounts:store_order_complete', invoice_number=invoice.invoice_number)
 
     return render(request, 'store/checkout.html', {
         'items': items,
-        'total': total,
+        'subtotal_before_discounts': subtotal_before_discounts,
+        'discount_total': discount_total,
+        'subtotal': subtotal,
+        'tax_label': tax_label,
+        'tax_total': tax_total,
+        'total_due': total_due,
         'customer_info': customer_info,
         'missing_fields': missing_fields,
         'error': error,
         'customer_account': customer_account,
+        'free_items': free_items,
     })
 
 
@@ -2073,9 +3100,10 @@ def checkout(request):
 def store_hub(request):
     """Summary hub for managing the public storefront."""
 
-    product_qs = Product.objects.filter(user=request.user)
-    group_qs = CategoryGroup.objects.filter(user=request.user)
-    category_qs = Category.objects.filter(user=request.user)
+    store_user_ids = get_product_user_ids(request.user)
+    product_qs = Product.objects.filter(user__in=store_user_ids)
+    group_qs = CategoryGroup.objects.filter(user__in=store_user_ids)
+    category_qs = Category.objects.filter(user__in=store_user_ids)
     profile = getattr(request.user, 'profile', None)
     price_form = StorefrontPriceVisibilityForm(instance=profile) if profile else None
 
@@ -2114,8 +3142,13 @@ def manage_storefront(request):
             'promotion_price': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'min': '0', 'step': '0.01'}),
         },
     )
-    queryset = Product.objects.filter(user=request.user).order_by('name')
+    store_user_ids = get_product_user_ids(request.user)
+    queryset = annotate_products_with_stock(
+        Product.objects.filter(user__in=store_user_ids).order_by('name'),
+        request.user,
+    )
     formset = ProductFormSet(request.POST or None, queryset=queryset)
+    apply_stock_fields([form.instance for form in formset.forms])
 
     for form in formset.forms:
         field = form.fields.get('is_published_to_store')
@@ -2136,9 +3169,9 @@ def manage_storefront(request):
         messages.error(request, 'Please review the errors highlighted below.')
 
     public_store_url = request.build_absolute_uri(reverse('accounts:store_product_list'))
-    product_qs = Product.objects.filter(user=request.user)
-    group_qs = CategoryGroup.objects.filter(user=request.user).order_by('sort_order', 'name')
-    category_qs = Category.objects.filter(user=request.user).select_related('group').order_by('sort_order', 'name')
+    product_qs = Product.objects.filter(user__in=store_user_ids)
+    group_qs = CategoryGroup.objects.filter(user__in=store_user_ids).order_by('sort_order', 'name')
+    category_qs = Category.objects.filter(user__in=store_user_ids).select_related('group').order_by('sort_order', 'name')
 
     context = {
         'formset': formset,
@@ -2159,7 +3192,7 @@ def manage_storefront(request):
 
 @login_required
 def manage_storefront_hero(request):
-    """Manage the simplified public homepage hero showcase."""
+    """Manage the storefront promotions section."""
 
     business_user = get_business_user(request.user) or request.user
     hero, _ = StorefrontHeroShowcase.objects.get_or_create(user=business_user)
@@ -2235,7 +3268,7 @@ def manage_storefront_hero(request):
                 hero_instance,
                 StorefrontHeroPackage.objects.filter(user=business_user),
             )
-            messages.success(request, 'Homepage hero showcase updated successfully.')
+            messages.success(request, 'Storefront promotions updated successfully.')
             return redirect('accounts:store_hero')
         messages.error(request, 'Please fix the errors below and try again.')
 
@@ -2371,11 +3404,11 @@ def customer_invoice_list(request):
                 Sum('payments__amount'), Value(Decimal('0.00')), output_field=DecimalField(max_digits=12, decimal_places=2)
             )
         )
-        .annotate(
-            balance_due_amount=ExpressionWrapper(
-                F('total_amount') - F('total_paid_amount'),
-                output_field=DecimalField(max_digits=12, decimal_places=2)
-            )
+    )
+    invoices_qs = _annotate_invoice_credit_totals(invoices_qs).annotate(
+        balance_due_amount=ExpressionWrapper(
+            F('total_amount') - F('total_paid_amount') - F('credit_total'),
+            output_field=DecimalField(max_digits=12, decimal_places=2)
         )
     )
 
@@ -2394,14 +3427,31 @@ def customer_invoice_list(request):
 
     params = request.GET.copy()
     params.pop('page', None)
+    credit_rows, credit_total = _build_customer_credit_rows(customer_account)
     context = {
         'invoices': page_obj,
         'page_obj': page_obj,
         'query_string': params.urlencode(),
         'search_query': search_query,
+        'credit_rows': credit_rows,
+        'credit_total': credit_total,
     }
     context.update(_customer_portal_layout_context(request, active_slug='invoices'))
     return render(request, 'store/customer_invoices.html', context)
+
+
+@customer_login_required
+def customer_returns(request):
+    """Display customer credits for returned parts."""
+
+    customer_account = request.user.customer_portal
+    credit_rows, total_credit = _build_customer_credit_rows(customer_account)
+    context = {
+        'credit_rows': credit_rows,
+        'total_credit': total_credit,
+    }
+    context.update(_customer_portal_layout_context(request, active_slug='returns'))
+    return render(request, 'store/customer_returns.html', context)
 
 
 @customer_login_required
@@ -2477,9 +3527,15 @@ def customer_invoice_statements(request):
                 tax_total=Coalesce(Sum('income_records__tax_collected'), Value(Decimal('0.00')), output_field=DecimalField()),
                 total_paid=Coalesce(Sum('payments__amount'), Value(Decimal('0.00')), output_field=DecimalField()),
             )
-            .annotate(
-                balance=ExpressionWrapper(F('total_amount') - F('total_paid'), output_field=DecimalField())
+        )
+        invoices_qs = invoices_qs.annotate(
+            balance=ExpressionWrapper(
+                F('total_amount') - F('total_paid'),
+                output_field=DecimalField(),
             )
+        )
+        invoices_qs = (
+            invoices_qs
             .filter(balance__lte=Decimal('0.01'))
             .select_related('user__profile')
             .prefetch_related('payments')
@@ -3204,26 +4260,25 @@ def customer_settlement_summary(request):
 
     total_invoiced = invoice_totals['total_invoiced'] or Decimal('0.00')
     total_paid = payment_totals['total_paid'] or Decimal('0.00')
-    outstanding_balance = total_invoiced - total_paid
+    credit_rows, total_credit = _build_customer_credit_rows(customer_account)
+    outstanding_balance = total_invoiced - total_paid - total_credit
 
     outstanding_qs = (
         customer_account.invoices
-        .select_related('user')
+        .select_related('user__profile')
         .prefetch_related('payments')
         .annotate(
             total_paid_amount=Coalesce(
                 Sum('payments__amount'), Value(Decimal('0.00')), output_field=DecimalField(max_digits=12, decimal_places=2)
             )
         )
-        .annotate(
-            balance_due_amount=ExpressionWrapper(
-                F('total_amount') - F('total_paid_amount'),
-                output_field=DecimalField(max_digits=12, decimal_places=2)
-            )
-        )
-        .filter(balance_due_amount__gt=Decimal('0.00'))
-        .order_by('-date', '-id')
     )
+    outstanding_qs = _annotate_invoice_credit_totals(outstanding_qs).annotate(
+        balance_due_amount=ExpressionWrapper(
+            F('total_amount') - F('total_paid_amount') - F('credit_total'),
+            output_field=DecimalField(max_digits=12, decimal_places=2)
+        )
+    ).filter(balance_due_amount__gt=Decimal('0.00')).order_by('-date', '-id')
     paginator = Paginator(outstanding_qs, 100)
     page_number = request.GET.get('page')
     outstanding_page = paginator.get_page(page_number)
@@ -3232,16 +4287,52 @@ def customer_settlement_summary(request):
     outstanding_query_string = outstanding_params.urlencode()
     recent_payments = Payment.objects.filter(invoice__customer=customer_account).order_by('-date', '-id')[:10]
 
+    profile = getattr(customer_account.user, 'profile', None)
+    contact_email = None
+    if profile:
+        contact_email = profile.interact_email or profile.company_email
+
+    has_outstanding = outstanding_page.paginator.count > 0
+    provider = getattr(profile, "payment_link_provider", PAYMENT_LINK_PROVIDER_STRIPE)
+    if provider not in {
+        PAYMENT_LINK_PROVIDER_STRIPE,
+        PAYMENT_LINK_PROVIDER_CLOVER,
+        PAYMENT_LINK_PROVIDER_NONE,
+    }:
+        provider = PAYMENT_LINK_PROVIDER_STRIPE
+
+    has_online_links = False
+    if has_outstanding:
+        if provider == PAYMENT_LINK_PROVIDER_CLOVER:
+            has_online_links = outstanding_qs.filter(
+                Q(clover_payment_link__isnull=False) & ~Q(clover_payment_link="")
+            ).exists()
+        elif provider == PAYMENT_LINK_PROVIDER_NONE:
+            has_online_links = False
+        else:
+            has_online_links = outstanding_qs.filter(
+                (Q(stripe_payment_link__isnull=False) & ~Q(stripe_payment_link="")) |
+                (Q(stripe_subscription_link__isnull=False) & ~Q(stripe_subscription_link=""))
+            ).exists()
+
+    show_action_column = has_online_links
+    show_interac_notice = has_outstanding and not has_online_links
+
     context = {
         'invoice_summary': {
             'total_invoiced': total_invoiced,
             'total_paid': total_paid,
+            'total_credit': total_credit,
             'outstanding_balance': outstanding_balance,
         },
+        'contact_email': contact_email,
+        'show_action_column': show_action_column,
+        'show_interac_notice': show_interac_notice,
         'outstanding_invoices': outstanding_page,
         'outstanding_page': outstanding_page,
         'outstanding_query_string': outstanding_query_string,
         'recent_payments': recent_payments,
+        'credit_rows': credit_rows,
     }
     context.update(_customer_portal_layout_context(request, active_slug='settlements'))
     return render(request, 'store/customer_settlements.html', context)

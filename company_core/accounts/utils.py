@@ -19,10 +19,30 @@ from dateutil.relativedelta import relativedelta
 from django.core.mail import send_mail
 from django.urls import reverse
 from decimal import Decimal
-from django.db.models import Sum, Value, F, Q
-from django.db.models.functions import Coalesce
+from django.db.models import (
+    Sum,
+    Value,
+    F,
+    Q,
+    OuterRef,
+    Subquery,
+    Case,
+    When,
+    DecimalField,
+    ExpressionWrapper,
+    IntegerField,
+)
+from django.db.models.functions import Coalesce, Cast
 from django.utils import timezone
-from .models import PendingInvoice, Product, UserStripeAccount, Profile, ConnectedBusinessGroup
+from .models import (
+    PendingInvoice,
+    Product,
+    ProductStock,
+    UserStripeAccount,
+    Profile,
+    ConnectedBusinessGroup,
+    CustomerCreditItem,
+)
 from .pdf_utils import apply_branding_defaults
 
 
@@ -181,7 +201,102 @@ def get_product_user_ids(user):
 
 
 def get_product_stock_user_ids(user):
-    return get_shared_user_ids(user, SHARE_SCOPE_PRODUCT_STOCK)
+    # Stock visibility follows the shared product list; stock values remain per-store.
+    return get_product_user_ids(user)
+
+
+def get_stock_owner(user):
+    """Return the user that owns stock records for this account."""
+    if not user:
+        return None
+
+    business_user = get_business_user(user) or user
+    group = get_connected_business_group(business_user)
+
+    profile_qs = Profile.objects.filter(
+        occupation="parts_store",
+        user__is_active=True,
+        storefront_is_visible=True,
+    )
+    if group:
+        member_ids = list(group.members.values_list("id", flat=True))
+        if member_ids:
+            profile_qs = profile_qs.filter(user_id__in=member_ids)
+        else:
+            profile_qs = Profile.objects.none()
+    else:
+        profile_qs = profile_qs.filter(Q(user=business_user) | Q(business_owner=business_user))
+    profile_user_ids = set(profile_qs.values_list("user_id", flat=True))
+    if len(profile_user_ids) > 1 and user.id in profile_user_ids:
+        return user
+
+    return business_user
+
+
+def get_store_user_ids(user):
+    """Return user IDs scoped to a single store location."""
+    if not user:
+        return []
+    store_owner = get_stock_owner(user) or user
+    user_ids = _get_team_user_ids(store_owner)
+    return user_ids or [store_owner.id]
+
+
+def annotate_products_with_stock(queryset, user):
+    """Attach store-specific stock levels to a Product queryset."""
+    stock_user = get_stock_owner(user)
+    if not stock_user:
+        return queryset.annotate(
+            stock_quantity=Value(0, output_field=IntegerField()),
+            stock_reorder=Value(0, output_field=IntegerField()),
+        )
+
+    stock_qs = ProductStock.objects.filter(product_id=OuterRef("pk"), user_id=stock_user.id)
+    return queryset.annotate(
+        stock_quantity=Coalesce(
+            Subquery(stock_qs.values("quantity_in_stock")[:1]),
+            Value(0),
+            output_field=IntegerField(),
+        ),
+        stock_reorder=Coalesce(
+            Subquery(stock_qs.values("reorder_level")[:1]),
+            Value(0),
+            output_field=IntegerField(),
+        ),
+    )
+
+
+def apply_stock_fields(products):
+    """Copy annotated stock values onto Product instances for template use."""
+    for product in products:
+        if hasattr(product, "stock_quantity"):
+            product.quantity_in_stock = product.stock_quantity
+        if hasattr(product, "stock_reorder"):
+            product.reorder_level = product.stock_reorder
+    return products
+
+
+def upsert_product_stock(product, user, *, quantity_in_stock=None, reorder_level=None):
+    """Create/update per-store stock values for a product."""
+    stock_user = get_stock_owner(user)
+    if not stock_user or not product:
+        return None
+
+    defaults = {}
+    if quantity_in_stock is not None:
+        defaults["quantity_in_stock"] = int(quantity_in_stock)
+    if reorder_level is not None:
+        defaults["reorder_level"] = int(reorder_level)
+
+    if not defaults:
+        return None
+
+    stock, _ = ProductStock.objects.update_or_create(
+        product=product,
+        user=stock_user,
+        defaults=defaults,
+    )
+    return stock
 
 
 def sync_workorder_assignments(workorder, mechanics, *, allow_submitted_removal=False):
@@ -324,6 +439,25 @@ def get_overdue_total_balance(user, term_days):
     treating term_days==0 as 'due on receipt' (i.e. <= today).
     """
     # 1) Base queryset: only unpaid invoices
+    amount_field = DecimalField(max_digits=10, decimal_places=2)
+    credit_amount_expr = Case(
+        When(customer_credit__tax_included=True, then=Cast('amount', amount_field)),
+        default=ExpressionWrapper(
+            Cast('amount', amount_field) + Cast('tax_paid', amount_field),
+            output_field=amount_field,
+        ),
+        output_field=amount_field,
+    )
+    credit_total = CustomerCreditItem.objects.filter(
+        source_invoice=OuterRef('grouped_invoice_id')
+    ).values('source_invoice').annotate(
+        total=Coalesce(
+            Sum(credit_amount_expr),
+            Value(Decimal('0.00')),
+            output_field=amount_field,
+        )
+    ).values('total')
+
     qs = PendingInvoice.objects.filter(
         is_paid=False,
         grouped_invoice__user=user
@@ -332,7 +466,15 @@ def get_overdue_total_balance(user, term_days):
             Sum('grouped_invoice__payments__amount'),
             Value(Decimal('0.00'))
         ),
-        balance_due=F('grouped_invoice__total_amount') - F('total_paid')
+        credit_total=Coalesce(
+            Subquery(credit_total, output_field=amount_field),
+            Value(Decimal('0.00')),
+            output_field=amount_field,
+        ),
+        balance_due=ExpressionWrapper(
+            F('grouped_invoice__total_amount') - F('total_paid') - F('credit_total'),
+            output_field=amount_field,
+        )
     )
 
     today = timezone.now().date()

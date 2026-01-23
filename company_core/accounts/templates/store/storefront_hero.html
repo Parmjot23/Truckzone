@@ -1,7 +1,7 @@
 {% extends 'customer_portal_base.html' %}
 {% load static %}
 
-{% block title %}Homepage Hero{% endblock %}
+{% block title %}Storefront Promotions{% endblock %}
 
 {% block extra_css %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1368,12 +1368,12 @@
 
   <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
     <div>
-      <h1 class="h3 mb-1">Homepage Hero</h1>
-      <p class="text-muted mb-0">Pick featured products and a gradient theme for the hero slideshow.</p>
+      <h1 class="h3 mb-1">Storefront Promotions</h1>
+      <p class="text-muted mb-0">Choose promo products and packages to feature in the storefront highlights.</p>
     </div>
     <a class="btn btn-outline-primary" href="{{ public_home_url }}" target="_blank" rel="noopener">
       <i class="fa-solid fa-up-right-from-square me-1"></i>
-      Preview Public Home
+      Preview Storefront
     </a>
   </div>
 
@@ -1408,80 +1408,6 @@
     </div>
     {% endif %}
 
-    <div class="hero-preview-toggle btn-group mb-3" role="group" aria-label="Preview selector">
-      <button type="button" class="btn btn-outline-light is-active" data-preview-target="hero" aria-pressed="true">
-        Hero Preview
-      </button>
-      <button type="button" class="btn btn-outline-light" data-preview-target="flyer" aria-pressed="false">
-        Flyer Preview
-      </button>
-    </div>
-
-    <div class="hero-preview-panel" data-preview-panel="hero" aria-hidden="false">
-      <div class="hero-preview-header">
-        <span>Live Preview</span>
-        <span class="text-white-50 small">Updates as you choose products.</span>
-      </div>
-      <div class="hero-preview-body hero-preview-shell" data-show-prices="{{ show_prices_hero|yesno:'true,false' }}">
-        <section class="hero-message-banner hero-message-banner--sunrise" data-preview-banner>
-          <div class="container">
-            <div class="hero-message-content">
-              <span class="hero-message-text" data-preview-banner-text>Announcement message</span>
-              <a class="hero-message-link" data-preview-banner-link href="#">
-                <span data-preview-banner-link-label>Learn more</span>
-                <i class="fas fa-arrow-right"></i>
-              </a>
-            </div>
-          </div>
-        </section>
-        <section class="hero-showcase hero-showcase--sky" data-hero-showcase data-hero-preview>
-          <div class="container">
-            <div class="hero-showcase-inner">
-              <div class="hero-showcase-content">
-                <span class="hero-showcase-eyebrow">Featured Products</span>
-                <h1 class="hero-showcase-title">{{ business_name|default:default_business_name }}</h1>
-                <p class="hero-showcase-subtitle">Hand-picked parts and supplies ready for fast pickup or delivery.</p>
-                <div class="hero-showcase-actions">
-                  <a href="{% url 'accounts:store_product_list' %}" class="btn-hero-primary">
-                    <i class="fas fa-store"></i>
-                    Shop All Parts
-                  </a>
-                  <a href="{% url 'accounts:public_contact' %}" class="btn-hero-secondary">
-                    <i class="fas fa-headset"></i>
-                    Contact Parts Desk
-                  </a>
-                  <a href="#flyer-preview" class="btn-hero-secondary" data-preview-flyer-button>
-                    <i class="fas fa-file-lines"></i>
-                    View Flyer
-                  </a>
-                </div>
-              </div>
-              <div class="hero-showcase-carousel" data-hero-carousel data-preview-carousel>
-                <div data-preview-slides></div>
-                <div class="hero-showcase-dots" data-preview-dots></div>
-                <div class="hero-preview-empty" data-preview-empty>Choose products below to see the preview.</div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>
-
-    <div class="hero-preview-panel is-hidden" id="flyer-preview" data-preview-panel="flyer" aria-hidden="true">
-      <div class="hero-preview-header">
-        <span>Flyer Preview</span>
-        <span class="text-white-50 small">Updates as you edit flyer details.</span>
-      </div>
-      <div class="hero-preview-body flyer-preview-shell"
-           data-flyer-preview
-           data-show-prices="{{ show_prices_hero|yesno:'true,false' }}"
-           data-store-url="{% url 'accounts:store_product_list' %}"
-           data-contact-url="{% url 'accounts:public_contact' %}"
-           data-business-name="{{ business_name|default:default_business_name }}">
-        {% include 'store/partials/_storefront_flyer_preview.html' %}
-      </div>
-    </div>
-
     <div class="card hero-form-card mb-4" id="banner-settings">
       <div class="card-header">Announcement Banner</div>
       <div class="card-body">
@@ -1498,21 +1424,14 @@
             <div class="text-danger small">{{ banner_form.message.errors }}</div>
             {% endif %}
           </div>
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="{{ banner_form.theme.id_for_label }}">Theme</label>
-            {{ banner_form.theme }}
-            {% if banner_form.theme.errors %}
-            <div class="text-danger small">{{ banner_form.theme.errors }}</div>
-            {% endif %}
-          </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-6">
             <label class="form-label" for="{{ banner_form.link_text.id_for_label }}">Link text</label>
             {{ banner_form.link_text }}
             {% if banner_form.link_text.errors %}
             <div class="text-danger small">{{ banner_form.link_text.errors }}</div>
             {% endif %}
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-6">
             <label class="form-label" for="{{ banner_form.link_url.id_for_label }}">Link URL</label>
             {{ banner_form.link_url }}
             {% if banner_form.link_url.errors %}
@@ -1525,16 +1444,10 @@
     </div>
 
     <div class="card hero-form-card mb-4">
-      <div class="card-header">Hero Setup</div>
+      <div class="card-header">Promo Products</div>
       <div class="card-body">
-        <div class="mb-4">
-          <label class="form-label" for="{{ hero_form.gradient_theme.id_for_label }}">Gradient theme</label>
-          {{ hero_form.gradient_theme }}
-          <div class="form-text">Pick a light gradient that fits your brand.</div>
-        </div>
-
-        <div class="hero-section-title">Products in slideshow</div>
-        <p class="text-muted small">Select the products you want to highlight. Empty rows are ignored.</p>
+        <div class="hero-section-title">Promo products</div>
+        <p class="text-muted small">Select the products you want to highlight in the promo grid. Empty rows are ignored.</p>
 
         {{ slide_formset.management_form }}
         {% if slide_formset.non_form_errors %}
@@ -1568,9 +1481,9 @@
     </div>
 
     <div class="card hero-form-card mb-4">
-      <div class="card-header">Hero Packages</div>
+      <div class="card-header">Package Deals</div>
       <div class="card-body">
-        <p class="text-muted small">Create bundle deals or free-item packages to feature in the hero slideshow.</p>
+        <p class="text-muted small">Create bundle deals or free-item packages to feature in the promo grid.</p>
         {{ package_formset.management_form }}
         {% if package_formset.non_form_errors %}
         <div class="alert alert-danger">{{ package_formset.non_form_errors }}</div>
@@ -1645,7 +1558,7 @@
       <div class="card-body">
         <div class="form-check form-switch mb-3">
           {{ flyer_form.is_active }}
-          <label class="form-check-label" for="{{ flyer_form.is_active.id_for_label }}">Show flyer button on homepage hero</label>
+          <label class="form-check-label" for="{{ flyer_form.is_active.id_for_label }}">Show flyer link on storefront</label>
         </div>
         <div class="row g-3">
           <div class="col-12 col-lg-5">
@@ -1663,14 +1576,14 @@
             {% endif %}
           </div>
         </div>
-        <div class="form-text mt-2">The flyer automatically uses the hero products and package deals above.</div>
+        <div class="form-text mt-2">The flyer automatically uses the promo products and package deals above.</div>
       </div>
     </div>
 
     <div class="hero-save-floating">
       <button type="submit" class="btn btn-primary btn-lg">
         <i class="fa-solid fa-save me-1"></i>
-        Save hero settings
+        Save promo settings
       </button>
     </div>
   </form>
@@ -1681,70 +1594,13 @@
 {{ hero_product_data|json_script:"hero-product-data" }}
 <script>
   (() => {
-    const preview = document.querySelector('[data-hero-preview]');
-    const slidesContainer = document.querySelector('[data-preview-slides]');
-    const dotsContainer = document.querySelector('[data-preview-dots]');
-    const emptyState = document.querySelector('[data-preview-empty]');
-    const themeSelect = document.getElementById('id_gradient_theme');
-
-    const bannerSettings = document.getElementById('banner-settings');
-    const bannerToggle = bannerSettings ? bannerSettings.querySelector('input[type="checkbox"]') : null;
-    const bannerMessage = bannerSettings ? bannerSettings.querySelector('input[name="message"]') : null;
-    const bannerLinkText = bannerSettings ? bannerSettings.querySelector('input[name="link_text"]') : null;
-    const bannerLinkUrl = bannerSettings ? bannerSettings.querySelector('input[name="link_url"]') : null;
-    const bannerTheme = bannerSettings ? bannerSettings.querySelector('select[name="theme"]') : null;
-    const bannerPreview = document.querySelector('[data-preview-banner]');
-    const bannerPreviewText = document.querySelector('[data-preview-banner-text]');
-    const bannerPreviewLink = document.querySelector('[data-preview-banner-link]');
-    const bannerPreviewLinkLabel = document.querySelector('[data-preview-banner-link-label]');
-
-    const flyerSettings = document.getElementById('flyer-settings');
-    const flyerToggle = flyerSettings ? flyerSettings.querySelector('input[type="checkbox"]') : null;
-    const flyerTitleInput = flyerSettings ? flyerSettings.querySelector('input[name="title"]') : null;
-    const flyerSubtitleInput = flyerSettings ? flyerSettings.querySelector('input[name="subtitle"]') : null;
-
-    const flyerPreview = document.querySelector('[data-flyer-preview]');
-    const flyerSheet = flyerPreview ? flyerPreview.querySelector('[data-flyer-sheet]') : null;
-    const flyerDisabledState = flyerPreview ? flyerPreview.querySelector('[data-flyer-disabled]') : null;
-    const flyerTitle = flyerPreview ? flyerPreview.querySelector('[data-flyer-title]') : null;
-    const flyerSubtitle = flyerPreview ? flyerPreview.querySelector('[data-flyer-subtitle]') : null;
-    const flyerBusiness = flyerPreview ? flyerPreview.querySelector('[data-flyer-business]') : null;
-    const flyerDate = flyerPreview ? flyerPreview.querySelector('[data-flyer-date]') : null;
-    const flyerDiscountSection = flyerPreview ? flyerPreview.querySelector('[data-flyer-discounts-section]') : null;
-    const flyerDiscountGrid = flyerPreview ? flyerPreview.querySelector('[data-flyer-discount-grid]') : null;
-    const flyerDiscountEmpty = flyerPreview ? flyerPreview.querySelector('[data-flyer-discount-empty]') : null;
-    const flyerPackageSection = flyerPreview ? flyerPreview.querySelector('[data-flyer-packages-section]') : null;
-    const flyerPackageGrid = flyerPreview ? flyerPreview.querySelector('[data-flyer-package-grid]') : null;
-    const flyerPackageEmpty = flyerPreview ? flyerPreview.querySelector('[data-flyer-package-empty]') : null;
-    const flyerFooterBusiness = flyerPreview ? flyerPreview.querySelector('[data-flyer-footer-business]') : null;
-    const flyerFooterStore = flyerPreview ? flyerPreview.querySelector('[data-flyer-footer-store]') : null;
-    const flyerFooterContact = flyerPreview ? flyerPreview.querySelector('[data-flyer-footer-contact]') : null;
-    const flyerFeatureStrip = flyerPreview ? flyerPreview.querySelector('[data-flyer-feature-strip]') : null;
-    const flyerButton = document.querySelector('[data-preview-flyer-button]');
-    const previewPanels = Array.from(document.querySelectorAll('[data-preview-panel]'));
-    const previewToggleButtons = Array.from(document.querySelectorAll('[data-preview-target]'));
-
-    const packageRows = Array.from(document.querySelectorAll('[data-hero-package-row]'));
-    const slideRows = Array.from(document.querySelectorAll('[data-hero-slide-row]'));
-    const productSelects = Array.from(document.querySelectorAll('[data-hero-product]'));
+    const productDataTag = document.getElementById('hero-product-data');
     const heroProductSelects = Array.from(document.querySelectorAll(
       '[data-hero-product], [data-hero-package-primary], [data-hero-package-secondary], [data-hero-package-free]'
     ));
-    const productDataTag = document.getElementById('hero-product-data');
 
-    if (!preview || !slidesContainer || !productDataTag) {
+    if (!productDataTag || !heroProductSelects.length) {
       return;
-    }
-
-    let showPrices = false;
-    const showPricesContainer = preview.closest('[data-show-prices]');
-    if (showPricesContainer) {
-      showPrices = showPricesContainer.dataset.showPrices === 'true';
-    }
-
-    let flyerShowPrices = showPrices;
-    if (flyerPreview && flyerPreview.dataset.showPrices) {
-      flyerShowPrices = flyerPreview.dataset.showPrices === 'true';
     }
 
     let productData = [];
@@ -1755,9 +1611,6 @@
     }
 
     const productMap = new Map(productData.map((item) => [String(item.id), item]));
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let carouselTimer = null;
-    let carouselIndex = 0;
 
     const closeAllHeroDropdowns = (exceptMenu = null) => {
       document.querySelectorAll('.hero-product-dropdown-menu.show').forEach((menu) => {
@@ -1998,803 +1851,15 @@
       select.dataset.heroDropdownInitialized = 'true';
     };
 
-    const initHeroProductDropdowns = () => {
-      heroProductSelects.forEach((select) => initHeroProductDropdown(select));
-    };
-
-    initHeroProductDropdowns();
+    heroProductSelects.forEach((select) => initHeroProductDropdown(select));
 
     document.addEventListener('click', (event) => {
       if (!event.target.closest('.hero-product-dropdown')) {
         closeAllHeroDropdowns();
       }
     });
-
-    const themeKeys = ['sky', 'sunrise', 'mint', 'sand', 'ice'];
-
-    const setPreviewPanel = (target) => {
-      if (!previewPanels.length) {
-        return;
-      }
-      previewPanels.forEach((panel) => {
-        const isTarget = panel.dataset.previewPanel === target;
-        panel.classList.toggle('is-hidden', !isTarget);
-        panel.setAttribute('aria-hidden', isTarget ? 'false' : 'true');
-      });
-      previewToggleButtons.forEach((button) => {
-        const isActive = button.dataset.previewTarget === target;
-        button.classList.toggle('is-active', isActive);
-        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-      });
-    };
-
-    const updateTheme = () => {
-      if (!preview) {
-        return;
-      }
-      const themeValue = themeSelect ? themeSelect.value : 'sky';
-      themeKeys.forEach((theme) => {
-        preview.classList.remove(`hero-showcase--${theme}`);
-      });
-      preview.classList.add(`hero-showcase--${themeValue || 'sky'}`);
-    };
-
-    const updateBanner = () => {
-      if (!bannerPreview || !bannerToggle) {
-        return;
-      }
-
-      const messageValue = bannerMessage ? bannerMessage.value.trim() : '';
-      const isActive = bannerToggle.checked && !!messageValue;
-      if (!isActive) {
-        bannerPreview.style.display = 'none';
-        return;
-      }
-
-      bannerPreview.style.display = 'block';
-      const themeValue = bannerTheme ? bannerTheme.value : 'sunrise';
-      themeKeys.forEach((theme) => {
-        bannerPreview.classList.remove(`hero-message-banner--${theme}`);
-      });
-      bannerPreview.classList.add(`hero-message-banner--${themeValue || 'sunrise'}`);
-
-      if (bannerPreviewText) {
-        bannerPreviewText.textContent = messageValue;
-      }
-
-      const linkTextValue = bannerLinkText ? bannerLinkText.value.trim() : '';
-      const linkUrlValue = bannerLinkUrl ? bannerLinkUrl.value.trim() : '';
-      const showLink = !!(linkTextValue && linkUrlValue);
-
-      if (bannerPreviewLink) {
-        bannerPreviewLink.style.display = showLink ? 'inline-flex' : 'none';
-        if (showLink) {
-          bannerPreviewLink.setAttribute('href', linkUrlValue);
-        }
-      }
-      if (bannerPreviewLinkLabel) {
-        bannerPreviewLinkLabel.textContent = linkTextValue || 'Learn more';
-      }
-    };
-
-    const resolveDiscountLabel = (discountValue, product) => {
-      const cleaned = (discountValue || '').toString().trim();
-      if (cleaned) {
-        return `Save ${cleaned}%`;
-      }
-      if (product && product.has_promotion) {
-        if (product.promotion_discount_percent) {
-          return `Save ${product.promotion_discount_percent}%`;
-        }
-        return 'Promo';
-      }
-      return '';
-    };
-
-    const buildHeroPrice = (product) => {
-      if (!showPrices) {
-        return null;
-      }
-      const priceEl = document.createElement('div');
-      priceEl.className = 'hero-showcase-price';
-
-      if (product.has_promotion && product.promotion_price) {
-        if (product.sale_price) {
-          const saleSpan = document.createElement('span');
-          saleSpan.className = 'text-decoration-line-through text-muted';
-          saleSpan.textContent = `$${product.sale_price}`;
-          const promoSpan = document.createElement('span');
-          promoSpan.className = 'ms-2';
-          promoSpan.textContent = `$${product.promotion_price}`;
-          priceEl.appendChild(saleSpan);
-          priceEl.appendChild(promoSpan);
-        } else {
-          priceEl.textContent = `$${product.promotion_price}`;
-        }
-      } else if (product.sale_price) {
-        priceEl.textContent = `$${product.sale_price}`;
-      } else {
-        priceEl.textContent = 'Call for price';
-      }
-
-      return priceEl;
-    };
-
-    const splitFlyerPrice = (value) => {
-      const safeValue = value == null ? '' : String(value);
-      const [dollarsRaw, centsRaw] = safeValue.split('.');
-      const dollars = dollarsRaw || '0';
-      const cents = (centsRaw || '00').padEnd(2, '0').slice(0, 2);
-      return { dollars, cents };
-    };
-
-    const buildFlyerPriceMain = (value) => {
-      const main = document.createElement('span');
-      main.className = 'flyer-price-main';
-      const { dollars, cents } = splitFlyerPrice(value);
-
-      const currency = document.createElement('span');
-      currency.className = 'flyer-price-currency';
-      currency.textContent = '$';
-      main.appendChild(currency);
-
-      const dollarsSpan = document.createElement('span');
-      dollarsSpan.className = 'flyer-price-dollars';
-      dollarsSpan.textContent = dollars;
-      main.appendChild(dollarsSpan);
-
-      const centsSpan = document.createElement('span');
-      centsSpan.className = 'flyer-price-cents';
-      centsSpan.textContent = cents;
-      main.appendChild(centsSpan);
-
-      return main;
-    };
-
-    const buildFlyerPrice = (product) => {
-      if (!flyerShowPrices) {
-        return null;
-      }
-      const priceEl = document.createElement('div');
-      priceEl.className = 'flyer-card-price';
-
-      if (product.has_promotion && product.promotion_price) {
-        if (product.sale_price) {
-          const saleSpan = document.createElement('span');
-          saleSpan.className = 'flyer-price-original';
-          saleSpan.textContent = `$${product.sale_price}`;
-          priceEl.appendChild(saleSpan);
-        }
-        priceEl.appendChild(buildFlyerPriceMain(product.promotion_price));
-      } else if (product.sale_price) {
-        priceEl.appendChild(buildFlyerPriceMain(product.sale_price));
-      } else {
-        const callSpan = document.createElement('span');
-        callSpan.className = 'flyer-price-call';
-        callSpan.textContent = 'Call for price';
-        priceEl.appendChild(callSpan);
-      }
-
-      return priceEl;
-    };
-
-    const buildHeroProductSlide = (item) => {
-      const product = item.product;
-      const slide = document.createElement('article');
-      slide.className = 'hero-showcase-slide';
-      slide.setAttribute('data-hero-slide', '');
-
-      const card = document.createElement('div');
-      card.className = 'hero-showcase-card';
-
-      const media = document.createElement('div');
-      media.className = 'hero-showcase-media';
-
-      if (product.image) {
-        const img = document.createElement('img');
-        img.src = product.image;
-        img.alt = product.name || 'Product image';
-        img.loading = 'lazy';
-        media.appendChild(img);
-      } else {
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-box';
-        media.appendChild(icon);
-      }
-
-      const content = document.createElement('div');
-      const discountLabel = resolveDiscountLabel(item.discountPercent, product);
-      if (discountLabel) {
-        const badge = document.createElement('div');
-        badge.className = 'hero-showcase-discount';
-        badge.textContent = discountLabel;
-        content.appendChild(badge);
-      }
-
-      const name = document.createElement('div');
-      name.className = 'hero-showcase-name';
-      name.textContent = product.name || 'Product name';
-      content.appendChild(name);
-
-      const priceEl = buildHeroPrice(product);
-      if (priceEl) {
-        content.appendChild(priceEl);
-      }
-
-      const link = document.createElement('a');
-      link.className = 'hero-showcase-link';
-      link.href = product.detail_url || '#';
-      link.textContent = 'View product';
-      content.appendChild(link);
-
-      card.appendChild(media);
-      card.appendChild(content);
-      slide.appendChild(card);
-
-      return slide;
-    };
-
-    const buildHeroPackageSlide = (item, index) => {
-      const slide = document.createElement('article');
-      slide.className = 'hero-showcase-slide';
-      slide.setAttribute('data-hero-slide', '');
-
-      const card = document.createElement('div');
-      card.className = 'hero-showcase-card hero-showcase-card--package';
-
-      const header = document.createElement('div');
-      header.className = 'hero-showcase-package-header';
-
-      const title = document.createElement('h3');
-      title.className = 'hero-showcase-package-title';
-      title.textContent = item.title || `Package ${index + 1}`;
-      header.appendChild(title);
-
-      const badge = document.createElement('span');
-      badge.className = 'hero-showcase-package-badge';
-      const discountValue = (item.discountPercent || '').toString().trim();
-      let badgeLabel = 'Bundle deal';
-      if (item.freeProduct && discountValue) {
-        badgeLabel = `Free ${item.freeProduct.name} + ${discountValue}% off`;
-      } else if (item.freeProduct) {
-        badgeLabel = `Free ${item.freeProduct.name}`;
-      } else if (discountValue) {
-        badgeLabel = `Save ${discountValue}%`;
-      }
-      badge.textContent = badgeLabel;
-      header.appendChild(badge);
-      card.appendChild(header);
-
-      const subtitle = document.createElement('p');
-      subtitle.className = 'hero-showcase-package-subtitle';
-      subtitle.textContent = item.subtitle || 'Bundle savings for fleet-ready orders.';
-      card.appendChild(subtitle);
-
-      const productsWrap = document.createElement('div');
-      productsWrap.className = 'hero-showcase-package-products';
-
-      const addPackageItem = (product, fallbackIcon) => {
-        if (!product) {
-          return;
-        }
-        const itemEl = document.createElement('div');
-        itemEl.className = 'hero-showcase-package-item';
-
-        if (product.image) {
-          const img = document.createElement('img');
-          img.src = product.image;
-          img.alt = product.name || 'Product image';
-          img.loading = 'lazy';
-          itemEl.appendChild(img);
-        } else {
-          const icon = document.createElement('i');
-          icon.className = fallbackIcon;
-          itemEl.appendChild(icon);
-        }
-
-        const label = document.createElement('span');
-        label.textContent = product.name || 'Product';
-        itemEl.appendChild(label);
-        productsWrap.appendChild(itemEl);
-      };
-
-      addPackageItem(item.primaryProduct, 'fas fa-box');
-      addPackageItem(item.secondaryProduct, 'fas fa-box');
-      addPackageItem(item.freeProduct, 'fas fa-gift');
-
-      card.appendChild(productsWrap);
-
-      const link = document.createElement('a');
-      link.className = 'hero-showcase-link';
-      link.href = item.primaryProduct && item.primaryProduct.detail_url ? item.primaryProduct.detail_url : '#';
-      link.textContent = 'View deal';
-      card.appendChild(link);
-
-      slide.appendChild(card);
-      return slide;
-    };
-
-    const buildHeroCarousel = (slides, packages) => {
-      if (!slidesContainer || !dotsContainer) {
-        return;
-      }
-
-      slidesContainer.innerHTML = '';
-      dotsContainer.innerHTML = '';
-      dotsContainer.style.display = 'flex';
-
-      if (carouselTimer) {
-        window.clearInterval(carouselTimer);
-        carouselTimer = null;
-      }
-      carouselIndex = 0;
-
-      const cards = [];
-      slides.forEach((item) => cards.push({ kind: 'product', data: item }));
-      packages.forEach((item) => cards.push({ kind: 'package', data: item }));
-
-      if (!cards.length) {
-        if (emptyState) {
-          emptyState.style.display = 'block';
-        }
-        dotsContainer.style.display = 'none';
-        return;
-      }
-
-      if (emptyState) {
-        emptyState.style.display = 'none';
-      }
-
-      const slideEls = [];
-      const dotEls = [];
-
-      const setActive = (index) => {
-        slideEls.forEach((slideEl, slideIndex) => {
-          slideEl.classList.toggle('is-active', slideIndex === index);
-        });
-        dotEls.forEach((dotEl, dotIndex) => {
-          dotEl.classList.toggle('is-active', dotIndex === index);
-          dotEl.setAttribute('aria-pressed', dotIndex === index ? 'true' : 'false');
-        });
-        carouselIndex = index;
-      };
-
-      const stopCarousel = () => {
-        if (carouselTimer) {
-          window.clearInterval(carouselTimer);
-          carouselTimer = null;
-        }
-      };
-
-      const startCarousel = () => {
-        if (prefersReducedMotion || slideEls.length <= 1) {
-          return;
-        }
-        carouselTimer = window.setInterval(() => {
-          const nextIndex = (carouselIndex + 1) % slideEls.length;
-          setActive(nextIndex);
-        }, 5000);
-      };
-
-      cards.forEach((card, index) => {
-        const slideEl = card.kind === 'product'
-          ? buildHeroProductSlide(card.data)
-          : buildHeroPackageSlide(card.data, index);
-
-        if (index === 0) {
-          slideEl.classList.add('is-active');
-        }
-        slidesContainer.appendChild(slideEl);
-        slideEls.push(slideEl);
-
-        const dot = document.createElement('button');
-        dot.type = 'button';
-        dot.className = `hero-showcase-dot${index === 0 ? ' is-active' : ''}`;
-        dot.dataset.heroDot = index;
-        dot.setAttribute('aria-label', `Go to slide ${index + 1}`);
-        dot.addEventListener('click', () => {
-          stopCarousel();
-          setActive(index);
-          startCarousel();
-        });
-        dotsContainer.appendChild(dot);
-        dotEls.push(dot);
-      });
-
-      if (cards.length <= 1) {
-        dotsContainer.style.display = 'none';
-        return;
-      }
-
-      const carousel = document.querySelector('[data-preview-carousel]');
-      if (carousel) {
-        carousel.onmouseenter = stopCarousel;
-        carousel.onmouseleave = startCarousel;
-      }
-
-      setActive(0);
-      startCarousel();
-    };
-
-    const formatPreviewDate = (date) => (
-      date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-    );
-
-    const buildFlyerProductCard = (item) => {
-      const product = item.product;
-      const card = document.createElement('div');
-      card.className = 'flyer-card';
-
-      const body = document.createElement('div');
-      body.className = 'flyer-card-body';
-
-      const brandLabel = (product.brand || product.source_name || '').trim();
-      if (brandLabel) {
-        const brand = document.createElement('div');
-        brand.className = 'flyer-card-brand';
-        brand.textContent = brandLabel;
-        body.appendChild(brand);
-      }
-
-      const title = document.createElement('div');
-      title.className = 'flyer-card-title';
-      title.textContent = product.name || 'Product';
-      body.appendChild(title);
-
-      const partLabel = (product.sku || product.source_product_id || '').trim();
-      if (partLabel) {
-        const meta = document.createElement('div');
-        meta.className = 'flyer-card-meta';
-        meta.textContent = `Part # ${partLabel}`;
-        body.appendChild(meta);
-      }
-
-      const priceEl = buildFlyerPrice(product);
-      if (priceEl) {
-        body.appendChild(priceEl);
-      }
-
-      const media = document.createElement('div');
-      media.className = 'flyer-card-media';
-      if (product.image) {
-        const img = document.createElement('img');
-        img.src = product.image;
-        img.alt = product.name || 'Product image';
-        img.loading = 'lazy';
-        media.appendChild(img);
-      } else {
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-box';
-        media.appendChild(icon);
-      }
-
-      card.appendChild(body);
-      card.appendChild(media);
-
-      const discountLabel = resolveDiscountLabel(item.discountPercent, product);
-      if (discountLabel) {
-        const badge = document.createElement('div');
-        badge.className = 'flyer-card-badge';
-        badge.textContent = discountLabel;
-        card.appendChild(badge);
-      }
-
-      return card;
-    };
-
-    const buildFlyerPackageCard = (item) => {
-      const card = document.createElement('div');
-      card.className = 'flyer-package-card';
-
-      const title = document.createElement('div');
-      title.className = 'flyer-package-title';
-      title.textContent = item.title || 'Package deal';
-      card.appendChild(title);
-
-      const subtitle = document.createElement('div');
-      subtitle.className = 'flyer-package-subtitle';
-      subtitle.textContent = item.subtitle || 'Bundle savings for fleet-ready orders.';
-      card.appendChild(subtitle);
-
-      const itemsWrap = document.createElement('div');
-      itemsWrap.className = 'flyer-package-items';
-
-      const addItem = (product, fallbackIcon) => {
-        if (!product) {
-          return;
-        }
-        const itemEl = document.createElement('div');
-        itemEl.className = 'flyer-package-item';
-
-        if (product.image) {
-          const img = document.createElement('img');
-          img.src = product.image;
-          img.alt = product.name || 'Product image';
-          img.loading = 'lazy';
-          itemEl.appendChild(img);
-        } else {
-          const icon = document.createElement('i');
-          icon.className = fallbackIcon;
-          itemEl.appendChild(icon);
-        }
-
-        const label = document.createElement('span');
-        label.textContent = product.name || 'Product';
-        itemEl.appendChild(label);
-        itemsWrap.appendChild(itemEl);
-      };
-
-      addItem(item.primaryProduct, 'fas fa-box');
-      addItem(item.secondaryProduct, 'fas fa-box');
-      addItem(item.freeProduct, 'fas fa-gift');
-
-      card.appendChild(itemsWrap);
-
-      const badge = document.createElement('div');
-      badge.className = 'flyer-package-badge';
-      const discountValue = (item.discountPercent || '').toString().trim();
-      let badgeLabel = 'Bundle deal';
-      if (item.freeProduct && discountValue) {
-        badgeLabel = `Free ${item.freeProduct.name} + ${discountValue}% off`;
-      } else if (item.freeProduct) {
-        badgeLabel = `Free ${item.freeProduct.name}`;
-      } else if (discountValue) {
-        badgeLabel = `Save ${discountValue}%`;
-      }
-      badge.textContent = badgeLabel;
-      card.appendChild(badge);
-
-      return card;
-    };
-
-    const updateFlyerPreview = (slides, packages) => {
-      if (!flyerPreview) {
-        return;
-      }
-
-      const isActive = flyerToggle ? flyerToggle.checked : false;
-
-      if (!isActive) {
-        if (flyerSheet) {
-          flyerSheet.style.display = 'none';
-        }
-        if (flyerDisabledState) {
-          flyerDisabledState.style.display = 'block';
-        }
-        if (flyerFeatureStrip) {
-          flyerFeatureStrip.style.display = 'none';
-        }
-        if (flyerButton) {
-          flyerButton.style.display = 'none';
-        }
-        return;
-      }
-
-      if (flyerDisabledState) {
-        flyerDisabledState.style.display = 'none';
-      }
-      if (flyerSheet) {
-        flyerSheet.style.display = 'block';
-      }
-      if (flyerFeatureStrip) {
-        flyerFeatureStrip.style.display = 'flex';
-      }
-
-      const titleValue = flyerTitleInput ? flyerTitleInput.value.trim() : '';
-      const subtitleValue = flyerSubtitleInput ? flyerSubtitleInput.value.trim() : '';
-      const businessName = flyerPreview.dataset.businessName || 'Business Name';
-      const storeUrl = flyerPreview.dataset.storeUrl || '';
-      const contactUrl = flyerPreview.dataset.contactUrl || '';
-
-      if (flyerTitle) {
-        flyerTitle.textContent = titleValue || 'Package Deals & Discounts';
-      }
-      if (flyerSubtitle) {
-        flyerSubtitle.textContent = subtitleValue || 'Featured hero products and bundle savings.';
-      }
-      if (flyerBusiness) {
-        flyerBusiness.textContent = businessName;
-      }
-      if (flyerFooterBusiness) {
-        flyerFooterBusiness.textContent = businessName;
-      }
-      if (flyerFooterStore) {
-        flyerFooterStore.textContent = storeUrl;
-      }
-      if (flyerFooterContact) {
-        flyerFooterContact.textContent = contactUrl;
-      }
-      if (flyerDate) {
-        flyerDate.textContent = `Updated ${formatPreviewDate(new Date())}`;
-      }
-
-      if (flyerDiscountGrid) {
-        flyerDiscountGrid.innerHTML = '';
-      }
-      if (slides.length) {
-        slides.forEach((item) => {
-          if (flyerDiscountGrid) {
-            flyerDiscountGrid.appendChild(buildFlyerProductCard(item));
-          }
-        });
-      }
-      if (flyerDiscountSection) {
-        flyerDiscountSection.style.display = 'block';
-      }
-      if (flyerDiscountEmpty) {
-        flyerDiscountEmpty.style.display = slides.length ? 'none' : 'block';
-      }
-
-      if (flyerPackageGrid) {
-        flyerPackageGrid.innerHTML = '';
-      }
-      if (packages.length) {
-        packages.forEach((item) => {
-          if (flyerPackageGrid) {
-            flyerPackageGrid.appendChild(buildFlyerPackageCard(item));
-          }
-        });
-      }
-      if (flyerPackageSection) {
-        flyerPackageSection.style.display = 'block';
-      }
-      if (flyerPackageEmpty) {
-        flyerPackageEmpty.style.display = packages.length ? 'none' : 'block';
-      }
-
-      if (flyerButton) {
-        flyerButton.style.display = (slides.length || packages.length) ? 'inline-flex' : 'none';
-      }
-    };
-
-    const getSelectedSlides = () => {
-      const selections = [];
-      slideRows.forEach((row) => {
-        const select = row.querySelector('[data-hero-product]');
-        const deleteInput = row.querySelector('input[name$="-DELETE"]');
-        const discountInput = row.querySelector('[data-hero-discount]');
-
-        if (deleteInput && deleteInput.checked) {
-          return;
-        }
-
-        const productId = select ? select.value : '';
-        if (!productId) {
-          return;
-        }
-
-        const product = productMap.get(String(productId));
-        if (!product) {
-          return;
-        }
-
-        const discountValue = discountInput ? discountInput.value.trim() : '';
-        selections.push({ product, discountPercent: discountValue });
-      });
-      return selections;
-    };
-
-    const getSelectedPackages = () => {
-      const selections = [];
-      packageRows.forEach((row) => {
-        const titleInput = row.querySelector('[data-hero-package-title]');
-        const subtitleInput = row.querySelector('[data-hero-package-subtitle]');
-        const primarySelect = row.querySelector('[data-hero-package-primary]');
-        const secondarySelect = row.querySelector('[data-hero-package-secondary]');
-        const freeSelect = row.querySelector('[data-hero-package-free]');
-        const discountInput = row.querySelector('[data-hero-package-discount]');
-        const deleteInput = row.querySelector('input[name$="-DELETE"]');
-        const activeInput = row.querySelector('input[name$="-is_active"]');
-
-        if (deleteInput && deleteInput.checked) {
-          return;
-        }
-        if (activeInput && !activeInput.checked) {
-          return;
-        }
-
-        const title = titleInput ? titleInput.value.trim() : '';
-        const subtitle = subtitleInput ? subtitleInput.value.trim() : '';
-        const primaryId = primarySelect ? primarySelect.value : '';
-        const secondaryId = secondarySelect ? secondarySelect.value : '';
-        const freeId = freeSelect ? freeSelect.value : '';
-        const discountValue = discountInput ? discountInput.value.trim() : '';
-
-        if (!title && !subtitle && !primaryId && !secondaryId && !freeId && !discountValue) {
-          return;
-        }
-
-        selections.push({
-          title,
-          subtitle,
-          primaryProduct: primaryId ? productMap.get(String(primaryId)) : null,
-          secondaryProduct: secondaryId ? productMap.get(String(secondaryId)) : null,
-          freeProduct: freeId ? productMap.get(String(freeId)) : null,
-          discountPercent: discountValue,
-        });
-      });
-
-      return selections;
-    };
-
-    const updatePreview = () => {
-      updateTheme();
-      updateBanner();
-      const slides = getSelectedSlides();
-      const packages = getSelectedPackages();
-      buildHeroCarousel(slides, packages);
-      updateFlyerPreview(slides, packages);
-    };
-
-    previewToggleButtons.forEach((button) => {
-      button.addEventListener('click', (event) => {
-        event.preventDefault();
-        setPreviewPanel(button.dataset.previewTarget);
-      });
-    });
-
-    if (flyerButton) {
-      flyerButton.addEventListener('click', (event) => {
-        event.preventDefault();
-        setPreviewPanel('flyer');
-      });
-    }
-
-    const defaultPreviewPanel = window.location.hash === '#flyer-preview' ? 'flyer' : 'hero';
-    setPreviewPanel(defaultPreviewPanel);
-
-    if (themeSelect) {
-      themeSelect.addEventListener('change', updatePreview);
-    }
-
-    if (bannerToggle) {
-      bannerToggle.addEventListener('change', updateBanner);
-    }
-
-    if (bannerTheme) {
-      bannerTheme.addEventListener('change', updateBanner);
-    }
-
-    [bannerMessage, bannerLinkText, bannerLinkUrl].forEach((field) => {
-      if (field) {
-        field.addEventListener('input', updateBanner);
-      }
-    });
-
-    if (flyerToggle) {
-      flyerToggle.addEventListener('change', updatePreview);
-    }
-    [flyerTitleInput, flyerSubtitleInput].forEach((field) => {
-      if (field) {
-        field.addEventListener('input', updatePreview);
-      }
-    });
-
-    packageRows.forEach((row) => {
-      row.querySelectorAll('input, select').forEach((field) => {
-        const eventType = field.type === 'checkbox' ? 'change' : 'input';
-        field.addEventListener(eventType, updatePreview);
-        if (field.tagName === 'SELECT') {
-          field.addEventListener('change', updatePreview);
-        }
-      });
-    });
-
-    productSelects.forEach((select) => {
-      select.addEventListener('change', updatePreview);
-    });
-    slideRows.forEach((row) => {
-      const discountInput = row.querySelector('[data-hero-discount]');
-      if (discountInput) {
-        discountInput.addEventListener('input', updatePreview);
-      }
-      const deleteInput = row.querySelector('input[name$="-DELETE"]');
-      if (deleteInput) {
-        deleteInput.addEventListener('change', updatePreview);
-      }
-    });
-
-    updatePreview();
   })();
 </script>
+
+
 {% endblock %}

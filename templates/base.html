@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap"
         rel="stylesheet">
 
     <!-- Bootstrap 5.3 -->
@@ -33,17 +33,17 @@
     <style>
         /* === CSS VARIABLES === */
         :root {
-            --nav-navy: #1A1A1A;
-            --nav-navy-light: #2D2D2D;
-            --nav-orange: #0047AB;
-            --nav-orange-hover: #003380;
+            --nav-navy: var(--brand-ink);
+            --nav-navy-light: var(--brand-navy-light);
+            --nav-orange: var(--brand-primary);
+            --nav-orange-hover: var(--brand-primary-strong);
             --nav-white: #FFFFFF;
-            --nav-gray-100: #F1F5F9;
-            --nav-gray-200: #E2E8F0;
-            --nav-gray-400: #94A3B8;
-            --nav-gray-600: #475569;
-            --nav-shadow: 0 4px 20px rgba(26, 26, 26, 0.08);
-            --nav-shadow-lg: 0 10px 40px rgba(26, 26, 26, 0.15);
+            --nav-gray-100: var(--neutral-100);
+            --nav-gray-200: var(--neutral-200);
+            --nav-gray-400: var(--neutral-400);
+            --nav-gray-600: var(--neutral-600);
+            --nav-shadow: 0 4px 20px rgba(11, 18, 32, 0.08);
+            --nav-shadow-lg: 0 10px 40px rgba(11, 18, 32, 0.15);
         }
 
         /* === PREMIUM TOP BAR === */
@@ -52,6 +52,9 @@
             padding: 0;
             position: relative;
             overflow: hidden;
+            --weather-accent: #38bdf8;
+            --weather-panel-bg: rgba(15, 23, 42, 0.45);
+            --weather-panel-border: rgba(255, 255, 255, 0.18);
         }
 
         /* Background pattern using existing image */
@@ -115,6 +118,7 @@
             gap: 0.5rem;
             padding: 0 1rem;
             color: rgba(255, 255, 255, 0.75);
+            text-decoration: none;
             font-size: 0.85rem;
             font-weight: 500;
             height: 100%;
@@ -133,6 +137,104 @@
             width: 1px;
             height: 20px;
             background: rgba(255, 255, 255, 0.15);
+        }
+
+        .topbar-weather {
+            display: flex;
+            align-items: center;
+            margin-right: 0.5rem;
+        }
+
+        .topbar-clock {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.7rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(15, 23, 42, 0.45);
+            color: rgba(226, 232, 240, 0.85);
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .topbar-clock i {
+            color: var(--nav-orange);
+        }
+
+        .topbar-weather .weather-panel {
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
+            color: #ffffff;
+            padding: 0.35rem 0.65rem;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            border: 1px solid var(--weather-panel-border);
+            background: var(--weather-panel-bg);
+            box-shadow: none;
+            text-shadow: none;
+            backdrop-filter: blur(8px);
+        }
+
+        .topbar-weather .weather-panel::before,
+        .topbar-weather .weather-panel::after {
+            border-radius: 999px;
+        }
+
+        .topbar-weather .weather-panel::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: var(--weather-panel-overlay-opacity, 0.35);
+            background: var(--weather-panel-overlay);
+            z-index: 0;
+        }
+
+        .topbar-weather .weather-panel::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: var(--weather-effect-opacity, 0);
+            z-index: 1;
+            background-repeat: repeat;
+        }
+
+        .topbar-weather .weather-panel > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        .topbar-weather .weather-now {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .topbar-weather .weather-now i {
+            font-size: 1.4rem;
+            color: var(--weather-accent);
+        }
+
+        .topbar-weather .weather-temp {
+            font-size: 0.85rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .topbar-weather .weather-desc {
+            font-size: 0.6rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(226, 232, 240, 0.75);
         }
 
         .topbar-btn {
@@ -234,7 +336,7 @@
         }
 
         button.dropdown-item {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: var(--font-sans);
         }
 
         .topbar-account .dropdown-toggle::after {
@@ -268,6 +370,10 @@
                 display: none;
             }
 
+            .topbar-clock span {
+                display: none;
+            }
+
             .topbar-store-toggle .store-label {
                 display: none;
             }
@@ -283,6 +389,12 @@
 
         @media (max-width: 480px) {
             .premium-topbar {
+                display: none;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .topbar-weather {
                 display: none;
             }
         }
@@ -317,9 +429,10 @@
         .navbar-inner {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             height: 75px;
             transition: height 0.3s ease;
+            gap: 1.5rem;
         }
 
         .stylish-navbar.scrolled .navbar-inner {
@@ -353,21 +466,32 @@
             display: flex;
             flex-direction: column;
             line-height: 1.1;
+            min-width: 0;
+        }
+
+        .brand-text.brand-text-hidden {
+            display: none;
         }
 
         .brand-name {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: var(--font-heading);
             font-weight: 700;
             font-size: 1.15rem;
             color: var(--nav-navy);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .brand-tagline {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: var(--font-heading);
             font-weight: 600;
             font-size: 0.7rem;
             color: var(--nav-orange);
             letter-spacing: 0.1em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* Desktop Nav Links */
@@ -378,6 +502,56 @@
             list-style: none;
             margin: 0;
             padding: 0;
+        }
+
+        .desktop-menu {
+            margin-left: auto;
+        }
+
+        .nav-search {
+            flex: 1 1 320px;
+            max-width: 520px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.5rem 0.35rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid var(--nav-gray-200);
+            background: rgba(201, 233, 247, 0.92);
+            box-shadow: var(--nav-shadow);
+            position: relative;
+        }
+
+        .nav-search i {
+            color: var(--nav-orange);
+            font-size: 0.9rem;
+        }
+
+        .nav-search input {
+            border: none;
+            background: transparent;
+            flex: 1;
+            min-width: 0;
+            padding: 0.35rem 0.4rem;
+            font-size: 0.9rem;
+            color: var(--nav-navy);
+        }
+
+        .nav-search input:focus {
+            outline: none;
+        }
+
+        .nav-search button {
+            border: none;
+            background: linear-gradient(135deg, #0047AB 0%, #003380 100%);
+            color: #fff;
+            border-radius: 999px;
+            padding: 0.45rem 0.9rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            white-space: nowrap;
         }
 
         .nav-link {
@@ -412,6 +586,226 @@
         .nav-link:hover::after,
         .nav-link.active::after {
             width: 50%;
+        }
+
+        .nav-links-bar {
+            border-top: 1px solid var(--nav-gray-200);
+            background: rgba(248, 250, 252, 0.95);
+            position: relative;
+            z-index: 3;
+        }
+
+        @media (max-width: 991.98px) {
+            .nav-links-bar {
+                display: none;
+            }
+        }
+
+        .nav-links-inner {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem 1.4rem;
+            padding: 0.5rem 0;
+        }
+
+        .nav-links-inner > a,
+        .nav-links-trigger {
+            color: var(--nav-navy);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            transition: color 0.2s ease, background 0.2s ease;
+            padding: 0.35rem 0.6rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .nav-links-inner > a:hover,
+        .nav-links-trigger:hover,
+        .nav-links-dropdown.is-open .nav-links-trigger,
+        .nav-links-dropdown:focus-within .nav-links-trigger {
+            color: var(--nav-orange);
+            background: rgba(0, 71, 171, 0.08);
+        }
+
+        .nav-links-trigger {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        .nav-links-trigger i {
+            font-size: 0.65rem;
+            transition: transform 0.2s ease;
+        }
+
+        .nav-links-dropdown.is-open .nav-links-trigger i,
+        .nav-links-dropdown:focus-within .nav-links-trigger i {
+            transform: rotate(180deg);
+        }
+
+        .nav-links-dropdown {
+            position: relative;
+        }
+
+        .nav-links-panel {
+            position: absolute;
+            top: calc(100% + 0.35rem);
+            left: 0;
+            min-width: 320px;
+            width: min(860px, 92vw);
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: var(--nav-shadow-lg);
+            padding: 1.1rem 1.35rem 1.35rem;
+            opacity: 0;
+            transform: translateY(8px);
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            max-height: 70vh;
+            overflow: auto;
+        }
+
+        .nav-links-panel--brands {
+            left: auto;
+            right: 0;
+            width: min(720px, 92vw);
+        }
+
+        .nav-links-dropdown.is-open .nav-links-panel,
+        .nav-links-dropdown:focus-within .nav-links-panel {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .nav-links-panel-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .nav-links-panel-header span {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--nav-navy);
+        }
+
+        .nav-links-panel-header a {
+            text-transform: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: var(--nav-orange);
+            text-decoration: none;
+        }
+
+        .nav-links-panel-header a:hover {
+            text-decoration: underline;
+        }
+
+        .nav-links-panel a {
+            text-transform: none;
+            letter-spacing: normal;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--nav-navy);
+            text-decoration: none;
+        }
+
+        .nav-links-category-list {
+            columns: 4 180px;
+            column-gap: 2rem;
+        }
+
+        .nav-links-category-list a {
+            display: block;
+            padding: 0.35rem 0;
+            break-inside: avoid;
+            text-decoration: none;
+        }
+
+        .nav-links-category-list a:hover {
+            color: var(--nav-orange);
+        }
+
+        .nav-links-brand-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .nav-links-brand-card {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.65rem;
+            border-radius: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background: #f8fafc;
+            min-height: 64px;
+            transition: border 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .nav-links-brand-card img {
+            max-width: 100%;
+            max-height: 42px;
+            object-fit: contain;
+        }
+
+        .nav-links-brand-card span {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-align: center;
+            color: var(--nav-navy);
+            line-height: 1.2;
+            padding: 0 0.35rem;
+        }
+
+        .nav-links-brand-card:hover {
+            border-color: rgba(0, 71, 171, 0.4);
+            transform: translateY(-2px);
+            box-shadow: var(--nav-shadow);
+        }
+
+        .nav-links-empty {
+            font-size: 0.85rem;
+            color: var(--nav-gray-600);
+        }
+
+        .nav-links-panel--compact {
+            width: min(360px, 92vw);
+        }
+
+        .nav-links-simple-list {
+            display: grid;
+            gap: 0.65rem;
+        }
+
+        .nav-links-simple-list a {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 0.6rem;
+            border-radius: 10px;
+            transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+        }
+
+        .nav-links-simple-list a:hover {
+            color: var(--nav-orange);
+            background: rgba(0, 71, 171, 0.08);
+            transform: translateX(2px);
         }
 
         .nav-cta {
@@ -588,6 +982,52 @@
             background: var(--nav-orange);
         }
 
+        @media (max-width: 1200px) {
+            .navbar-inner {
+                gap: 1rem;
+                padding: 0.35rem 0;
+            }
+
+            .nav-brand img {
+                height: 42px;
+            }
+
+            .brand-name {
+                font-size: 1rem;
+            }
+
+            .brand-tagline {
+                font-size: 0.65rem;
+                letter-spacing: 0.08em;
+            }
+
+            .nav-search {
+                max-width: 420px;
+            }
+
+            .nav-search button {
+                padding: 0.35rem 0.8rem;
+                font-size: 0.65rem;
+            }
+
+            .nav-link {
+                font-size: 0.85rem;
+                padding: 0.5rem 0.9rem;
+            }
+
+            .nav-cta,
+            .nav-cart,
+            .nav-store-toggle {
+                font-size: 0.8rem;
+            }
+
+            .nav-cart-badge {
+                min-width: 18px;
+                height: 18px;
+                font-size: 0.65rem;
+            }
+        }
+
         @media (max-width: 991px) {
             .desktop-menu {
                 display: none !important;
@@ -598,11 +1038,34 @@
             }
 
             .navbar-inner {
-                height: 65px;
+                height: auto;
+                flex-wrap: wrap;
+                padding: 0.6rem 0;
+                gap: 0.75rem;
+            }
+
+            .stylish-navbar.scrolled .navbar-inner {
+                height: auto;
             }
 
             .nav-brand img {
                 height: 38px;
+            }
+
+            .nav-brand {
+                order: 1;
+            }
+
+            .nav-search {
+                order: 3;
+                flex: 1 1 100%;
+                max-width: none;
+                margin: 0;
+            }
+
+            .mobile-toggle {
+                order: 2;
+                margin-left: auto;
             }
 
             .brand-name {
@@ -611,6 +1074,51 @@
 
             .brand-tagline {
                 font-size: 0.6rem;
+            }
+
+            .nav-links-inner {
+                gap: 0.4rem 0.8rem;
+                padding: 0.4rem 0;
+            }
+
+            .nav-links-inner > a,
+            .nav-links-trigger {
+                font-size: 0.7rem;
+            }
+
+            .nav-links-dropdown {
+                width: 100%;
+            }
+
+            .nav-links-trigger {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .nav-links-panel {
+                position: static;
+                width: 100%;
+                min-width: 0;
+                margin-top: 0.35rem;
+                box-shadow: none;
+                border-radius: 12px;
+                display: none;
+                opacity: 1;
+                transform: none;
+                pointer-events: auto;
+            }
+
+            .nav-links-panel--brands {
+                right: auto;
+            }
+
+            .nav-links-dropdown.is-open .nav-links-panel,
+            .nav-links-dropdown:focus-within .nav-links-panel {
+                display: block;
+            }
+
+            .nav-links-category-list {
+                columns: 2 160px;
             }
         }
 
@@ -668,7 +1176,7 @@
         }
 
         .mobile-brand-mini span {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: var(--font-heading);
             font-weight: 700;
             font-size: 1rem;
             color: #FFFFFF;
@@ -1318,7 +1826,7 @@
                         <span>{{ business_hours|default:default_business_hours }}</span>
                     </div>
                     <div class="topbar-divider d-none d-md-block"></div>
-                    <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}" class="topbar-item d-none d-md-flex" style="text-decoration: none;"
+                    <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}" class="topbar-item d-none d-md-flex"
                         data-analytics-event="call_header" data-analytics-category="contact"
                         data-analytics-label="Header Phone">
                         <i class="fas fa-phone-alt"></i>
@@ -1326,11 +1834,35 @@
                     </a>
                 </div>
                 <div class="topbar-right">
+                    {% block topbar_weather %}
+                    <div class="topbar-weather" data-weather-panel
+                        data-weather-endpoint="{% url 'accounts:storefront_weather' %}"
+                        data-store-address="{{ storefront_selected_profile.company_address|default_if_none:''|default:business_contact_address|default:''|cut:'\r'|cut:'\n'|escape }}"
+                        data-store-street="{{ storefront_selected_profile.street_address|default_if_none:''|escape }}"
+                        data-store-city="{{ storefront_selected_profile.city|default_if_none:''|escape }}"
+                        data-store-province="{{ storefront_selected_profile.province|default_if_none:''|escape }}"
+                        data-store-postal="{{ storefront_selected_profile.postal_code|default_if_none:''|escape }}">
+                        <div class="weather-panel">
+                            <div class="weather-now">
+                                <span data-weather-icon><i class="fas fa-cloud-sun"></i></span>
+                                <div>
+                                    <div class="weather-temp" data-weather-temp>--</div>
+                                    <div class="weather-desc" data-weather-desc>Loading</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="topbar-clock">
+                        <i class="fas fa-calendar"></i>
+                        <span data-weather-time>--</span>
+                    </div>
+                    {% endblock %}
+                    <div class="topbar-divider d-none d-md-block"></div>
                     <a href="{% url 'accounts:public_contact' %}" class="topbar-btn contact"
                         data-analytics-event="parts_desk" data-analytics-category="cta"
                         data-analytics-label="Header Parts Desk">
                         <i class="fas fa-headset"></i>
-                        <span>Parts Desk</span>
+                        <span>Contact</span>
                     </a>
                 </div>
             </div>
@@ -1342,7 +1874,7 @@
         <div class="container-fluid px-3 px-lg-5">
             <div class="navbar-inner">
                 <!-- Brand -->
-                <a class="nav-brand" href="{% url 'accounts:store_product_list' %}">
+                <a class="nav-brand" href="{% url 'accounts:public_home' %}">
                     <img src="{{ company_logo_url|default:default_company_logo_url }}" alt="{{ business_name|default:default_business_name }}">
                     <div class="brand-text">
                         <span class="brand-name">{{ business_name|default:default_business_name }}</span>
@@ -1350,13 +1882,18 @@
                     </div>
                 </a>
 
+                <form class="nav-search" method="get" action="{% url 'accounts:store_search' %}" role="search"
+                    data-storefront-search-form data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <input type="search" name="q"
+                        value="{{ search_query|default:'' }}"
+                        placeholder="Search parts, SKUs, or keywords" autocomplete="off" aria-label="Search parts"
+                        data-storefront-search-input data-storefront-search-sync data-storefront-main-search>
+                    <button type="submit">Search</button>
+                </form>
+
                 <!-- Desktop Menu -->
                 <div class="desktop-menu d-none d-lg-flex align-items-center">
-                    <ul class="nav-menu">
-                        <li><a href="{% url 'accounts:store_product_list' %}" class="nav-link">Parts</a></li>
-                        <li><a href="{% url 'accounts:public_about' %}" class="nav-link">About</a></li>
-                        <li><a href="{% url 'accounts:public_contact' %}" class="nav-link">Contact</a></li>
-                    </ul>
                     {% if storefront_selected_profile %}
                         {% if storefront_has_multiple_locations %}
                         <div class="dropdown nav-store-dropdown">
@@ -1403,8 +1940,8 @@
                     </a>
                     {% else %}
                     <a href="{% url 'accounts:login' %}" class="nav-cta" data-analytics-event="client_login"
-                        data-analytics-category="cta" data-analytics-label="Desktop Nav Client Login">
-                        <span>Client Login</span>
+                        data-analytics-category="cta" data-analytics-label="Desktop Nav My Account">
+                        <span>My Account</span>
                         <i class="fas fa-arrow-right"></i>
                     </a>
                     {% endif %}
@@ -1418,6 +1955,113 @@
                     <span class="toggle-line"></span>
                 </button>
             </div>
+            <nav class="nav-links-bar" aria-label="Storefront quick links">
+                <div class="nav-links-inner">
+                    <div class="nav-links-dropdown" data-nav-dropdown>
+                        <button class="nav-links-trigger" type="button" data-nav-trigger aria-expanded="false"
+                            aria-controls="navCategoriesPanel">
+                            Browse by Categories
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+                        <div class="nav-links-panel" id="navCategoriesPanel" data-nav-panel>
+                            <div class="nav-links-panel-header">
+                                <span>Categories</span>
+                                <a href="{% url 'accounts:store_product_list' %}#categories">Shop all categories</a>
+                            </div>
+                            {% if nav_categories %}
+                            <div class="nav-links-category-list">
+                                {% for category in nav_categories %}
+                                <a href="{% url 'accounts:store_category_detail' category.id %}">{{ category.name }}</a>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="nav-links-empty">No categories available yet.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="nav-links-dropdown" data-nav-dropdown>
+                        <button class="nav-links-trigger" type="button" data-nav-trigger aria-expanded="false"
+                            aria-controls="navBrandsPanel">
+                            Browse by Brands
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+                        <div class="nav-links-panel nav-links-panel--brands" id="navBrandsPanel" data-nav-panel>
+                            <div class="nav-links-panel-header">
+                                <span>Brands</span>
+                                <a href="{% url 'accounts:store_search' %}">Shop all brands</a>
+                            </div>
+                            {% if nav_brand_logos %}
+                            <div class="nav-links-brand-grid">
+                                {% for brand in nav_brand_logos %}
+                                <a href="{% url 'accounts:store_search' %}?brand={{ brand.id }}"
+                                    class="nav-links-brand-card" aria-label="{{ brand.name }}">
+                                    {% if brand.logo %}
+                                    <img src="{{ brand.logo.url }}" alt="{{ brand.name }}">
+                                    {% else %}
+                                    <span>{{ brand.name }}</span>
+                                    {% endif %}
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="nav-links-empty">No brands available yet.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="nav-links-dropdown" data-nav-dropdown>
+                        <button class="nav-links-trigger" type="button" data-nav-trigger aria-expanded="false"
+                            aria-controls="navPromotionsPanel">
+                            Promotions &amp; Deals
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+                        <div class="nav-links-panel nav-links-panel--compact" id="navPromotionsPanel" data-nav-panel>
+                            <div class="nav-links-panel-header">
+                                <span>Promotions &amp; Deals</span>
+                            </div>
+                            <div class="nav-links-simple-list">
+                                <a href="{% url 'accounts:store_product_list' %}#featured-products">
+                                    <i class="fas fa-star"></i>
+                                    Featured Products
+                                </a>
+                                <a href="{% url 'accounts:storefront_flyer_pdf' %}" data-flyer-open>
+                                    <i class="fas fa-file-lines"></i>
+                                    View Flyer
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nav-links-dropdown" data-nav-dropdown>
+                        <button class="nav-links-trigger" type="button" data-nav-trigger aria-expanded="false"
+                            aria-controls="navResourcesPanel">
+                            Resources
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+                        <div class="nav-links-panel nav-links-panel--compact" id="navResourcesPanel" data-nav-panel>
+                            <div class="nav-links-panel-header">
+                                <span>Resources</span>
+                            </div>
+                            <div class="nav-links-simple-list">
+                                <a href="{% url 'accounts:public_contact' %}">
+                                    <i class="fas fa-headset"></i>
+                                    Contact Parts Desk
+                                </a>
+                                <a href="{% url 'accounts:customer_invoice_list' %}">
+                                    <i class="fas fa-file-invoice-dollar"></i>
+                                    Invoices
+                                </a>
+                                <a href="{% url 'accounts:customer_invoice_statements' %}">
+                                    <i class="fas fa-file-lines"></i>
+                                    Statements
+                                </a>
+                                <a href="{% url 'accounts:public_faq' %}">
+                                    <i class="fas fa-circle-question"></i>
+                                    FAQ
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
         </div>
     </nav>
 
@@ -1434,11 +2078,6 @@
         </div>
         <div class="mobile-body">
             <div class="mobile-nav-links">
-                <a href="{% url 'accounts:store_product_list' %}" class="mobile-link">
-                    <div class="mobile-link-icon"><i class="fas fa-store"></i></div>
-                    <span>Parts</span>
-                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
-                </a>
                 <a href="{% url 'accounts:public_about' %}" class="mobile-link">
                     <div class="mobile-link-icon"><i class="fas fa-info-circle"></i></div>
                     <span>About Us</span>
@@ -1449,6 +2088,40 @@
                     <span>Contact</span>
                     <i class="fas fa-chevron-right mobile-link-arrow"></i>
                 </a>
+                <div class="mobile-section-label">Promotions &amp; Deals</div>
+                <a href="{% url 'accounts:store_product_list' %}#featured-products" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-star"></i></div>
+                    <span>Featured Products</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                <a href="{% url 'accounts:storefront_flyer_pdf' %}" class="mobile-link" data-flyer-open>
+                    <div class="mobile-link-icon"><i class="fas fa-file-lines"></i></div>
+                    <span>View Flyer</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                <div class="mobile-section-label">Resources</div>
+                <a href="{% url 'accounts:public_contact' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-headset"></i></div>
+                    <span>Contact Parts Desk</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                <a href="{% url 'accounts:public_faq' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-circle-question"></i></div>
+                    <span>FAQ</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                {% if customer_account and customer_account.user.profile.occupation == 'parts_store' %}
+                <a href="{% url 'accounts:customer_invoice_list' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <span>Invoices</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                <a href="{% url 'accounts:customer_invoice_statements' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-file-lines"></i></div>
+                    <span>Statements</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                {% endif %}
                 {% if storefront_selected_profile %}
                 <div class="mobile-section-label">Store Location</div>
                 {% if storefront_has_multiple_locations %}
@@ -1592,6 +2265,9 @@
                         <a href="#" class="social-icon-btn"><i class="fab fa-instagram"></i></a>
                         <a href="#" class="social-icon-btn"><i class="fab fa-tiktok"></i></a>
                     </div>
+                    <div class="footer-logo-box">
+                        <img src="{{ company_logo_url|default:default_company_logo_url }}" alt="{{ business_name|default:default_business_name }} logo">
+                    </div>
                 </div>
 
                 <!-- Quick Links -->
@@ -1635,7 +2311,11 @@
                         </div>
                         <div class="footer-contact-item">
                             <i class="fas fa-map-marker-alt footer-contact-icon"></i>
-                            <span class="text-white-50">{{ business_contact_address|linebreaksbr }}</span>
+                            <span class="text-white-50">
+                                2362 46th Ave, Lachine, Quebec H8T 2P3<br>
+                                2860 Rue du Meunier Unit 140, Vaudreuil-Dorion, Quebec J7V 8P2<br>
+                                2015 Vincent Massey Dr, Cornwall, ON K6H 5R6
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -1728,6 +2408,41 @@
             }
         });
 
+        // Brand Text Overflow Handling
+        const updateBrandTextVisibility = () => {
+            const brandText = document.querySelector('.nav-brand .brand-text');
+            if (!brandText) {
+                return;
+            }
+
+            const brandName = brandText.querySelector('.brand-name');
+            const brandTagline = brandText.querySelector('.brand-tagline');
+            const prevVisibility = brandText.style.visibility;
+            const wasHidden = brandText.classList.contains('brand-text-hidden');
+
+            if (wasHidden) {
+                brandText.classList.remove('brand-text-hidden');
+                brandText.style.visibility = 'hidden';
+            }
+
+            const shouldHide = [brandName, brandTagline].some((el) => el && el.scrollWidth > el.clientWidth);
+
+            if (wasHidden) {
+                brandText.style.visibility = prevVisibility;
+            }
+
+            brandText.classList.toggle('brand-text-hidden', shouldHide);
+        };
+
+        updateBrandTextVisibility();
+        window.addEventListener('resize', () => {
+            window.requestAnimationFrame(updateBrandTextVisibility);
+        });
+
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(updateBrandTextVisibility);
+        }
+
         // Current Link Active State
         const currentPath = window.location.pathname;
         document.querySelectorAll('.nav-link').forEach(link => {
@@ -1735,6 +2450,97 @@
                 link.classList.add('active');
             }
         });
+
+        // Storefront quick-link dropdowns
+        (() => {
+            const dropdowns = Array.from(document.querySelectorAll('[data-nav-dropdown]'));
+            if (!dropdowns.length) {
+                return;
+            }
+
+            const setExpanded = (dropdown, isOpen) => {
+                dropdown.classList.toggle('is-open', isOpen);
+                const trigger = dropdown.querySelector('[data-nav-trigger]');
+                if (trigger) {
+                    trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                }
+            };
+
+            const closeAll = (except) => {
+                dropdowns.forEach((dropdown) => {
+                    if (except && dropdown === except) {
+                        return;
+                    }
+                    setExpanded(dropdown, false);
+                });
+            };
+
+            dropdowns.forEach((dropdown) => {
+                const trigger = dropdown.querySelector('[data-nav-trigger]');
+                if (!trigger) {
+                    return;
+                }
+
+                let hoverCloseTimer = null;
+                const openDropdown = () => {
+                    if (hoverCloseTimer) {
+                        window.clearTimeout(hoverCloseTimer);
+                        hoverCloseTimer = null;
+                    }
+                    closeAll(dropdown);
+                    setExpanded(dropdown, true);
+                };
+
+                const closeDropdown = () => {
+                    setExpanded(dropdown, false);
+                };
+
+                const scheduleClose = () => {
+                    if (hoverCloseTimer) {
+                        window.clearTimeout(hoverCloseTimer);
+                    }
+                    hoverCloseTimer = window.setTimeout(() => {
+                        if (!dropdown.matches(':hover') && !dropdown.contains(document.activeElement)) {
+                            closeDropdown();
+                        }
+                    }, 120);
+                };
+
+                dropdown.addEventListener('mouseenter', openDropdown);
+                dropdown.addEventListener('mouseleave', scheduleClose);
+
+                trigger.addEventListener('focus', openDropdown);
+                dropdown.addEventListener('focusout', (event) => {
+                    if (!dropdown.contains(event.relatedTarget)) {
+                        scheduleClose();
+                    }
+                });
+
+                trigger.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const isOpen = dropdown.classList.contains('is-open');
+                    closeAll(dropdown);
+                    if (!isOpen) {
+                        setExpanded(dropdown, true);
+                    } else {
+                        setExpanded(dropdown, false);
+                    }
+                });
+            });
+
+            document.addEventListener('click', (event) => {
+                const clickedInside = dropdowns.some((dropdown) => dropdown.contains(event.target));
+                if (!clickedInside) {
+                    closeAll();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    closeAll();
+                }
+            });
+        })();
 
         // AI Chat Logic (Simplified & Preserved)
         (() => {
@@ -1969,6 +2775,48 @@
             });
         })();
 
+        // Cursor-focused product detail image zoom
+        (() => {
+            if (!window.matchMedia || !window.matchMedia('(hover: hover)').matches) {
+                return;
+            }
+
+            const containers = document.querySelectorAll(
+                '.product-detail-media'
+            );
+
+            if (!containers.length) {
+                return;
+            }
+
+            const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+            containers.forEach(container => {
+                const img = container.querySelector('img');
+                if (!img) return;
+
+                const updateOrigin = (event) => {
+                    const rect = container.getBoundingClientRect();
+                    if (!rect.width || !rect.height) return;
+
+                    const x = clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100);
+                    const y = clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100);
+
+                    img.style.setProperty('--zoom-x', `${x}%`);
+                    img.style.setProperty('--zoom-y', `${y}%`);
+                };
+
+                const resetOrigin = () => {
+                    img.style.removeProperty('--zoom-x');
+                    img.style.removeProperty('--zoom-y');
+                };
+
+                container.addEventListener('mouseenter', updateOrigin);
+                container.addEventListener('mousemove', updateOrigin);
+                container.addEventListener('mouseleave', resetOrigin);
+            });
+        })();
+
         // Analytics event wiring
         (() => {
             const track = (name, meta = {}) => {
@@ -2001,6 +2849,8 @@
             }
         })();
     </script>
+
+    <script src="{% static 'js/storefront_weather.js' %}" defer></script>
 
     {% block extra_js %}{% endblock %}
 </body>

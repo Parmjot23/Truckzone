@@ -1075,6 +1075,235 @@ class SupplierCreditItem(models.Model):
         verbose_name_plural = "Supplier Credit Items"
 
 
+class CustomerCredit(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    customer = models.ForeignKey(
+        'Customer',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='credits',
+    )
+    customer_name = models.CharField(max_length=150, blank=True)
+    credit_no = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    date = models.DateField(null=True)
+    memo = models.TextField(null=True, blank=True)
+    tax_included = models.BooleanField(default=False)
+    province = models.CharField(max_length=2, choices=PROVINCE_CHOICES, null=True, blank=True)
+    custom_tax_rate = models.DecimalField(max_digits=5, decimal_places=4, null=True, blank=True)
+    record_in_inventory = models.BooleanField(
+        default=True,
+        help_text="When enabled, credit items adjust inventory stock levels.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        credit_label = self.credit_no or f"Credit {self.pk}"
+        customer_label = self.customer_name or (self.customer.name if self.customer else '')
+        return f"{credit_label} - {customer_label}".strip()
+
+    def save(self, *args, **kwargs):
+        if self.customer:
+            self.customer_name = self.customer.name
+        if not self.credit_no:
+            self.credit_no = self.generate_unique_credit_no()
+        super().save(*args, **kwargs)
+
+    def generate_unique_credit_no(self):
+        while True:
+            new_credit_no = str(uuid.uuid4()).split('-')[0]
+            if not CustomerCredit.objects.filter(credit_no=new_credit_no).exists():
+                return new_credit_no
+
+    def _get_effective_province_code(self):
+        profile_province = getattr(getattr(self.user, "profile", None), "province", None)
+        return self.province or profile_province
+
+    def calculate_totals(self):
+        items = self.items.all()
+        total_amount = sum(
+            (ensure_decimal(item.amount) for item in items),
+            Decimal('0.00'),
+        ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        province_code = self._get_effective_province_code()
+        custom_rate = self.custom_tax_rate if province_code == 'CU' else None
+
+        if self.tax_included:
+            _, total_tax, total_amount_excl_tax = calculate_tax_components(
+                total_amount,
+                province_code,
+                tax_included=True,
+                custom_tax_rate=custom_rate,
+            )
+            total_amount_incl_tax = total_amount
+        else:
+            total_amount_excl_tax = total_amount
+            _, total_tax, _ = calculate_tax_components(
+                total_amount,
+                province_code,
+                tax_included=False,
+                custom_tax_rate=custom_rate,
+            )
+            total_amount_incl_tax = (total_amount + total_tax).quantize(
+                Decimal('0.01'),
+                rounding=ROUND_HALF_UP,
+            )
+
+        return total_amount_incl_tax, total_tax, total_amount_excl_tax
+
+    def _format_percentage_value(self, decimal_rate):
+        percent_value = decimal_rate * Decimal('100')
+        formatted = format(percent_value.normalize(), 'f')
+        if '.' in formatted:
+            formatted = formatted.rstrip('0').rstrip('.')
+        return formatted
+
+    def get_tax_rate_info(self):
+        province_code = self._get_effective_province_code()
+        if not province_code:
+            return 0.0, "Tax rate not set"
+
+        if province_code == 'CU' and self.custom_tax_rate is not None:
+            rate_decimal = Decimal(str(self.custom_tax_rate))
+            percent_display = self._format_percentage_value(rate_decimal)
+            return float(rate_decimal), f"Custom ({percent_display}%)"
+
+        rate_value = PROVINCE_TAX_RATES.get(province_code, 0)
+        rate_decimal = Decimal(str(rate_value))
+        percent_display = self._format_percentage_value(rate_decimal)
+        province_label = PROVINCE_DISPLAY_MAP.get(province_code, province_code)
+        return float(rate_decimal), f"{province_label} ({percent_display}%)"
+
+    def get_tax_label(self):
+        return self.get_tax_rate_info()[1]
+
+    @property
+    def applied_amount(self):
+        total = Decimal('0.00')
+        for item in self.items.all():
+            if not item.source_invoice_id:
+                continue
+            line_total = ensure_decimal(item.amount)
+            if not self.tax_included:
+                line_total += ensure_decimal(item.tax_paid)
+            total += line_total
+        return total
+
+    @property
+    def available_amount(self):
+        total_amount_incl_tax, _, _ = self.calculate_totals()
+        total_amount_incl_tax = Decimal(str(total_amount_incl_tax or 0))
+        remaining = total_amount_incl_tax - self.applied_amount
+        return remaining if remaining > 0 else Decimal('0.00')
+
+    def _find_inventory_product(self, item):
+        if item.product:
+            return item.product
+
+        part = (item.part_no or "").strip()
+        desc = (item.description or "").strip()
+
+        if not part and not desc:
+            return None
+
+        qs = Product.objects.filter(user=self.user)
+        product = None
+        if part:
+            product = qs.filter(Q(sku__iexact=part) | Q(name__iexact=part)).first()
+        if not product and desc:
+            product = qs.filter(name__iexact=desc).first()
+
+        return product
+
+    def _log_inventory_transactions(self, items, transaction_type, remark_suffix):
+        for item in items:
+            product = self._find_inventory_product(item)
+            if not product:
+                continue
+            qty_decimal = Decimal(str(item.qty or 0)).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+            qty_int = int(qty_decimal) if qty_decimal > 0 else 0
+            if qty_int <= 0:
+                continue
+            remarks = f"Customer credit {self.credit_no or self.pk} - {remark_suffix}"
+            InventoryTransaction.objects.create(
+                product=product,
+                transaction_type=transaction_type,
+                quantity=qty_int,
+                remarks=remarks,
+                user=self.user,
+            )
+
+    def delete(self, using=None, keep_parents=False):
+        if self.record_in_inventory:
+            items = list(self.items.select_related('product'))
+            try:
+                self._log_inventory_transactions(items, 'OUT', 'credit deleted')
+            except Exception:
+                logger.warning(
+                    "Inventory sync on delete failed for customer credit %s",
+                    getattr(self, "id", None),
+                )
+        return super().delete(using=using, keep_parents=keep_parents)
+
+
+class CustomerCreditItem(models.Model):
+    customer_credit = models.ForeignKey(CustomerCredit, on_delete=models.CASCADE, related_name='items')
+    source_invoice = models.ForeignKey(
+        'GroupedInvoice',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='customer_credit_items',
+    )
+    source_invoice_item = models.ForeignKey(
+        'IncomeRecord2',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='customer_credit_items',
+    )
+    product = models.ForeignKey(
+        'Product',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='customer_credit_items',
+    )
+    part_no = models.CharField(max_length=50, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    qty = models.FloatField(default=1)
+    price = models.FloatField(default=0)
+    amount = models.FloatField(editable=False, default=0)
+    tax_paid = models.FloatField(editable=False, default=0)
+
+    def save(self, *args, **kwargs):
+        qty_dec = ensure_decimal(self.qty)
+        price_dec = ensure_decimal(self.price)
+        amount_dec = (qty_dec * price_dec).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        self.amount = float(amount_dec)
+        credit = self.customer_credit
+
+        province = credit.province or getattr(getattr(credit.user, "profile", None), "province", None)
+        custom_rate = credit.custom_tax_rate if province == 'CU' else None
+        _, tax_total, _ = calculate_tax_components(
+            amount_dec,
+            province,
+            tax_included=credit.tax_included,
+            custom_tax_rate=custom_rate,
+        )
+        self.tax_paid = float(tax_total)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        credit_label = self.customer_credit.credit_no if self.customer_credit else 'Credit'
+        return f'{credit_label} - {self.description or self.part_no or "Item"} - {self.amount}'
+
+    class Meta:
+        verbose_name = "Customer Credit Item"
+        verbose_name_plural = "Customer Credit Items"
+
+
 class SupplierCheque(models.Model):
     STATUS_CHOICES = [
         ('issued', 'Issued'),
@@ -1302,6 +1531,35 @@ class Customer(models.Model):
         )
 
 
+class StorefrontCartItem(models.Model):
+    """Persisted cart items for customer portal storefront users."""
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name="storefront_cart_items",
+    )
+    store_owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="storefront_cart_items",
+        help_text="Storefront location the item was added from.",
+    )
+    product = models.ForeignKey(
+        "Product",
+        on_delete=models.CASCADE,
+        related_name="storefront_cart_items",
+    )
+    quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("customer", "store_owner", "product")
+
+    def __str__(self):
+        return f"{self.customer} - {self.product} ({self.quantity})"
+
+
 class TaxExemptionReason(models.Model):
     """Stores user specific tax exemption reasons for quick reuse."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="tax_exemption_reasons")
@@ -1459,6 +1717,9 @@ class GroupedInvoice(models.Model):
                 transaction_type="OUT",
                 remarks=remarks,
             )
+            .filter(
+                Q(user=self.user) | Q(user__isnull=True, product__user=self.user)
+            )
             .values("product_id")
             .annotate(total_qty=Sum("quantity"))
         )
@@ -1469,17 +1730,24 @@ class GroupedInvoice(models.Model):
             if missing_qty <= 0:
                 continue
 
-            owner_user = None
+            owner_user = self.user
             try:
                 product_obj = Product.objects.select_related("user").get(pk=product_id)
-                owner_user = product_obj.user
+                if owner_user is None:
+                    owner_user = product_obj.user
             except Product.DoesNotExist:
                 product_obj = None
                 owner_user = self.user
 
             # Auto-top-up inventory to avoid insufficient stock errors when posting OUT.
             if product_obj:
-                current_stock = product_obj.quantity_in_stock or 0
+                stock_owner = _resolve_stock_owner(owner_user, product_obj)
+                stock_record, _ = ProductStock.objects.get_or_create(
+                    product=product_obj,
+                    user=stock_owner,
+                    defaults={"quantity_in_stock": 0, "reorder_level": 0},
+                )
+                current_stock = stock_record.quantity_in_stock or 0
                 if current_stock < missing_qty:
                     replenish_qty = missing_qty - current_stock
                     InventoryTransaction.objects.create(
@@ -1507,13 +1775,28 @@ class GroupedInvoice(models.Model):
         )['total'] or Decimal('0.00')
         return total
 
+    @property
+    def total_credit_amount(self):
+        annotated_total = getattr(self, 'credit_total', None)
+        if annotated_total is not None:
+            return Decimal(str(annotated_total))
+        total = Decimal('0.00')
+        items = self.customer_credit_items.select_related('customer_credit')
+        for item in items:
+            line_total = ensure_decimal(item.amount)
+            if item.customer_credit and not item.customer_credit.tax_included:
+                line_total += ensure_decimal(item.tax_paid)
+            total += line_total
+        return total
+
     def balance_due(self):
-        return self.total_amount - self.total_paid()
+        total_amount = self.total_amount or Decimal('0.00')
+        return total_amount - self.total_paid() - self.total_credit_amount
 
     @property
     def payment_status(self):
         total_paid = self.total_paid()
-        total_amount = self.total_amount
+        total_amount = self.total_amount or Decimal('0.00')
 
         # Round values to 2 decimal places
         total_paid = total_paid.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
@@ -1552,12 +1835,17 @@ class GroupedInvoice(models.Model):
         return self.stripe_payment_link
 
     def update_date_fully_paid(self):
-        if self.balance_due() <= Decimal('0.00') and not self.date_fully_paid:
+        total_amount = self.total_amount or Decimal('0.00')
+        total_paid = self.total_paid().quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_amount = total_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        tolerance = Decimal('0.01')
+
+        if total_paid + tolerance >= total_amount and not self.date_fully_paid:
             last_payment = self.payments.order_by('-date').first()
             if last_payment:
                 self.date_fully_paid = last_payment.date
                 self.save(update_fields=['date_fully_paid'])
-        elif self.balance_due() > Decimal('0.00') and self.date_fully_paid:
+        elif total_paid + tolerance < total_amount and self.date_fully_paid:
             # If payments are deleted or adjusted, reset date_fully_paid
             self.date_fully_paid = None
             self.save(update_fields=['date_fully_paid'])
@@ -2650,11 +2938,12 @@ class Product(models.Model):
         """
         Returns products for a given user that are below their reorder level.
         """
-        return Product.objects.filter(
-            user=user,
-            item_type='inventory',
-            quantity_in_stock__lt=F('reorder_level')
-        )
+        from .utils import annotate_products_with_stock, get_product_user_ids
+
+        product_user_ids = get_product_user_ids(user)
+        products = Product.objects.filter(user__in=product_user_ids, item_type='inventory')
+        products = annotate_products_with_stock(products, user)
+        return products.filter(stock_quantity__lt=F('stock_reorder'))
 
     @staticmethod
     def top_sellers(user, days=30, limit=5):
@@ -2805,6 +3094,64 @@ class Product(models.Model):
                 name='unique_product_quickbooks_item_per_user',
             ),
         ]
+
+
+class ProductStock(models.Model):
+    product = models.ForeignKey(
+        Product,
+        related_name="stock_levels",
+        on_delete=models.CASCADE,
+    )
+    user = models.ForeignKey(
+        User,
+        related_name="product_stocks",
+        on_delete=models.CASCADE,
+    )
+    quantity_in_stock = models.PositiveIntegerField(default=0)
+    reorder_level = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["product", "user"], name="unique_product_stock_per_user"),
+        ]
+
+    def __str__(self):
+        owner = self.user.get_full_name() or self.user.get_username()
+        return f"{self.product.name} - {owner}"
+
+
+def _resolve_stock_owner(user, product=None):
+    if user:
+        profile = getattr(user, "profile", None)
+        business_user = user
+        if profile and hasattr(profile, "get_business_user"):
+            business_user = profile.get_business_user() or user
+
+        group = ConnectedBusinessGroup.objects.filter(members=business_user).first()
+
+        profile_qs = Profile.objects.filter(
+            occupation="parts_store",
+            user__is_active=True,
+            storefront_is_visible=True,
+        )
+        if group:
+            member_ids = list(group.members.values_list("id", flat=True))
+            if member_ids:
+                profile_qs = profile_qs.filter(user_id__in=member_ids)
+            else:
+                profile_qs = Profile.objects.none()
+        else:
+            profile_qs = profile_qs.filter(Q(user=business_user) | Q(business_owner=business_user))
+        profile_user_ids = set(profile_qs.values_list("user_id", flat=True))
+        if len(profile_user_ids) > 1 and user.id in profile_user_ids:
+            return user
+
+        return business_user
+    if product:
+        return product.user
+    return None
 
 
 class ProductAlternateSku(models.Model):
@@ -3054,16 +3401,27 @@ class InventoryTransaction(models.Model):
             super(InventoryTransaction, self).save(*args, **kwargs)
             return
 
-        # Normalize stock to non-negative integer
-        if self.product.quantity_in_stock is None:
-            self.product.quantity_in_stock = 0
+        stock_owner = _resolve_stock_owner(self.user, self.product)
+        if not stock_owner:
+            super(InventoryTransaction, self).save(*args, **kwargs)
+            return
+
+        if not self.user_id:
+            self.user = stock_owner
+
+        stock_record, _ = ProductStock.objects.get_or_create(
+            product=self.product,
+            user=stock_owner,
+            defaults={"quantity_in_stock": 0, "reorder_level": 0},
+        )
+        current_stock = stock_record.quantity_in_stock or 0
 
         if self.transaction_type == 'IN':
-            self.product.quantity_in_stock += self.quantity
+            stock_record.quantity_in_stock = current_stock + self.quantity
         elif self.transaction_type == 'OUT':
-            if self.product.quantity_in_stock < self.quantity:
+            if current_stock < self.quantity:
                 # Auto-top-up missing stock instead of throwing an error
-                missing_qty = self.quantity - self.product.quantity_in_stock
+                missing_qty = self.quantity - current_stock
                 InventoryTransaction.objects.create(
                     product=self.product,
                     transaction_type='IN',
@@ -3072,11 +3430,16 @@ class InventoryTransaction(models.Model):
                     remarks="Auto restock to satisfy invoice",
                     user=self.user,
                 )
-            self.product.quantity_in_stock -= self.quantity
+                current_stock += missing_qty
+            stock_record.quantity_in_stock = current_stock - self.quantity
         elif self.transaction_type == 'ADJUSTMENT':
-            self.product.quantity_in_stock = self.quantity
+            stock_record.quantity_in_stock = self.quantity
 
-        self.product.save()
+        stock_record.save(update_fields=["quantity_in_stock", "updated_at"])
+        if stock_owner.id == self.product.user_id:
+            Product.objects.filter(pk=self.product_id).update(
+                quantity_in_stock=stock_record.quantity_in_stock,
+            )
         super(InventoryTransaction, self).save(*args, **kwargs)
 
 
@@ -3127,12 +3490,6 @@ class IncomeRecord2(models.Model):
         if getattr(product_to_use, 'item_type', 'inventory') != 'inventory':
             return
 
-        try:
-            if product_to_use.pk:
-                product_to_use.refresh_from_db(fields=['quantity_in_stock'])
-        except Product.DoesNotExist:
-            return
-
         if remarks_suffix.lower() == "sold":
             if self.grouped_invoice:
                 remarks = f"Sold with invoice {self.grouped_invoice.invoice_number}"
@@ -3142,7 +3499,7 @@ class IncomeRecord2(models.Model):
             remarks_base = f"Invoice {self.grouped_invoice.invoice_number}" if self.grouped_invoice else "Invoice N/A"
             remarks = f"{remarks_base} - {remarks_suffix}"
 
-        owner_user = user or getattr(product_to_use, "user", None) or (self.grouped_invoice.user if self.grouped_invoice else None)
+        owner_user = user or (self.grouped_invoice.user if self.grouped_invoice else None) or getattr(product_to_use, "user", None)
 
         # Ensure quantity is a whole number for the InventoryTransaction model
         # which uses a PositiveIntegerField
@@ -3213,7 +3570,7 @@ class IncomeRecord2(models.Model):
                         original_qty,
                         original_product,
                         remarks_suffix="Reversed",
-                        user=original_product.user if original_product else (self.grouped_invoice.user if self.grouped_invoice else None),
+                        user=(self.grouped_invoice.user if self.grouped_invoice else None) or (original_product.user if original_product else None),
                     )
                 except Product.DoesNotExist:
                     # Log error or handle case where original product might have been deleted
@@ -3228,7 +3585,7 @@ class IncomeRecord2(models.Model):
                     current_qty,
                     self.product,
                     remarks_suffix="Sold",
-                    user=self.product.user if self.product else (self.grouped_invoice.user if self.grouped_invoice else None),
+                    user=(self.grouped_invoice.user if self.grouped_invoice else None) or (self.product.user if self.product else None),
                 )
 
 
@@ -3259,7 +3616,7 @@ class IncomeRecord2(models.Model):
                 qty_to_reverse,
                 product_to_reverse,
                 remarks_suffix="Deletion Reversal",
-                user=product_to_reverse.user if product_to_reverse else (self.grouped_invoice.user if self.grouped_invoice else None),
+                user=(self.grouped_invoice.user if self.grouped_invoice else None) or (product_to_reverse.user if product_to_reverse else None),
             )
         # --- End Inventory Logic ---
 

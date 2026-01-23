@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Checkout{% endblock %}
-{% block body_class %}public-page-road-bg page-without-hero topbar-light no-scroll-animations storefront-page{% endblock
-%}
+{% block body_class %}public-page-road-bg page-without-hero topbar-light no-scroll-animations storefront-page{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/storefront_public.css' %}">
@@ -46,39 +45,96 @@
                     {% endif %}
                   </div>
                   <div>
-                    <div class="fw-semibold">{{ item.product.name }}</div>
-                    <div class="small text-muted">Qty: {{ item.quantity }} × ${{ item.unit_price|floatformat:2 }}</div>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="fw-semibold">{{ item.product.name }}</div>
+                      {% if item.is_free %}
+                      <span class="badge bg-success-subtle text-success">FREE</span>
+                      {% endif %}
+                    </div>
+                    <div class="small text-muted">
+                      Qty: {{ item.quantity }}
+                      {% if item.is_free %}
+                      <span class="text-success ms-1">Bonus item</span>
+                      {% else %}
+                      @ ${{ item.unit_price|floatformat:2 }}
+                      {% endif %}
+                    </div>
+                    {% if item.is_free and item.package_title %}
+                    <div class="small text-success">Free with {{ item.package_title }}</div>
+                    {% endif %}
+                    {% if item.is_free and item.free_value %}
+                    <div class="small text-success">Value ${{ item.free_value|floatformat:2 }}</div>
+                    {% endif %}
+                    {% if not item.is_free and item.discount_total %}
+                    <div class="small text-success">Discount: -${{ item.discount_total|floatformat:2 }}</div>
+                    {% endif %}
                   </div>
                 </div>
-                <div class="fw-bold">${{ item.subtotal|floatformat:2 }}</div>
+                <div class="fw-bold">
+                  {% if item.is_free %}
+                  <span class="text-success">FREE</span>
+                  {% else %}
+                  ${{ item.subtotal|floatformat:2 }}
+                  {% endif %}
+                </div>
               </div>
             </div>
             {% endfor %}
           </div>
-          <div class="d-flex justify-content-between align-items-center pt-2">
-            <span class="h5 mb-0 text-muted">Total Amount</span>
-            <span class="h3 mb-0 fw-bold text-primary">${{ total|floatformat:2 }}</span>
+          <div class="border-top pt-3">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Subtotal</span>
+              <span class="fw-semibold">${{ subtotal_before_discounts|floatformat:2 }}</span>
+            </div>
+            {% if discount_total %}
+            <div class="d-flex justify-content-between mb-2 text-success">
+              <span>Discounts</span>
+              <span>- ${{ discount_total|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">{{ tax_label|default:"Tax" }}</span>
+              <span class="fw-semibold">${{ tax_total|default:0|floatformat:2 }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+              <span class="h6 mb-0 text-muted">Total Amount Due</span>
+              <span class="h4 mb-0 fw-bold text-primary">${{ total_due|default:subtotal|floatformat:2 }}</span>
+            </div>
           </div>
         </div>
 
         <div class="store-form-section">
           <h2 class="h5 mb-4 fw-bold pb-3 border-bottom text-uppercase tracking-wide text-muted">Billing Information
           </h2>
-          <p class="text-muted small mb-4 bg-light p-3 rounded border">These details are retrieved from your account
-            settings.</p>
+          <p class="text-muted small mb-4 bg-light p-3 rounded border">Update these details to keep your billing profile
+            current.</p>
 
           <div class="row g-4">
             <div class="col-md-6">
               <label class="form-label text-muted small fw-bold text-uppercase">Contact</label>
-              <div class="fw-semibold">{{ customer_info.name }}</div>
-              <div class="text-muted">{{ customer_info.email|default:"Not provided" }}</div>
-              <div class="text-muted">{% if customer_info.phone %}{{ customer_info.phone }}{% else %}Not provided{%
-                endif %}</div>
+              <div class="mb-3">
+                <label class="form-label small text-muted">Name</label>
+                <input type="text" name="billing_name" class="form-control" value="{{ customer_info.name }}">
+              </div>
+              <div class="mb-3">
+                <label class="form-label small text-muted">Email</label>
+                <input type="email" name="billing_email" class="form-control" value="{{ customer_info.email }}">
+                {% if customer_info.cc_emails %}
+                <div class="small text-muted mt-1">CC: {{ customer_info.cc_emails|join:", " }}</div>
+                {% endif %}
+              </div>
+              <div class="mb-3">
+                <label class="form-label small text-muted">Phone</label>
+                <input type="text" name="billing_phone" class="form-control" value="{{ customer_info.phone }}">
+              </div>
             </div>
             <div class="col-md-6">
               <label class="form-label text-muted small fw-bold text-uppercase">Billing Address</label>
-              <div class="text-muted">{% if customer_info.address %}{{ customer_info.address|linebreaksbr }}{% else
-                %}Not provided{% endif %}</div>
+              <textarea name="billing_address" rows="5" class="form-control">{{ customer_info.address }}</textarea>
+              <div class="mt-3">
+                <label class="form-label small text-muted">Additional CC emails (comma-separated)</label>
+                <input type="text" name="billing_cc_emails" class="form-control" value="{{ customer_info.cc_emails_raw }}">
+              </div>
             </div>
           </div>
 
@@ -118,12 +174,23 @@
         <p class="text-center text-muted small mt-3">By placing this order, you agree to our terms of service.</p>
       </form>
       {% else %}
-      <div class="storefront-empty">
-        <div class="storefront-empty-icon"><i class="fas fa-shopping-basket"></i></div>
-        <h2 class="h4 mb-3 fw-bold">Cart is empty</h2>
-        <p class="text-muted mb-4">Add some products to your cart to proceed with checkout.</p>
-        <a href="{% url 'accounts:store_product_list' %}" class="btn btn-primary btn-lg rounded-pill px-5">Go to
-          Shop</a>
+      <div class="storefront-empty storefront-empty--cart">
+        <div class="storefront-empty-card">
+          <div class="storefront-empty-icon"><i class="fas fa-shopping-basket"></i></div>
+          <h2 class="storefront-empty-title">Cart is empty</h2>
+          <p class="storefront-empty-text">Add products to your cart to proceed with checkout.</p>
+          <div class="storefront-empty-actions">
+            <a href="{% url 'accounts:store_product_list' %}" class="btn btn-primary btn-lg rounded-pill px-5">Go to
+              Shop</a>
+            <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-primary btn-lg rounded-pill px-5">Back to
+              Cart</a>
+          </div>
+          <div class="storefront-empty-highlights">
+            <span><i class="fas fa-check-circle"></i> Secure checkout</span>
+            <span><i class="fas fa-bolt"></i> Fast fulfillment</span>
+            <span><i class="fas fa-headset"></i> Fleet support</span>
+          </div>
+        </div>
       </div>
       {% endif %}
     </div>

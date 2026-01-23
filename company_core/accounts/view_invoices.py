@@ -18,7 +18,7 @@ try:
 except (ImportError, OSError):
     WEASYPRINT_AVAILABLE = False
     CSS = None
-from accounts.models import GroupedInvoice, GroupedEstimate, InvoiceActivity
+from accounts.models import GroupedInvoice, GroupedEstimate, InvoiceActivity, ensure_decimal
 from .invoice_activity import (
     log_invoice_activity,
     build_email_open_tracking_url,
@@ -127,6 +127,29 @@ def _build_invoice_context(invoice, request, *, profile=None):
 
     # Compute summaries with interest handled separately
     records = list(invoice.income_records.all())
+    line_items = []
+    discount_total = Decimal('0.00')
+    for record in records:
+        rate = ensure_decimal(getattr(record, 'rate', None))
+        qty = ensure_decimal(getattr(record, 'qty', None))
+        original_rate = rate
+        product = getattr(record, 'product', None)
+        if product:
+            if product.sale_price is not None:
+                original_rate = ensure_decimal(product.sale_price)
+            elif product.promotion_price is not None and product.promotion_price > rate:
+                original_rate = ensure_decimal(product.promotion_price)
+        discount_amount = Decimal('0.00')
+        if original_rate > rate:
+            discount_amount = (original_rate - rate) * qty
+        is_free = rate == Decimal('0.00') and qty > 0
+        line_items.append({
+            'record': record,
+            'original_rate': original_rate,
+            'discount_amount': discount_amount,
+            'is_free': is_free,
+        })
+        discount_total += discount_amount
     interest_total = sum(
         r.amount for r in records
         if r.job and str(r.job).lower().startswith('interest')
@@ -167,6 +190,8 @@ def _build_invoice_context(invoice, request, *, profile=None):
         'interest_total': interest_total,
         'tax': tax,
         'total_amount': total_amount,
+        'line_items': line_items,
+        'discount_total': discount_total,
         'is_paid': invoice.payment_status == 'Paid',
         'balance_due': invoice.balance_due(),
         'total_paid_amount': invoice.total_paid(),

@@ -1,0 +1,555 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}FAQ - {{ business_name|default:default_business_name }}{% endblock %}
+
+{% block body_class %}page-faq{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --brand-blue: var(--brand-primary);
+    --brand-blue-light: #2C6BD6;
+    --brand-blue-dark: var(--brand-primary-strong);
+    --brand-cyan: var(--brand-cool);
+    --brand-navy: var(--brand-ink);
+    --neutral-600: var(--brand-ink-soft);
+    --neutral-700: #334155;
+  }
+
+  .faq-hero {
+    min-height: 55vh;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(11, 18, 32, 0.92) 0%, rgba(15, 74, 168, 0.82) 55%, rgba(11, 54, 125, 0.9) 100%),
+      url("{% static 'images/hero_contact_background.png' %}");
+    background-size: cover;
+    background-position: center;
+    padding: clamp(4rem, 9vw, 7rem) 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .faq-hero::before {
+    content: '';
+    position: absolute;
+    top: -10%;
+    right: 8%;
+    width: 380px;
+    height: 380px;
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: faqFloat 9s ease-in-out infinite;
+  }
+
+  .faq-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    left: 5%;
+    width: 320px;
+    height: 320px;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 32% 68% 63% 37% / 44% 38% 62% 56%;
+    animation: faqMorph 12s ease-in-out infinite;
+  }
+
+  @keyframes faqFloat {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    50% {
+      transform: translate(-20px, 25px) scale(1.08);
+    }
+  }
+
+  @keyframes faqMorph {
+    0%,
+    100% {
+      transform: rotate(0deg);
+      border-radius: 32% 68% 63% 37% / 44% 38% 62% 56%;
+    }
+    50% {
+      transform: rotate(180deg);
+      border-radius: 62% 38% 42% 58% / 38% 64% 36% 62%;
+    }
+  }
+
+  .faq-hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+  }
+
+  .faq-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: rgba(34, 211, 238, 0.18);
+    border: 1px solid rgba(34, 211, 238, 0.45);
+    color: var(--brand-cyan);
+    padding: 0.6rem 1.25rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+  }
+
+  .faq-hero h1 {
+    font-family: var(--font-heading);
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 1.2rem;
+    line-height: 1.1;
+  }
+
+  .faq-hero .lead {
+    color: rgba(255, 255, 255, 0.86);
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    max-width: 640px;
+    margin: 0 auto 2.4rem;
+    line-height: 1.7;
+  }
+
+  .faq-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.85rem;
+  }
+
+  .faq-hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.95rem 1.75rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+  }
+
+  .faq-hero-btn.primary {
+    background: #fff;
+    color: var(--brand-navy);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+  }
+
+  .faq-hero-btn.primary:hover {
+    transform: translateY(-3px);
+    background: #f8fafc;
+    color: var(--brand-navy);
+  }
+
+  .faq-hero-btn.secondary {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  .faq-hero-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+  }
+
+  .faq-section {
+    padding: clamp(4.5rem, 9vw, 6.5rem) 0;
+    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .faq-section::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 760px;
+    height: 760px;
+    background: radial-gradient(circle, rgba(0, 168, 232, 0.06) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .faq-section > .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 3.5rem;
+  }
+
+  .section-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--tone-accent-soft);
+    border: 1px solid var(--tone-accent-border);
+    color: var(--tone-accent);
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 800;
+    color: var(--tone-ink);
+    margin-bottom: 0.75rem;
+  }
+
+  .section-subtitle {
+    color: var(--tone-subtle);
+    font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+    max-width: 650px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  .faq-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 767px) {
+    .faq-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .faq-item {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .faq-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--brand-cyan), var(--brand-blue));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .faq-item:hover {
+    box-shadow: 0 15px 50px rgba(0, 71, 171, 0.12);
+    transform: translateY(-6px);
+  }
+
+  .faq-item:hover::before {
+    opacity: 1;
+  }
+
+  .faq-question {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: var(--brand-navy);
+    margin-bottom: 0.75rem;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .faq-question i {
+    color: var(--brand-cyan);
+  }
+
+  .faq-answer {
+    color: var(--neutral-700);
+    margin-bottom: 0;
+    line-height: 1.7;
+  }
+
+  .faq-cta {
+    padding: clamp(3.5rem, 7vw, 5rem) 0;
+    background: #fff;
+  }
+
+  .faq-cta-card {
+    background: linear-gradient(135deg, var(--tone-accent-soft), rgba(255, 255, 255, 0.95));
+    border-radius: 24px;
+    padding: 2.5rem;
+    border: 1px solid var(--tone-accent-border);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .faq-cta-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--brand-navy);
+    margin-bottom: 0.75rem;
+  }
+
+  .faq-cta-card p {
+    color: var(--neutral-600);
+    margin: 0;
+    max-width: 520px;
+  }
+
+  .faq-cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .faq-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--brand-blue);
+    color: #fff;
+    transition: all 0.3s ease;
+  }
+
+  .faq-cta-btn:hover {
+    transform: translateY(-2px);
+    color: #fff;
+    background: var(--brand-blue-dark);
+  }
+
+  .faq-cta-btn.secondary {
+    background: #fff;
+    color: var(--brand-navy);
+    border: 1px solid rgba(15, 23, 42, 0.12);
+  }
+
+  .faq-cta-btn.secondary:hover {
+    background: #f8fafc;
+    color: var(--brand-navy);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="faq-hero">
+  <div class="container">
+    <div class="faq-hero-content">
+      <div class="faq-hero-badge">
+        <i class="fas fa-circle-question"></i>
+        <span>Help Center</span>
+      </div>
+      <h1>Frequently Asked Questions</h1>
+      <p class="lead">Quick answers about ordering parts, fitment help, delivery options, and fleet accounts.</p>
+      <div class="faq-hero-actions">
+        <a class="faq-hero-btn primary" href="{% url 'accounts:public_contact' %}">
+          <i class="fas fa-headset"></i>
+          Contact Parts Desk
+        </a>
+        <a class="faq-hero-btn secondary" href="{% url 'accounts:store_product_list' %}">
+          <i class="fas fa-truck"></i>
+          Browse Parts
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="faq-section" data-brand-tone="cool">
+  <div class="container">
+    <div class="section-header animate-fade-up">
+      <div class="section-badge">
+        <i class="fas fa-question-circle"></i>
+        FAQ
+      </div>
+      <h2 class="section-title">Answers to the Most Common Questions</h2>
+      <p class="section-subtitle">Use these quick answers to plan pickups, confirm availability, and get the right truck and trailer parts fast.</p>
+    </div>
+
+    <div class="faq-grid">
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          What are your hours of operation?
+        </div>
+        <p class="faq-answer">Hours vary by location. See the location cards on our contact page for daily hours.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Do you carry OEM and aftermarket parts?
+        </div>
+        <p class="faq-answer">Yes. We stock trusted OEM-grade and aftermarket options to meet different fleet budgets and timelines.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Can you help confirm part fitment?
+        </div>
+        <p class="faq-answer">Absolutely. Share your VIN, unit number, or part number and our team will verify the correct match.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Do you offer delivery or pickup?
+        </div>
+        <p class="faq-answer">Yes. We offer same-day pickup and can arrange local delivery based on availability.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          How do I set up a fleet account?
+        </div>
+        <p class="faq-answer">Register online or contact the parts desk to set up account pricing and ordering access.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          What payment methods do you accept?
+        </div>
+        <p class="faq-answer">We accept cash, all major credit cards, debit, and offer fleet account billing for qualified businesses with approved credit.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Do you offer quotes for fleet or bulk orders?
+        </div>
+        <p class="faq-answer">Yes. Share your parts list, quantities, and deadlines, and we will provide a fast quote with availability and lead times.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Can you source special-order parts?
+        </div>
+        <p class="faq-answer">We can special-order OEM and aftermarket parts not currently in stock. Lead times vary by brand and supplier.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          What types of parts do you carry?
+        </div>
+        <p class="faq-answer">We stock heavy-duty truck and trailer parts including brakes, suspension, lighting, filters, driveline, electrical, and shop supplies.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Do you help with cross-references or part numbers?
+        </div>
+        <p class="faq-answer">Yes. Provide a part number, brand, or spec and we will cross-reference to compatible options.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Can I get updates on order status?
+        </div>
+        <p class="faq-answer">We can provide updates by phone or email. For account customers, invoices and statements are available online.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Do you have warranties on parts?
+        </div>
+        <p class="faq-answer">Warranty coverage depends on the manufacturer. We will explain warranty terms and help with claims when applicable.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          What is your return policy?
+        </div>
+        <p class="faq-answer">Returns are accepted on unused items in original packaging. Some special-order or electrical items may be non-returnable.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Do you charge core deposits?
+        </div>
+        <p class="faq-answer">Some components include core charges. Bring the core back for credit based on supplier guidelines.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Can I place orders online?
+        </div>
+        <p class="faq-answer">Yes. Use the storefront to browse, search by brand or category, and submit orders anytime.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          Do you offer same-day pickup?
+        </div>
+        <p class="faq-answer">In-stock items are available for same-day pickup. We will confirm timing when your order is placed.</p>
+      </div>
+
+      <div class="faq-item animate-fade-up">
+        <div class="faq-question">
+          <i class="fas fa-check-circle"></i>
+          How do invoices and statements work?
+        </div>
+        <p class="faq-answer">Fleet accounts receive invoices per order and statements for monthly balances. Contact the parts desk for access or billing questions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="faq-cta" data-brand-tone="highlight">
+  <div class="container">
+    <div class="faq-cta-card animate-fade-up">
+      <div>
+        <h3>Still need help?</h3>
+        <p>Our parts desk can confirm fitment, pricing, and availability for your fleet.</p>
+      </div>
+      <div class="faq-cta-actions">
+        <a class="faq-cta-btn" href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}">
+          <i class="fas fa-phone"></i>
+          Call {{ business_contact_phone }}
+        </a>
+        <a class="faq-cta-btn secondary" href="{% url 'accounts:public_contact' %}">
+          <i class="fas fa-envelope"></i>
+          Send a Message
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

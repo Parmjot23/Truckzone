@@ -1,6 +1,6 @@
 import tempfile
 import json
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import timedelta
 from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse, JsonResponse
@@ -15,12 +15,31 @@ except (ImportError, OSError):
     WEASYPRINT_AVAILABLE = False
     HTML = None
     CSS = None
-from django.db.models import Sum, Value, DecimalField, F, Q
-from django.db.models.functions import Coalesce
+from django.db.models import (
+    Sum,
+    Value,
+    DecimalField,
+    F,
+    Q,
+    OuterRef,
+    Subquery,
+    Case,
+    When,
+    ExpressionWrapper,
+)
+from django.db.models.functions import Coalesce, Cast
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 # Assuming your models.py defines GroupedInvoice, Profile, Customer, Payment, ReminderLog
-from .models import GroupedInvoice, Profile, Customer, Payment, ReminderLog # Make sure Invoice model is imported if used by customer.invoices
+from .models import (
+    GroupedInvoice,
+    Profile,
+    Customer,
+    Payment,
+    ReminderLog,
+    CustomerCreditItem,
+    CustomerCredit,
+) # Make sure Invoice model is imported if used by customer.invoices
 # Assuming your templatetags are in 'accounts' app, and 'custom_filters.py' contains currency
 from accounts.templatetags import custom_filters
 from .utils import resolve_company_logo_url, build_cc_list, get_customer_user_ids
@@ -28,6 +47,33 @@ from .pdf_utils import apply_branding_defaults
 import logging 
 logger = logging.getLogger(__name__)
 
+
+def _annotate_invoice_credit_totals(queryset):
+    amount_field = DecimalField(max_digits=10, decimal_places=2)
+    credit_amount_expr = Case(
+        When(customer_credit__tax_included=True, then=Cast('amount', amount_field)),
+        default=ExpressionWrapper(
+            Cast('amount', amount_field) + Cast('tax_paid', amount_field),
+            output_field=amount_field,
+        ),
+        output_field=amount_field,
+    )
+    credit_total = CustomerCreditItem.objects.filter(
+        source_invoice=OuterRef('pk')
+    ).values('source_invoice').annotate(
+        total=Coalesce(
+            Sum(credit_amount_expr),
+            Value(Decimal('0.00')),
+            output_field=amount_field,
+        )
+    ).values('total')
+    return queryset.annotate(
+        credit_total=Coalesce(
+            Subquery(credit_total, output_field=amount_field),
+            Value(Decimal('0.00')),
+            output_field=amount_field,
+        )
+    )
 
 # ---------------------------
 # Standard Invoice Functions
@@ -47,11 +93,14 @@ def get_invoice_context(request, customer_id, start_date=None, end_date=None, in
     if end_date:
         invoices = invoices.filter(date__lte=end_date)
 
-    # Annotate computed fields (total_paid and balance_due)
+    # Annotate computed fields (total_paid and balance_due) using payments only.
     invoices = invoices.annotate(
         total_paid=Coalesce(Sum('payments__amount'), Value(Decimal('0.00')), output_field=DecimalField())
     ).annotate(
-        balance_due=F('total_amount') - F('total_paid')
+        balance_due=ExpressionWrapper(
+            F('total_amount') - F('total_paid'),
+            output_field=DecimalField(),
+        )
     )
 
     if invoice_type == 'pending':
@@ -74,6 +123,55 @@ def get_invoice_context(request, customer_id, start_date=None, end_date=None, in
         total=Coalesce(Sum('balance_due'), Value(Decimal('0.00')), output_field=DecimalField())
     )['total'] or Decimal('0.00')
 
+    credit_rows = []
+    credit_total = Decimal('0.00')
+    credits_qs = CustomerCredit.objects.filter(user=request.user, customer=customer).prefetch_related(
+        'items',
+        'items__product',
+        'items__source_invoice',
+    ).order_by('-date', '-id')
+    if start_date:
+        credits_qs = credits_qs.filter(date__gte=start_date)
+    if end_date:
+        credits_qs = credits_qs.filter(date__lte=end_date)
+    for credit in credits_qs:
+        total_incl_tax, total_tax, total_excl_tax = credit.calculate_totals()
+        total_incl_tax = Decimal(str(total_incl_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_tax = Decimal(str(total_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_excl_tax = Decimal(str(total_excl_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        credit_total += total_incl_tax
+        item_parts = []
+        for item in credit.items.all():
+            label = (item.description or item.part_no or '').strip()
+            if not label and item.product:
+                label = item.product.name or ''
+            label = label.strip()
+            qty = item.qty or 0
+            if label:
+                if qty:
+                    item_parts.append(f"{qty}x {label}")
+                else:
+                    item_parts.append(label)
+        credit_rows.append({
+            'credit': credit,
+            'total_incl_tax': total_incl_tax,
+            'total_tax': total_tax,
+            'total_excl_tax': total_excl_tax,
+            'item_summary': ", ".join(item_parts),
+        })
+
+    credit_sign = Decimal('1.00') if invoice_type == 'paid' else Decimal('-1.00')
+    for row in credit_rows:
+        row['display_total'] = (row['total_incl_tax'] * credit_sign).quantize(
+            Decimal('0.01'),
+            rounding=ROUND_HALF_UP,
+        )
+
+    if invoice_type == 'paid':
+        total_paid += credit_total
+    else:
+        total_balance_due -= credit_total
+
     customer_email = customer.email
     start_date_actual = invoices.order_by('date').first().date
     end_date_actual = invoices.order_by('date').last().date
@@ -93,6 +191,9 @@ def get_invoice_context(request, customer_id, start_date=None, end_date=None, in
         'total_amount': total_amount,
         'total_paid': total_paid,
         'total_balance_due': total_balance_due,
+        'credit_rows': credit_rows,
+        'credit_total': credit_total,
+        'credit_sign': credit_sign,
         'customer_email': customer_email,
         'company_logo_url': company_logo_url,
         'start_date': start_date_actual,
@@ -117,12 +218,15 @@ def get_overdue_invoice_context(request, customer_id, start_date=None, end_date=
     customer_user_ids = get_customer_user_ids(request.user)
     customer = get_object_or_404(Customer, id=customer_id, user__in=customer_user_ids)
 
-    # Retrieve invoices and annotate computed fields
+    # Retrieve invoices and annotate computed fields (payments only).
     invoices = customer.invoices.filter(user=request.user)
     invoices = invoices.annotate(
         total_paid=Coalesce(Sum('payments__amount'), Value(Decimal('0.00')), output_field=DecimalField())
     ).annotate(
-        balance_due=F('total_amount') - F('total_paid')
+        balance_due=ExpressionWrapper(
+            F('total_amount') - F('total_paid'),
+            output_field=DecimalField(),
+        )
     )
     # Only include invoices with a positive balance
     invoices = invoices.filter(balance_due__gt=Decimal('0.00'))
@@ -151,6 +255,53 @@ def get_overdue_invoice_context(request, customer_id, start_date=None, end_date=
 
     total_overdue_balance = sum(invoice.balance_due for invoice in overdue_invoices_list)
 
+    credit_rows = []
+    credit_total = Decimal('0.00')
+    credits_qs = CustomerCredit.objects.filter(user=request.user, customer=customer).prefetch_related(
+        'items',
+        'items__product',
+        'items__source_invoice',
+    ).order_by('-date', '-id')
+    if start_date:
+        credits_qs = credits_qs.filter(date__gte=start_date)
+    if end_date:
+        credits_qs = credits_qs.filter(date__lte=end_date)
+    for credit in credits_qs:
+        total_incl_tax, total_tax, total_excl_tax = credit.calculate_totals()
+        total_incl_tax = Decimal(str(total_incl_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_tax = Decimal(str(total_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_excl_tax = Decimal(str(total_excl_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        credit_total += total_incl_tax
+        item_parts = []
+        for item in credit.items.all():
+            label = (item.description or item.part_no or '').strip()
+            if not label and item.product:
+                label = item.product.name or ''
+            label = label.strip()
+            qty = item.qty or 0
+            if label:
+                if qty:
+                    item_parts.append(f"{qty}x {label}")
+                else:
+                    item_parts.append(label)
+        credit_rows.append({
+            'credit': credit,
+            'total_incl_tax': total_incl_tax,
+            'total_tax': total_tax,
+            'total_excl_tax': total_excl_tax,
+            'item_summary': ", ".join(item_parts),
+        })
+
+    credit_sign = Decimal('-1.00')
+    for row in credit_rows:
+        row['display_total'] = (row['total_incl_tax'] * credit_sign).quantize(
+            Decimal('0.01'),
+            rounding=ROUND_HALF_UP,
+        )
+
+    total_pending_balance -= credit_total
+    total_overdue_balance -= credit_total
+
     # Determine actual start/end dates from the overdue invoices being processed
     start_date_actual = min(inv.date for inv in overdue_invoices_list) if overdue_invoices_list else None
     end_date_actual = max(inv.date for inv in overdue_invoices_list) if overdue_invoices_list else None
@@ -165,6 +316,9 @@ def get_overdue_invoice_context(request, customer_id, start_date=None, end_date=
         'invoices': overdue_invoices_list,  # Only overdue invoices
         'total_pending_balance': total_pending_balance, # This is total pending for the customer (possibly within date range)
         'total_overdue_balance': total_overdue_balance, # This is total of actually overdue items in the list
+        'credit_rows': credit_rows,
+        'credit_total': credit_total,
+        'credit_sign': credit_sign,
         'customer_email': customer.email,
         'company_logo_url': company_logo_url,
         'start_date': start_date_actual,

@@ -190,6 +190,12 @@
       line-height: 1.6;
     }
     .line-items .text-right { text-align: right; white-space: nowrap; }
+    .line-items .discount-row td {
+      padding-top: 0;
+      padding-bottom: 8px;
+      font-size: 10px;
+      color: #6b7780;
+    }
     /* --- REFACTORED TOTALS SECTION --- */
     .summary-row {
       display: flex;
@@ -432,7 +438,7 @@
       </div>
       <!-- End Letterhead -->
 
-      {% if invoice.income_records.all %}
+      {% if line_items %}
         <div class="line-items-wrapper">
           <div class="table-heading">Jobs / Parts Description</div>
           <table class="line-items" aria-label="Jobs / Parts Description">
@@ -445,13 +451,41 @@
               </tr>
             </thead>
             <tbody>
-              {% for job in invoice.income_records.all %}
+              {% for line in line_items %}
+                {% with job=line.record %}
                 <tr>
                   <td>{{ job.job|default:'Untitled Job'|linebreaksbr }}</td>
-                  <td class="text-right">{% if job.rate is not None %}{{ job.rate|currency }}{% else %}—{% endif %}</td>
-                  <td class="text-right">{% if job.qty is not None %}{{ job.qty|floatformat:-2 }}{% else %}—{% endif %}</td>
-                  <td class="text-right">{{ job.amount|currency }}</td>
+                  <td class="text-right">
+                    {% if line.is_free %}
+                      FREE
+                    {% elif job.rate is not None %}
+                      {{ job.rate|currency }}
+                    {% else %}
+                      --
+                    {% endif %}
+                  </td>
+                  <td class="text-right">
+                    {% if job.qty is not None %}
+                      {{ job.qty|floatformat:-2 }}
+                    {% else %}
+                      --
+                    {% endif %}
+                  </td>
+                  <td class="text-right">
+                    {% if line.is_free %}
+                      FREE
+                    {% else %}
+                      {{ job.amount|currency }}
+                    {% endif %}
+                  </td>
                 </tr>
+                {% if line.discount_amount %}
+                <tr class="discount-row">
+                  <td colspan="3" class="text-muted">Discount applied</td>
+                  <td class="text-right text-muted">-{{ line.discount_amount|currency }}</td>
+                </tr>
+                {% endif %}
+                {% endwith %}
               {% endfor %}
             </tbody>
           </table>

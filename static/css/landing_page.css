@@ -1122,6 +1122,31 @@
   flex-shrink: 0;
 }
 
+.service-detail-card a {
+  color: var(--neutral-900);
+  font-weight: 600;
+}
+
+.service-detail-card a:hover {
+  color: var(--neutral-700);
+  text-decoration: underline;
+}
+
+@media (max-width: 992px) {
+  .service-detail-card {
+    padding: clamp(1.5rem, 2vw, 2rem);
+    border-radius: 1.5rem;
+  }
+
+  .service-detail-card h3 {
+    font-size: clamp(1.35rem, 3vw, 1.75rem);
+  }
+
+  .service-detail-card a {
+    font-size: 0.95rem;
+  }
+}
+
 .service-list {
   list-style: none;
   padding: 0;

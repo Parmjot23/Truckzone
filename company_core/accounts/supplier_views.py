@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from .decorators import supplier_login_required
 from .models import InventoryTransaction, MechExpense
-from .utils import resolve_company_logo_url
+from .utils import apply_stock_fields, annotate_products_with_stock, get_store_user_ids, resolve_company_logo_url
 
 
 def _business_contact_details(supplier):
@@ -69,45 +69,62 @@ def build_supplier_portal_context(request):
 def supplier_dashboard(request):
     supplier_account = request.user.supplier_portal
 
-    product_queryset = supplier_account.products.all()
+    product_queryset = annotate_products_with_stock(
+        supplier_account.products.all(),
+        supplier_account.user,
+    )
+    transaction_user_ids = get_store_user_ids(supplier_account.user)
 
     product_summary = product_queryset.aggregate(
         total_products=Coalesce(Count("id"), Value(0)),
-        total_stock=Coalesce(Sum("quantity_in_stock"), Value(0)),
+        total_stock=Coalesce(Sum("stock_quantity"), Value(0)),
     )
 
     total_purchased = (
         InventoryTransaction.objects.filter(
             product__supplier=supplier_account,
             transaction_type="IN",
+            user__in=transaction_user_ids,
         ).aggregate(total=Coalesce(Sum("quantity"), Value(0)))
     )["total"]
     total_purchased = int(total_purchased or 0)
 
     low_stock_count = product_queryset.filter(
-        quantity_in_stock__lt=F("reorder_level"),
-        reorder_level__gt=0,
+        stock_quantity__lt=F("stock_reorder"),
+        stock_reorder__gt=0,
     ).count()
 
-    product_rows = product_queryset.annotate(
-        total_received=Coalesce(
-            Sum(
-                "transactions__quantity",
-                filter=Q(transactions__transaction_type="IN"),
+    product_rows = list(
+        product_queryset.annotate(
+            total_received=Coalesce(
+                Sum(
+                    "transactions__quantity",
+                    filter=Q(
+                    transactions__transaction_type="IN",
+                    transactions__user__in=transaction_user_ids,
+                ),
             ),
             Value(0),
         ),
         total_used=Coalesce(
             Sum(
                 "transactions__quantity",
-                filter=Q(transactions__transaction_type="OUT"),
+                filter=Q(
+                    transactions__transaction_type="OUT",
+                    transactions__user__in=transaction_user_ids,
+                ),
+                ),
+                Value(0),
             ),
-            Value(0),
-        ),
-    ).order_by("name")
+        ).order_by("name")
+    )
+    apply_stock_fields(product_rows)
 
     recent_transactions = (
-        InventoryTransaction.objects.filter(product__supplier=supplier_account)
+        InventoryTransaction.objects.filter(
+            product__supplier=supplier_account,
+            user__in=transaction_user_ids,
+        )
         .select_related("product")
         .order_by("-transaction_date")[:6]
     )

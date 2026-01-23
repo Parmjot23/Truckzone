@@ -9,31 +9,83 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   /* =============================================
-       CONTACT PAGE - Premium Modern Design
+       CONTACT PAGE - PREMIUM E-COMMERCE DESIGN
+       Modern, Professional, Enterprise-grade
        ============================================= */
 
-  /* Hero Section */
+  :root {
+    --brand-blue: var(--brand-primary);
+    --brand-blue-light: #2C6BD6;
+    --brand-blue-dark: var(--brand-primary-strong);
+    --brand-cyan: var(--brand-cool);
+    --brand-navy: var(--brand-ink);
+    --neutral-600: var(--brand-ink-soft);
+    --neutral-700: #334155;
+  }
+
+  /* === HERO SECTION - IMMERSIVE DESIGN === */
   .contact-hero {
-    background: linear-gradient(135deg, rgba(26, 26, 26, 0.92), rgba(0, 71, 171, 0.85)),
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(11, 18, 32, 0.92) 0%, rgba(15, 74, 168, 0.78) 52%, rgba(11, 54, 125, 0.85) 100%),
     url("{% static 'images/hero_contact_background.png' %}");
     background-size: cover;
     background-position: center;
-    padding: clamp(5rem, 10vw, 8rem) 0 clamp(4rem, 8vw, 6rem);
+    padding: clamp(5rem, 10vw, 8rem) 0;
     position: relative;
     overflow: hidden;
   }
 
+  /* Animated floating shapes */
   .contact-hero::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background:
-      radial-gradient(circle at 20% 20%, rgba(0, 71, 171, 0.15), transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(26, 26, 26, 0.12), transparent 50%);
-    pointer-events: none;
+    top: 10%;
+    right: 10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.18) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: floatShape 8s ease-in-out infinite;
+  }
+
+  .contact-hero::after {
+    content: '';
+    position: absolute;
+    bottom: 15%;
+    left: 5%;
+    width: 300px;
+    height: 300px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+    animation: morphBlob 12s ease-in-out infinite;
+  }
+
+  @keyframes floatShape {
+
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+
+    50% {
+      transform: translate(-20px, 30px) scale(1.1);
+    }
+  }
+
+  @keyframes morphBlob {
+
+    0%,
+    100% {
+      border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+      transform: rotate(0deg);
+    }
+
+    50% {
+      border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%;
+      transform: rotate(180deg);
+    }
   }
 
   .contact-hero-content {
@@ -44,30 +96,45 @@
   .contact-hero-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    background: rgba(0, 71, 171, 0.15);
-    border: 1px solid rgba(0, 71, 171, 0.3);
-    color: #74a5e6;
-    padding: 0.5rem 1rem;
+    gap: 0.6rem;
+    background: rgba(34, 211, 238, 0.18);
+    border: 1px solid rgba(34, 211, 238, 0.45);
+    color: var(--brand-cyan);
+    padding: 0.6rem 1.25rem;
     border-radius: 999px;
     font-size: 0.85rem;
     font-weight: 600;
+    letter-spacing: 0.05em;
     margin-bottom: 1.5rem;
+    backdrop-filter: blur(10px);
+    text-transform: uppercase;
+    animation: fadeSlideUp 0.6s ease-out;
   }
 
   .contact-hero h1 {
-    font-size: clamp(2.25rem, 5vw, 3.5rem);
+    font-family: var(--font-heading);
+    font-size: clamp(2.5rem, 6vw, 4rem);
     font-weight: 800;
     color: white;
-    margin-bottom: 1rem;
-    line-height: 1.15;
+    margin-bottom: 1.25rem;
+    line-height: 1.1;
+    animation: fadeSlideUp 0.6s ease-out 0.1s both;
+  }
+
+  .contact-hero h1 .highlight {
+    background: linear-gradient(135deg, var(--brand-cyan), var(--brand-blue-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .contact-hero .lead {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: clamp(1rem, 2vw, 1.2rem);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: clamp(1rem, 2vw, 1.25rem);
     max-width: 600px;
-    margin: 0 auto 2rem;
+    margin: 0 auto 2.5rem;
+    line-height: 1.7;
+    animation: fadeSlideUp 0.6s ease-out 0.2s both;
   }
 
   .hero-quick-contacts {
@@ -75,39 +142,171 @@
     flex-wrap: wrap;
     gap: 1rem;
     justify-content: center;
+    animation: fadeSlideUp 0.6s ease-out 0.3s both;
   }
 
   .hero-contact-chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
-    background: rgba(255, 255, 255, 0.1);
+    gap: 0.75rem;
+    background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 0.75rem 1.25rem;
-    border-radius: 999px;
+    padding: 1rem 1.75rem;
+    border-radius: 16px;
     color: white;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 1rem;
     text-decoration: none;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(8px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(20px);
   }
 
   .hero-contact-chip:hover {
-    background: rgba(0, 71, 171, 0.3);
-    border-color: rgba(0, 71, 171, 0.5);
-    transform: translateY(-2px);
+    background: rgba(0, 168, 232, 0.2);
+    border-color: var(--brand-cyan);
+    transform: translateY(-4px);
+    box-shadow: 0 15px 40px rgba(0, 168, 232, 0.25);
     color: white;
   }
 
   .hero-contact-chip i {
-    color: var(--brand-blue, #0047AB);
-    font-size: 1.1rem;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--brand-cyan), var(--brand-blue));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: white;
   }
 
-  /* Locations Section */
+  @keyframes fadeSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* === LOCATION HIGHLIGHT SECTION === */
+  .location-highlight-section {
+    padding: clamp(3rem, 6vw, 4rem) 0;
+    background: linear-gradient(135deg, #e0f2fe 0%, #f8fafc 55%, #e2e8f0 100%);
+    position: relative;
+  }
+
+  .location-highlight-card {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    padding: 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  }
+
+  .location-highlight-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0, 168, 232, 0.08), transparent 55%);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .location-highlight-card .highlight-body h2 {
+    font-family: var(--font-heading);
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--brand-navy);
+  }
+
+  .location-highlight-card .highlight-body p {
+    color: var(--neutral-600);
+    margin: 0.35rem 0;
+    font-size: 0.95rem;
+  }
+
+  .location-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--tone-accent-soft);
+    border: 1px solid var(--tone-accent-border);
+    color: var(--tone-accent);
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .location-list {
+    list-style: none;
+    margin: 0 0 0.75rem;
+    padding: 0;
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .location-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    color: var(--neutral-700);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .location-list i {
+    color: var(--brand-blue);
+    margin-top: 3px;
+    font-size: 0.95rem;
+  }
+
+  .highlight-actions .highlight-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    background: #ffffff;
+    color: var(--brand-navy);
+    font-weight: 700;
+    font-size: 0.95rem;
+    border-radius: 12px;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+    transition: all 0.3s ease;
+  }
+
+  .highlight-actions .highlight-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 40px rgba(15, 23, 42, 0.18);
+    color: var(--brand-navy);
+    background: #f8fafc;
+    border-color: rgba(0, 71, 171, 0.25);
+  }
+
+  /* === LOCATIONS SECTION - PREMIUM CARDS === */
   .locations-section {
-    padding: clamp(4rem, 8vw, 6rem) 0;
+    padding: clamp(5rem, 10vw, 7rem) 0;
     background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
     position: relative;
     overflow: hidden;
@@ -116,15 +315,12 @@
   .locations-section::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url("{% static 'images/contact_locations_bg.png' %}");
-    background-size: cover;
-    background-position: center;
-    opacity: 0.5;
-    z-index: 0;
+    top: -50%;
+    right: -20%;
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(0, 71, 171, 0.03) 0%, transparent 70%);
+    pointer-events: none;
   }
 
   .locations-section>.container {
@@ -134,48 +330,49 @@
 
   .section-header {
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 4rem;
   }
 
   .section-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(0, 71, 171, 0.08));
-    color: var(--brand-blue, #0047AB);
-    padding: 0.5rem 1rem;
+    background: var(--tone-accent-soft);
+    border: 1px solid var(--tone-accent-border);
+    color: var(--tone-accent);
+    padding: 0.5rem 1.25rem;
     border-radius: 999px;
     font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
     margin-bottom: 1rem;
   }
 
   .section-title {
-    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 5vw, 3rem);
     font-weight: 800;
-    color: var(--brand-navy, #0F172A);
+    color: var(--tone-ink);
     margin-bottom: 0.75rem;
   }
 
   .section-subtitle {
-    color: var(--neutral-600, #475569);
-    font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+    color: var(--tone-subtle);
+    font-size: clamp(0.95rem, 1.5vw, 1.15rem);
     max-width: 600px;
     margin: 0 auto;
+    line-height: 1.7;
   }
 
-  /* Location Cards */
+  /* Location Cards - 3D Glassmorphism */
   .location-card {
     background: white;
     border-radius: 24px;
     overflow: hidden;
-    box-shadow:
-      0 4px 6px rgba(0, 0, 0, 0.02),
-      0 12px 40px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
     border: 1px solid rgba(0, 0, 0, 0.04);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     height: 100%;
     position: relative;
   }
@@ -186,152 +383,105 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 5px;
-    background: linear-gradient(90deg, var(--brand-blue, #0047AB), #2563EB);
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand-cyan), var(--brand-blue));
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 0.4s ease;
   }
 
   .location-card:hover {
-    transform: translateY(-8px);
-    box-shadow:
-      0 8px 16px rgba(0, 0, 0, 0.04),
-      0 24px 60px rgba(0, 0, 0, 0.1);
+    transform: translateY(-12px);
+    box-shadow: 0 25px 60px rgba(0, 71, 171, 0.15);
   }
 
   .location-card:hover::before {
     transform: scaleX(1);
   }
 
-  .location-highlight-section {
-    padding: clamp(3rem, 6vw, 4.5rem) 0;
-    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-  }
-
-  .location-highlight-card {
-    background: white;
-    border-radius: 24px;
-    padding: 2rem;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1.5rem;
-    box-shadow:
-      0 10px 30px rgba(15, 23, 42, 0.05);
-  }
-
-  .location-highlight-card .highlight-body h2 {
-    font-size: clamp(1.75rem, 3vw, 2.25rem);
-    font-weight: 700;
-    margin-bottom: 0.75rem;
-    color: var(--brand-navy, #0F172A);
-  }
-
-  .location-highlight-card .highlight-body p {
-    color: var(--neutral-600, #475569);
-    margin: 0.1rem 0;
-    font-size: 1rem;
-  }
-
-  .highlight-actions .highlight-btn {
-    text-transform: uppercase;
-    font-weight: 600;
-    font-size: 0.9rem;
-    background: #0047AB;
-    border-radius: 999px;
-    color: white;
-    padding: 0.65rem 1.25rem;
-    border: none;
-    box-shadow: 0 5px 15px rgba(0, 71, 171, 0.25);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .highlight-actions .highlight-btn:hover {
-    background: #003080;
-    color: white;
-  }
-
   .location-card-header {
-    padding: 1.75rem 1.75rem 0;
+    padding: 2rem 2rem 0;
     display: flex;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 1.25rem;
   }
 
   .location-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(0, 71, 171, 0.1));
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--brand-cyan), var(--brand-blue));
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 10px 25px rgba(0, 168, 232, 0.3);
   }
 
   .location-icon i {
     font-size: 1.5rem;
-    color: var(--brand-blue, #0047AB);
+    color: white;
   }
 
   .location-info h3 {
-    font-size: 1.25rem;
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
     font-weight: 700;
-    color: var(--brand-navy, #0F172A);
-    margin-bottom: 0.25rem;
+    color: var(--brand-navy);
+    margin-bottom: 0.5rem;
   }
 
   .location-info .province-badge {
     display: inline-block;
-    background: linear-gradient(135deg, #0F172A, #1E293B);
+    background: linear-gradient(135deg, var(--brand-navy), #334155);
     color: white;
-    padding: 0.25rem 0.75rem;
+    padding: 0.3rem 0.85rem;
     border-radius: 999px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
   }
 
   .location-card-body {
-    padding: 1.5rem 1.75rem;
+    padding: 1.75rem 2rem;
   }
 
   .location-detail {
     display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
     align-items: flex-start;
+  }
+
+  .location-detail:last-child {
+    margin-bottom: 0;
   }
 
   .location-detail i {
     width: 20px;
-    color: var(--brand-blue, #0047AB);
+    color: var(--brand-cyan);
     margin-top: 3px;
     flex-shrink: 0;
   }
 
   .location-detail span {
-    color: var(--neutral-700, #334155);
+    color: var(--neutral-700);
     font-size: 0.95rem;
-    line-height: 1.5;
+    line-height: 1.6;
   }
 
   .location-detail a {
-    color: var(--brand-navy, #0F172A);
+    color: var(--brand-navy);
     font-weight: 600;
     text-decoration: none;
     transition: color 0.2s ease;
   }
 
   .location-detail a:hover {
-    color: var(--brand-blue, #0047AB);
+    color: var(--brand-cyan);
   }
 
   .location-card-footer {
-    padding: 1rem 1.75rem 1.75rem;
+    padding: 1.25rem 2rem 2rem;
     display: flex;
     gap: 0.75rem;
   }
@@ -342,20 +492,22 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.85rem 1.25rem;
-    background: linear-gradient(135deg, var(--brand-blue, #0047AB), #2563EB);
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, var(--brand-cyan), var(--brand-blue));
     color: white;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.9rem;
-    border-radius: 12px;
+    border-radius: 14px;
     text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 14px rgba(0, 71, 171, 0.3);
+    box-shadow: 0 8px 25px rgba(0, 168, 232, 0.3);
   }
 
   .btn-directions:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 71, 171, 0.4);
+    box-shadow: 0 12px 35px rgba(0, 168, 232, 0.4);
     color: white;
   }
 
@@ -363,21 +515,22 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
-    background: rgba(15, 23, 42, 0.08);
-    color: var(--brand-navy, #0F172A);
-    border-radius: 12px;
+    width: 52px;
+    height: 52px;
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--brand-navy);
+    border-radius: 14px;
     text-decoration: none;
     transition: all 0.3s ease;
   }
 
   .btn-call:hover {
-    background: var(--brand-navy, #0F172A);
-    color: white;
+    background: #e2e8f0;
+    color: var(--brand-navy);
+    transform: scale(1.05);
   }
 
-  /* Interactive Map Section */
+  /* === MAP SECTION === */
   .map-section {
     padding: 0 0 clamp(4rem, 8vw, 6rem);
   }
@@ -386,21 +539,33 @@
     background: white;
     border-radius: 24px;
     overflow: hidden;
-    box-shadow:
-      0 4px 6px rgba(0, 0, 0, 0.02),
-      0 20px 50px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(0, 0, 0, 0.04);
+    position: relative;
+  }
+
+  .map-container::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 24px;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+      inset 0 0 60px rgba(15, 23, 42, 0.18),
+      inset 0 0 140px rgba(15, 23, 42, 0.22);
+    pointer-events: none;
+    z-index: 2;
   }
 
   .map-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.25rem 1.5rem;
-    background: linear-gradient(135deg, #fafafa, #f5f5f5);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, rgba(224, 242, 254, 0.95) 0%, rgba(248, 250, 252, 0.98) 100%);
     flex-wrap: wrap;
     gap: 1rem;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
   }
 
   .map-title {
@@ -408,12 +573,12 @@
     align-items: center;
     gap: 0.75rem;
     font-weight: 700;
-    color: var(--brand-navy, #0F172A);
-    font-size: 1rem;
+    color: var(--brand-navy);
+    font-size: 1.1rem;
   }
 
   .map-title i {
-    color: var(--brand-blue, #0047AB);
+    color: var(--brand-blue);
   }
 
   .map-legend {
@@ -427,21 +592,26 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.85rem;
-    color: var(--neutral-600, #475569);
+    color: var(--neutral-600);
   }
 
   .legend-dot {
     width: 12px;
     height: 12px;
     border-radius: 50%;
+    box-shadow: 0 0 10px currentColor;
   }
 
-  .legend-dot.cornwall {
+  .legend-dot.lachine {
     background: #0047AB;
   }
 
   .legend-dot.vaudreuil {
-    background: #3B82F6;
+    background: #16A34A;
+  }
+
+  .legend-dot.cornwall {
+    background: #F97316;
   }
 
   #locations-map {
@@ -449,26 +619,49 @@
     width: 100%;
   }
 
-  /* Contact Form Section */
+  /* === CONTACT FORM SECTION === */
   .contact-form-section {
-    padding: clamp(4rem, 8vw, 6rem) 0;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    padding: clamp(5rem, 10vw, 7rem) 0;
+    background: linear-gradient(180deg, #e0f2fe 0%, #f8fafc 50%, #dbeafe 100%);
     position: relative;
     overflow: hidden;
   }
 
+  /* Animated orbs */
   .contact-form-section::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url("{% static 'images/contact_form_bg.png' %}");
-    background-size: cover;
-    background-position: center;
-    opacity: 0.5;
-    z-index: 0;
+    top: 20%;
+    right: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(0, 168, 232, 0.12) 0%, transparent 70%);
+    filter: blur(55px);
+    animation: floatOrb 10s ease-in-out infinite;
+  }
+
+  .contact-form-section::after {
+    content: '';
+    position: absolute;
+    bottom: 10%;
+    left: -5%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(0, 71, 171, 0.14) 0%, transparent 70%);
+    filter: blur(70px);
+    animation: floatOrb 12s ease-in-out infinite reverse;
+  }
+
+  @keyframes floatOrb {
+
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+
+    50% {
+      transform: translate(20px, -20px) scale(1.05);
+    }
   }
 
   .contact-form-section>.container {
@@ -477,181 +670,121 @@
   }
 
   .contact-form-wrapper {
-    display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 3rem;
-    align-items: start;
+    max-width: 700px;
+    margin: 0 auto;
   }
 
-  @media (max-width: 991px) {
-    .contact-form-wrapper {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .contact-info-panel {
-    background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
-    border-radius: 24px;
-    padding: 2.5rem;
-    color: white;
+  /* Form Card - Glassmorphism */
+  .form-card {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e2e8f0;
+    border-radius: 28px;
+    padding: 3rem;
+    backdrop-filter: blur(8px);
     position: relative;
     overflow: hidden;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
   }
 
-  .contact-info-panel::before {
+  .form-card::before {
     content: '';
     position: absolute;
     top: 0;
+    left: 0;
     right: 0;
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle, rgba(0, 71, 171, 0.15), transparent 70%);
-    pointer-events: none;
-  }
-
-  .contact-info-panel h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-  }
-
-  .contact-info-panel .lead {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.95rem;
-    margin-bottom: 2rem;
-  }
-
-  .info-item {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .info-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: rgba(37, 99, 235, 0.15);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .info-icon i {
-    color: var(--brand-blue, #0047AB);
-    font-size: 1.2rem;
-  }
-
-  .info-content h4 {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.6);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.35rem;
-  }
-
-  .info-content p,
-  .info-content a {
-    color: white;
-    font-size: 1rem;
-    font-weight: 600;
-    text-decoration: none;
-    margin: 0;
-  }
-
-  .info-content a:hover {
-    color: var(--brand-blue, #0047AB);
-  }
-
-  /* Form Card */
-  .form-card {
-    background: white;
-    border-radius: 24px;
-    padding: 2.5rem;
-    box-shadow:
-      0 4px 6px rgba(0, 0, 0, 0.02),
-      0 20px 50px rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.12), transparent);
   }
 
   .form-card h3 {
-    font-size: 1.5rem;
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
     font-weight: 700;
-    color: var(--brand-navy, #0F172A);
+    color: var(--brand-navy);
     margin-bottom: 0.5rem;
+    text-align: center;
   }
 
   .form-card .lead {
-    color: var(--neutral-600, #475569);
-    font-size: 0.95rem;
-    margin-bottom: 2rem;
+    color: var(--neutral-600);
+    font-size: 1rem;
+    margin-bottom: 2.5rem;
+    text-align: center;
   }
 
   .form-group {
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
   }
 
   .form-label {
     display: block;
     font-weight: 600;
-    color: var(--neutral-700, #334155);
-    margin-bottom: 0.5rem;
+    color: var(--brand-navy);
+    margin-bottom: 0.6rem;
     font-size: 0.9rem;
   }
 
   .form-control,
   .form-select {
     width: 100%;
-    padding: 0.85rem 1rem;
+    padding: 1rem 1.25rem;
     border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 0.95rem;
-    transition: all 0.2s ease;
-    background: #fafafa;
+    border-radius: 14px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+    color: var(--brand-navy);
+  }
+
+  .form-control::placeholder {
+    color: #94a3b8;
   }
 
   .form-control:focus,
   .form-select:focus {
     outline: none;
-    border-color: var(--brand-blue, #0047AB);
-    background: white;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+    border-color: var(--brand-blue);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(0, 71, 171, 0.12);
   }
 
   textarea.form-control {
     resize: vertical;
-    min-height: 120px;
+    min-height: 140px;
   }
 
   .btn-submit {
     width: 100%;
-    padding: 1rem 2rem;
-    background: linear-gradient(135deg, var(--brand-blue, #0047AB), #2563EB);
-    color: white;
+    padding: 1.15rem 2rem;
+    background: #ffffff;
+    color: var(--brand-navy);
     font-weight: 700;
     font-size: 1rem;
-    border: none;
-    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 14px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 14px rgba(0, 71, 171, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 1rem;
   }
 
   .btn-submit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 71, 171, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 15px 40px rgba(15, 23, 42, 0.18);
+    background: #f8fafc;
+    border-color: rgba(0, 71, 171, 0.25);
   }
 
-  /* FAQ Section */
+  /* === FAQ SECTION === */
   .faq-section {
-    padding: clamp(4rem, 8vw, 6rem) 0;
-    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    padding: clamp(5rem, 10vw, 7rem) 0;
+    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
     position: relative;
     overflow: hidden;
   }
@@ -659,15 +792,13 @@
   .faq-section::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url("{% static 'images/contact_faq_bg.png' %}");
-    background-size: cover;
-    background-position: center;
-    opacity: 0.5;
-    z-index: 0;
+    top: 50%;
+    left: 50%;
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(0, 168, 232, 0.05) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
   }
 
   .faq-section>.container {
@@ -689,80 +820,95 @@
 
   .faq-item {
     background: white;
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
     border: 1px solid rgba(0, 0, 0, 0.04);
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .faq-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--brand-cyan), var(--brand-blue));
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
 
   .faq-item:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    transform: translateY(-4px);
+    box-shadow: 0 15px 50px rgba(0, 71, 171, 0.1);
+    transform: translateY(-6px);
+  }
+
+  .faq-item:hover::before {
+    opacity: 1;
   }
 
   .faq-question {
+    font-family: var(--font-heading);
     font-weight: 700;
-    color: var(--brand-navy, #0F172A);
+    color: var(--brand-navy);
     margin-bottom: 0.75rem;
-    font-size: 1rem;
+    font-size: 1.1rem;
     display: flex;
     align-items: flex-start;
-    gap: 0.75rem;
+    gap: 0.85rem;
   }
 
   .faq-question i {
-    color: var(--brand-blue, #0047AB);
-    margin-top: 2px;
+    color: var(--brand-cyan);
+    margin-top: 3px;
   }
 
   .faq-answer {
-    color: var(--neutral-600, #475569);
-    font-size: 0.9rem;
-    line-height: 1.6;
-    padding-left: 1.75rem;
+    color: var(--neutral-600);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    padding-left: 2rem;
   }
 
-  /* Custom Leaflet Popup */
+  /* Leaflet popup override */
   .custom-popup .leaflet-popup-content-wrapper {
-    border-radius: 12px;
-    padding: 0;
-  }
-
-  .custom-popup .leaflet-popup-content {
-    margin: 0;
-    min-width: 200px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   }
 
   .popup-content {
-    padding: 1rem;
+    padding: 1.25rem;
   }
 
   .popup-content h4 {
+    font-family: var(--font-heading);
     font-weight: 700;
-    color: #0F172A;
+    color: var(--brand-navy);
     margin-bottom: 0.5rem;
-    font-size: 1rem;
+    font-size: 1.1rem;
   }
 
   .popup-content p {
-    color: #64748B;
-    font-size: 0.85rem;
-    margin-bottom: 0.75rem;
+    color: var(--neutral-600);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
   }
 
   .popup-content a {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    color: #0047AB;
-    font-weight: 600;
-    font-size: 0.85rem;
+    gap: 0.4rem;
+    color: var(--brand-cyan);
+    font-weight: 700;
+    font-size: 0.9rem;
     text-decoration: none;
   }
 
   .popup-content a:hover {
-    text-decoration: underline;
+    color: var(--brand-blue);
   }
 
   /* Animations */
@@ -777,11 +923,57 @@
     transform: translateY(0);
   }
 
-  /* === SATELLITE MAP SECTION === */
-  .satellite-map-section {
-    padding: clamp(4rem, 8vw, 6rem) 0;
-    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  /* Marker styles */
+  .location-marker {
+    background: transparent;
+    border: none;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+  }
+
+  .location-marker .marker-pin {
+    width: 22px;
+    height: 22px;
+    border-radius: 50% 50% 50% 0;
+    background: var(--marker-color, #0047AB);
+    transform: rotate(-45deg);
     position: relative;
+    display: block;
+    transform-origin: 50% 50%;
+    box-shadow:
+      0 8px 18px rgba(0, 0, 0, 0.25),
+      0 0 0 3px rgba(255, 255, 255, 0.9);
+  }
+
+  .location-marker .marker-pin::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    top: 7px;
+    left: 7px;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+  }
+
+  .location-marker .marker-pin::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.35), transparent 60%);
+    border-radius: 50%;
+    top: -2px;
+    left: -2px;
+  }
+
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  position: relative;
   }
 
   .satellite-map-section .section-header {
@@ -894,14 +1086,15 @@
     flex-wrap: wrap;
     gap: 2rem;
     padding: 1.25rem 2rem;
-    background: linear-gradient(135deg, #1A1A1A, #2D2D2D);
+    background: linear-gradient(135deg, #e2e8f0, #f8fafc);
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
   }
 
   .map-info-item {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: rgba(255, 255, 255, 0.85);
+    color: var(--neutral-700);
     font-size: 0.9rem;
   }
 
@@ -911,7 +1104,7 @@
   }
 
   .map-info-item a {
-    color: rgba(255, 255, 255, 0.85);
+    color: var(--brand-navy);
     text-decoration: none;
     font-weight: 600;
     transition: color 0.2s ease;
@@ -974,20 +1167,219 @@
 </section>
 
 <!-- Location Highlight Section -->
-<section class="location-highlight-section">
+<section class="location-highlight-section" data-brand-tone="highlight">
   <div class="container">
     <div class="location-highlight-card animate-fade-up">
       <div class="highlight-body">
-        <h2>Visit {{ business_name|default:default_business_name }}</h2>
-        <p>{{ business_contact_address|linebreaksbr }}</p>
-        <p>Business Hours: {{ business_hours|default:default_business_hours }}</p>
+        <div class="location-count">
+          <i class="fas fa-location-dot"></i>
+          Three Locations
+        </div>
+        <h2>Visit Our Locations</h2>
+        <ul class="location-list">
+          <li>
+            <i class="fas fa-location-dot"></i>
+            2362 46th Ave, Lachine, Quebec H8T 2P3
+          </li>
+          <li>
+            <i class="fas fa-location-dot"></i>
+            2860 Rue du Meunier Unit 140, Vaudreuil-Dorion, Quebec J7V 8P2
+          </li>
+          <li>
+            <i class="fas fa-location-dot"></i>
+            2015 Vincent Massey Dr, Cornwall, ON K6H 5R6
+          </li>
+        </ul>
+        <p>Hours listed per location below.</p>
       </div>
       <div class="highlight-actions">
-        <a href="https://www.google.com/maps/dir/?api=1&destination={{ business_contact_address|urlencode }}"
-          target="_blank" class="btn-directions highlight-btn">
-          <i class="fas fa-directions"></i> Get Directions
+        <a href="#locations" class="btn-directions highlight-btn">
+          <i class="fas fa-map-marker-alt"></i> View Locations
         </a>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- Locations Section -->
+<section class="locations-section" id="locations" data-brand-tone="primary">
+  <div class="container">
+    <div class="section-header animate-fade-up">
+      <div class="section-badge">
+        <i class="fas fa-map-marked-alt"></i>
+        Locations
+      </div>
+      <h2 class="section-title">Parts Pickup Locations</h2>
+      <p class="section-subtitle">Choose the nearest parts desk for fast pickup and expert support.</p>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-6 col-lg-4 d-flex">
+        <div class="location-card animate-fade-up w-100">
+          <div class="location-card-header">
+            <div class="location-icon">
+              <i class="fas fa-warehouse"></i>
+            </div>
+            <div class="location-info">
+              <h3>Truck Zone Lachine</h3>
+              <span class="province-badge">QC</span>
+            </div>
+          </div>
+          <div class="location-card-body">
+            <div class="location-detail">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>2362 46th Ave, Lachine, Quebec H8T 2P3</span>
+            </div>
+            <div class="location-detail">
+              <i class="fas fa-clock"></i>
+              <span>
+                Mon: 7 a.m. - 9 p.m.<br>
+                Tue: 7 a.m. - 9 p.m.<br>
+                Wed: 7 a.m. - 9 p.m.<br>
+                Thu: 7 a.m. - 9 p.m.<br>
+                Fri: 7 a.m. - 9 p.m.<br>
+                Sat: 7 a.m. - 9 p.m.<br>
+                Sun: 9 a.m. - 7 p.m.
+              </span>
+            </div>
+            <div class="location-detail">
+              <i class="fas fa-phone"></i>
+              <a href="tel:+15148029999">(514) 802-9999</a>
+            </div>
+          </div>
+          <div class="location-card-footer">
+            <a href="https://www.google.com/maps/dir/?api=1&destination=2362%2046th%20Ave%2C%20Lachine%2C%20Quebec%20H8T%202P3"
+              target="_blank" rel="noopener" class="btn-directions">
+              <i class="fas fa-directions"></i>
+              Directions
+            </a>
+            <a href="tel:+15148029999" class="btn-call" aria-label="Call Truck Zone Lachine">
+              <i class="fas fa-phone"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-4 d-flex">
+        <div class="location-card animate-fade-up w-100">
+          <div class="location-card-header">
+            <div class="location-icon">
+              <i class="fas fa-warehouse"></i>
+            </div>
+            <div class="location-info">
+              <h3>Truck Zone Vaudreuil-Dorion</h3>
+              <span class="province-badge">QC</span>
+            </div>
+          </div>
+          <div class="location-card-body">
+            <div class="location-detail">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>2860 Rue du Meunier Unit 140, Vaudreuil-Dorion, Quebec J7V 8P2</span>
+            </div>
+            <div class="location-detail">
+              <i class="fas fa-clock"></i>
+              <span>
+                Mon: 8 a.m. - 7 p.m.<br>
+                Tue: 8 a.m. - 7 p.m.<br>
+                Wed: 8 a.m. - 7 p.m.<br>
+                Thu: 8 a.m. - 7 p.m.<br>
+                Fri: 8 a.m. - 7 p.m.<br>
+                Sat: 8 a.m. - 5 p.m.<br>
+                Sun: Closed
+              </span>
+            </div>
+            <div class="location-detail">
+              <i class="fas fa-phone"></i>
+              <a href="tel:+15148267777">(514) 826-7777</a>
+            </div>
+          </div>
+          <div class="location-card-footer">
+            <a href="https://www.google.com/maps/dir/?api=1&destination=2860%20Rue%20du%20Meunier%20Unit%20140%2C%20Vaudreuil-Dorion%2C%20Quebec%20J7V%208P2"
+              target="_blank" rel="noopener" class="btn-directions">
+              <i class="fas fa-directions"></i>
+              Directions
+            </a>
+            <a href="tel:+15148267777" class="btn-call" aria-label="Call Truck Zone Vaudreuil-Dorion">
+              <i class="fas fa-phone"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-4 d-flex">
+        <div class="location-card animate-fade-up w-100">
+          <div class="location-card-header">
+            <div class="location-icon">
+              <i class="fas fa-warehouse"></i>
+            </div>
+            <div class="location-info">
+              <h3>Truck Zone Cornwall</h3>
+              <span class="province-badge">ON</span>
+            </div>
+          </div>
+          <div class="location-card-body">
+            <div class="location-detail">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>2015 Vincent Massey Dr, Cornwall, ON K6H 5R6</span>
+            </div>
+            <div class="location-detail">
+              <i class="fas fa-clock"></i>
+              <span>
+                Mon: 9 a.m. - 9 p.m.<br>
+                Tue: 9 a.m. - 9 p.m.<br>
+                Wed: 9 a.m. - 9 p.m.<br>
+                Thu: 9 a.m. - 9 p.m.<br>
+                Fri: 9 a.m. - 9 p.m.<br>
+                Sat: 9 a.m. - 5 p.m.<br>
+                Sun: 10 a.m. - 5 p.m.
+              </span>
+            </div>
+            <div class="location-detail">
+              <i class="fas fa-phone"></i>
+              <a href="tel:+16133244444">(613) 324-4444</a>
+            </div>
+          </div>
+          <div class="location-card-footer">
+            <a href="https://www.google.com/maps/dir/?api=1&destination=2015%20Vincent%20Massey%20Dr%2C%20Cornwall%2C%20ON%20K6H%205R6"
+              target="_blank" rel="noopener" class="btn-directions">
+              <i class="fas fa-directions"></i>
+              Directions
+            </a>
+            <a href="tel:+16133244444" class="btn-call" aria-label="Call Truck Zone Cornwall">
+              <i class="fas fa-phone"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Interactive Map Section -->
+<section class="map-section">
+  <div class="container">
+    <div class="map-container animate-fade-up">
+      <div class="map-header">
+        <div class="map-title">
+          <i class="fas fa-map"></i>
+          All Locations Map
+        </div>
+        <div class="map-legend">
+          <div class="legend-item">
+            <span class="legend-dot lachine"></span>
+            Lachine, QC
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot vaudreuil"></span>
+            Vaudreuil-Dorion, QC
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot cornwall"></span>
+            Cornwall, ON
+          </div>
+        </div>
+      </div>
+      <div id="locations-map"></div>
     </div>
   </div>
 </section>
@@ -995,53 +1387,6 @@
 <section class="contact-form-section">
   <div class="container">
     <div class="contact-form-wrapper">
-      <!-- Info Panel -->
-      <div class="contact-info-panel animate-fade-up">
-        <h3>Let's Connect</h3>
-        <p class="lead">Have a question or need a quote? We're here to help with parts sourcing and fitment.</p>
-
-        <div class="info-item">
-          <div class="info-icon">
-            <i class="fas fa-map-marker-alt"></i>
-          </div>
-          <div class="info-content">
-            <h4>Address</h4>
-            <p>{{ business_contact_address|linebreaksbr }}</p>
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-icon">
-            <i class="fas fa-phone"></i>
-          </div>
-          <div class="info-content">
-            <h4>Contact Numbers</h4>
-            <p><a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}">{{ business_contact_phone
-                }}</a></p>
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-icon">
-            <i class="fas fa-envelope"></i>
-          </div>
-          <div class="info-content">
-            <h4>Email</h4>
-            <p><a href="mailto:{{ business_contact_email }}">{{ business_contact_email }}</a></p>
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-icon">
-            <i class="fas fa-clock"></i>
-          </div>
-          <div class="info-content">
-            <h4>Hours</h4>
-            <p>{{ business_hours|default:default_business_hours }}</p>
-          </div>
-        </div>
-      </div>
-
       <!-- Form Card -->
       <div class="form-card animate-fade-up">
         <h3>Send Us a Message</h3>
@@ -1105,7 +1450,7 @@
 </section>
 
 <!-- FAQ Section -->
-<section class="faq-section">
+<section class="faq-section" data-brand-tone="cool">
   <div class="container">
     <div class="section-header animate-fade-up">
       <div class="section-badge">
@@ -1122,7 +1467,7 @@
           <i class="fas fa-check-circle"></i>
           What are your hours of operation?
         </div>
-        <p class="faq-answer">We are open {{ business_hours|default:default_business_hours }}.</p>
+        <p class="faq-answer">Hours vary by location. See the location cards above for daily hours.</p>
       </div>
 
       <div class="faq-item animate-fade-up">
@@ -1172,63 +1517,10 @@
   </div>
 </section>
 
-<!-- Satellite Map Section -->
-<section class="satellite-map-section">
-  <div class="container">
-    <div class="section-header animate-fade-up">
-      <div class="section-badge">
-        <i class="fas fa-satellite"></i>
-        Our Location
-      </div>
-      <h2 class="section-title">Find Us Here</h2>
-      <p class="section-subtitle">Visit our parts desk for fast pickup and expert support.</p>
-    </div>
-
-    <div class="satellite-map-container animate-fade-up">
-      <div class="map-glass-header">
-        <div class="map-header-left">
-          <div class="map-pin-icon">
-            <i class="fas fa-map-marker-alt"></i>
-          </div>
-          <div class="map-address-info">
-            <h4>{{ business_name|default:default_business_name }}</h4>
-            <p>{{ business_contact_address|linebreaksbr }}</p>
-          </div>
-        </div>
-        <div class="map-header-right">
-          <a href="https://www.google.com/maps/dir/?api=1&destination={{ business_contact_address|urlencode }}"
-            target="_blank" class="map-directions-btn">
-            <i class="fas fa-directions"></i>
-            Get Directions
-          </a>
-        </div>
-      </div>
-      <div class="map-iframe-wrapper">
-        <iframe src="https://www.google.com/maps?q={{ business_contact_address|urlencode }}&output=embed" width="100%"
-          height="500" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">
-        </iframe>
-      </div>
-      <div class="map-info-bar">
-        <div class="map-info-item">
-          <i class="fas fa-clock"></i>
-          <span>{{ business_hours|default:default_business_hours }}</span>
-        </div>
-        <div class="map-info-item">
-          <i class="fas fa-envelope"></i>
-          <a href="mailto:{{ business_contact_email }}">{{ business_contact_email }}</a>
-        </div>
-        <div class="map-info-item">
-          <i class="fas fa-phone"></i>
-          <a href="tel:{{ business_contact_phone_tel|default:business_contact_phone }}">{{ business_contact_phone }}</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     // Scroll animation
@@ -1244,6 +1536,71 @@
     }, { threshold: 0.1 });
 
     animatedElements.forEach(el => observer.observe(el));
+
+    const mapElement = document.getElementById('locations-map');
+    if (mapElement && window.L) {
+      const locations = [
+        {
+          name: 'Truck Zone Lachine',
+          address: '2362 46th Ave, Lachine, Quebec H8T 2P3',
+          coords: [45.4631046, -73.7194955],
+          color: '#0047AB',
+        },
+        {
+          name: 'Truck Zone Vaudreuil-Dorion',
+          address: '2860 Rue du Meunier Unit 140, Vaudreuil-Dorion, Quebec J7V 8P2',
+          coords: [45.3721377, -74.0318754],
+          color: '#16A34A',
+        },
+        {
+          name: 'Truck Zone Cornwall',
+          address: '2015 Vincent Massey Dr, Cornwall, ON K6H 5R6',
+          coords: [45.0316523, -74.7770535],
+          color: '#F97316',
+        },
+      ];
+
+      const map = L.map(mapElement, {
+        scrollWheelZoom: false,
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(map);
+
+      const bounds = L.latLngBounds([]);
+      locations.forEach((location) => {
+        const marker = L.marker(location.coords, {
+          icon: L.divIcon({
+            className: 'location-marker',
+            html: `<span class="marker-pin" style="--marker-color: ${location.color};"></span>`,
+            iconSize: [22, 22],
+            iconAnchor: [11, 22],
+            popupAnchor: [0, -22],
+          }),
+        });
+
+        const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location.address)}`;
+        const popupHtml = `
+          <div class="popup-content">
+            <h4>${location.name}</h4>
+            <p>${location.address}</p>
+            <a href="${directionsUrl}" target="_blank" rel="noopener">
+              Get directions <i class="fas fa-arrow-right"></i>
+            </a>
+          </div>
+        `;
+
+        marker.addTo(map).bindPopup(popupHtml, { className: 'custom-popup' });
+        bounds.extend(marker.getLatLng());
+      });
+
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [40, 40] });
+      } else {
+        map.setView([45.25, -74.2], 7);
+      }
+    }
   });
 </script>
 {% endblock %}

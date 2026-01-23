@@ -96,6 +96,51 @@
     {% else %}
         <p>No invoices found for this customer.</p>
     {% endif %}
+
+    {% if credit_entries %}
+        <div class="mt-5">
+            <h4>Customer Credits (Returns)</h4>
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Credit No</th>
+                            <th>Memo</th>
+                            <th>Returned Items</th>
+                            <th>Total Credit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in credit_entries %}
+                        <tr>
+                            <td data-label="Date">{{ entry.credit.date|date:"M d, Y" }}</td>
+                            <td data-label="Credit No">
+                                <a href="{% url 'accounts:customer_credit_detail' entry.credit.pk %}" class="btn btn-link">
+                                    {{ entry.credit.credit_no }}
+                                </a>
+                            </td>
+                            <td data-label="Memo">{{ entry.credit.memo|default:"-" }}</td>
+                            <td data-label="Returned Items">
+                                <ul class="list-unstyled mb-0">
+                                    {% for item in entry.items %}
+                                        <li>
+                                            {{ item.qty }}x {{ item.description|default:item.part_no|default:"Item" }}
+                                            {% if item.source_invoice %}
+                                                (Invoice {{ item.source_invoice.invoice_number|default:item.source_invoice.id }})
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </td>
+                            <td data-label="Total Credit">{{ entry.display_total|currency }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
 </div>
 
 <!-- Date Range Modal -->

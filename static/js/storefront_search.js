@@ -121,13 +121,66 @@
     const renderSuggestions = (dropdown, payload, query, form) => {
         dropdown.innerHTML = '';
         const results = Array.isArray(payload?.results) ? payload.results : [];
+        const categories = Array.isArray(payload?.categories) ? payload.categories : [];
 
-        if (!results.length) {
+        if (!results.length && !categories.length) {
             const empty = document.createElement('div');
             empty.className = 'storefront-suggest-empty';
             empty.textContent = `No matches for "${query}".`;
             dropdown.appendChild(empty);
         } else {
+            if (categories.length) {
+                const categoryHeader = document.createElement('div');
+                categoryHeader.className = 'storefront-suggest-section';
+                categoryHeader.textContent = 'Categories';
+                dropdown.appendChild(categoryHeader);
+            }
+
+            categories.forEach((item) => {
+                const link = document.createElement('a');
+                link.className = 'storefront-suggest-item storefront-suggest-category';
+                link.href = item.url || '#';
+
+                const media = document.createElement('div');
+                media.className = 'storefront-suggest-media';
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-folder-open';
+                media.appendChild(icon);
+
+                const body = document.createElement('div');
+                body.className = 'storefront-suggest-body';
+
+                const title = document.createElement('div');
+                title.className = 'storefront-suggest-title';
+                title.textContent = item.name || 'Category';
+                body.appendChild(title);
+
+                const metaParts = [];
+                if (item.path) {
+                    metaParts.push(item.path);
+                }
+                if (item.group) {
+                    metaParts.push(item.group);
+                }
+                if (metaParts.length) {
+                    const meta = document.createElement('div');
+                    meta.className = 'storefront-suggest-meta';
+                    meta.textContent = metaParts.join(' | ');
+                    body.appendChild(meta);
+                }
+
+                link.appendChild(media);
+                link.appendChild(body);
+                dropdown.appendChild(link);
+            });
+
+            if (results.length) {
+                const productHeader = document.createElement('div');
+                productHeader.className = 'storefront-suggest-section';
+                productHeader.textContent = 'Products';
+                dropdown.appendChild(productHeader);
+            }
+
             results.forEach((item) => {
                 const link = document.createElement('a');
                 link.className = 'storefront-suggest-item';
@@ -561,6 +614,7 @@
 
     const init = () => {
         initSuggestions(document);
+        bindDynamicAddToCart(document);
         const resultsContainer = document.querySelector('[data-storefront-results]');
         if (resultsContainer) {
             initLiveResults(resultsContainer);

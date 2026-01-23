@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Cart{% endblock %}
-{% block body_class %}public-page-road-bg page-without-hero topbar-light no-scroll-animations storefront-page{% endblock
-%}
+{% block body_class %}public-page-road-bg page-without-hero topbar-light no-scroll-animations storefront-page{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/storefront_public.css' %}">
@@ -14,6 +13,12 @@
     <h1 class="h2 fw-bold mb-0">Your Cart</h1>
     <span class="badge bg-light text-dark">{{ items|length }} Items</span>
   </div>
+  {% if free_items %}
+  <div class="alert alert-success d-flex align-items-center gap-2 mb-4 shadow-sm border-0">
+    <i class="fas fa-gift"></i>
+    <div class="fw-semibold">Free bonus items unlocked in your cart.</div>
+  </div>
+  {% endif %}
 
   {% if items %}
   <div class="store-form-section p-0 overflow-hidden">
@@ -42,17 +47,33 @@
                   <i class="fas fa-box text-muted"></i>
                 </div>
                 {% endif %}
-                <div class="fw-semibold">{{ item.product.name }}</div>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="fw-semibold">{{ item.product.name }}</div>
+                  {% if item.is_free %}
+                  <span class="badge bg-success-subtle text-success">FREE</span>
+                  {% endif %}
+                </div>
+                {% if item.is_free and item.package_title %}
+                <div class="small text-success">Free with {{ item.package_title }}</div>
+                {% endif %}
+                {% if item.is_free and item.free_value %}
+                <div class="small text-success">Value ${{ item.free_value|floatformat:2 }}</div>
+                {% endif %}
+                {% if not item.is_free and item.discount_total %}
+                <div class="small text-success">Discount: -${{ item.discount_total|floatformat:2 }}</div>
+                {% endif %}
               </div>
             </td>
             <td>
+              {% if item.is_free %}
+              <div class="fw-bold text-success px-2">{{ item.quantity }}</div>
+              {% else %}
               <div class="d-inline-flex align-items-center gap-2 border rounded p-1">
                 <form method="post" action="{% url 'accounts:store_update_cart' item.product.id %}"
                   class="d-inline-flex m-0">
                   {% csrf_token %}
                   <button type="submit" name="action" value="decrement"
-                    class="btn btn-link text-dark p-0 px-2 text-decoration-none" title="Decrease quantity" {% if
-                    item.quantity <=1 %}disabled{% endif %}>
+                    class="btn btn-link text-dark p-0 px-2 text-decoration-none" title="Decrease quantity" {% if item.quantity <= 1 %}disabled{% endif %}>
                     <i class="fas fa-minus small"></i>
                   </button>
                 </form>
@@ -61,24 +82,41 @@
                   class="d-inline-flex m-0">
                   {% csrf_token %}
                   <button type="submit" name="action" value="increment"
-                    class="btn btn-link text-dark p-0 px-2 text-decoration-none" title="Increase quantity" {% if
-                    item.quantity>= item.product.quantity_in_stock %}disabled{% endif %}>
+                    class="btn btn-link text-dark p-0 px-2 text-decoration-none" title="Increase quantity" {% if item.quantity >= item.product.quantity_in_stock %}disabled{% endif %}>
                     <i class="fas fa-plus small"></i>
                   </button>
                 </form>
               </div>
+              {% endif %}
             </td>
             <td>
-              {% if item.product.has_promotion %}
-              <div class="text-muted text-decoration-line-through small">${{ item.product.sale_price|floatformat:2 }}
+              {% if item.is_free %}
+              {% if item.original_unit_price %}
+              <div class="text-muted text-decoration-line-through small">${{ item.original_unit_price|floatformat:2 }}
+              </div>
+              {% endif %}
+              <div class="fw-bold text-success">FREE</div>
+              {% else %}
+              {% if item.discount_total %}
+              <div class="text-muted text-decoration-line-through small">${{ item.original_unit_price|floatformat:2 }}
               </div>
               <div class="fw-bold text-primary">${{ item.unit_price|floatformat:2 }}</div>
               {% else %}
               <div class="fw-bold">${{ item.unit_price|floatformat:2 }}</div>
               {% endif %}
+              {% endif %}
             </td>
-            <td class="fw-bold">${{ item.subtotal|floatformat:2 }}</td>
+            <td class="fw-bold">
+              {% if item.is_free %}
+              <span class="text-success">FREE</span>
+              {% else %}
+              ${{ item.subtotal|floatformat:2 }}
+              {% endif %}
+            </td>
             <td class="text-end">
+              {% if item.is_free %}
+              <span class="text-muted">--</span>
+              {% else %}
               <form method="post" action="{% url 'accounts:store_update_cart' item.product.id %}" class="d-inline-flex">
                 {% csrf_token %}
                 <button type="submit" name="action" value="remove"
@@ -87,6 +125,7 @@
                   <i class="fas fa-trash-alt"></i>
                 </button>
               </form>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -101,6 +140,9 @@
         <div class="text-end">
           <div class="text-muted small text-uppercase fw-bold">Total Amount</div>
           <div class="h3 mb-0 fw-bold text-primary">${{ total|floatformat:2 }}</div>
+          {% if discount_total %}
+          <div class="small text-success mt-1">You saved ${{ discount_total|floatformat:2 }}</div>
+          {% endif %}
         </div>
         <a href="{% url 'accounts:store_checkout' %}" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm">
           Checkout <i class="fas fa-arrow-right ms-2"></i>
@@ -109,20 +151,44 @@
     </div>
   </div>
   {% else %}
-  <div class="storefront-empty">
-    <div class="storefront-empty-icon">
-      <i class="fas fa-shopping-cart"></i>
-    </div>
-    <h2 class="h4 mb-3 fw-bold">Your cart is empty</h2>
-    <p class="text-muted mb-4" style="max-width: 400px; margin: 0 auto;">
-      Looks like you haven't added anything to your cart yet. Browse our catalog to find quality parts for your fleet.
-    </p>
-    <div class="storefront-empty-actions">
-      <a href="{% url 'accounts:store_product_list' %}" class="btn btn-primary btn-lg rounded-pill px-4">
-        <i class="fas fa-store me-2"></i> Browse Catalog
-      </a>
+  <div class="storefront-empty storefront-empty--cart">
+    <div class="storefront-empty-card">
+      <div class="storefront-empty-icon">
+        <i class="fas fa-shopping-cart"></i>
+      </div>
+      <h2 class="storefront-empty-title">Your cart is empty</h2>
+      <p class="storefront-empty-text">
+        Looks like you haven't added anything yet. Browse our catalog to find trusted parts ready for your fleet.
+      </p>
+      <div class="storefront-empty-actions">
+        <a href="{% url 'accounts:store_product_list' %}" class="btn btn-primary btn-lg rounded-pill px-4">
+          <i class="fas fa-store me-2"></i> Browse Catalog
+        </a>
+        <a href="{% url 'accounts:store_product_list' %}" class="btn btn-outline-primary btn-lg rounded-pill px-4">
+          Explore Categories
+        </a>
+      </div>
+      <div class="storefront-empty-highlights">
+        <span><i class="fas fa-check-circle"></i> OEM-grade options</span>
+        <span><i class="fas fa-bolt"></i> Fast fulfillment</span>
+        <span><i class="fas fa-shield-alt"></i> Trusted suppliers</span>
+      </div>
     </div>
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
+<script src="{% static 'js/storefront_confetti.js' %}" defer></script>
+{% if free_items %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.launchStorefrontConfetti === 'function') {
+      window.launchStorefrontConfetti({ originY: 0.3 });
+    }
+  });
+</script>
+{% endif %}
 {% endblock %}

@@ -8,11 +8,21 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db.models import Sum, Value, F
-from django.db.models.functions import Coalesce, TruncMonth
+from django.db.models import (
+    Sum,
+    Value,
+    F,
+    OuterRef,
+    Subquery,
+    Case,
+    When,
+    DecimalField,
+    ExpressionWrapper,
+)
+from django.db.models.functions import Coalesce, TruncMonth, Cast
 from django.contrib.auth.decorators import login_required
 
-from .models import PendingInvoice, Payment, MechExpenseItem, TERM_CHOICES
+from .models import PendingInvoice, Payment, MechExpenseItem, TERM_CHOICES, CustomerCreditItem
 
 logger = logging.getLogger(__name__)
 
@@ -44,12 +54,42 @@ def api_dashboard(request):
         term_days = TERM_CHOICES.get(profile.term, 30)
         today = timezone.now().date()
 
+        amount_field = DecimalField(max_digits=10, decimal_places=2)
+        credit_amount_expr = Case(
+            When(customer_credit__tax_included=True, then=Cast('amount', amount_field)),
+            default=ExpressionWrapper(
+                Cast('amount', amount_field) + Cast('tax_paid', amount_field),
+                output_field=amount_field,
+            ),
+            output_field=amount_field,
+        )
+        credit_total = CustomerCreditItem.objects.filter(
+            source_invoice=OuterRef('grouped_invoice_id')
+        ).values('source_invoice').annotate(
+            total=Coalesce(
+                Sum(credit_amount_expr),
+                Value(Decimal('0.00')),
+                output_field=amount_field,
+            )
+        ).values('total')
+
         pending_invoices_qs = PendingInvoice.objects.filter(
             is_paid=False,
             grouped_invoice__user=request.user
         ).annotate(
-            total_paid=Coalesce(Sum('grouped_invoice__payments__amount'), Value(Decimal('0.00'))),
-            balance_due=F('grouped_invoice__total_amount') - Coalesce(Sum('grouped_invoice__payments__amount'), Value(Decimal('0.00')))
+            total_paid=Coalesce(
+                Sum('grouped_invoice__payments__amount'),
+                Value(Decimal('0.00')),
+            ),
+            credit_total=Coalesce(
+                Subquery(credit_total, output_field=amount_field),
+                Value(Decimal('0.00')),
+                output_field=amount_field,
+            ),
+            balance_due=ExpressionWrapper(
+                F('grouped_invoice__total_amount') - F('total_paid') - F('credit_total'),
+                output_field=amount_field,
+            )
         )
         total_pending_balance = pending_invoices_qs.aggregate(total=Sum('balance_due'))['total'] or Decimal('0.00')
 

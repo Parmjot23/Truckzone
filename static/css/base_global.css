@@ -3,41 +3,40 @@
    Heavy-duty parts storefront theme
    ============================================================================ */
 :root {
-    /* --- BRAND COLORS --- */
-    /* Deep Navy (Primary Dark) */
-    --brand-navy: #0F172A;
-    /* Slate 900 equivalent - Professional, trusted */
-    --brand-navy-light: #1E293B;
-    /* Slate 800 */
-    --brand-navy-dark: #020617;
-    /* Slate 950 */
+    /* --- BRAND CORE --- */
+    --brand-ink: #0B1220;
+    --brand-ink-soft: #334155;
+    --brand-primary: #0F4AA8;
+    --brand-primary-strong: #0B367D;
+    --brand-primary-soft: #DBEAFE;
+    --brand-accent: #F59E0B;
+    --brand-accent-strong: #D97706;
+    --brand-accent-soft: #FFF4D6;
+    --brand-cool: #22D3EE;
+    --brand-cool-strong: #0EA5B7;
+    --brand-cool-soft: #CFFAFE;
 
-    /* Primary Brand Accent (Remapped to Blue) */
-    --brand-orange: #0047AB;
-    /* Blue 700 */
-    --brand-orange-hover: #003380;
-    /* Blue 900 */
-    --brand-orange-light: #E0E7FF;
-    /* Blue 100 */
+    /* --- BRAND COLORS (Legacy Map) --- */
+    --brand-navy: var(--brand-ink);
+    --brand-navy-light: #1F2A44;
+    --brand-navy-dark: #050912;
 
-    /* Accent Gradient */
+    --brand-orange: var(--brand-primary);
+    --brand-orange-hover: var(--brand-primary-strong);
+    --brand-orange-light: var(--brand-primary-soft);
+
     --brand-red: #EF4444;
-    /* Red 500 */
-    --brand-yellow: #EAB308;
-    /* Yellow 500 */
-    --gradient-flame: linear-gradient(135deg, #0047AB 0%, #2563EB 50%, #60A5FA 100%);
-    --gradient-flame-hover: linear-gradient(135deg, #003380 0%, #1D4ED8 50%, #3B82F6 100%);
+    --brand-yellow: var(--brand-accent);
+    --gradient-flame: linear-gradient(135deg, var(--brand-primary) 0%, #2C6BD6 50%, #7FB5FF 100%);
+    --gradient-flame-hover: linear-gradient(135deg, var(--brand-primary-strong) 0%, #1D4ED8 50%, #60A5FA 100%);
 
-    /* Cyan Accent */
-    --brand-cyan: #06B6D4;
-    /* Cyan 500 */
-    --brand-cyan-dark: #0891B2;
-    /* Cyan 600 */
-    --gradient-water: linear-gradient(180deg, #06B6D4 0%, #3B82F6 100%);
+    --brand-cyan: var(--brand-cool);
+    --brand-cyan-dark: var(--brand-cool-strong);
+    --gradient-water: linear-gradient(180deg, var(--brand-cool) 0%, var(--brand-primary) 100%);
 
     /* --- NEUTRALS --- */
     --neutral-white: #FFFFFF;
-    --neutral-50: #F8FAFC;
+    --neutral-50: #F6F8FB;
     --2g-off-white: #F5F7FA;
     /* Very Light Blue-Gray background */
     --neutral-100: #F1F5F9;
@@ -56,8 +55,8 @@
     /* Headings Main */
 
     /* --- TYPOGRAPHY --- */
-    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-heading: 'Space Grotesk', 'Inter', sans-serif;
+    --font-sans: 'Manrope', 'Sora', sans-serif;
+    --font-heading: 'Sora', 'Manrope', sans-serif;
 
     /* --- SHADOWS --- */
     --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.05);
@@ -65,7 +64,19 @@
     --shadow-lg: 0 10px 15px -3px rgb(15 23 42 / 0.1), 0 4px 6px -4px rgb(15 23 42 / 0.1);
     --shadow-xl: 0 20px 25px -5px rgb(15 23 42 / 0.1), 0 8px 10px -6px rgb(15 23 42 / 0.1);
     --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
-    --shadow-glow: 0 0 20px rgba(0, 71, 171, 0.3);
+    --shadow-glow: 0 0 24px rgba(245, 158, 11, 0.25);
+    --shadow-strong: 0 24px 50px -30px rgba(11, 18, 32, 0.55);
+
+    --brand-surface: var(--neutral-50);
+    --brand-surface-alt: #FFFFFF;
+    --brand-border: var(--neutral-200);
+    --brand-border-strong: var(--neutral-300);
+
+    --tone-accent: var(--brand-primary);
+    --tone-accent-soft: var(--brand-primary-soft);
+    --tone-accent-border: rgba(15, 74, 168, 0.22);
+    --tone-ink: var(--brand-ink);
+    --tone-subtle: var(--brand-ink-soft);
 
     /* --- SPACING & RADIUS --- */
     --radius-sm: 0.375rem;
@@ -100,11 +111,16 @@ html {
 body {
     font-family: var(--font-sans);
     color: var(--neutral-600);
-    background-color: var(--neutral-50);
+    background-color: var(--brand-surface);
     line-height: 1.55;
     margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+#mainContent {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 h1,
@@ -138,14 +154,57 @@ h4 {
     font-size: 1.15rem;
 }
 
+/* --- BRAND TONES --- */
+[data-brand-tone="primary"] {
+    --tone-accent: var(--brand-primary);
+    --tone-accent-soft: var(--brand-primary-soft);
+    --tone-accent-border: rgba(15, 74, 168, 0.22);
+    --tone-ink: var(--brand-ink);
+    --tone-subtle: var(--brand-ink-soft);
+}
+
+[data-brand-tone="highlight"] {
+    --tone-accent: var(--brand-accent);
+    --tone-accent-soft: var(--brand-accent-soft);
+    --tone-accent-border: rgba(245, 158, 11, 0.35);
+    --tone-ink: var(--brand-ink);
+    --tone-subtle: var(--brand-ink-soft);
+}
+
+[data-brand-tone="cool"] {
+    --tone-accent: var(--brand-cool);
+    --tone-accent-soft: var(--brand-cool-soft);
+    --tone-accent-border: rgba(34, 211, 238, 0.32);
+    --tone-ink: var(--brand-ink);
+    --tone-subtle: var(--brand-ink-soft);
+}
+
+[data-brand-tone="inverse"] {
+    --tone-accent: var(--brand-accent);
+    --tone-accent-soft: rgba(245, 158, 11, 0.18);
+    --tone-accent-border: rgba(245, 158, 11, 0.45);
+    --tone-ink: #FFFFFF;
+    --tone-subtle: rgba(255, 255, 255, 0.7);
+}
+
 a {
-    color: var(--2g-off-white);
+    color: var(--brand-primary);
     text-decoration: none;
     transition: all 0.2s ease;
 }
 
 a:hover {
+    color: var(--brand-primary-strong);
+}
+
+.public-page-road-bg .service-detail-card a {
+    color: var(--brand-orange);
+    font-weight: 600;
+}
+
+.public-page-road-bg .service-detail-card a:hover {
     color: var(--brand-orange-hover);
+    text-decoration: underline;
 }
 
 img {
@@ -664,6 +723,7 @@ img {
 /* --- FOOTER --- */
 .footer-main {
     background-color: var(--brand-navy);
+    margin-top: 100px;
     color: var(--neutral-300);
     padding-top: 5rem;
     padding-bottom: 2rem;
@@ -773,6 +833,22 @@ img {
     background-color: var(--brand-orange);
     transform: translateY(-2px);
     color: white;
+}
+
+.footer-logo-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1.25rem;
+    padding: 0.6rem 0.85rem;
+    background: #ffffff;
+    border-radius: 0.9rem;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+}
+
+.footer-logo-box img {
+    max-height: 56px;
+    width: auto;
 }
 
 .footer-bottom {

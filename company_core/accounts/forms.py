@@ -36,6 +36,8 @@ from .models import (
     MechExpenseItem,
     SupplierCredit,
     SupplierCreditItem,
+    CustomerCredit,
+    CustomerCreditItem,
     SupplierCheque,
     BusinessBankAccount,
     PROVINCE_TAX_RATES,
@@ -707,7 +709,7 @@ class DisplayPreferencesForm(forms.ModelForm):
 class StorefrontHeroShowcaseForm(forms.ModelForm):
     class Meta:
         model = StorefrontHeroShowcase
-        fields = ['gradient_theme']
+        fields = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -782,13 +784,13 @@ class StorefrontPriceVisibilityForm(forms.ModelForm):
             'storefront_show_empty_categories',
         ]
         labels = {
-            'storefront_show_prices_hero': 'Show prices in home hero for guests',
+            'storefront_show_prices_hero': 'Show prices in promo highlights for guests',
             'storefront_show_prices_featured': 'Show prices in featured sections for guests',
             'storefront_show_prices_catalog': 'Show prices across all product pages for guests',
             'storefront_show_empty_categories': 'Show categories even when no products are published',
         }
         help_texts = {
-            'storefront_show_prices_hero': 'When off, hero pricing is hidden unless the customer signs in.',
+            'storefront_show_prices_hero': 'When off, promo pricing is hidden unless the customer signs in.',
             'storefront_show_prices_featured': 'When off, featured pricing is hidden unless the customer signs in.',
             'storefront_show_prices_catalog': 'When off, product listings and details hide prices unless signed in.',
             'storefront_show_empty_categories': 'Keeps category groups and category pages visible when inventory is empty.',
@@ -803,7 +805,7 @@ class StorefrontPriceVisibilityForm(forms.ModelForm):
 class StorefrontMessageBannerForm(forms.ModelForm):
     class Meta:
         model = StorefrontMessageBanner
-        fields = ['is_active', 'message', 'link_text', 'link_url', 'theme']
+        fields = ['is_active', 'message', 'link_text', 'link_url']
         widgets = {
             'message': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter banner message'}),
             'link_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Optional link label'}),
@@ -814,8 +816,6 @@ class StorefrontMessageBannerForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if 'is_active' in self.fields:
             self.fields['is_active'].widget.attrs.setdefault('class', 'form-check-input')
-        if 'theme' in self.fields:
-            self.fields['theme'].widget.attrs.setdefault('class', 'form-select')
 
 
 class StorefrontFlyerForm(forms.ModelForm):
@@ -1513,6 +1513,230 @@ SupplierCreditItemFormSet = inlineformset_factory(
     SupplierCreditItem,
     form=SupplierCreditItemForm,
     formset=BaseSupplierCreditItemFormSet,
+    extra=0,
+    can_delete=True,
+)
+
+
+class CustomerCreditForm(forms.ModelForm):
+    custom_tax_rate = forms.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        min_value=Decimal('0'),
+        required=False,
+        label='Custom Tax Rate (%)',
+        help_text='Enter the tax rate as a percentage (e.g., 13 for 13%).',
+    )
+    record_in_inventory = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Track these items in inventory',
+        help_text='Turn off for non-inventory credits like adjustments or rebates.',
+    )
+    customer = forms.ModelChoiceField(
+        queryset=Customer.objects.none(),
+        required=True,
+        label='Customer',
+    )
+    credit_no = forms.CharField(
+        required=False,
+        label='Credit Number',
+        widget=forms.TextInput(attrs={'placeholder': 'Enter credit number'}),
+        help_text='Leave blank to auto-generate',
+    )
+    memo = forms.CharField(
+        required=False,
+        label='Memo',
+        widget=forms.Textarea(attrs={'rows': 2, 'placeholder': 'Add a memo for this credit'}),
+    )
+    tax_included = forms.BooleanField(required=False, label="Tax Included")
+    province = forms.ChoiceField(choices=PROVINCE_CHOICES, required=False, label="Tax rate")
+
+    class Meta:
+        model = CustomerCredit
+        fields = [
+            'date',
+            'customer',
+            'credit_no',
+            'memo',
+            'tax_included',
+            'province',
+            'custom_tax_rate',
+            'record_in_inventory',
+        ]
+        widgets = {
+            'date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        today = timezone.localdate().isoformat()
+        if 'date' in self.fields:
+            date_attrs = self.fields['date'].widget.attrs.copy()
+            date_attrs['max'] = today
+            self.fields['date'].widget.attrs = date_attrs
+        if self.user:
+            business_user_ids = get_customer_user_ids(self.user)
+            self.fields['customer'].queryset = Customer.objects.filter(
+                user__in=business_user_ids
+            ).order_by('name')
+        else:
+            self.fields['customer'].queryset = Customer.objects.none()
+        self.fields['custom_tax_rate'].widget.attrs.update({'placeholder': 'e.g., 13 for 13%'})
+
+        def _format_percent(value):
+            percent_value = Decimal(str(value)) * Decimal('100')
+            formatted = format(percent_value.normalize(), 'f')
+            if '.' in formatted:
+                formatted = formatted.rstrip('0').rstrip('.')
+            return formatted
+
+        province_choices = []
+        for code, label in PROVINCE_CHOICES:
+            if code == 'CU':
+                choice_label = f"{label} (custom rate)"
+            else:
+                rate_value = PROVINCE_TAX_RATES.get(code, 0)
+                choice_label = f"{label} ({_format_percent(rate_value)}%)"
+            province_choices.append((code, choice_label))
+        self.fields['province'].choices = province_choices
+
+        if self.user and hasattr(self.user, 'profile'):
+            self.fields['province'].initial = self.user.profile.province
+        else:
+            self.fields['province'].initial = 'ON'
+
+        if self.instance and self.instance.custom_tax_rate is not None:
+            self.fields['custom_tax_rate'].initial = (
+                Decimal(self.instance.custom_tax_rate) * Decimal('100')
+            ).quantize(Decimal('0.0001'))
+
+    def clean_date(self):
+        value = self.cleaned_data.get('date')
+        if value and value > timezone.localdate():
+            raise forms.ValidationError('Date cannot be in the future.')
+        return value
+
+    def clean_custom_tax_rate(self):
+        value = self.cleaned_data.get('custom_tax_rate')
+        if value in (None, ''):
+            return None
+        if value > Decimal('1'):
+            value = (value / Decimal('100')).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+        else:
+            value = Decimal(value).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+        return value
+
+    def clean(self):
+        cleaned_data = super().clean()
+        province = cleaned_data.get('province')
+        custom_tax_rate = cleaned_data.get('custom_tax_rate')
+        if province == 'CU':
+            if custom_tax_rate is None:
+                self.add_error('custom_tax_rate', 'Please enter a custom tax rate.')
+        else:
+            cleaned_data['custom_tax_rate'] = None
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if not instance.user_id:
+            instance.user = self.user
+        cleaned_custom_tax_rate = self.cleaned_data.get('custom_tax_rate')
+        province = self.cleaned_data.get('province')
+        if province == 'CU':
+            instance.custom_tax_rate = cleaned_custom_tax_rate
+        else:
+            instance.custom_tax_rate = None
+        if commit:
+            instance.save()
+        return instance
+
+
+class CustomerCreditItemForm(forms.ModelForm):
+    product = forms.ModelChoiceField(
+        queryset=Product.objects.none(),
+        required=False,
+        label='Inventory Product',
+    )
+    create_inventory_product = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Create or update this product in inventory',
+    )
+
+    class Meta:
+        model = CustomerCreditItem
+        fields = [
+            'product',
+            'part_no',
+            'description',
+            'qty',
+            'price',
+            'source_invoice',
+            'source_invoice_item',
+        ]
+        widgets = {
+            'part_no': forms.TextInput(attrs={'placeholder': 'Enter part number'}),
+            'description': forms.Textarea(attrs={'placeholder': 'Enter description', 'rows': 2}),
+            'qty': forms.NumberInput(attrs={'min': '0', 'step': '1'}),
+            'price': forms.NumberInput(attrs={'min': '0', 'step': '0.01'}),
+            'source_invoice': forms.HiddenInput(),
+            'source_invoice_item': forms.HiddenInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if self.user:
+            product_user_ids = get_product_user_ids(self.user)
+            self.fields['product'].queryset = Product.objects.filter(
+                user__in=product_user_ids
+            ).order_by('name')
+        else:
+            self.fields['product'].queryset = Product.objects.none()
+        self.fields['product'].widget.attrs.update({'class': 'form-control credit-product-select'})
+        self.fields['create_inventory_product'].widget.attrs.update({'class': 'create-inventory-checkbox'})
+
+    def has_meaningful_data(self, cleaned_data):
+        if not cleaned_data:
+            return False
+        return any(
+            cleaned_data.get(field) not in (None, '', [], {}, 0, 0.0)
+            for field in ('product', 'qty', 'price', 'description', 'part_no')
+        )
+
+
+class BaseCustomerCreditItemFormSet(BaseInlineFormSet):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['user'] = self.user
+        return kwargs
+
+    def clean(self):
+        super().clean()
+        for form in self.forms:
+            if not hasattr(form, 'cleaned_data'):
+                continue
+            if form.cleaned_data.get('DELETE'):
+                continue
+            fields = ['product', 'part_no', 'description', 'qty', 'price']
+            if any(form.cleaned_data.get(f) not in (None, '', 0, 0.0) for f in fields):
+                continue
+            form.cleaned_data['DELETE'] = True
+            form._errors = form.error_class()
+
+
+CustomerCreditItemFormSet = inlineformset_factory(
+    CustomerCredit,
+    CustomerCreditItem,
+    form=CustomerCreditItemForm,
+    formset=BaseCustomerCreditItemFormSet,
     extra=0,
     can_delete=True,
 )
@@ -2978,6 +3202,25 @@ class ProductForm(forms.ModelForm):
             elif attribute.value_unit:
                 field.help_text = f"Units: {attribute.value_unit}"
             field.widget.attrs.setdefault('data-attribute-id', str(attribute.id))
+            options_text = ''
+            if attribute.attribute_type == 'select':
+                options_text = ', '.join(
+                    option.value for option in attribute.options.filter(is_active=True).order_by('sort_order', 'value')
+                )
+            field.attribute_metadata = {
+                'id': attribute.id,
+                'name': attribute.name or '',
+                'description': attribute.description or '',
+                'value_unit': attribute.value_unit or '',
+                'attribute_type': attribute.attribute_type or 'select',
+                'category_id': attribute.category_id or '',
+                'category_name': attribute.category.name if attribute.category else '',
+                'is_filterable': attribute.is_filterable,
+                'is_comparable': attribute.is_comparable,
+                'is_active': attribute.is_active,
+                'sort_order': attribute.sort_order if attribute.sort_order is not None else '',
+                'options_text': options_text,
+            }
             self.fields[field_name] = field
 
     def clean(self):

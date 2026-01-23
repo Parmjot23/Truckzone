@@ -12,15 +12,19 @@ from .utils import (
     get_storefront_owner,
     get_primary_business_user,
     get_business_user,
+    get_business_user_ids,
     get_connected_business_group,
     get_customer_user_ids,
     get_product_user_ids,
+    get_stock_owner,
     is_parts_store_business,
     resolve_storefront_price_flags,
     resolve_storefront_category_flags,
     notify_mechanic_assignment,
     sync_workorder_assignments,
     resolve_company_logo_url,
+    apply_stock_fields,
+    upsert_product_stock,
 )
 from .service_reminders import (
     create_maintenance_tasks_from_services,
@@ -162,6 +166,8 @@ from .forms import (
     SupplierPortalForm,
     SupplierCreditForm,
     SupplierCreditItemFormSet,
+    CustomerCreditForm,
+    CustomerCreditItemFormSet,
     SupplierChequeForm,
 )
 from .models import (
@@ -199,6 +205,8 @@ from .models import (
     MechExpenseItem,
     SupplierCredit,
     SupplierCreditItem,
+    CustomerCredit,
+    CustomerCreditItem,
     SupplierCheque,
     SupplierChequeLine,
     BusinessBankAccount,
@@ -2548,6 +2556,43 @@ def _update_expense_paid_status(expense):
     expense.paid = total_paid >= total_amount_incl_tax
     expense.save(update_fields=['paid'])
 
+
+def _update_invoice_paid_status(invoice):
+    total_amount = Decimal(str(invoice.total_amount or 0))
+    total_paid = ensure_decimal(invoice.total_paid())
+    pending_invoice = PendingInvoice.objects.filter(grouped_invoice=invoice).first()
+    is_paid = total_paid >= total_amount
+    if pending_invoice and pending_invoice.is_paid != is_paid:
+        pending_invoice.is_paid = is_paid
+        pending_invoice.save(update_fields=['is_paid'])
+    invoice.update_date_fully_paid()
+
+
+def _annotate_invoice_credit_totals(queryset, *, invoice_field='pk'):
+    credit_items = (
+        CustomerCreditItem.objects.filter(source_invoice=OuterRef(invoice_field))
+        .values('source_invoice')
+    )
+    amount_field = DecimalField(max_digits=10, decimal_places=2)
+    credit_amount_expr = Case(
+        When(customer_credit__tax_included=True, then=Cast('amount', amount_field)),
+        default=ExpressionWrapper(
+            Cast('amount', amount_field) + Cast('tax_paid', amount_field),
+            output_field=amount_field,
+        ),
+        output_field=amount_field,
+    )
+    credit_total = credit_items.annotate(
+        total=Coalesce(Sum(credit_amount_expr), Value(Decimal('0.00')), output_field=amount_field)
+    ).values('total')
+    return queryset.annotate(
+        credit_total=Coalesce(
+            Subquery(credit_total, output_field=amount_field),
+            Value(Decimal('0.00')),
+            output_field=amount_field,
+        )
+    )
+
 def _allocate_supplier_payment(
     *,
     user,
@@ -2664,6 +2709,59 @@ class SupplierCreditInventoryMixin:
             self._log_transactions(credit, prev, 'IN', 'reverse edit/delete')
         current_items = credit.items.all()
         self._log_transactions(credit, current_items, 'OUT', 'stock out from supplier credit')
+
+
+class CustomerCreditInventoryMixin:
+    """Sync customer credit items to inventory transactions."""
+
+    @staticmethod
+    def _find_or_create_product(credit, item):
+        if item.product:
+            return item.product
+
+        part = (item.part_no or "").strip()
+        desc = (item.description or "").strip()
+
+        if not part and not desc:
+            return None
+
+        qs = Product.objects.filter(user=credit.user)
+        product = None
+        if part:
+            product = qs.filter(Q(sku__iexact=part) | Q(name__iexact=part)).first()
+        if not product and desc:
+            product = qs.filter(name__iexact=desc).first()
+
+        return product
+
+    @classmethod
+    def _log_transactions(cls, credit, items, transaction_type, remark_suffix):
+        for item in items:
+            product = cls._find_or_create_product(credit, item)
+            if not product:
+                continue
+            try:
+                qty_decimal = Decimal(str(item.qty or 0)).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+                qty_int = int(qty_decimal) if qty_decimal > 0 else 0
+                if qty_int <= 0:
+                    continue
+                remarks = f"Customer credit {credit.credit_no or credit.id} - {remark_suffix}"
+                InventoryTransaction.objects.create(
+                    product=product,
+                    transaction_type=transaction_type,
+                    quantity=qty_int,
+                    remarks=remarks,
+                    user=credit.user,
+                )
+            except Exception as exc:  # best-effort logging
+                logger.warning("Inventory sync skipped for credit %s item %s: %s", credit.id, getattr(item, "id", None), exc)
+
+    def _apply_inventory_sync(self, credit, previous_items=None):
+        prev = previous_items or []
+        if prev:
+            self._log_transactions(credit, prev, 'OUT', 'reverse edit/delete')
+        current_items = credit.items.all()
+        self._log_transactions(credit, current_items, 'IN', 'stock in from customer credit')
 
 
 class SupplierCreditListView(LoginRequiredMixin, ListView):
@@ -3176,6 +3274,614 @@ class SupplierCreditDeleteView(SupplierCreditInventoryMixin, LoginRequiredMixin,
             _update_expense_paid_status(expense)
         messages.success(request, f'Supplier credit {self.object.credit_no} deleted successfully.')
         return response
+
+
+class CustomerCreditListView(LoginRequiredMixin, ListView):
+    model = CustomerCredit
+    template_name = 'app/customer_credit_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 100
+
+    def _get_filter_params(self):
+        period_value = self.request.GET.get('period')
+        if period_value is None:
+            period_value = '1y'
+        return {
+            'search': (self.request.GET.get('search') or '').strip(),
+            'period': (period_value or '').strip().lower(),
+            'customer': (self.request.GET.get('customer') or '').strip(),
+        }
+
+    def get_queryset(self):
+        params = self._get_filter_params()
+        query = params['search']
+        period = params['period']
+        customer = params['customer']
+        user = self.request.user
+
+        items_queryset = (
+            CustomerCreditItem.objects.filter(customer_credit=OuterRef('pk'))
+            .values('customer_credit')
+        )
+        items_subtotal = items_queryset.annotate(
+            total=Coalesce(Sum('amount'), Value(0.0))
+        ).values('total')
+        items_tax = items_queryset.annotate(
+            total=Coalesce(Sum('tax_paid'), Value(0.0))
+        ).values('total')
+        applied_amount_expr = Case(
+            When(customer_credit__tax_included=True, then=F('amount')),
+            default=ExpressionWrapper(F('amount') + F('tax_paid'), output_field=FloatField()),
+            output_field=FloatField(),
+        )
+        items_applied = items_queryset.annotate(
+            total=Coalesce(
+                Sum(applied_amount_expr, filter=Q(source_invoice__isnull=False)),
+                Value(0.0),
+            )
+        ).values('total')
+
+        queryset = (
+            CustomerCredit.objects.filter(user=user)
+            .annotate(
+                items_subtotal=Coalesce(Subquery(items_subtotal, output_field=FloatField()), Value(0.0)),
+                items_tax=Coalesce(Subquery(items_tax, output_field=FloatField()), Value(0.0)),
+                applied_total=Coalesce(Subquery(items_applied, output_field=FloatField()), Value(0.0)),
+            )
+            .annotate(
+                total_incl_tax=Case(
+                    When(tax_included=True, then=F('items_subtotal')),
+                    default=F('items_subtotal') + F('items_tax'),
+                    output_field=FloatField(),
+                ),
+                available_total=ExpressionWrapper(
+                    F('total_incl_tax') - F('applied_total'),
+                    output_field=FloatField(),
+                ),
+            )
+            .select_related('customer')
+            .prefetch_related('items')
+        )
+
+        if query:
+            queryset = queryset.filter(
+                Q(credit_no__icontains=query) |
+                Q(customer_name__icontains=query) |
+                Q(customer__name__icontains=query)
+            )
+
+        if customer:
+            queryset = queryset.filter(
+                Q(customer__name__iexact=customer) | Q(customer_name__iexact=customer)
+            )
+
+        if period:
+            today = datetime.date.today()
+            start_date = None
+            end_date = None
+            if period == 'today':
+                start_date = today
+                end_date = today
+            elif period == 'yesterday':
+                start_date = today - datetime.timedelta(days=1)
+                end_date = start_date
+            elif period == 'this_week':
+                start_date = today - datetime.timedelta(days=today.weekday())
+                end_date = start_date + datetime.timedelta(days=6)
+            elif period == 'last_week':
+                end_date = today - datetime.timedelta(days=today.weekday() + 1)
+                start_date = end_date - datetime.timedelta(days=6)
+            elif period == 'this_month':
+                start_date = today.replace(day=1)
+                end_date = today
+            elif period == 'last_month':
+                first_day_this_month = today.replace(day=1)
+                end_date = first_day_this_month - datetime.timedelta(days=1)
+                start_date = end_date.replace(day=1)
+            elif period == 'this_year':
+                start_date = today.replace(month=1, day=1)
+                end_date = today
+            elif period == 'last_year':
+                start_date = today.replace(year=today.year - 1, month=1, day=1)
+                end_date = today.replace(year=today.year - 1, month=12, day=31)
+            elif period == '1y':
+                start_date = today - relativedelta(years=1)
+                end_date = today
+
+            if start_date and end_date:
+                queryset = queryset.filter(date__range=(start_date, end_date))
+            elif start_date:
+                queryset = queryset.filter(date__gte=start_date)
+            elif end_date:
+                queryset = queryset.filter(date__lte=end_date)
+
+        queryset = queryset.order_by('-date', '-pk')
+        self.filter_params = params
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        params = getattr(self, 'filter_params', None) or self._get_filter_params()
+        customer_options = (
+            CustomerCredit.objects.filter(user=self.request.user)
+            .exclude(customer_name__exact='')
+            .values_list('customer_name', flat=True)
+            .distinct()
+            .order_by('customer_name')
+        )
+        context.update({
+            'search_query': params['search'],
+            'selected_period': params['period'],
+            'selected_customer': params['customer'],
+            'customer_options': customer_options,
+        })
+        return context
+
+
+class CustomerCreditDetailView(LoginRequiredMixin, DetailView):
+    model = CustomerCredit
+    template_name = 'app/customer_credit_detail.html'
+
+    def get_queryset(self):
+        return CustomerCredit.objects.filter(user=self.request.user).prefetch_related(
+            'items',
+            'items__source_invoice',
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        credit = self.object
+        total_amount_incl_tax, total_tax, total_amount_excl_tax = credit.calculate_totals()
+        context.update({
+            'total_amount_incl_tax': total_amount_incl_tax,
+            'total_tax': total_tax,
+            'total_amount_excl_tax': total_amount_excl_tax,
+            'applied_amount': credit.applied_amount,
+            'available_amount': credit.available_amount,
+        })
+        return context
+
+
+def _build_customer_credit_context(credit, *, request=None):
+    profile = getattr(credit.user, 'profile', None)
+    total_amount_incl_tax, total_tax, total_amount_excl_tax = credit.calculate_totals()
+    total_amount_incl_tax = Decimal(str(total_amount_incl_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    total_tax = Decimal(str(total_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    total_amount_excl_tax = Decimal(str(total_amount_excl_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    company_logo_url = resolve_company_logo_url(profile, request=request)
+    company_logo_url_pdf = resolve_company_logo_url(profile, for_pdf=True)
+
+    context = {
+        'credit': credit,
+        'profile': profile,
+        'customer': credit.customer,
+        'customer_name': credit.customer_name or (credit.customer.name if credit.customer else ''),
+        'items': list(credit.items.select_related('product', 'source_invoice').all()),
+        'total_amount_incl_tax': total_amount_incl_tax,
+        'total_tax': total_tax,
+        'total_amount_excl_tax': total_amount_excl_tax,
+        'company_logo_url': company_logo_url,
+        'company_logo_url_pdf': company_logo_url_pdf,
+        'generated_on': timezone.localdate(),
+    }
+    return apply_branding_defaults(context)
+
+
+@login_required
+def customer_credit_pdf(request, pk):
+    credit = get_object_or_404(CustomerCredit, pk=pk, user=request.user)
+    context = _build_customer_credit_context(credit, request=request)
+    pdf_bytes = render_template_to_pdf('invoices/customer_credit_pdf.html', context)
+    filename = f"Customer_Credit_{credit.credit_no or credit.pk}.pdf"
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
+def customer_credit_print(request, pk):
+    credit = get_object_or_404(CustomerCredit, pk=pk, user=request.user)
+    context = _build_customer_credit_context(credit, request=request)
+    pdf_bytes = render_template_to_pdf('invoices/customer_credit_pdf.html', context)
+    filename = f"Customer_Credit_{credit.credit_no or credit.pk}.pdf"
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    return response
+
+
+@login_required
+@require_POST
+def customer_credit_email(request, pk):
+    credit = get_object_or_404(CustomerCredit, pk=pk, user=request.user)
+    customer = credit.customer
+    customer_email = (customer.email if customer else '') or ''
+    if not customer_email:
+        messages.error(request, "Customer email is missing. Update the customer record and try again.")
+        return redirect('accounts:customer_credit_detail', pk=credit.pk)
+
+    context = _build_customer_credit_context(credit, request=request)
+    pdf_bytes = render_template_to_pdf('invoices/customer_credit_pdf.html', context)
+    email_html = render_to_string('emails/customer_credit_email.html', context)
+
+    profile = getattr(credit.user, 'profile', None)
+    company_name = context.get('business_name') or (getattr(profile, 'company_name', '') if profile else '')
+    subject = f"Customer Credit Memo #{credit.credit_no or credit.pk}"
+    if company_name:
+        subject = f"{subject} from {company_name}"
+
+    customer_cc_emails = customer.get_cc_emails() if customer else []
+    cc_recipients = build_cc_list(
+        getattr(request.user, 'email', None),
+        getattr(profile, "company_email", None),
+        *customer_cc_emails,
+        exclude=[customer_email],
+    )
+
+    email_message = EmailMultiAlternatives(
+        subject=subject,
+        body="Please find your customer credit memo attached.",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[customer_email],
+        cc=cc_recipients or None,
+    )
+    email_message.attach_alternative(email_html, "text/html")
+    email_message.attach(
+        f"Customer_Credit_{credit.credit_no or credit.pk}.pdf",
+        pdf_bytes,
+        'application/pdf',
+    )
+    email_message.send()
+
+    messages.success(request, f"Customer credit memo sent to {customer_email}.")
+    return redirect('accounts:customer_credit_detail', pk=credit.pk)
+
+
+class CustomerCreditCreateView(CustomerCreditInventoryMixin, LoginRequiredMixin, CreateView):
+    model = CustomerCredit
+    form_class = CustomerCreditForm
+    template_name = 'accounts/mach/add_customer_credit.html'
+    success_url = reverse_lazy('accounts:customer_credit_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        inventory_products_qs = Product.objects.filter(user__in=get_product_user_ids(self.request.user)).order_by('name')
+        inventory_products_data = {}
+        for product in inventory_products_qs:
+            product_id_str = str(product.id)
+            display_name = f"{product.name} ({product.sku})" if product.sku else product.name
+            inventory_products_data[product_id_str] = {
+                'name': product.name,
+                'sku': product.sku or '',
+                'description': product.description or '',
+                'cost_price': float(product.cost_price) if product.cost_price is not None else 0.0,
+                'sale_price': float(product.sale_price) if product.sale_price is not None else 0.0,
+                'display_name': display_name,
+            }
+
+        if self.request.POST:
+            context['customer_credit_item_formset'] = CustomerCreditItemFormSet(
+                self.request.POST,
+                prefix='credit_items',
+                user=self.request.user,
+            )
+        else:
+            context['customer_credit_item_formset'] = CustomerCreditItemFormSet(
+                prefix='credit_items',
+                user=self.request.user,
+            )
+            context['customer_credit_item_formset'].extra = 1
+
+        context['customer_credit_form'] = context.get('form')
+        context['inventory_products_data'] = json.dumps(inventory_products_data)
+        context['customer_invoices_url'] = reverse('accounts:customer_credit_invoices')
+        context['province_tax_rates'] = json.dumps(PROVINCE_TAX_RATES)
+        context['is_edit'] = False
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        formset = context['customer_credit_item_formset']
+
+        if not formset.is_valid():
+            messages.error(self.request, 'Please correct the errors below in the items.')
+            return self.render_to_response(self.get_context_data(form=form))
+
+        self.object = form.save()
+        formset.instance = self.object
+
+        for inline_form in formset.forms:
+            if not hasattr(inline_form, 'cleaned_data'):
+                continue
+            if inline_form.cleaned_data.get('DELETE'):
+                continue
+            item = inline_form.save(commit=False)
+            selected_product = inline_form.cleaned_data.get('product')
+            create_inventory_product = inline_form.cleaned_data.get('create_inventory_product')
+            part_no = inline_form.cleaned_data.get('part_no')
+            description = inline_form.cleaned_data.get('description')
+            price = inline_form.cleaned_data.get('price')
+
+            price_decimal = Decimal('0.00')
+            has_price = False
+            if price not in (None, ''):
+                try:
+                    price_decimal = Decimal(str(price)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    has_price = True
+                except (InvalidOperation, TypeError, ValueError):
+                    price_decimal = Decimal('0.00')
+
+            product = _ensure_inventory_product_for_item(
+                user=self.request.user,
+                category_name="Returns",
+                existing_product=selected_product,
+                create_inventory_product=create_inventory_product,
+                part_no=part_no,
+                description=description,
+                price_decimal=price_decimal,
+                has_price=has_price,
+                supplier_name='',
+            )
+            item.product = product
+
+            if not item.part_no and product and product.sku:
+                item.part_no = product.sku
+            if not item.description and product:
+                item.description = product.description or product.name
+
+            if item.source_invoice_item and not item.source_invoice:
+                item.source_invoice = item.source_invoice_item.grouped_invoice
+            if item.source_invoice_item and item.source_invoice_item.grouped_invoice.user_id != self.request.user.id:
+                item.source_invoice_item = None
+            if item.source_invoice and item.source_invoice.user_id != self.request.user.id:
+                item.source_invoice = None
+                item.source_invoice_item = None
+            if item.source_invoice_item and item.source_invoice and item.source_invoice_item.grouped_invoice_id != item.source_invoice_id:
+                item.source_invoice_item = None
+
+            customer_name = (self.object.customer_name or '').strip().lower()
+            if customer_name and item.source_invoice:
+                invoice_customer_name = ''
+                if item.source_invoice.customer:
+                    invoice_customer_name = (item.source_invoice.customer.name or '').strip().lower()
+                else:
+                    invoice_customer_name = (item.source_invoice.bill_to or '').strip().lower()
+                if invoice_customer_name and invoice_customer_name != customer_name:
+                    item.source_invoice = None
+                    item.source_invoice_item = None
+
+            item.customer_credit = self.object
+            item.save()
+
+        deleted_instances = []
+        if hasattr(formset, 'deleted_objects'):
+            deleted_instances = formset.deleted_objects
+        elif hasattr(formset, 'deleted_forms'):
+            deleted_instances = [
+                form.instance
+                for form in formset.deleted_forms
+                if getattr(form, 'instance', None) and form.instance.pk
+            ]
+
+        for deleted in deleted_instances:
+            deleted.delete()
+
+        record_inventory = self.object.record_in_inventory
+        if record_inventory:
+            self._apply_inventory_sync(self.object)
+
+        messages.success(self.request, f'Customer credit {self.object.credit_no} created successfully.')
+        return redirect(self.get_success_url())
+
+
+class CustomerCreditUpdateView(CustomerCreditInventoryMixin, LoginRequiredMixin, UpdateView):
+    model = CustomerCredit
+    form_class = CustomerCreditForm
+    template_name = 'accounts/mach/add_customer_credit.html'
+    success_url = reverse_lazy('accounts:customer_credit_list')
+
+    def get_queryset(self):
+        return CustomerCredit.objects.filter(user=self.request.user)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        inventory_products_qs = Product.objects.filter(user__in=get_product_user_ids(self.request.user)).order_by('name')
+        inventory_products_data = {}
+        for product in inventory_products_qs:
+            product_id_str = str(product.id)
+            display_name = f"{product.name} ({product.sku})" if product.sku else product.name
+            inventory_products_data[product_id_str] = {
+                'name': product.name,
+                'sku': product.sku or '',
+                'description': product.description or '',
+                'cost_price': float(product.cost_price) if product.cost_price is not None else 0.0,
+                'sale_price': float(product.sale_price) if product.sale_price is not None else 0.0,
+                'display_name': display_name,
+            }
+
+        if self.request.POST:
+            context['customer_credit_item_formset'] = CustomerCreditItemFormSet(
+                self.request.POST,
+                instance=self.object,
+                prefix='credit_items',
+                user=self.request.user,
+            )
+        else:
+            context['customer_credit_item_formset'] = CustomerCreditItemFormSet(
+                instance=self.object,
+                prefix='credit_items',
+                user=self.request.user,
+            )
+
+        context['customer_credit_form'] = context.get('form')
+        context['inventory_products_data'] = json.dumps(inventory_products_data)
+        context['customer_invoices_url'] = reverse('accounts:customer_credit_invoices')
+        context['province_tax_rates'] = json.dumps(PROVINCE_TAX_RATES)
+        context['is_edit'] = True
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        formset = context['customer_credit_item_formset']
+        previous_items = list(self.object.items.all())
+        was_recorded = self.object.record_in_inventory
+        if not formset.is_valid():
+            messages.error(self.request, 'Please correct the errors below in the items.')
+            return self.render_to_response(self.get_context_data(form=form))
+
+        self.object = form.save()
+        formset.instance = self.object
+
+        for inline_form in formset.forms:
+            if not hasattr(inline_form, 'cleaned_data'):
+                continue
+            if inline_form.cleaned_data.get('DELETE'):
+                continue
+            item = inline_form.save(commit=False)
+            selected_product = inline_form.cleaned_data.get('product')
+            create_inventory_product = inline_form.cleaned_data.get('create_inventory_product')
+            part_no = inline_form.cleaned_data.get('part_no')
+            description = inline_form.cleaned_data.get('description')
+            price = inline_form.cleaned_data.get('price')
+
+            price_decimal = Decimal('0.00')
+            has_price = False
+            if price not in (None, ''):
+                try:
+                    price_decimal = Decimal(str(price)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    has_price = True
+                except (InvalidOperation, TypeError, ValueError):
+                    price_decimal = Decimal('0.00')
+
+            product = _ensure_inventory_product_for_item(
+                user=self.request.user,
+                category_name="Returns",
+                existing_product=selected_product,
+                create_inventory_product=create_inventory_product,
+                part_no=part_no,
+                description=description,
+                price_decimal=price_decimal,
+                has_price=has_price,
+                supplier_name='',
+            )
+            item.product = product
+
+            if not item.part_no and product and product.sku:
+                item.part_no = product.sku
+            if not item.description and product:
+                item.description = product.description or product.name
+
+            if item.source_invoice_item and not item.source_invoice:
+                item.source_invoice = item.source_invoice_item.grouped_invoice
+            if item.source_invoice_item and item.source_invoice_item.grouped_invoice.user_id != self.request.user.id:
+                item.source_invoice_item = None
+            if item.source_invoice and item.source_invoice.user_id != self.request.user.id:
+                item.source_invoice = None
+                item.source_invoice_item = None
+            if item.source_invoice_item and item.source_invoice and item.source_invoice_item.grouped_invoice_id != item.source_invoice_id:
+                item.source_invoice_item = None
+
+            customer_name = (self.object.customer_name or '').strip().lower()
+            if customer_name and item.source_invoice:
+                invoice_customer_name = ''
+                if item.source_invoice.customer:
+                    invoice_customer_name = (item.source_invoice.customer.name or '').strip().lower()
+                else:
+                    invoice_customer_name = (item.source_invoice.bill_to or '').strip().lower()
+                if invoice_customer_name and invoice_customer_name != customer_name:
+                    item.source_invoice = None
+                    item.source_invoice_item = None
+
+            item.customer_credit = self.object
+            item.save()
+
+        deleted_instances = []
+        if hasattr(formset, 'deleted_objects'):
+            deleted_instances = formset.deleted_objects
+        elif hasattr(formset, 'deleted_forms'):
+            deleted_instances = [
+                form.instance
+                for form in formset.deleted_forms
+                if getattr(form, 'instance', None) and form.instance.pk
+            ]
+
+        for deleted in deleted_instances:
+            deleted.delete()
+
+        record_inventory = self.object.record_in_inventory
+        if record_inventory:
+            self._apply_inventory_sync(
+                self.object,
+                previous_items=previous_items if was_recorded else [],
+            )
+        elif was_recorded:
+            self._log_transactions(self.object, previous_items, 'OUT', 'credit edit reversal')
+
+        messages.success(self.request, f'Customer credit {self.object.credit_no} updated successfully.')
+        return redirect(self.get_success_url())
+
+
+class CustomerCreditDeleteView(CustomerCreditInventoryMixin, LoginRequiredMixin, DeleteView):
+    model = CustomerCredit
+    template_name = 'app/customer_credit_confirm_delete.html'
+    success_url = reverse_lazy('accounts:customer_credit_list')
+
+    def get_queryset(self):
+        return CustomerCredit.objects.filter(user=self.request.user)
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        response = super().delete(request, *args, **kwargs)
+        messages.success(request, f'Customer credit {self.object.credit_no} deleted successfully.')
+        return response
+
+
+@login_required
+def customer_credit_invoices(request):
+    customer_id = request.GET.get('customer_id')
+    if not customer_id:
+        return JsonResponse({'invoices': []})
+    customer_user_ids = get_customer_user_ids(request.user)
+    store_user_ids = get_business_user_ids(request.user)
+    customer = get_object_or_404(Customer, pk=customer_id, user__in=customer_user_ids)
+    invoices = (
+        GroupedInvoice.objects.filter(user__in=store_user_ids, customer=customer)
+        .prefetch_related('income_records', 'income_records__product')
+        .order_by('-date', '-id')
+    )
+    invoice_payload = []
+    for invoice in invoices:
+        items_payload = []
+        for item in invoice.income_records.all():
+            product = item.product
+            part_no = product.sku if product and product.sku else ''
+            description = item.job or (product.description if product else '') or (product.name if product else '')
+            items_payload.append({
+                'id': item.id,
+                'part_no': part_no,
+                'description': description or '',
+                'qty': float(item.qty or 0),
+                'price': float(item.rate or 0),
+                'amount': float(item.amount or 0),
+                'product_id': str(product.id) if product else '',
+                'invoice_id': invoice.id,
+            })
+        invoice_payload.append({
+            'id': invoice.id,
+            'invoice_number': invoice.invoice_number or f"Invoice {invoice.id}",
+            'date': invoice.date.isoformat() if invoice.date else '',
+            'items': items_payload,
+        })
+    return JsonResponse({'invoices': invoice_payload})
 
 
 @login_required
@@ -4739,6 +5445,10 @@ def public_contact(request):
 
     return render(request, 'public/contact_form.html', { 'form': form })
 
+
+def public_faq(request):
+    return render(request, 'public/faq.html')
+
 @login_required
 def home(request):
     # --- Profile and Template Determination ---
@@ -4835,9 +5545,14 @@ def home(request):
             Sum('grouped_invoice__payments__amount'),
             Value(Decimal('0.00')),
             output_field=DecimalField(max_digits=10, decimal_places=2)
-        ),
+        )
+    )
+    pending_invoices_qs = _annotate_invoice_credit_totals(
+        pending_invoices_qs,
+        invoice_field='grouped_invoice_id',
+    ).annotate(
         balance_due=ExpressionWrapper(
-            F('grouped_invoice__total_amount') - F('total_paid'),
+            F('grouped_invoice__total_amount') - F('total_paid') - F('credit_total'),
             output_field=DecimalField(max_digits=10, decimal_places=2)
         )
     )
@@ -4882,18 +5597,21 @@ def home(request):
             .values('total')[:1]
         )
         outstanding_customer_rows = list(
-            GroupedInvoice.objects.filter(
-                user=request.user,
-                customer__isnull=False,
+            _annotate_invoice_credit_totals(
+                GroupedInvoice.objects.filter(
+                    user=request.user,
+                    customer__isnull=False,
+                ).annotate(
+                    total_paid=Coalesce(
+                        Subquery(invoice_paid_subquery),
+                        Value(Decimal('0.00')),
+                        output_field=DecimalField(max_digits=10, decimal_places=2),
+                    )
+                )
             )
             .annotate(
-                total_paid=Coalesce(
-                    Subquery(invoice_paid_subquery),
-                    Value(Decimal('0.00')),
-                    output_field=DecimalField(max_digits=10, decimal_places=2),
-                ),
                 balance_due=ExpressionWrapper(
-                    F('total_amount') - F('total_paid'),
+                    F('total_amount') - F('total_paid') - F('credit_total'),
                     output_field=DecimalField(max_digits=10, decimal_places=2),
                 ),
             )
@@ -4906,18 +5624,21 @@ def home(request):
             for row in outstanding_customer_rows
         }
         overdue_customer_rows = list(
-            GroupedInvoice.objects.filter(
-                user=request.user,
-                customer__isnull=False,
+            _annotate_invoice_credit_totals(
+                GroupedInvoice.objects.filter(
+                    user=request.user,
+                    customer__isnull=False,
+                ).annotate(
+                    total_paid=Coalesce(
+                        Subquery(invoice_paid_subquery),
+                        Value(Decimal('0.00')),
+                        output_field=DecimalField(max_digits=10, decimal_places=2),
+                    )
+                )
             )
             .annotate(
-                total_paid=Coalesce(
-                    Subquery(invoice_paid_subquery),
-                    Value(Decimal('0.00')),
-                    output_field=DecimalField(max_digits=10, decimal_places=2),
-                ),
                 balance_due=ExpressionWrapper(
-                    F('total_amount') - F('total_paid'),
+                    F('total_amount') - F('total_paid') - F('credit_total'),
                     output_field=DecimalField(max_digits=10, decimal_places=2),
                 ),
             )
@@ -4993,8 +5714,12 @@ def home(request):
     overdue_customers_count = len(overdue_customers_payload)
     grouped_pending_invoices_qs = GroupedInvoice.objects.filter(user=request.user).annotate(
         total_paid=grouped_payments_sum,
+    )
+    grouped_pending_invoices_qs = _annotate_invoice_credit_totals(
+        grouped_pending_invoices_qs
+    ).annotate(
         balance_due=ExpressionWrapper(
-            F('total_amount') - grouped_payments_sum,
+            F('total_amount') - F('total_paid') - F('credit_total'),
             output_field=DecimalField(max_digits=10, decimal_places=2)
         )
     ).filter(balance_due__gt=Decimal('0.00'))
@@ -5144,8 +5869,10 @@ def home(request):
             total_paid = Decimal(str(total_paid))
         except Exception:
             total_paid = Decimal('0.00')
-        balance_due = (inv.total_amount or Decimal('0.00')) - total_paid
-        if balance_due <= Decimal('0.00'):
+        total_amount = inv.total_amount or Decimal('0.00')
+        credit_total = ensure_decimal(getattr(inv, 'total_credit_amount', Decimal('0.00')))
+        balance_due = total_amount - total_paid - credit_total
+        if total_paid >= total_amount:
             inv.display_status = 'Paid'
         elif total_paid > Decimal('0.00'):
             inv.display_status = 'Partially Paid'
@@ -5180,15 +5907,19 @@ def home(request):
     )
     pending_customer_approvals_count = pending_customer_approvals_qs.count()
     pending_customer_approvals = list(pending_customer_approvals_qs[:5])
+    stock_owner = get_stock_owner(request.user)
     inventory_value_expr = ExpressionWrapper(
-        F('products__cost_price') * F('products__quantity_in_stock'),
+        F('products__cost_price') * F('products__stock_levels__quantity_in_stock'),
         output_field=DecimalField(max_digits=12, decimal_places=2),
     )
     top_suppliers = list(
         Supplier.objects.filter(user=request.user)
         .annotate(
             total_inventory_value=Coalesce(
-                Sum(inventory_value_expr),
+                Sum(
+                    inventory_value_expr,
+                    filter=Q(products__stock_levels__user=stock_owner),
+                ),
                 Value(Decimal('0.00')),
                 output_field=DecimalField(max_digits=12, decimal_places=2),
             )
@@ -6671,6 +7402,12 @@ def _copy_inventory_catalog(source_user, target_user):
             warranty_length=source_product.warranty_length,
             location=source_product.location,
         )
+        upsert_product_stock(
+            target_product,
+            target_user,
+            quantity_in_stock=source_product.quantity_in_stock or 0,
+            reorder_level=source_product.reorder_level or 0,
+        )
         results["products_created"] += 1
         if sku_key:
             target_products_by_sku[sku_key] = target_product
@@ -7766,8 +8503,10 @@ def quick_create_inventory_product(request):
         instance = get_object_or_404(Product, pk=product_id, user=request.user)
     form = QuickProductCreateForm(request.POST, user=request.user, instance=instance)
     if form.is_valid():
+        stock_owner = get_stock_owner(request.user)
         product = form.save(commit=False)
-        product.user = request.user
+        if not product.user_id:
+            product.user = stock_owner or request.user
         supplier = _get_or_create_supplier_for_user(request.user, supplier_name)
         if supplier and product.supplier_id != supplier.id:
             product.supplier = supplier
@@ -7790,6 +8529,14 @@ def quick_create_inventory_product(request):
         if product.reorder_level is None:
             product.reorder_level = 0
         product.save()
+        stock_quantity = product.quantity_in_stock if product.item_type == 'inventory' else 0
+        stock_reorder = product.reorder_level if product.item_type == 'inventory' else 0
+        upsert_product_stock(
+            product,
+            request.user,
+            quantity_in_stock=stock_quantity,
+            reorder_level=stock_reorder,
+        )
 
         display_name = f"{product.name} ({product.sku})" if product.sku else product.name
         category_id = product.category_id
@@ -8132,16 +8879,18 @@ def add_dailylog(request):
     if documentType == 'invoice' and getattr(grouped_form, 'instance', None) and grouped_form.instance.pk:
         total_amount = grouped_form.instance.total_amount or Decimal('0.00')
         total_paid = grouped_form.instance.total_paid()
+        credit_total = ensure_decimal(grouped_form.instance.total_credit_amount)
+        total_settled = total_paid
         tolerance = Decimal('0.01')
         pending_invoice = getattr(grouped_form.instance, 'pending_invoice', None)
         pending_is_paid = bool(pending_invoice and getattr(pending_invoice, 'is_paid', False))
-        invoice_is_paid = pending_is_paid or bool(getattr(grouped_form.instance, 'paid_invoice', None)) or (total_amount > Decimal('0.00') and total_paid + tolerance >= total_amount)
+        invoice_is_paid = pending_is_paid or bool(getattr(grouped_form.instance, 'paid_invoice', None)) or (total_amount > Decimal('0.00') and total_settled + tolerance >= total_amount)
         if invoice_is_paid:
             invoice_total_paid_amount = total_amount
             invoice_balance_due_amount = Decimal('0.00')
         else:
-            invoice_total_paid_amount = total_paid
-            invoice_balance_due_amount = (total_amount - total_paid).quantize(Decimal('0.01'))
+            invoice_total_paid_amount = total_settled
+            invoice_balance_due_amount = (total_amount - total_paid - credit_total).quantize(Decimal('0.01'))
             if invoice_balance_due_amount < Decimal('0.00'):
                 invoice_balance_due_amount = Decimal('0.00')
         payment_history = list(grouped_form.instance.payments.order_by('date', 'id'))
@@ -8627,11 +9376,11 @@ class PendingInvoiceListView(LoginRequiredMixin, ListView):
         invoices = GroupedInvoice.objects.filter(user=user).select_related('customer').annotate(
             total_paid=Coalesce(
                 Sum('payments__amount'), Value(Decimal('0.00')), output_field=DecimalField(max_digits=10, decimal_places=2)
-            ),
+            )
+        )
+        invoices = _annotate_invoice_credit_totals(invoices).annotate(
             balance_due=ExpressionWrapper(
-                F('total_amount') - Coalesce(
-                    Sum('payments__amount'), Value(Decimal('0.00')), output_field=DecimalField(max_digits=10, decimal_places=2)
-                ),
+                F('total_amount') - F('total_paid') - F('credit_total'),
                 output_field=DecimalField(max_digits=10, decimal_places=2)
             )
         )
@@ -8708,17 +9457,20 @@ class PendingInvoiceListView(LoginRequiredMixin, ListView):
             )
             .values('total')[:1]
         )
-        invoices = GroupedInvoice.objects.filter(
-            user=user,
-            customer__isnull=False,
+        invoices = _annotate_invoice_credit_totals(
+            GroupedInvoice.objects.filter(
+                user=user,
+                customer__isnull=False,
+            ).annotate(
+                total_paid=Coalesce(
+                    Subquery(invoice_paid_subquery),
+                    Value(Decimal('0.00')),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                ),
+            )
         ).annotate(
-            total_paid=Coalesce(
-                Subquery(invoice_paid_subquery),
-                Value(Decimal('0.00')),
-                output_field=DecimalField(max_digits=10, decimal_places=2),
-            ),
             balance_due=ExpressionWrapper(
-                F('total_amount') - F('total_paid'),
+                F('total_amount') - F('total_paid') - F('credit_total'),
                 output_field=DecimalField(max_digits=10, decimal_places=2),
             ),
         ).filter(balance_due__gt=Decimal('0.00'))
@@ -9012,8 +9764,10 @@ class MarkInvoicePaidView(LoginRequiredMixin, View):
             date=payment_date,
         )
 
-        # Update PendingInvoice state only when fully paid
-        if grouped_invoice.balance_due() <= Decimal('0.00') and pending_invoice:
+        # Update PendingInvoice state only when payments cover the invoice.
+        total_amount = grouped_invoice.total_amount or Decimal('0.00')
+        total_paid = grouped_invoice.total_paid()
+        if total_paid + Decimal('0.01') >= total_amount and pending_invoice:
             pending_invoice.is_paid = True
             pending_invoice.save()
 
@@ -9076,18 +9830,21 @@ def record_customer_payment(request, customer_id: int):
         .values('total')[:1]
     )
     unpaid_qs = (
-        GroupedInvoice.objects.filter(
-            user=request.user,
-            customer=customer,
+        _annotate_invoice_credit_totals(
+            GroupedInvoice.objects.filter(
+                user=request.user,
+                customer=customer,
+            ).annotate(
+                total_paid_calc=Coalesce(
+                    Subquery(invoice_paid_subquery),
+                    Value(Decimal('0.00')),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                ),
+            )
         )
         .annotate(
-            total_paid_calc=Coalesce(
-                Subquery(invoice_paid_subquery),
-                Value(Decimal('0.00')),
-                output_field=DecimalField(max_digits=10, decimal_places=2),
-            ),
             balance_due_calc=ExpressionWrapper(
-                F('total_amount') - F('total_paid_calc'),
+                F('total_amount') - F('total_paid_calc') - F('credit_total'),
                 output_field=DecimalField(max_digits=10, decimal_places=2),
             ),
         )
@@ -9129,20 +9886,23 @@ def record_customer_payment(request, customer_id: int):
 
     def customer_overdue_total() -> Decimal:
         rows = list(
-            GroupedInvoice.objects.filter(
-                user=request.user,
-                customer=customer,
-                date__isnull=False,
-                **overdue_filter,
+            _annotate_invoice_credit_totals(
+                GroupedInvoice.objects.filter(
+                    user=request.user,
+                    customer=customer,
+                    date__isnull=False,
+                    **overdue_filter,
+                ).annotate(
+                    total_paid_calc=Coalesce(
+                        Subquery(invoice_paid_subquery),
+                        Value(Decimal('0.00')),
+                        output_field=DecimalField(max_digits=10, decimal_places=2),
+                    ),
+                )
             )
             .annotate(
-                total_paid_calc=Coalesce(
-                    Subquery(invoice_paid_subquery),
-                    Value(Decimal('0.00')),
-                    output_field=DecimalField(max_digits=10, decimal_places=2),
-                ),
                 balance_due_calc=ExpressionWrapper(
-                    F('total_amount') - F('total_paid_calc'),
+                    F('total_amount') - F('total_paid_calc') - F('credit_total'),
                     output_field=DecimalField(max_digits=10, decimal_places=2),
                 ),
             )
@@ -9184,7 +9944,9 @@ def record_customer_payment(request, customer_id: int):
             # Refresh invoice payment state for accurate status.
             fresh_invoice = GroupedInvoice.objects.get(pk=inv.pk, user=request.user)
             balance_after = fresh_invoice.balance_due()
-            status = 'paid' if balance_after <= Decimal('0.00') else 'partial'
+            total_amount = fresh_invoice.total_amount or Decimal('0.00')
+            total_paid = fresh_invoice.total_paid()
+            status = 'paid' if total_paid + Decimal('0.01') >= total_amount else 'partial'
 
             if status == 'paid':
                 pending = PendingInvoice.objects.filter(grouped_invoice_id=inv.pk).first()
@@ -9828,8 +10590,10 @@ def customer_list(request):
 
     totals_by_customer = {}
     paid_by_customer = {}
+    credit_by_customer = {}
     overdue_invoice_totals_by_customer = {}
     overdue_paid_by_customer = {}
+    overdue_credit_by_customer = {}
 
     if all_customer_ids:
         invoices_all_qs = GroupedInvoice.objects.filter(
@@ -9841,6 +10605,7 @@ def customer_list(request):
             invoices_all_qs = invoices_all_qs.filter(date__gte=start_date)
         if end_date:
             invoices_all_qs = invoices_all_qs.filter(date__lte=end_date)
+        invoices_all_qs = _annotate_invoice_credit_totals(invoices_all_qs)
 
         invoice_totals_rows = invoices_all_qs.values('customer_id').annotate(
             total_amount=Coalesce(
@@ -9874,6 +10639,18 @@ def customer_list(request):
             for row in payment_totals_rows
         }
 
+        credit_totals_rows = invoices_all_qs.values('customer_id').annotate(
+            total_credit=Coalesce(
+                Sum('credit_total'),
+                V(Decimal('0.00')),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            )
+        )
+        credit_by_customer = {
+            row['customer_id']: (row['total_credit'] or Decimal('0.00'))
+            for row in credit_totals_rows
+        }
+
         profile = getattr(request.user, 'profile', None)
         term_days = TERM_CHOICES.get(getattr(profile, 'term', None), 30)
         overdue_threshold_date = today - timedelta(days=term_days) if term_days > 0 else today
@@ -9890,6 +10667,18 @@ def customer_list(request):
         overdue_invoice_totals_by_customer = {
             row['customer_id']: (row['total_amount'] or Decimal('0.00'))
             for row in overdue_invoice_totals_rows
+        }
+
+        overdue_credit_totals_rows = overdue_invoices_all_qs.values('customer_id').annotate(
+            total_credit=Coalesce(
+                Sum('credit_total'),
+                V(Decimal('0.00')),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            )
+        )
+        overdue_credit_by_customer = {
+            row['customer_id']: (row['total_credit'] or Decimal('0.00'))
+            for row in overdue_credit_totals_rows
         }
 
         overdue_payment_totals_rows = Payment.objects.filter(
@@ -9917,7 +10706,8 @@ def customer_list(request):
     def _overdue_total_for_customer(cid: int) -> Decimal:
         overdue_invoice_total = overdue_invoice_totals_by_customer.get(cid, Decimal('0.00'))
         overdue_paid_total = overdue_paid_by_customer.get(cid, Decimal('0.00'))
-        val = overdue_invoice_total - overdue_paid_total
+        overdue_credit_total = overdue_credit_by_customer.get(cid, Decimal('0.00'))
+        val = overdue_invoice_total - overdue_paid_total - overdue_credit_total
         return val if val > Decimal('0.00') else Decimal('0.00')
 
     # Apply overdue-only filter based on the selected period (and term rules).
@@ -9951,7 +10741,8 @@ def customer_list(request):
             continue
         total_amount = totals_by_customer.get(cid, Decimal('0.00'))
         paid_total = paid_by_customer.get(cid, Decimal('0.00'))
-        pending_total = total_amount - paid_total
+        credit_total = credit_by_customer.get(cid, Decimal('0.00'))
+        pending_total = total_amount - paid_total - credit_total
         if pending_total < Decimal('0.00'):
             pending_total = Decimal('0.00')
 
@@ -11201,6 +11992,7 @@ def customer_overdue_list(request):
         user_profile = None # Or some default if necessary for TERM_CHOICES logic
 
     business_user_ids = get_customer_user_ids(request.user)
+    store_user_ids = get_business_user_ids(request.user)
     customers_query = Customer.objects.filter(user__in=business_user_ids)
     if search_query:
         customers_query = customers_query.filter(name__icontains=search_query)
@@ -11210,14 +12002,17 @@ def customer_overdue_list(request):
 
     for customer in customers_query:
         # Calculate balance_due for each invoice of the customer
-        invoices_with_balance = customer.invoices.annotate(
+        invoices_with_balance = customer.invoices.filter(
+            user__in=store_user_ids,
+        ).annotate(
             total_paid=Coalesce(
                 Sum('payments__amount', distinct=True), # Ensure payments aren't double-counted if joins occur
                 Value(Decimal('0.00')),
                 output_field=DecimalField()
             )
-        ).annotate(
-            balance_due=F('total_amount') - F('total_paid')
+        )
+        invoices_with_balance = _annotate_invoice_credit_totals(invoices_with_balance).annotate(
+            balance_due=F('total_amount') - F('total_paid') - F('credit_total')
         )
 
         # Calculate total overdue amount for this specific customer
@@ -11268,18 +12063,17 @@ def customer_detail(request, customer_id, invoice_type):
     For 'overdue', only invoices with due_date earlier than today are shown.
     """
     business_user_ids = get_customer_user_ids(request.user)
+    store_user_ids = get_business_user_ids(request.user)
     customer = get_object_or_404(Customer, id=customer_id, user__in=business_user_ids)
-    invoices_qs = customer.invoices.all().annotate(
+    invoices_qs = customer.invoices.filter(user__in=store_user_ids).annotate(
         total_paid=Coalesce(
             Sum('payments__amount'),
             Value(Decimal('0.00')),
             output_field=DecimalField()
-        ),
-        balance_due=F('total_amount') - Coalesce(
-            Sum('payments__amount'),
-            Value(Decimal('0.00')),
-            output_field=DecimalField()
         )
+    )
+    invoices_qs = _annotate_invoice_credit_totals(invoices_qs).annotate(
+        balance_due=F('total_amount') - F('total_paid') - F('credit_total')
     )
     if invoice_type == 'paid':
         invoices = invoices_qs.filter(balance_due__lte=Decimal('0.00'))
@@ -11299,11 +12093,35 @@ def customer_detail(request, customer_id, invoice_type):
     elif invoice_type == 'overdue':
         total_invoice_amount = sum(inv.total_amount for inv in invoices)
 
+    credit_entries = []
+    credits_qs = CustomerCredit.objects.filter(
+        user__in=business_user_ids,
+        customer=customer,
+    ).prefetch_related(
+        'items',
+        'items__product',
+        'items__source_invoice',
+    ).order_by('-date', '-id')
+    for credit in credits_qs:
+        total_incl_tax, total_tax, total_excl_tax = credit.calculate_totals()
+        total_incl_tax = Decimal(str(total_incl_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_tax = Decimal(str(total_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_excl_tax = Decimal(str(total_excl_tax or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        credit_entries.append({
+            'credit': credit,
+            'items': list(credit.items.all()),
+            'total_incl_tax': total_incl_tax,
+            'total_excl_tax': total_excl_tax,
+            'total_tax': total_tax,
+            'display_total': -total_incl_tax,
+        })
+
     context = {
         'customer': customer,
         'invoices': invoices,
         'total_invoice_amount': total_invoice_amount,
         'invoice_type': invoice_type,
+        'credit_entries': credit_entries,
     }
     return render(request, 'app/customer_jobs.html', context)
 
@@ -12880,14 +13698,21 @@ class GroupedInvoiceListView(LoginRequiredMixin, ListView):
             )
             .values('total')[:1]
         )
-        queryset = queryset.annotate(
-            total_paid=Coalesce(
-                Subquery(invoice_paid_subquery),
-                Value(Decimal('0.00')),
+        queryset = _annotate_invoice_credit_totals(
+            queryset.annotate(
+                total_paid=Coalesce(
+                    Subquery(invoice_paid_subquery),
+                    Value(Decimal('0.00')),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                ),
+            )
+        ).annotate(
+            balance_due=ExpressionWrapper(
+                F('total_amount') - F('total_paid') - F('credit_total'),
                 output_field=DecimalField(max_digits=10, decimal_places=2),
             ),
-            balance_due=ExpressionWrapper(
-                F('total_amount') - F('total_paid'),
+            total_settled=ExpressionWrapper(
+                F('total_paid'),
                 output_field=DecimalField(max_digits=10, decimal_places=2),
             ),
         )
@@ -12899,13 +13724,11 @@ class GroupedInvoiceListView(LoginRequiredMixin, ListView):
         queryset = queryset.annotate(
             status_label=Case(
                 When(
-                    total_paid__gt=Decimal('0.00'),
-                    balance_due__lte=Decimal('0.00'),
+                    total_paid__gte=F('total_amount'),
                     then=Value('Paid'),
                 ),
                 When(
                     total_paid__gt=Decimal('0.00'),
-                    balance_due__gt=Decimal('0.00'),
                     then=Value('Partial'),
                 ),
                 default=Value('Pending'),
@@ -12956,13 +13779,13 @@ class GroupedInvoiceListView(LoginRequiredMixin, ListView):
         # Apply status filter
         if status_filter == 'paid':
             # Paid should include fully paid and partially paid invoices.
-            queryset = queryset.filter(total_paid__gt=Decimal('0.00'))
+            queryset = queryset.filter(total_settled__gt=Decimal('0.00'))
         elif status_filter == 'pending':
             # Pending should include unpaid and partial invoices (any balance due).
             queryset = queryset.filter(balance_due__gt=Decimal('0.00'))
         elif status_filter == 'partial':
             queryset = queryset.filter(
-                total_paid__gt=Decimal('0.00'),
+                total_settled__gt=Decimal('0.00'),
                 balance_due__gt=Decimal('0.00'),
             )
 
@@ -13034,14 +13857,21 @@ class GroupedInvoiceListView(LoginRequiredMixin, ListView):
             .values('total')[:1]
         )
         def annotate_with_payments(qs):
-            return qs.annotate(
-                total_paid=Coalesce(
-                    Subquery(invoice_paid_subquery),
-                    Value(Decimal('0.00')),
+            return _annotate_invoice_credit_totals(
+                qs.annotate(
+                    total_paid=Coalesce(
+                        Subquery(invoice_paid_subquery),
+                        Value(Decimal('0.00')),
+                        output_field=DecimalField(max_digits=10, decimal_places=2),
+                    ),
+                )
+            ).annotate(
+                balance_due=ExpressionWrapper(
+                    F('total_amount') - F('total_paid') - F('credit_total'),
                     output_field=DecimalField(max_digits=10, decimal_places=2),
                 ),
-                balance_due=ExpressionWrapper(
-                    F('total_amount') - F('total_paid'),
+                total_settled=ExpressionWrapper(
+                    F('total_paid'),
                     output_field=DecimalField(max_digits=10, decimal_places=2),
                 ),
             )
@@ -13614,14 +14444,14 @@ class OverdueInvoiceListView(LoginRequiredMixin, ListView):
                 Sum('grouped_invoice__payments__amount'),
                 Value(Decimal('0.00')),
                 output_field=DecimalField(max_digits=10, decimal_places=2)
-            ),
+            )
+        )
+        qs = _annotate_invoice_credit_totals(
+            qs,
+            invoice_field='grouped_invoice_id',
+        ).annotate(
             balance_due=ExpressionWrapper(
-                F('grouped_invoice__total_amount') -
-                Coalesce(
-                    Sum('grouped_invoice__payments__amount'),
-                    Value(Decimal('0.00')),
-                    output_field=DecimalField(max_digits=10, decimal_places=2)
-                ),
+                F('grouped_invoice__total_amount') - F('total_paid') - F('credit_total'),
                 output_field=DecimalField(max_digits=10, decimal_places=2)
             )
         ).filter(balance_due__gt=0)
@@ -13701,19 +14531,22 @@ class OverdueInvoiceListView(LoginRequiredMixin, ListView):
             )
             .values('total')[:1]
         )
-        invoices = GroupedInvoice.objects.filter(
-            user=user,
-            customer__isnull=False,
-            date__isnull=False,
-            **overdue_filter,
+        invoices = _annotate_invoice_credit_totals(
+            GroupedInvoice.objects.filter(
+                user=user,
+                customer__isnull=False,
+                date__isnull=False,
+                **overdue_filter,
+            ).annotate(
+                total_paid=Coalesce(
+                    Subquery(invoice_paid_subquery),
+                    Value(Decimal('0.00')),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                ),
+            )
         ).annotate(
-            total_paid=Coalesce(
-                Subquery(invoice_paid_subquery),
-                Value(Decimal('0.00')),
-                output_field=DecimalField(max_digits=10, decimal_places=2),
-            ),
             balance_due=ExpressionWrapper(
-                F('total_amount') - F('total_paid'),
+                F('total_amount') - F('total_paid') - F('credit_total'),
                 output_field=DecimalField(max_digits=10, decimal_places=2),
             ),
         ).filter(balance_due__gt=Decimal('0.00'))
@@ -14019,16 +14852,18 @@ def edit_dailylog(request, pk):
 
     total_amount = invoice.total_amount or Decimal('0.00')
     total_paid = invoice.total_paid()
+    credit_total = ensure_decimal(invoice.total_credit_amount)
+    total_settled = total_paid
     tolerance = Decimal('0.01')
     pending_invoice = getattr(invoice, 'pending_invoice', None)
     pending_is_paid = bool(pending_invoice and getattr(pending_invoice, 'is_paid', False))
-    invoice_is_paid = pending_is_paid or bool(getattr(invoice, 'paid_invoice', None)) or (total_amount > Decimal('0.00') and total_paid + tolerance >= total_amount)
+    invoice_is_paid = pending_is_paid or bool(getattr(invoice, 'paid_invoice', None)) or (total_amount > Decimal('0.00') and total_settled + tolerance >= total_amount)
     if invoice_is_paid:
         invoice_total_paid_amount = total_amount
         invoice_balance_due_amount = Decimal('0.00')
     else:
-        invoice_total_paid_amount = total_paid
-        invoice_balance_due_amount = (total_amount - total_paid).quantize(Decimal('0.01'))
+        invoice_total_paid_amount = total_settled
+        invoice_balance_due_amount = (total_amount - total_paid - credit_total).quantize(Decimal('0.01'))
         if invoice_balance_due_amount < Decimal('0.00'):
             invoice_balance_due_amount = Decimal('0.00')
 
@@ -14671,7 +15506,7 @@ def product_low_stock_notifications(request):
     View to get notifications as an HTML partial for AJAX loading.
     Fetches low stock product notifications and is structured for future notification types.
     """
-    low_stock_products = Product.get_low_stock_products(request.user)
+    low_stock_products = apply_stock_fields(list(Product.get_low_stock_products(request.user)))
 
     expiring_warranty_products = Product.get_expiring_warranty_products(request.user, days_ahead=30)
 

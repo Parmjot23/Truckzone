@@ -1,0 +1,275 @@
+{% if hero_cards %}
+{% url 'accounts:store_product_list' as store_url %}
+{% for card in hero_cards %}
+{% if card.kind == 'package' %}
+{% with package=card.package %}
+{% if package.primary_product %}
+<div class="package-deal-modal" id="package-deal-{{ package.id }}" data-package-modal aria-hidden="true"{% if package.free_product %} data-has-free-item="true"{% endif %}>
+    <div class="package-deal-dialog" role="dialog" aria-modal="true"
+        aria-labelledby="package-deal-title-{{ package.id }}" tabindex="-1">
+        <div class="package-deal-header">
+            <div>
+                <div class="package-deal-eyebrow">Package deal</div>
+                <h2 class="package-deal-title" id="package-deal-title-{{ package.id }}">{{ package.title }}</h2>
+                <p class="package-deal-subtitle">
+                    {{ package.subtitle|default:"Bundle savings for fleet-ready orders." }}
+                </p>
+            </div>
+            <button class="package-deal-close" type="button" data-package-close aria-label="Close">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </div>
+        <div class="package-deal-body">
+            <div class="package-deal-grid">
+                <div class="package-deal-summary-card">
+                    <div class="package-deal-badges">
+                        {% if package.discount_percent %}
+                        <span class="package-deal-badge">
+                            <i class="fas fa-tag"></i>
+                            Save {{ package.discount_percent }}%
+                        </span>
+                        {% endif %}
+                        {% if package.free_product %}
+                        <span class="package-deal-badge light">
+                            <i class="fas fa-gift"></i>
+                            Free {{ package.free_product.name }}
+                        </span>
+                        {% endif %}
+                        {% if not package.discount_percent and not package.free_product %}
+                        <span class="package-deal-badge light">
+                            <i class="fas fa-boxes-stacked"></i>
+                            Bundle deal
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="package-deal-contents-title">Bundle includes</div>
+                    <div class="package-deal-contents-list">
+                        {% if package.primary_product %}
+                        <div class="package-deal-contents-item">
+                            <span class="package-deal-chip">Primary</span>
+                            {{ package.primary_product.name }}
+                        </div>
+                        {% endif %}
+                        {% if package.secondary_product %}
+                        <div class="package-deal-contents-item">
+                            <span class="package-deal-chip">Secondary</span>
+                            {{ package.secondary_product.name }}
+                        </div>
+                        {% endif %}
+                        {% if package.free_product %}
+                        <div class="package-deal-contents-item">
+                            <span class="package-deal-chip">Bonus</span>
+                            {{ package.free_product.name }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="package-deal-cta">
+                        {% if customer_account %}
+                        <button type="button" class="package-deal-addall" data-package-add-all
+                            data-loading-label="Adding bundle..." data-success-label="Bundle added">
+                            <i class="fas fa-cart-plus"></i>
+                            <span class="btn-text">Add all to cart</span>
+                        </button>
+                        <a class="package-deal-secondary-link" href="{% url 'accounts:store_cart' %}">View cart</a>
+                        {% else %}
+                        <a class="package-deal-login-cta"
+                            href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">
+                            Log in to add bundle
+                        </a>
+                        {% endif %}
+                        <a class="package-deal-secondary-link" href="{{ store_url }}">Browse all parts</a>
+                    </div>
+                </div>
+                <div class="package-deal-products">
+                    {% if package.primary_product %}
+                    {% with product=package.primary_product %}
+                    <article class="package-deal-product">
+                        <div class="package-deal-product-header">
+                            <span class="package-deal-product-role">Primary</span>
+                            {% if package.discount_percent %}
+                            <span class="package-deal-product-badge">Save {{ package.discount_percent }}%</span>
+                            {% endif %}
+                        </div>
+                        <div class="package-deal-product-media">
+                            {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                            {% else %}
+                            <i class="fas fa-box"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="package-deal-product-title">{{ product.name }}</div>
+                            {% if product.brand %}
+                            <div class="package-deal-product-meta">{{ product.brand.name }}</div>
+                            {% endif %}
+                            {% if show_prices_hero %}
+                            <div class="package-deal-product-price">
+                                {% if product.has_promotion %}
+                                {% if product.sale_price %}
+                                <span class="package-deal-price-old">${{ product.sale_price|floatformat:2 }}</span>
+                                {% endif %}
+                                <span>${{ product.promotion_price|floatformat:2 }}</span>
+                                {% elif product.sale_price %}
+                                <span>${{ product.sale_price|floatformat:2 }}</span>
+                                {% else %}
+                                <span class="package-deal-price-call">Call for price</span>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <div class="package-deal-product-meta">Sign in to view price</div>
+                            {% endif %}
+                        </div>
+                        <div class="package-deal-product-actions">
+                            {% if customer_account %}
+                            {% if product.quantity_in_stock > 0 %}
+                            <div class="cart-slot{% if product.id|stringformat:'s' in cart_product_ids %} is-in-cart{% endif %}" data-cart-slot data-product-id="{{ product.id }}">
+                                <div class="cart-action-add">
+                                    <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}"
+                                        data-add-to-cart data-product-id="{{ product.id }}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="quantity" value="1">
+                                        <button type="submit" class="btn btn-primary btn-sm" title="Add to cart"
+                                            aria-label="Add to cart" data-loading-label="Adding..."
+                                            data-success-label="Added">
+                                            <i class="fas fa-cart-plus"></i>
+                                            <span class="visually-hidden btn-text">Add to cart</span>
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="cart-action-in">
+                                    <span class="package-deal-in-cart"><i class="fas fa-check-circle"></i> Added</span>
+                                    <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-primary btn-sm">View
+                                        cart</a>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="package-deal-stock">Out of stock</div>
+                            {% endif %}
+                            {% else %}
+                            <div class="package-deal-product-meta">Sign in to add</div>
+                            {% endif %}
+                            <a class="package-deal-product-link"
+                                href="{% url 'accounts:store_product_detail' product.id %}">View product details</a>
+                        </div>
+                    </article>
+                    {% endwith %}
+                    {% endif %}
+                    {% if package.secondary_product %}
+                    {% with product=package.secondary_product %}
+                    <article class="package-deal-product">
+                        <div class="package-deal-product-header">
+                            <span class="package-deal-product-role">Secondary</span>
+                            {% if package.discount_percent %}
+                            <span class="package-deal-product-badge">Save {{ package.discount_percent }}%</span>
+                            {% endif %}
+                        </div>
+                        <div class="package-deal-product-media">
+                            {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                            {% else %}
+                            <i class="fas fa-box"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="package-deal-product-title">{{ product.name }}</div>
+                            {% if product.brand %}
+                            <div class="package-deal-product-meta">{{ product.brand.name }}</div>
+                            {% endif %}
+                            {% if show_prices_hero %}
+                            <div class="package-deal-product-price">
+                                {% if product.has_promotion %}
+                                {% if product.sale_price %}
+                                <span class="package-deal-price-old">${{ product.sale_price|floatformat:2 }}</span>
+                                {% endif %}
+                                <span>${{ product.promotion_price|floatformat:2 }}</span>
+                                {% elif product.sale_price %}
+                                <span>${{ product.sale_price|floatformat:2 }}</span>
+                                {% else %}
+                                <span class="package-deal-price-call">Call for price</span>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <div class="package-deal-product-meta">Sign in to view price</div>
+                            {% endif %}
+                        </div>
+                        <div class="package-deal-product-actions">
+                            {% if customer_account %}
+                            {% if product.quantity_in_stock > 0 %}
+                            <div class="cart-slot{% if product.id|stringformat:'s' in cart_product_ids %} is-in-cart{% endif %}" data-cart-slot data-product-id="{{ product.id }}">
+                                <div class="cart-action-add">
+                                    <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}"
+                                        data-add-to-cart data-product-id="{{ product.id }}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="quantity" value="1">
+                                        <button type="submit" class="btn btn-primary btn-sm" title="Add to cart"
+                                            aria-label="Add to cart" data-loading-label="Adding..."
+                                            data-success-label="Added">
+                                            <i class="fas fa-cart-plus"></i>
+                                            <span class="visually-hidden btn-text">Add to cart</span>
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="cart-action-in">
+                                    <span class="package-deal-in-cart"><i class="fas fa-check-circle"></i> Added</span>
+                                    <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-primary btn-sm">View
+                                        cart</a>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="package-deal-stock">Out of stock</div>
+                            {% endif %}
+                            {% else %}
+                            <div class="package-deal-product-meta">Sign in to add</div>
+                            {% endif %}
+                            <a class="package-deal-product-link"
+                                href="{% url 'accounts:store_product_detail' product.id %}">View product details</a>
+                        </div>
+                    </article>
+                    {% endwith %}
+                    {% endif %}
+                    {% if package.free_product %}
+                    {% with product=package.free_product %}
+                    <article class="package-deal-product is-free">
+                        <div class="package-deal-product-header">
+                            <span class="package-deal-product-role">Bonus</span>
+                            <span class="package-deal-product-badge">Free</span>
+                        </div>
+                        <div class="package-deal-product-media">
+                            {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                            {% else %}
+                            <i class="fas fa-gift"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="package-deal-product-title">{{ product.name }}</div>
+                            {% if product.brand %}
+                            <div class="package-deal-product-meta">{{ product.brand.name }}</div>
+                            {% endif %}
+                            {% if show_prices_hero %}
+                            <div class="package-deal-product-price">
+                                {% if product.sale_price %}
+                                <span class="package-deal-price-old">${{ product.sale_price|floatformat:2 }}</span>
+                                {% endif %}
+                                <span>Free</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="package-deal-product-actions">
+                            <div class="package-deal-free-note">Included free with bundle</div>
+                            <a class="package-deal-product-link"
+                                href="{% url 'accounts:store_product_detail' product.id %}">View product details</a>
+                        </div>
+                    </article>
+                    {% endwith %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endwith %}
+{% endif %}
+{% endfor %}
+{% endif %}

@@ -40,7 +40,7 @@ except (ImportError, OSError):
 
 from .ai_service import refine_cause_correction, autocorrect_text_block, transcribe_audio_and_rephrase
 
-from .utils import resolve_company_logo_url, get_customer_user_ids, get_product_user_ids
+from .utils import apply_stock_fields, annotate_products_with_stock, resolve_company_logo_url, get_customer_user_ids, get_product_user_ids
 from .pdf_utils import apply_branding_defaults, render_template_to_pdf
 
 from .models import (
@@ -3018,11 +3018,15 @@ def mechanic_products(request):
         mechanic = request.user.mechanic_portal
     except Mechanic.DoesNotExist:
         return HttpResponseForbidden()
-    products = Product.objects.filter(user=mechanic.user)
+    products = annotate_products_with_stock(
+        Product.objects.filter(user=mechanic.user),
+        mechanic.user,
+    )
     query = request.GET.get('q')
     if query:
         products = products.filter(Q(name__icontains=query) | Q(sku__icontains=query))
-    products = products.order_by('name')
+    products = list(products.order_by('name'))
+    apply_stock_fields(products)
     context = {
         'products': products,
     }

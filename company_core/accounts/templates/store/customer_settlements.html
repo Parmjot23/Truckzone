@@ -13,19 +13,25 @@
   </div>
 
   <div class="row">
-    <div class="col-md-4 mb-3">
+    <div class="col-md-3 mb-3">
       <div class="border rounded p-3 h-100 bg-light">
         <div class="text-muted text-uppercase small">Total invoiced</div>
         <div class="h4 mb-0">${{ invoice_summary.total_invoiced|floatformat:2 }}</div>
       </div>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-3 mb-3">
       <div class="border rounded p-3 h-100 bg-light">
         <div class="text-muted text-uppercase small">Total paid</div>
         <div class="h4 mb-0 text-success">${{ invoice_summary.total_paid|floatformat:2 }}</div>
       </div>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-3 mb-3">
+      <div class="border rounded p-3 h-100 bg-light">
+        <div class="text-muted text-uppercase small">Credits / returns</div>
+        <div class="h4 mb-0 text-info">-${{ invoice_summary.total_credit|floatformat:2 }}</div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
       <div class="border rounded p-3 h-100 bg-light">
         <div class="text-muted text-uppercase small">Outstanding balance</div>
         <div class="h4 mb-0 text-danger">${{ invoice_summary.outstanding_balance|floatformat:2 }}</div>
@@ -37,6 +43,18 @@
     <div class="card-header bg-transparent border-0">
       <h2 class="h5 mb-0">Outstanding invoices</h2>
     </div>
+    {% if show_interac_notice %}
+      <div class="px-3 pt-3">
+        <div class="alert alert-info mb-0">
+          <strong>Payment by Interac e-Transfer:</strong>
+          {% if contact_email %}
+            send to <a href="mailto:{{ contact_email }}" class="fw-semibold text-dark text-decoration-underline">{{ contact_email }}</a>.
+          {% else %}
+            contact the shop to settle.
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
     <div class="table-responsive">
       <table class="table table-striped mb-0">
         <thead class="thead-light">
@@ -46,7 +64,9 @@
             <th scope="col">Total</th>
             <th scope="col">Amount paid</th>
             <th scope="col">Balance due</th>
-            <th scope="col" class="text-center">Action</th>
+            {% if show_action_column %}
+              <th scope="col" class="text-center">Action</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
@@ -57,19 +77,23 @@
               <td data-label="Total">${{ invoice.total_amount|floatformat:2 }}</td>
               <td data-label="Paid">${{ invoice.total_paid_amount|floatformat:2 }}</td>
               <td data-label="Balance">${{ invoice.balance_due_amount|floatformat:2 }}</td>
-              <td class="text-right" data-label="Action">
-                {% if invoice.payment_link %}
-                  <a href="{{ invoice.payment_link }}" target="_blank" class="btn btn-sm btn-primary">
-                    {% if invoice.is_subscription %}Manage billing{% else %}Pay now{% endif %}
-                  </a>
-                {% else %}
-                  <span class="text-muted small">Contact the shop to settle</span>
-                {% endif %}
-              </td>
+              {% if show_action_column %}
+                <td class="text-right" data-label="Action">
+                  {% if invoice.payment_link %}
+                    <a href="{{ invoice.payment_link }}" target="_blank" class="btn btn-sm btn-primary">
+                      {% if invoice.is_subscription %}Manage billing{% else %}Pay now{% endif %}
+                    </a>
+                  {% else %}
+                    <span class="text-muted small">Contact the shop to settle</span>
+                  {% endif %}
+                </td>
+              {% endif %}
             </tr>
           {% empty %}
             <tr>
-              <td colspan="6" class="text-center py-4">Great news! You have no outstanding invoices.</td>
+              <td colspan="{% if show_action_column %}6{% else %}5{% endif %}" class="text-center py-4">
+                Great news! You have no outstanding invoices.
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -108,6 +132,49 @@
     </nav>
     {% endif %}
   </div>
+
+  {% if credit_rows %}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-transparent border-0">
+        <h2 class="h5 mb-0">Customer credits (returns)</h2>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Credit #</th>
+              <th scope="col">Memo</th>
+              <th scope="col">Returned items</th>
+              <th scope="col">Credit total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in credit_rows %}
+              <tr>
+                <td data-label="Date">{{ row.credit.date|date:"M d, Y" }}</td>
+                <td data-label="Credit #">{{ row.credit.credit_no|default:"-" }}</td>
+                <td data-label="Memo">{{ row.credit.memo|default:"-" }}</td>
+                <td data-label="Returned items">
+                  <ul class="list-unstyled mb-0">
+                    {% for item in row.items %}
+                      <li>
+                        {{ item.qty }}x {{ item.label }}
+                        {% if item.invoice_number %}
+                          (Invoice {{ item.invoice_number }})
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </td>
+                <td data-label="Credit total">-${{ row.total_incl_tax|floatformat:2 }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
 
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-transparent border-0">

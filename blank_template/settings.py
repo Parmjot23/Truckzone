@@ -257,6 +257,7 @@ TEMPLATES = [
                 'accounts.context_processors.maps_settings',
                 'accounts.context_processors.customer_portal_context',
                 'accounts.context_processors.storefront_location_context',
+                'accounts.context_processors.storefront_nav_context',
                 'accounts.context_processors.cart_summary',
             ],
         },

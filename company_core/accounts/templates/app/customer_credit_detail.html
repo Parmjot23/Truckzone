@@ -1,0 +1,138 @@
+{% extends 'customer_portal_base.html' %}
+{% load custom_filters %}
+
+{% block title %}Customer Credit Detail{% endblock %}
+
+{% block content %}
+<style>
+  .credit-shell { max-width: 100%; width: 100%; margin: 0 auto 2rem; padding: 0 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 12px 30px rgba(15,23,42,0.06); padding: 1.25rem; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .title { font-size: 1.4rem; font-weight: 800; margin: 0; color: #111827; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; font-weight: 700; font-size: 0.75rem; margin: 0; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 0.75rem; margin-top: 0.5rem; }
+  .stat { padding: 0.9rem; border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb; display: grid; gap: 0.1rem; }
+  .stat-label { color: #6b7280; font-size: 0.9rem; }
+  .stat-value { font-weight: 800; color: #0f172a; }
+  .table-modern thead th { background: #f8fafc; color: #6b7280; font-weight: 700; }
+  .table-modern td, .table-modern th { border-color: #eef1f5 !important; }
+  .totals { display: grid; gap: 0.25rem; max-width: 360px; margin-left: auto; }
+  .totals-row { display: flex; justify-content: space-between; font-weight: 700; }
+  .totals-row.muted { color: #6b7280; font-weight: 600; }
+  .totals-highlight { background: #eef2ff; border-radius: 10px; padding: 0.5rem 0.75rem; }
+  .actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+</style>
+
+<div class="credit-shell">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow mb-1">Customer Credit</p>
+        <h2 class="title"><i class="fas fa-undo-alt me-2 text-primary"></i>{{ object.customer_name|default:object.customer|default:"-" }}</h2>
+      </div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="badge bg-primary">Credit #{{ object.credit_no }}</span>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">Date</div>
+        <div class="stat-value">{{ object.date|date:"F d, Y" }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Customer</div>
+        <div class="stat-value">{{ object.customer_name|default:object.customer|default:"-" }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Tax Included</div>
+        <div class="stat-value">
+          {% if object.tax_included %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Applied / Available</div>
+        <div class="stat-value">{{ applied_amount|currency }} / {{ available_amount|currency }}</div>
+      </div>
+      {% if object.memo %}
+      <div class="stat">
+        <div class="stat-label">Memo</div>
+        <div class="stat-value">{{ object.memo }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div>
+        <p class="eyebrow mb-1">Credit Items</p>
+        <h5 class="title mb-0" style="font-size:1.05rem;">Line Items</h5>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-modern align-middle">
+        <thead>
+          <tr>
+            <th scope="col">Part No</th>
+            <th scope="col">Description</th>
+            <th scope="col" class="text-center">Qty</th>
+            <th scope="col" class="text-end">Price</th>
+            <th scope="col" class="text-end">Amount</th>
+            <th scope="col">Invoice</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in object.items.all %}
+            <tr>
+              <td>{{ item.part_no|default:"" }}</td>
+              <td>{{ item.description|default:"" }}</td>
+              <td class="text-center">{{ item.qty }}</td>
+              <td class="text-end">{{ item.price|currency }}</td>
+              <td class="text-end">{{ item.amount|currency }}</td>
+              <td>{% if item.source_invoice %}{{ item.source_invoice.invoice_number|default:item.source_invoice.id }}{% else %}-{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="totals mt-3">
+      <div class="totals-row muted">
+        <span>Total Amount (Excl. Tax)</span><span>{{ total_amount_excl_tax|currency }}</span>
+      </div>
+      <div class="totals-row muted">
+        {% with tax_label=object.get_tax_label %}
+          <span>Tax {% if tax_label %}({{ tax_label }}){% endif %}</span>
+        {% endwith %}
+        <span>{{ total_tax|currency }}</span>
+      </div>
+      <div class="totals-row totals-highlight">
+        <span>Total Credit (Incl. Tax)</span><span>{{ total_amount_incl_tax|currency }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel actions">
+    <a href="{% url 'accounts:customer_credit_pdf' object.pk %}" class="btn btn-outline-secondary">
+      <i class="fas fa-file-pdf"></i> Download PDF
+    </a>
+    <a href="{% url 'accounts:customer_credit_print' object.pk %}" class="btn btn-outline-secondary" target="_blank" rel="noopener">
+      <i class="fas fa-print"></i> Print
+    </a>
+    <form method="post" action="{% url 'accounts:customer_credit_email' object.pk %}" class="m-0">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success">
+        <i class="fas fa-envelope"></i> Email Customer
+      </button>
+    </form>
+    <a href="{% url 'accounts:customer_credit_edit' object.pk %}" class="btn btn-outline-primary">
+      <i class="fas fa-edit"></i> Edit
+    </a>
+    <a href="{% url 'accounts:customer_credit_delete' object.pk %}" class="btn btn-outline-danger">
+      <i class="fas fa-trash-alt"></i> Delete
+    </a>
+    <a href="{% url 'accounts:customer_credit_list' %}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Back to List
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -703,13 +703,16 @@
     </div>
 </div>
 
-<div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+<div class="modal fade inventory-modal" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <form method="post" action="{% url 'accounts:inventory_product_attributes_update' %}">
                 {% csrf_token %}
                 <div class="modal-header">
-                    <h5 class="modal-title" id="editProductModalLabel">Edit product attributes</h5>
+                    <div>
+                        <h5 class="modal-title" id="editProductModalLabel">Edit product attributes</h5>
+                        <p class="modal-subtitle mb-0">Update category-specific details without leaving this screen.</p>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -786,6 +789,270 @@
 
     .product-select-checkbox {
         cursor: pointer;
+    }
+
+    #editProductModal .modal-dialog {
+        height: calc(100vh - 2rem);
+        max-height: calc(100vh - 2rem);
+        display: flex;
+        margin: 1rem auto;
+    }
+
+    #editProductModal .modal-content {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 18px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 24px 50px rgba(15, 23, 42, 0.2);
+    }
+
+    #editProductModal .modal-content > form {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    #editProductModal .modal-header {
+        padding: 1rem 1.25rem;
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        color: #fff;
+        border-bottom: none;
+    }
+
+    #editProductModal .modal-title {
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        color: inherit;
+    }
+
+    #editProductModal .modal-subtitle {
+        margin: 0.15rem 0 0 0;
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    #editProductModal .btn-close {
+        filter: invert(1);
+        opacity: 0.85;
+    }
+
+    #editProductModal .modal-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 1.25rem;
+        background: #f8fafc;
+    }
+
+    #editProductModal .modal-footer {
+        padding: 0.85rem 1.25rem;
+        background: #f1f5f9;
+        border-top: none;
+    }
+
+    #editProductModal .product-attributes-shell {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 1.1rem;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
+    }
+
+    #editProductModal .product-attributes-shell .row > [class*="col-"] {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #editProductModal .product-attributes-shell .fw-semibold {
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    #editProductModal .product-attributes-shell label {
+        margin-bottom: 0.35rem;
+    }
+
+    #editProductModal .product-attributes-shell select,
+    #editProductModal .product-attributes-shell input:not([type="checkbox"]):not([type="radio"]),
+    #editProductModal .product-attributes-shell textarea {
+        width: 100%;
+        border-radius: 0.65rem;
+        border: 1px solid #d6dde6;
+        padding: 0.55rem 0.75rem;
+        background: #fff;
+        min-height: 2.4rem;
+    }
+
+    #editProductModal .product-attributes-shell textarea {
+        min-height: 4.25rem;
+    }
+
+    #editProductModal .product-attributes-shell select:focus,
+    #editProductModal .product-attributes-shell input:not([type="checkbox"]):not([type="radio"]):focus,
+    #editProductModal .product-attributes-shell textarea:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.2);
+        outline: none;
+    }
+
+    #editProductModal .product-attributes-shell .form-text {
+        margin-top: 0.25rem;
+    }
+
+    #editProductModal .product-modal-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 0.9rem 1rem;
+    }
+
+    #editProductModal .product-modal-grid .form-group {
+        margin-bottom: 0;
+    }
+
+    #editProductModal .product-modal-grid .span-2 {
+        grid-column: 1 / -1;
+    }
+
+    #editProductModal label {
+        font-weight: 600;
+        color: #0f172a;
+        font-size: 0.9rem;
+    }
+
+    #editProductModal .form-control,
+    #editProductModal .form-select {
+        border-radius: 0.65rem;
+        border-color: #d6dde6;
+    }
+
+    #editProductModal .form-control:focus,
+    #editProductModal .form-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.2);
+    }
+
+    #editProductModal .form-text {
+        font-size: 0.85rem;
+    }
+
+    #editProductModal .btn-link {
+        font-weight: 600;
+    }
+
+    #editProductModal .attribute-create-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    #editProductModal .attribute-create-wrapper {
+        margin-top: 0.5rem;
+    }
+
+    #editProductModal .attribute-create-panel {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    #editProductModal .attribute-create-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    #editProductModal .attribute-create-category {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
+    #editProductModal .attribute-create-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.75rem 1rem;
+    }
+
+    #editProductModal .attribute-create-span-2 {
+        grid-column: 1 / -1;
+    }
+
+    #editProductModal .attribute-create-flags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem 1.5rem;
+        margin-top: 0.75rem;
+    }
+
+    #editProductModal .attribute-create-footer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-top: 0.9rem;
+    }
+
+    #editProductModal .attribute-create-status {
+        font-size: 0.85rem;
+    }
+
+    #editProductModal .attribute-field-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    #editProductModal .attribute-field-header label {
+        margin-bottom: 0;
+    }
+
+    #editProductModal .attribute-edit-link {
+        padding: 0;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        text-decoration: none;
+    }
+
+    #editProductModal .attribute-edit-link:hover {
+        text-decoration: underline;
+    }
+
+    #editProductModal .attribute-help {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1rem;
+        height: 1rem;
+        margin-left: 0.35rem;
+        border-radius: 999px;
+        background: #e2e8f0;
+        color: #334155;
+        font-size: 0.7rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: help;
+    }
+
+    @media (max-width: 576px) {
+        #editProductModal .modal-dialog {
+            height: 100vh;
+            max-height: 100vh;
+            margin: 0;
+        }
+
+        #editProductModal .modal-content {
+            border-radius: 0;
+        }
     }
 
     @media (max-width: 991.98px) {
@@ -917,6 +1184,320 @@
             })
             .catch(function () {
                 // Keep existing attribute fields if the update fails.
+            });
+    }
+
+    function getAttributeCreatePanel(element) {
+        const form = element ? element.closest('form') : null;
+        if (!form) {
+            return null;
+        }
+        return form.querySelector('[data-attribute-create-panel]');
+    }
+
+    function getAttributeCategorySelect(element) {
+        const form = element ? element.closest('form') : null;
+        if (!form) {
+            return null;
+        }
+        return form.querySelector('[data-attribute-source]');
+    }
+
+    function normalizeAttributeFlag(value) {
+        return value === true || value === 'true' || value === '1' || value === 1;
+    }
+
+    function setAttributeCreateMode(panel, mode) {
+        if (!panel) {
+            return;
+        }
+        const titleEl = panel.querySelector('[data-attribute-panel-title]');
+        const submitButton = panel.querySelector('[data-attribute-create-submit]');
+
+        if (titleEl && !panel.dataset.defaultTitle) {
+            panel.dataset.defaultTitle = titleEl.textContent.trim();
+        }
+        if (submitButton && !panel.dataset.defaultSubmitLabel) {
+            panel.dataset.defaultSubmitLabel = submitButton.getAttribute('data-default-label') || submitButton.textContent.trim();
+        }
+
+        if (mode === 'edit') {
+            if (titleEl) {
+                titleEl.textContent = 'Edit attribute';
+            }
+            if (submitButton) {
+                submitButton.textContent = 'Save changes';
+            }
+        } else {
+            delete panel.dataset.editingId;
+            delete panel.dataset.editingCategoryId;
+            delete panel.dataset.editingCategoryName;
+            if (titleEl) {
+                titleEl.textContent = panel.dataset.defaultTitle || 'New attribute';
+            }
+            if (submitButton) {
+                submitButton.textContent = panel.dataset.defaultSubmitLabel || 'Save attribute';
+            }
+        }
+    }
+
+    function applyAttributeEditData(panel, meta) {
+        if (!panel || !meta) {
+            return;
+        }
+        panel.dataset.editingId = meta.id || '';
+        panel.dataset.editingCategoryId = meta.categoryId || '';
+        panel.dataset.editingCategoryName = meta.categoryName || '';
+
+        const nameInput = panel.querySelector('[data-attribute-create-name]');
+        const typeInput = panel.querySelector('[data-attribute-create-type]');
+        const optionsInput = panel.querySelector('[data-attribute-create-options]');
+        const unitInput = panel.querySelector('[data-attribute-create-unit]');
+        const orderInput = panel.querySelector('[data-attribute-create-order]');
+        const descriptionInput = panel.querySelector('[data-attribute-create-description]');
+        const filterableInput = panel.querySelector('[data-attribute-create-filterable]');
+        const comparableInput = panel.querySelector('[data-attribute-create-comparable]');
+        const activeInput = panel.querySelector('[data-attribute-create-active]');
+        const statusTarget = panel.querySelector('[data-attribute-create-status]');
+
+        if (nameInput) {
+            nameInput.value = meta.name || '';
+        }
+        if (typeInput) {
+            typeInput.value = meta.attributeType || 'select';
+        }
+        if (optionsInput) {
+            optionsInput.value = meta.options || '';
+        }
+        if (unitInput) {
+            unitInput.value = meta.unit || '';
+        }
+        if (orderInput) {
+            orderInput.value = meta.sortOrder !== undefined && meta.sortOrder !== null ? meta.sortOrder : '';
+        }
+        if (descriptionInput) {
+            descriptionInput.value = meta.description || '';
+        }
+        if (filterableInput) {
+            filterableInput.checked = normalizeAttributeFlag(meta.filterable);
+        }
+        if (comparableInput) {
+            comparableInput.checked = normalizeAttributeFlag(meta.comparable);
+        }
+        if (activeInput) {
+            activeInput.checked = normalizeAttributeFlag(meta.active);
+        }
+        if (statusTarget) {
+            statusTarget.textContent = 'Editing this attribute.';
+            statusTarget.classList.remove('status-error', 'status-success');
+        }
+        setAttributeCreateOptionsVisibility(panel, typeInput ? typeInput.value : 'select');
+        updateAttributeCreateCategory(panel);
+    }
+
+    function setAttributeCreateOptionsVisibility(panel, typeValue) {
+        if (!panel) {
+            return;
+        }
+        const optionsGroup = panel.querySelector('[data-attribute-create-options-group]');
+        if (!optionsGroup) {
+            return;
+        }
+        const isSelect = (typeValue || 'select') === 'select';
+        optionsGroup.classList.toggle('d-none', !isSelect);
+    }
+
+    function updateAttributeCreateCategory(panel) {
+        if (!panel) {
+            return;
+        }
+        if (panel.dataset.editingId) {
+            const labelTarget = panel.querySelector('[data-attribute-category-label]');
+            const submitButton = panel.querySelector('[data-attribute-create-submit]');
+            const categoryName = panel.dataset.editingCategoryName || 'Selected category';
+            if (labelTarget) {
+                labelTarget.textContent = categoryName;
+            }
+            if (submitButton) {
+                submitButton.disabled = !panel.dataset.editingCategoryId;
+            }
+            return;
+        }
+        const categorySelect = getAttributeCategorySelect(panel);
+        const labelTarget = panel.querySelector('[data-attribute-category-label]');
+        const submitButton = panel.querySelector('[data-attribute-create-submit]');
+        const categoryName = categorySelect && categorySelect.selectedOptions && categorySelect.selectedOptions.length
+            ? (categorySelect.selectedOptions[0].textContent || '').trim()
+            : '';
+
+        if (labelTarget) {
+            labelTarget.textContent = categoryName || 'Choose a category above';
+        }
+        if (submitButton) {
+            submitButton.disabled = !(categorySelect && categorySelect.value);
+        }
+    }
+
+    function initializeAttributeCreatePanel(container) {
+        const panel = container ? container.querySelector('[data-attribute-create-panel]') : null;
+        if (!panel) {
+            return;
+        }
+        setAttributeCreateMode(panel, 'create');
+        const typeInput = panel.querySelector('[data-attribute-create-type]');
+        setAttributeCreateOptionsVisibility(panel, typeInput ? typeInput.value : 'select');
+        updateAttributeCreateCategory(panel);
+    }
+
+    function resetAttributeCreatePanel(panel) {
+        if (!panel) {
+            return;
+        }
+        const nameInput = panel.querySelector('[data-attribute-create-name]');
+        const typeInput = panel.querySelector('[data-attribute-create-type]');
+        const optionsInput = panel.querySelector('[data-attribute-create-options]');
+        const unitInput = panel.querySelector('[data-attribute-create-unit]');
+        const orderInput = panel.querySelector('[data-attribute-create-order]');
+        const descriptionInput = panel.querySelector('[data-attribute-create-description]');
+        const filterableInput = panel.querySelector('[data-attribute-create-filterable]');
+        const comparableInput = panel.querySelector('[data-attribute-create-comparable]');
+        const activeInput = panel.querySelector('[data-attribute-create-active]');
+
+        if (nameInput) {
+            nameInput.value = '';
+        }
+        if (typeInput) {
+            typeInput.value = 'select';
+        }
+        if (optionsInput) {
+            optionsInput.value = '';
+        }
+        if (unitInput) {
+            unitInput.value = '';
+        }
+        if (orderInput) {
+            orderInput.value = '';
+        }
+        if (descriptionInput) {
+            descriptionInput.value = '';
+        }
+        if (filterableInput) {
+            filterableInput.checked = true;
+        }
+        if (comparableInput) {
+            comparableInput.checked = false;
+        }
+        if (activeInput) {
+            activeInput.checked = true;
+        }
+        setAttributeCreateOptionsVisibility(panel, typeInput ? typeInput.value : 'select');
+    }
+
+    function toggleAttributeCreatePanel(panel, shouldOpen) {
+        if (!panel) {
+            return;
+        }
+        const isHidden = panel.classList.contains('d-none');
+        const openPanel = shouldOpen === undefined ? isHidden : shouldOpen;
+        panel.classList.toggle('d-none', !openPanel);
+        if (openPanel) {
+            updateAttributeCreateCategory(panel);
+            const typeInput = panel.querySelector('[data-attribute-create-type]');
+            setAttributeCreateOptionsVisibility(panel, typeInput ? typeInput.value : 'select');
+            const nameInput = panel.querySelector('[data-attribute-create-name]');
+            if (nameInput) {
+                nameInput.focus();
+            }
+        }
+    }
+
+    function handleAttributeCreateSubmit(panel) {
+        if (!panel) {
+            return;
+        }
+        const editingId = panel.dataset.editingId || '';
+        const categorySelect = getAttributeCategorySelect(panel);
+        const nameInput = panel.querySelector('[data-attribute-create-name]');
+        const typeInput = panel.querySelector('[data-attribute-create-type]');
+        const optionsInput = panel.querySelector('[data-attribute-create-options]');
+        const unitInput = panel.querySelector('[data-attribute-create-unit]');
+        const orderInput = panel.querySelector('[data-attribute-create-order]');
+        const descriptionInput = panel.querySelector('[data-attribute-create-description]');
+        const filterableInput = panel.querySelector('[data-attribute-create-filterable]');
+        const comparableInput = panel.querySelector('[data-attribute-create-comparable]');
+        const activeInput = panel.querySelector('[data-attribute-create-active]');
+        const statusTarget = panel.querySelector('[data-attribute-create-status]');
+        const saveUrl = panel.getAttribute('data-save-url');
+        const categoryId = editingId ? (panel.dataset.editingCategoryId || '') : (categorySelect ? categorySelect.value : '');
+
+        if (!categoryId) {
+            showStatus(statusTarget, 'Select a category first.', 'error');
+            return;
+        }
+        if (!nameInput || !(nameInput.value || '').trim()) {
+            showStatus(statusTarget, 'Attribute name is required.', 'error');
+            if (nameInput) {
+                nameInput.focus();
+            }
+            return;
+        }
+        if (!saveUrl) {
+            showStatus(statusTarget, 'Save endpoint is not available.', 'error');
+            return;
+        }
+
+        const attributeType = typeInput ? typeInput.value : 'select';
+        const payload = {
+            name: (nameInput.value || '').trim(),
+            description: (descriptionInput && descriptionInput.value ? descriptionInput.value : '').trim(),
+            value_unit: (unitInput && unitInput.value ? unitInput.value : '').trim(),
+            category_id: categoryId,
+            attribute_type: attributeType || 'select',
+            sort_order: orderInput && orderInput.value ? orderInput.value : 0,
+            is_filterable: filterableInput ? filterableInput.checked : true,
+            is_comparable: comparableInput ? comparableInput.checked : false,
+            is_active: activeInput ? activeInput.checked : true,
+            options: attributeType === 'select' && optionsInput ? (optionsInput.value || '') : '',
+        };
+        if (editingId) {
+            payload.id = editingId;
+        }
+
+        showStatus(statusTarget, 'Saving...', 'saving');
+        fetch(saveUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(payload),
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().then(function (data) {
+                        throw data;
+                    });
+                }
+                return response.json();
+            })
+            .then(function () {
+                if (editingId) {
+                    showStatus(statusTarget, 'Changes saved.', 'success');
+                } else {
+                    resetAttributeCreatePanel(panel);
+                    updateAttributeCreateCategory(panel);
+                    showStatus(statusTarget, 'Saved. Add another attribute when you are ready.', 'success');
+                }
+                if (categorySelect) {
+                    fetchAttributeFields(categorySelect);
+                }
+            })
+            .catch(function (errorData) {
+                const message = errorData && errorData.errors
+                    ? Object.values(errorData.errors).flat().join(' ')
+                    : 'Could not save this attribute.';
+                showStatus(statusTarget, message, 'error');
             });
     }
 
@@ -2004,6 +2585,87 @@
                 }
                 if (target.matches('[data-attribute-source]')) {
                     fetchAttributeFields(target);
+                    const panel = getAttributeCreatePanel(target);
+                    setAttributeCreateMode(panel, 'create');
+                    resetAttributeCreatePanel(panel);
+                    updateAttributeCreateCategory(panel);
+                }
+                if (target.matches('[data-attribute-create-type]')) {
+                    const panel = target.closest('[data-attribute-create-panel]');
+                    setAttributeCreateOptionsVisibility(panel, target.value);
+                }
+            });
+            document.addEventListener('click', function (event) {
+                const editButton = event.target && event.target.closest
+                    ? event.target.closest('[data-attribute-edit]')
+                    : null;
+                if (editButton) {
+                    const panel = getAttributeCreatePanel(editButton);
+                    if (!panel) {
+                        return;
+                    }
+                    const meta = {
+                        id: editButton.getAttribute('data-attribute-id') || '',
+                        name: editButton.getAttribute('data-attribute-name') || '',
+                        description: editButton.getAttribute('data-attribute-description') || '',
+                        unit: editButton.getAttribute('data-attribute-unit') || '',
+                        attributeType: editButton.getAttribute('data-attribute-type') || 'select',
+                        options: editButton.getAttribute('data-attribute-options') || '',
+                        sortOrder: editButton.getAttribute('data-attribute-sort-order') || '',
+                        categoryId: editButton.getAttribute('data-attribute-category-id') || '',
+                        categoryName: editButton.getAttribute('data-attribute-category-name') || '',
+                        filterable: editButton.getAttribute('data-attribute-filterable'),
+                        comparable: editButton.getAttribute('data-attribute-comparable'),
+                        active: editButton.getAttribute('data-attribute-active'),
+                    };
+                    setAttributeCreateMode(panel, 'edit');
+                    applyAttributeEditData(panel, meta);
+                    toggleAttributeCreatePanel(panel, true);
+                    setTimeout(function () {
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 0);
+                    return;
+                }
+                const toggleButton = event.target && event.target.closest
+                    ? event.target.closest('[data-attribute-create-toggle]')
+                    : null;
+                if (toggleButton) {
+                    const panel = getAttributeCreatePanel(toggleButton);
+                    setAttributeCreateMode(panel, 'create');
+                    resetAttributeCreatePanel(panel);
+                    toggleAttributeCreatePanel(panel, true);
+                    setTimeout(function () {
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 0);
+                    return;
+                }
+                const cancelButton = event.target && event.target.closest
+                    ? event.target.closest('[data-attribute-create-cancel]')
+                    : null;
+                if (cancelButton) {
+                    const panel = cancelButton.closest('[data-attribute-create-panel]');
+                    setAttributeCreateMode(panel, 'create');
+                    resetAttributeCreatePanel(panel);
+                    toggleAttributeCreatePanel(panel, false);
+                    return;
+                }
+                const submitButton = event.target && event.target.closest
+                    ? event.target.closest('[data-attribute-create-submit]')
+                    : null;
+                if (submitButton) {
+                    const panel = submitButton.closest('[data-attribute-create-panel]');
+                    handleAttributeCreateSubmit(panel);
+                }
+            });
+            document.addEventListener('keydown', function (event) {
+                const target = event.target;
+                if (!target || !(target instanceof HTMLElement)) {
+                    return;
+                }
+                if (target.matches('[data-attribute-create-name]') && event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    const panel = target.closest('[data-attribute-create-panel]');
+                    handleAttributeCreateSubmit(panel);
                 }
             });
         }
@@ -2032,6 +2694,7 @@
                     })
                     .then(function (data) {
                         editProductFormContent.innerHTML = data.html || '';
+                        initializeAttributeCreatePanel(editProductFormContent);
                     })
                     .catch(function () {
                         editProductFormContent.innerHTML = '<div class="alert alert-danger mb-0">Unable to load the product details. Please refresh and try again.</div>';

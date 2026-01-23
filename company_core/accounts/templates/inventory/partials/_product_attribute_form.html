@@ -1,16 +1,99 @@
 <!-- inventory/partials/_product_attribute_form.html -->
 <input type="hidden" name="product_id" value="{{ form.instance.id }}">
 {{ form.non_field_errors }}
-<div class="product-modal-grid">
-  <div class="form-group span-2">
-    {{ form.category.label_tag }}
-    {{ form.category }}
-    <div class="form-text text-muted">Choose a category to load its custom attributes.</div>
-  </div>
-  <div class="form-group span-2" data-attribute-fields="true" data-attribute-url="{% url 'accounts:get_attribute_fields' %}" data-product-id="{{ form.instance.id|default_if_none:'' }}">
-    {% include 'inventory/partials/_attribute_fields.html' with form=form %}
-    <div class="mt-2">
-      <a class="btn btn-link btn-sm px-0" href="{% url 'accounts:inventory_attributes' %}" target="_blank" rel="noopener">Create custom attributes</a>
+<div class="product-attributes-shell">
+  <div class="product-modal-grid">
+    <div class="form-group span-2">
+      {{ form.category.label_tag }}
+      {{ form.category }}
+      <div class="form-text text-muted">Choose a category to load its custom attributes.</div>
+    </div>
+    <div class="form-group span-2" data-attribute-fields="true" data-attribute-url="{% url 'accounts:get_attribute_fields' %}" data-product-id="{{ form.instance.id|default_if_none:'' }}">
+      {% include 'inventory/partials/_attribute_fields.html' with form=form %}
+    </div>
+    <div class="form-group span-2 attribute-create-wrapper">
+      <div class="attribute-create-actions">
+        <button type="button" class="btn btn-outline-primary btn-sm" data-attribute-create-toggle>
+          <i class="fas fa-plus me-1"></i> Create custom attribute
+        </button>
+        <span class="form-text text-muted">Add a new attribute for this category without leaving this page.</span>
+      </div>
+      {% with attr_uid=form.instance.id|default_if_none:'new' %}
+      <div class="attribute-create-panel d-none" data-attribute-create-panel data-save-url="{% url 'accounts:inventory_attribute_inline_save' %}">
+        <div class="attribute-create-header">
+          <div>
+            <div class="fw-semibold" data-attribute-panel-title>New attribute</div>
+            <div class="attribute-create-category">Category: <span data-attribute-category-label>Choose a category above</span></div>
+          </div>
+          <button type="button" class="btn btn-link btn-sm" data-attribute-create-cancel>Cancel</button>
+        </div>
+        <div class="attribute-create-grid mt-3">
+          <div>
+            <label class="form-label" for="attributeCreateName-{{ attr_uid }}">Attribute name</label>
+            <input type="text" class="form-control" id="attributeCreateName-{{ attr_uid }}" data-attribute-create-name placeholder="e.g. Dial color">
+          </div>
+          <div>
+            <label class="form-label" for="attributeCreateType-{{ attr_uid }}">Type</label>
+            <select class="form-select" id="attributeCreateType-{{ attr_uid }}" data-attribute-create-type>
+              {% if attribute_types %}
+              {% for value, label in attribute_types %}
+              <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+              {% else %}
+              <option value="select">Select</option>
+              <option value="text">Text</option>
+              <option value="number">Number</option>
+              <option value="boolean">Yes/No</option>
+              {% endif %}
+            </select>
+          </div>
+          <div class="attribute-create-span-2" data-attribute-create-options-group>
+            <label class="form-label" for="attributeCreateOptions-{{ attr_uid }}">Options</label>
+            <textarea class="form-control" id="attributeCreateOptions-{{ attr_uid }}" data-attribute-create-options rows="2" placeholder="Option 1, Option 2"></textarea>
+            <div class="form-text text-muted">Use commas or new lines to separate values.</div>
+          </div>
+          <div>
+            <label class="form-label" for="attributeCreateUnit-{{ attr_uid }}">Value unit (optional)</label>
+            <input type="text" class="form-control" id="attributeCreateUnit-{{ attr_uid }}" data-attribute-create-unit placeholder="e.g. inch, psi">
+          </div>
+          <div>
+            <label class="form-label" for="attributeCreateOrder-{{ attr_uid }}">Sort order (optional)</label>
+            <input type="number" class="form-control" id="attributeCreateOrder-{{ attr_uid }}" data-attribute-create-order min="0" placeholder="0">
+          </div>
+          <div class="attribute-create-span-2">
+            <label class="form-label" for="attributeCreateDescription-{{ attr_uid }}">Description (optional)</label>
+            <textarea class="form-control" id="attributeCreateDescription-{{ attr_uid }}" data-attribute-create-description rows="2" placeholder="Add helper text for staff"></textarea>
+          </div>
+        </div>
+        <div class="attribute-create-flags">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="attributeCreateFilterable-{{ attr_uid }}" data-attribute-create-filterable checked>
+            <label class="form-check-label" for="attributeCreateFilterable-{{ attr_uid }}">
+              Filterable
+              <span class="attribute-help" title="Customers can use this to filter products (for example: filter by size or material).">?</span>
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="attributeCreateComparable-{{ attr_uid }}" data-attribute-create-comparable>
+            <label class="form-check-label" for="attributeCreateComparable-{{ attr_uid }}">
+              Comparable
+              <span class="attribute-help" title="This shows in product comparisons so people can compare items side by side.">?</span>
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="attributeCreateActive-{{ attr_uid }}" data-attribute-create-active checked>
+            <label class="form-check-label" for="attributeCreateActive-{{ attr_uid }}">
+              Active
+              <span class="attribute-help" title="Turn this on to use the attribute now. Turn it off if you want to hide it for this category.">?</span>
+            </label>
+          </div>
+        </div>
+        <div class="attribute-create-footer">
+          <button type="button" class="btn btn-primary btn-sm" data-attribute-create-submit data-default-label="Save attribute">Save attribute</button>
+          <div class="attribute-create-status text-muted" data-attribute-create-status>New attributes save instantly.</div>
+        </div>
+      </div>
+      {% endwith %}
     </div>
   </div>
 </div>

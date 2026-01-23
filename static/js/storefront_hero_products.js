@@ -29,7 +29,7 @@
     };
 
     const start = () => {
-      if (prefersReducedMotion) {
+      if (prefersReducedMotion || timerId || carousel.matches(':hover')) {
         return;
       }
       timerId = window.setInterval(nextSlide, 5000);
@@ -56,6 +56,10 @@
 
     carousel.addEventListener('mouseenter', stop);
     carousel.addEventListener('mouseleave', start);
+    carousel.querySelectorAll('.hero-showcase-card').forEach((card) => {
+      card.addEventListener('mouseenter', stop);
+      card.addEventListener('mouseleave', start);
+    });
 
     setActive(0);
     start();

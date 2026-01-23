@@ -10,6 +10,7 @@
       <div class="card-body">
         <div class="text-muted small">Outstanding balance</div>
         <div class="h4 mb-1">${{ invoice_summary.outstanding_balance|floatformat:2 }}</div>
+        <div class="small text-muted">Credits/returns: -${{ invoice_summary.total_credit|floatformat:2 }}</div>
         <a class="small text-decoration-none" href="{% url 'accounts:customer_settlement_summary' %}">View balance</a>
       </div>
     </div>
@@ -88,6 +89,41 @@
             </tbody>
           </table>
         </div>
+
+        <hr class="my-4">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-3 gap-2">
+          <div>
+            <h3 class="h6 mb-1">Recent returns</h3>
+            <p class="text-muted small mb-0">Credits issued for returned items.</p>
+          </div>
+          <a href="{% url 'accounts:customer_returns' %}" class="btn btn-outline-secondary btn-sm">
+            View all
+          </a>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col">Credit #</th>
+                <th scope="col">Date</th>
+                <th scope="col">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in recent_credit_rows %}
+                <tr>
+                  <td>{{ row.credit.credit_no|default:"-" }}</td>
+                  <td>{{ row.credit.date|date:"M d, Y" }}</td>
+                  <td>-${{ row.total_incl_tax|floatformat:2 }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="3" class="text-center text-muted py-4">No returns yet.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -102,6 +138,9 @@
           </a>
           <a href="{% url 'accounts:customer_invoice_statements' %}" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-file-lines me-1"></i> Statements
+          </a>
+          <a href="{% url 'accounts:customer_returns' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-undo me-1"></i> Returns
           </a>
           <a href="{% url 'accounts:customer_settlement_summary' %}" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-scale-balanced me-1"></i> Balance

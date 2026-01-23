@@ -8,6 +8,8 @@
 <link rel="stylesheet" href="{% static 'css/storefront_public.css' %}">
 <link rel="stylesheet" href="{% static 'css/storefront_live_search.css' %}">
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&display=swap');
+
     :root {
         --2g-blue: #0047AB;
         --2g-blue-light: #2563EB;
@@ -17,6 +19,7 @@
         --2g-slate: #2D2D2D;
         --2g-white: #FFFFFF;
         --2g-off-white: #F5F7FA;
+        --2g-premium-font: 'Playfair Display', 'Space Grotesk', serif;
     }
 
     /* === MESSAGE BANNER === */
@@ -423,18 +426,241 @@
         line-height: 1.7;
     }
 
+    /* === BRAND LOGO BANNER === */
+    .brand-banner {
+        padding: 4.75rem 0 4.25rem;
+        background: linear-gradient(180deg, #f8fafc 0%, #ffffff 45%, #f1f5f9 100%);
+        position: relative;
+        overflow: hidden;
+        color: var(--neutral-900);
+    }
+
+    .brand-banner::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(circle at 18% 20%, rgba(0, 71, 171, 0.12), transparent 55%),
+            radial-gradient(circle at 85% 0%, rgba(15, 23, 42, 0.08), transparent 60%);
+        opacity: 0.9;
+        pointer-events: none;
+    }
+
+    .brand-banner::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(120deg, rgba(148, 163, 184, 0.2), transparent 50%);
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .brand-banner-header {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        margin-bottom: 2.75rem;
+    }
+
+    .brand-banner-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(0, 71, 171, 0.08);
+        color: var(--brand-orange);
+        padding: 0.45rem 1.1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 71, 171, 0.2);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+    }
+
+    .brand-banner-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+        font-weight: 800;
+        color: var(--neutral-900);
+        margin-bottom: 0.75rem;
+        letter-spacing: -0.02em;
+    }
+
+    .brand-banner-subtitle {
+        font-size: 1.05rem;
+        color: var(--neutral-500);
+        max-width: 640px;
+        margin: 0 auto;
+        line-height: 1.7;
+    }
+
+    .brand-carousel {
+        position: relative;
+        z-index: 1;
+        overflow: hidden;
+        margin: 0 auto;
+        max-width: min(1180px, 92vw);
+        background: #ffffff;
+        border-radius: 28px;
+        border: 1px solid var(--neutral-200);
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        padding: 1.75rem 0;
+        --brand-gap: clamp(1.5rem, 3vw, 2.75rem);
+    }
+
+    .brand-carousel-rows {
+        display: grid;
+        gap: 1.1rem;
+    }
+
+    .brand-carousel-row {
+        overflow: hidden;
+    }
+
+    .brand-carousel::before,
+    .brand-carousel::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 12%;
+        z-index: 2;
+        pointer-events: none;
+    }
+
+    .brand-carousel::before {
+        left: 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0) 100%);
+    }
+
+    .brand-carousel::after {
+        right: 0;
+        background: linear-gradient(270deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0) 100%);
+    }
+
+    .brand-carousel-track {
+        display: flex;
+        align-items: center;
+        gap: var(--brand-gap);
+        width: max-content;
+        padding: 0.35rem var(--brand-gap);
+        --brand-duration: calc(48s + (var(--brand-count) * 2s));
+        animation: brand-scroll var(--brand-duration) linear infinite;
+        will-change: transform;
+    }
+
+    .brand-carousel-row.is-reverse .brand-carousel-track {
+        animation-direction: reverse;
+    }
+
+    .brand-carousel-row:nth-child(1) .brand-carousel-track {
+        animation-duration: calc(var(--brand-duration) + 20s);
+        animation-delay: -10s;
+    }
+
+    .brand-carousel-row:nth-child(2) .brand-carousel-track {
+        animation-duration: calc(var(--brand-duration) + 14s);
+        animation-delay: -16s;
+    }
+
+    .brand-carousel-row:nth-child(3) .brand-carousel-track {
+        animation-duration: calc(var(--brand-duration) + 26s);
+        animation-delay: -6s;
+    }
+
+    .brand-carousel-row:nth-child(4) .brand-carousel-track {
+        animation-duration: calc(var(--brand-duration) + 18s);
+        animation-delay: -20s;
+    }
+
+    .brand-carousel-row:hover .brand-carousel-track {
+        animation-play-state: paused;
+    }
+
+    .brand-logo-card {
+        width: clamp(130px, 14vw, 180px);
+        height: clamp(64px, 7vw, 90px);
+        border-radius: 16px;
+        border: 1px solid var(--neutral-200);
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1rem;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+
+    .brand-logo-card img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        filter: none;
+        opacity: 1;
+        transition: transform 0.3s ease, filter 0.3s ease;
+    }
+
+    .brand-logo-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+        border-color: rgba(0, 71, 171, 0.35);
+    }
+
+    .brand-logo-card:hover img {
+        transform: scale(1.02);
+    }
+
+    @keyframes brand-scroll {
+        from {
+            transform: translateX(0);
+        }
+        to {
+            transform: translateX(calc(-50% - (var(--brand-gap) / 2)));
+        }
+    }
+
     /* Featured Products */
     .featured-products-section {
         padding: 6rem 0;
         background: linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.5) 100%),
-            url("{% static 'images/featured_parts_bg.png' %}");
+        url("{% static 'images/featured_parts_bg.png' %}");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .featured-products-section::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 15% 0%, rgba(37, 99, 235, 0.35), transparent 55%);
+        opacity: 0.7;
+        pointer-events: none;
+    }
+
+    .featured-products-section::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(120deg, rgba(15, 23, 42, 0.15), transparent 45%);
+        pointer-events: none;
+    }
+
+    .featured-products-section .container {
+        position: relative;
+        z-index: 1;
     }
 
     .featured-products-section .section-title {
         color: var(--2g-white);
+        font-family: var(--2g-premium-font);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        text-shadow: 0 10px 26px rgba(15, 23, 42, 0.45);
     }
 
     .featured-products-section .section-subtitle {
@@ -442,15 +668,28 @@
     }
 
     .product-card {
-        background: var(--2g-white);
-        border-radius: 20px;
-        border: 1px solid #E8ECF2;
+        background:
+            linear-gradient(var(--2g-white), var(--2g-white)) padding-box,
+            linear-gradient(135deg, rgba(212, 175, 55, 0.9), rgba(255, 255, 255, 0.25), rgba(212, 175, 55, 0.6)) border-box;
+        border-radius: 22px;
+        border: 1px solid transparent;
         overflow: hidden;
         transition: all 0.4s ease;
         height: 100%;
         display: flex;
         flex-direction: column;
         position: relative;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+
+    .product-card::before {
+        content: '';
+        position: absolute;
+        inset: 10px;
+        border-radius: 16px;
+        border: 1px solid rgba(212, 175, 55, 0.25);
+        pointer-events: none;
+        transition: border-color 0.3s ease;
     }
 
     .featured-discount-badge {
@@ -469,24 +708,30 @@
     }
 
     .product-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+        transform: translateY(-10px);
+        box-shadow: 0 26px 60px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(212, 175, 55, 0.4);
         border-color: transparent;
     }
 
+    .product-card:hover::before {
+        border-color: rgba(212, 175, 55, 0.5);
+    }
+
     .product-media {
-        height: 200px;
-        background: #F8FAFC;
+        height: 210px;
+        background: linear-gradient(145deg, #f8fafc 0%, #eef2ff 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         overflow: hidden;
+        padding: 0.75rem;
+        box-sizing: border-box;
     }
 
     .product-media img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
     }
 
     .product-body {
@@ -546,7 +791,7 @@
     /* === WHY CHOOSE US - BOLD FEATURES === */
     .features-section {
         padding: 8rem 0;
-        background: var(--2g-charcoal);
+        background: linear-gradient(135deg, #e0f2fe 0%, #f8fafc 45%, #dbeafe 100%);
         position: relative;
         overflow: hidden;
     }
@@ -554,30 +799,43 @@
     .features-section::before {
         content: '';
         position: absolute;
-        top: -50%;
-        right: -20%;
-        width: 60%;
-        height: 200%;
-        background: radial-gradient(ellipse at center, rgba(0, 71, 171, 0.15) 0%, transparent 60%);
+        top: -40%;
+        left: -10%;
+        width: 70%;
+        height: 160%;
+        background: radial-gradient(circle at 30% 30%, rgba(37, 99, 235, 0.18) 0%, transparent 60%);
         pointer-events: none;
     }
 
+    .features-section::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 85% 10%, rgba(14, 116, 144, 0.18) 0%, transparent 55%);
+        pointer-events: none;
+    }
+
+    .features-section .container {
+        position: relative;
+        z-index: 1;
+    }
+
     .features-section .section-eyebrow {
-        background: rgba(255, 255, 255, 0.1);
-        color: var(--2g-blue-light);
+        background: rgba(0, 71, 171, 0.1);
+        color: #0f172a;
     }
 
     .features-section .section-title {
-        color: var(--2g-white);
+        color: var(--2g-charcoal);
     }
 
     .features-section .section-subtitle {
-        color: rgba(255, 255, 255, 0.7);
+        color: #475569;
     }
 
     .feature-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #e2e8f0;
         border-radius: 20px;
         padding: 2.5rem;
         text-align: center;
@@ -585,6 +843,9 @@
         height: 100%;
         position: relative;
         overflow: hidden;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(8px);
     }
 
     .feature-card::before {
@@ -594,23 +855,37 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: linear-gradient(135deg, rgba(0, 71, 171, 0.1) 0%, transparent 100%);
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    .feature-card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 20px;
+        border: 1px solid rgba(37, 99, 235, 0.25);
         opacity: 0;
         transition: opacity 0.4s ease;
     }
 
     .feature-card:hover {
-        border-color: var(--2g-blue);
-        transform: translateY(-8px);
+        border-color: rgba(37, 99, 235, 0.45);
+        transform: translateY(-10px);
     }
 
     .feature-card:hover::before {
         opacity: 1;
     }
 
+    .feature-card:hover::after {
+        opacity: 1;
+    }
+
     .feature-icon {
-        width: 80px;
-        height: 80px;
+        width: 84px;
+        height: 84px;
         margin: 0 auto 1.5rem;
         background: linear-gradient(135deg, var(--2g-blue) 0%, var(--2g-blue-light) 100%);
         border-radius: 20px;
@@ -619,6 +894,18 @@
         justify-content: center;
         position: relative;
         z-index: 1;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.2);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .feature-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 0.65rem;
+        box-sizing: border-box;
+        display: block;
     }
 
     .feature-icon i {
@@ -626,18 +913,23 @@
         color: var(--2g-white);
     }
 
+    .feature-card:hover .feature-icon {
+        transform: translateY(-4px);
+        box-shadow: 0 18px 32px rgba(15, 23, 42, 0.28);
+    }
+
     .feature-title {
         font-family: 'Space Grotesk', sans-serif;
         font-size: 1.25rem;
         font-weight: 700;
-        color: var(--2g-white);
+        color: var(--2g-charcoal);
         margin-bottom: 0.75rem;
         position: relative;
         z-index: 1;
     }
 
     .feature-text {
-        color: rgba(255, 255, 255, 0.7);
+        color: #475569;
         font-size: 0.95rem;
         line-height: 1.7;
         position: relative;
@@ -647,7 +939,7 @@
     /* === CTA SECTION - BOLD BANNER === */
     .cta-section {
         padding: 6rem 0;
-        background: linear-gradient(135deg, var(--2g-blue) 0%, var(--2g-blue-dark) 100%);
+        background: linear-gradient(135deg, #dbeafe 0%, #f8fafc 45%, #e2e8f0 100%);
         position: relative;
         overflow: hidden;
     }
@@ -659,28 +951,31 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-        opacity: 0.5;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%230f172a' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        opacity: 0.35;
     }
 
     .cta-content {
         position: relative;
         z-index: 1;
         text-align: center;
+        background-color: rgba(165, 200, 217, 1);
+        border-radius: 27px;
+        padding: 11px 5px;
     }
 
     .cta-title {
         font-family: 'Space Grotesk', sans-serif;
         font-size: clamp(2rem, 5vw, 3rem);
         font-weight: 800;
-        color: var(--2g-white);
+        color: var(--2g-charcoal);
         margin-bottom: 1rem;
         letter-spacing: -0.02em;
     }
 
     .cta-text {
         font-size: 1.15rem;
-        color: rgba(255, 255, 255, 0.9);
+        color: #475569;
         max-width: 600px;
         margin: 0 auto 2rem;
         line-height: 1.7;
@@ -698,8 +993,8 @@
         align-items: center;
         gap: 0.75rem;
         padding: 1rem 2rem;
-        background: var(--2g-white);
-        color: var(--2g-blue);
+        background: #ffffff;
+        color: #0f172a;
         font-weight: 700;
         font-size: 1rem;
         border-radius: 8px;
@@ -707,13 +1002,14 @@
         transition: all 0.3s ease;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
     }
 
     .btn-cta-light:hover {
         transform: translateY(-3px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-        color: var(--2g-blue);
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+        color: #0f172a;
     }
 
     .btn-cta-dark {
@@ -721,8 +1017,8 @@
         align-items: center;
         gap: 0.75rem;
         padding: 1rem 2rem;
-        background: var(--2g-charcoal);
-        color: var(--2g-white);
+        background: #e2e8f0;
+        color: #0f172a;
         font-weight: 700;
         font-size: 1rem;
         border-radius: 8px;
@@ -730,13 +1026,14 @@
         transition: all 0.3s ease;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
     }
 
     .btn-cta-dark:hover {
         transform: translateY(-3px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-        color: var(--2g-white);
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+        color: #0f172a;
     }
 
     @media (max-width: 991px) {
@@ -803,6 +1100,413 @@
         .btn-cta-dark {
             width: 100%;
             justify-content: center;
+        }
+    }
+
+    /* === PACKAGE DEAL MODAL === */
+    .package-deal-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.65);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        z-index: 1200;
+    }
+
+    .package-deal-modal.is-open {
+        display: flex;
+    }
+
+    body.package-deal-open {
+        overflow: hidden;
+    }
+
+    .package-deal-dialog {
+        background: #f8fafc;
+        border-radius: 24px;
+        max-width: 980px;
+        width: 100%;
+        max-height: 92vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 30px 80px rgba(15, 23, 42, 0.25);
+        animation: package-deal-pop 0.25s ease;
+    }
+
+    @keyframes package-deal-pop {
+        from {
+            opacity: 0;
+            transform: translateY(12px) scale(0.98);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .package-deal-header {
+        padding: 1.5rem 1.75rem;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        background: #ffffff;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .package-deal-eyebrow {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        color: #0f172a;
+    }
+
+    .package-deal-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+        font-weight: 800;
+        margin: 0.35rem 0 0.4rem;
+        color: #0f172a;
+    }
+
+    .package-deal-subtitle {
+        color: #475569;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    .package-deal-close {
+        border: none;
+        background: #f1f5f9;
+        color: #0f172a;
+        width: 42px;
+        height: 42px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35);
+    }
+
+    .package-deal-body {
+        padding: 1.5rem 1.75rem 1.75rem;
+        background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+        overflow-y: auto;
+    }
+
+    .package-deal-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.5rem;
+    }
+
+    .package-deal-summary-card {
+        background: #ffffff;
+        border-radius: 18px;
+        border: 1px solid #e2e8f0;
+        padding: 1.25rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.1);
+    }
+
+    .package-deal-summary-card::after {
+        content: '';
+        position: absolute;
+        top: -90px;
+        right: -80px;
+        width: 180px;
+        height: 180px;
+        background: radial-gradient(circle, rgba(37, 99, 235, 0.18), transparent 70%);
+        pointer-events: none;
+    }
+
+    .package-deal-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .package-deal-badge {
+        background: #0f172a;
+        color: #ffffff;
+        border-radius: 999px;
+        padding: 0.35rem 0.85rem;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .package-deal-badge.light {
+        background: #f8fafc;
+        color: #0f172a;
+        border: 1px solid #e2e8f0;
+    }
+
+    .package-deal-contents-title {
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.6rem;
+    }
+
+    .package-deal-contents-list {
+        display: grid;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+    }
+
+    .package-deal-contents-item {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.9rem;
+        color: #1e293b;
+    }
+
+    .package-deal-chip {
+        background: rgba(15, 23, 42, 0.08);
+        color: #0f172a;
+        border-radius: 999px;
+        padding: 0.2rem 0.6rem;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .package-deal-cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        margin-top: 1rem;
+    }
+
+    .package-deal-addall {
+        border: none;
+        background: #0f172a;
+        color: #ffffff;
+        border-radius: 999px;
+        padding: 0.65rem 1.4rem;
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.2);
+    }
+
+    .package-deal-addall:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .package-deal-secondary-link {
+        color: #1e3a8a;
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 0.85rem;
+    }
+
+    .package-deal-secondary-link:hover {
+        text-decoration: underline;
+    }
+
+    .package-deal-login-cta {
+        background: #1e3a8a;
+        color: #ffffff;
+        border-radius: 999px;
+        padding: 0.6rem 1.2rem;
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 0.85rem;
+    }
+
+    .package-deal-products {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+    }
+
+    .package-deal-product {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 1rem;
+        display: grid;
+        gap: 0.75rem;
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .package-deal-product.is-free {
+        border: 1px dashed #f59e0b;
+        background: linear-gradient(150deg, #fff7ed 0%, #ffffff 60%);
+    }
+
+    .package-deal-product-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .package-deal-product-role {
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #0f172a;
+    }
+
+    .package-deal-product-badge {
+        background: #facc15;
+        color: #0f172a;
+        border-radius: 999px;
+        padding: 0.2rem 0.6rem;
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .package-deal-product-media {
+        height: 140px;
+        border-radius: 12px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        font-size: 2rem;
+        overflow: hidden;
+    }
+
+    .package-deal-product-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 12px 16px rgba(15, 23, 42, 0.2));
+    }
+
+    .package-deal-product-title {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 0.95rem;
+        line-height: 1.35;
+    }
+
+    .package-deal-product-meta {
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+
+    .package-deal-product-price {
+        font-weight: 800;
+        color: #1e3a8a;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: baseline;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+    }
+
+    .package-deal-price-old {
+        color: #94a3b8;
+        text-decoration: line-through;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .package-deal-price-call {
+        font-size: 0.78rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+    }
+
+    .package-deal-product-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .package-deal-product-link {
+        color: #1e3a8a;
+        text-decoration: none;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+
+    .package-deal-product-link:hover {
+        text-decoration: underline;
+    }
+
+    .package-deal-free-note {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #92400e;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .package-deal-stock {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #dc2626;
+    }
+
+    .package-deal-in-cart {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #16a34a;
+    }
+
+    @media (min-width: 900px) {
+        .package-deal-grid {
+            grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+            align-items: start;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .package-deal-dialog {
+            max-height: 95vh;
+        }
+
+        .package-deal-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .package-deal-cta {
+            width: 100%;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .package-deal-dialog {
+            animation: none;
         }
     }
 
@@ -896,7 +1600,7 @@
     .flyer-sheet {
         font-family: 'Space Grotesk', 'Inter', sans-serif;
         color: #0f172a;
-        background-color: #f7f6f3;
+        background-color: #f1f5f9;
         background-image:
             radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.08) 1px, transparent 0),
             radial-gradient(circle at 0 0, rgba(15, 23, 42, 0.04) 1px, transparent 0);
@@ -933,7 +1637,7 @@
         pointer-events: none;
     }
 
-    .flyer-sheet > * {
+    .flyer-sheet>* {
         position: relative;
         z-index: 1;
     }
@@ -1314,13 +2018,56 @@
             display: none;
         }
     }
+
+    @media (max-width: 991px) {
+        .brand-logo-card {
+            width: clamp(120px, 18vw, 160px);
+            height: clamp(56px, 8vw, 76px);
+        }
+    }
+
+    @media (max-width: 640px) {
+        .brand-banner {
+            padding: 3.5rem 0 3rem;
+        }
+
+        .brand-carousel {
+            border-radius: 20px;
+        }
+
+        .brand-carousel-rows {
+            gap: 0.75rem;
+        }
+
+        .brand-logo-card {
+            width: 120px;
+            height: 60px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .brand-carousel-track {
+            animation: none;
+            flex-wrap: wrap;
+            width: 100%;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+        }
+
+        .brand-logo-card[data-duplicate="true"] {
+            display: none;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/storefront_hero_products.js' %}" defer></script>
 <script src="{% static 'js/storefront_search.js' %}" defer></script>
 <script src="{% static 'js/storefront_flyer.js' %}" defer></script>
+<script src="{% static 'js/storefront_promo_slider.js' %}" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
+<script src="{% static 'js/storefront_confetti.js' %}" defer></script>
+<script src="{% static 'js/storefront_package_modal.js' %}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -1328,79 +2075,8 @@
 {% url 'accounts:public_contact' as contact_url %}
 
 <div class="storefront-shell">
-    <section class="storefront-hero">
-        <div class="container">
-            <nav class="storefront-breadcrumbs" aria-label="Breadcrumb">
-                {% for crumb in breadcrumbs %}
-                    {% if crumb.url %}
-                    <a href="{{ crumb.url }}">{{ crumb.label }}</a>
-                    {% else %}
-                    <span>{{ crumb.label }}</span>
-                    {% endif %}
-                    {% if not forloop.last %}
-                    <span class="crumb-sep">/</span>
-                    {% endif %}
-                {% endfor %}
-            </nav>
-            <div class="storefront-hero-inner">
-                <div class="storefront-hero-copy">
-                    <div class="storefront-eyebrow">
-                        <i class="fas fa-layer-group"></i>
-                        Parts Catalog
-                    </div>
-                    <h1>All Categories</h1>
-                    <p>Browse every system and component group to find the exact part you need.</p>
-                </div>
-                <div class="storefront-hero-actions">
-                    {% if storefront_selected_profile %}
-                        {% if storefront_has_multiple_locations %}
-                        <div class="dropdown">
-                            <button class="btn btn-light dropdown-toggle storefront-store-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-store"></i>
-                                <span class="store-label">My Store:</span>
-                                <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-end storefront-store-menu">
-                                {% for profile in storefront_locations %}
-                                <form method="post" action="{% url 'accounts:storefront_location_set' %}">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                    <button class="dropdown-item{% if storefront_selected_profile and profile.user_id == storefront_selected_profile.user_id %} active{% endif %}"
-                                        type="submit" name="storefront_location" value="{{ profile.user_id }}">
-                                        {{ profile.storefront_label }}
-                                    </button>
-                                </form>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% else %}
-                        <div class="btn btn-light storefront-store-toggle storefront-store-static">
-                            <i class="fas fa-store"></i>
-                            <span class="store-label">My Store:</span>
-                            <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
-                        </div>
-                        {% endif %}
-                    {% endif %}
-                    {% if customer_account %}
-                    <a href="{% url 'accounts:customer_dashboard' %}" class="btn btn-light">My Account</a>
-                    <a href="{% url 'accounts:store_cart' %}" class="btn btn-primary">View Cart</a>
-                    {% else %}
-                    <a href="{% url 'accounts:login' %}?next={% url 'accounts:store_product_list' %}" class="btn btn-light">Sign In</a>
-                    <a href="{% url 'accounts:customer_signup' %}?next={% url 'accounts:store_product_list' %}" class="btn btn-primary">Create Account</a>
-                    {% endif %}
-                </div>
-            </div>
-            <form class="storefront-search" method="get" action="{% url 'accounts:store_search' %}"
-                data-storefront-search-form data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}">
-                <input type="search" name="q" value="{{ search_query }}" placeholder="Search parts, SKUs, or keywords"
-                    data-storefront-search-input autocomplete="off">
-                <button type="submit">Search</button>
-            </form>
-        </div>
-    </section>
-
     {% if hero_banner %}
-    <section class="hero-message-banner hero-message-banner--{{ hero_banner.theme|default:'sunrise' }}">
+    <section class="hero-message-banner hero-message-banner--sky">
         <div class="container">
             <div class="hero-message-content">
                 <span class="hero-message-text">{{ hero_banner.message }}</span>
@@ -1415,77 +2091,224 @@
     </section>
     {% endif %}
 
-    {% if hero_cards %}
-    <section class="hero-showcase hero-showcase--{{ hero_showcase.gradient_theme|default:'sky' }}" data-hero-showcase>
+    <section class="storefront-hero">
         <div class="container">
-            <div class="hero-showcase-inner">
-                <div class="hero-showcase-content">
-                    <span class="hero-showcase-eyebrow">Featured Products</span>
-                    <h1 class="hero-showcase-title">{{ business_name|default:default_business_name }}</h1>
-                    <p class="hero-showcase-subtitle">Hand-picked parts and supplies ready for fast pickup or delivery.</p>
-                    <div class="hero-showcase-actions">
-                        <a href="{{ store_url }}" class="btn-hero-primary">
-                            <i class="fas fa-store"></i>
-                            Shop All Parts
-                        </a>
-                        <a href="{{ contact_url }}" class="btn-hero-secondary">
-                            <i class="fas fa-headset"></i>
-                            Contact Parts Desk
-                        </a>
-                        {% if flyer and flyer_has_content %}
-                        <button type="button" class="btn-hero-secondary" data-flyer-open>
-                            <i class="fas fa-file-lines"></i>
-                            View Flyer
-                        </button>
-                        {% endif %}
+            <nav class="storefront-breadcrumbs" aria-label="Breadcrumb">
+                {% for crumb in breadcrumbs %}
+                {% if crumb.url %}
+                <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+                {% else %}
+                <span>{{ crumb.label }}</span>
+                {% endif %}
+                {% if not forloop.last %}
+                <span class="crumb-sep">/</span>
+                {% endif %}
+                {% endfor %}
+            </nav>
+            <div class="storefront-hero-inner">
+                <div class="storefront-hero-copy">
+                    <div class="storefront-eyebrow">
+                        <i class="fas fa-layer-group"></i>
+                        Parts Catalog
                     </div>
+                    <h1>All Categories</h1>
+                    <p>Browse every system and component group to find the exact part you need.</p>
                 </div>
-                <div class="hero-showcase-carousel" data-hero-carousel>
-                    {% for card in hero_cards %}
-                    <article class="hero-showcase-slide{% if forloop.first %} is-active{% endif %}" data-hero-slide>
-                        {% if card.kind == 'product' %}
-                        {% with product=card.product %}
-                        <div class="hero-showcase-card">
-                            <div class="hero-showcase-media">
-                                {% if product.image %}
-                                <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
-                                {% else %}
-                                <i class="fas fa-box"></i>
-                                {% endif %}
-                            </div>
-                            <div>
-                                {% if card.slide.discount_percent %}
-                                <div class="hero-showcase-discount">Save {{ card.slide.discount_percent }}%</div>
-                                {% elif product.has_promotion %}
-                                    {% if product.promotion_discount_percent %}
-                                    <div class="hero-showcase-discount">Save {{ product.promotion_discount_percent }}%</div>
+                {% if hero_cards %}
+                <div class="storefront-hero-promos">
+                    <div class="storefront-hero-promos-label">Promo Products &amp; Packages</div>
+                    <div class="storefront-hero-promo-slider" data-promo-slider>
+                        <div class="storefront-hero-promo-track">
+                            {% for card in hero_cards %}
+                            {% if card.kind == 'product' %}
+                            {% with product=card.product %}
+                            <article class="storefront-promo-card{% if forloop.first %} is-active{% endif %}" data-promo-slide>
+                                <div class="storefront-promo-card-media">
+                                    {% if product.image %}
+                                    <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
                                     {% else %}
-                                    <div class="hero-showcase-discount">Promo</div>
-                                    {% endif %}
-                                {% endif %}
-                                <div class="hero-showcase-name">{{ product.name }}</div>
-                                {% if show_prices_hero %}
-                                <div class="hero-showcase-price">
-                                    {% if product.has_promotion %}
-                                    <span class="text-decoration-line-through text-muted">${{ product.sale_price|floatformat:2 }}</span>
-                                    <span class="ms-2">${{ product.promotion_price|floatformat:2 }}</span>
-                                    {% elif product.sale_price %}
-                                    ${{ product.sale_price|floatformat:2 }}
-                                    {% else %}
-                                    Call for price
+                                    <i class="fas fa-box"></i>
                                     {% endif %}
                                 </div>
+                                <div class="storefront-promo-card-body">
+                                    <div class="storefront-promo-card-type">Promo product</div>
+                                    <div class="storefront-promo-card-title">{{ product.name }}</div>
+                                    {% if show_prices_hero %}
+                                    <div class="storefront-promo-card-price">
+                                        {% if product.has_promotion %}
+                                            {% if product.sale_price %}
+                                            <span class="storefront-promo-card-price-old">
+                                                ${{ product.sale_price|floatformat:2 }}
+                                            </span>
+                                            {% endif %}
+                                            <span>${{ product.promotion_price|floatformat:2 }}</span>
+                                        {% elif product.sale_price %}
+                                        <span>${{ product.sale_price|floatformat:2 }}</span>
+                                        {% else %}
+                                        <span>Call for price</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="storefront-promo-card-actions">
+                                        {% if customer_account %}
+                                        <div class="cart-slot{% if product.id|stringformat:'s' in cart_product_ids %} is-in-cart{% endif %}" data-cart-slot data-product-id="{{ product.id }}">
+                                            <div class="cart-action-add">
+                                                <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" data-add-to-cart>
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="quantity" value="1">
+                                                    <button type="submit" class="storefront-promo-card-link" data-loading-label="Adding..." data-success-label="Added" {% if product.quantity_in_stock <= 0 %}disabled{% endif %}>
+                                                        <span class="btn-text">Add to cart</span>
+                                                        <i class="fas fa-cart-plus"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                            <div class="cart-action-in">
+                                                <span class="storefront-promo-card-in-cart"><i class="fas fa-check-circle"></i> Added to cart</span>
+                                                <a class="storefront-promo-card-link" href="{% url 'accounts:store_cart' %}">
+                                                    View cart
+                                                    <i class="fas fa-arrow-right"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <a class="storefront-promo-card-link storefront-promo-card-link--secondary" href="{% url 'accounts:store_product_detail' product.id %}">
+                                            View product
+                                            <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                        {% else %}
+                                        <a class="storefront-promo-card-link" href="{% url 'accounts:store_product_detail' product.id %}">
+                                            View product
+                                            <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if card.slide.discount_percent %}
+                                <div class="storefront-promo-card-badge">Save {{ card.slide.discount_percent }}%</div>
+                                {% elif product.has_promotion %}
+                                    {% if product.promotion_discount_percent %}
+                                    <div class="storefront-promo-card-badge">Save {{ product.promotion_discount_percent }}%</div>
+                                    {% else %}
+                                    <div class="storefront-promo-card-badge">Promo</div>
+                                    {% endif %}
                                 {% endif %}
-                                <a class="hero-showcase-link" href="{% url 'accounts:store_product_detail' product.id %}">View product</a>
-                            </div>
-                        </div>
-                        {% endwith %}
-                        {% else %}
-                        {% with package=card.package %}
-                        <div class="hero-showcase-card hero-showcase-card--package">
-                            <div class="hero-showcase-package-header">
-                                <h3 class="hero-showcase-package-title">{{ package.title }}</h3>
-                                <span class="hero-showcase-package-badge">
+                            </article>
+                            {% endwith %}
+                            {% else %}
+                            {% with package=card.package %}
+                            <article class="storefront-promo-card storefront-promo-card--package{% if forloop.first %} is-active{% endif %}" data-promo-slide>
+                                <div class="storefront-promo-card-media">
+                                    <i class="fas fa-boxes-stacked"></i>
+                                </div>
+                                <div class="storefront-promo-card-body">
+                                    <div class="storefront-promo-card-type">Package deal</div>
+                                    <div class="storefront-promo-card-title">{{ package.title }}</div>
+                                    <div class="storefront-promo-card-subtitle">
+                                        {{ package.subtitle|default:"Bundle savings for fleet-ready orders." }}
+                                    </div>
+                                    <div class="storefront-promo-card-items">
+                                        {% if package.primary_product %}
+                                        <div class="storefront-promo-card-item">
+                                            <div class="storefront-promo-card-item-media">
+                                                {% if package.primary_product.image %}
+                                                <img src="{{ package.primary_product.image.url }}" alt="{{ package.primary_product.name }}" loading="lazy">
+                                                {% else %}
+                                                <i class="fas fa-box"></i>
+                                                {% endif %}
+                                            </div>
+                                            <span class="storefront-promo-card-item-name">{{ package.primary_product.name }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if package.secondary_product %}
+                                        <div class="storefront-promo-card-item">
+                                            <div class="storefront-promo-card-item-media">
+                                                {% if package.secondary_product.image %}
+                                                <img src="{{ package.secondary_product.image.url }}" alt="{{ package.secondary_product.name }}" loading="lazy">
+                                                {% else %}
+                                                <i class="fas fa-box"></i>
+                                                {% endif %}
+                                            </div>
+                                            <span class="storefront-promo-card-item-name">{{ package.secondary_product.name }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if package.free_product %}
+                                        <div class="storefront-promo-card-item">
+                                            <div class="storefront-promo-card-item-media">
+                                                {% if package.free_product.image %}
+                                                <img src="{{ package.free_product.image.url }}" alt="{{ package.free_product.name }}" loading="lazy">
+                                                {% else %}
+                                                <i class="fas fa-gift"></i>
+                                                {% endif %}
+                                            </div>
+                                            <span class="storefront-promo-card-item-name">{{ package.free_product.name }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="storefront-promo-card-actions">
+                                        {% if package.primary_product %}
+                                        {% with primary=package.primary_product secondary=package.secondary_product free=package.free_product %}
+                                        {% if customer_account %}
+                                        {% if primary.quantity_in_stock > 0 %}
+                                        {% if secondary %}
+                                        {% if secondary.quantity_in_stock > 0 %}
+                                        <div class="storefront-promo-card-bundle{% if primary.id|stringformat:'s' in cart_product_ids %}{% if secondary and not secondary.id|stringformat:'s' in cart_product_ids %}{% elif free and not free.id|stringformat:'s' in cart_product_ids %}{% else %} is-in-cart{% endif %}{% endif %}" data-package-status="package-deal-{{ package.id }}">
+                                            <div class="bundle-action-add">
+                                                <a class="storefront-promo-card-link"
+                                                    href="{% url 'accounts:store_product_detail' package.primary_product.id %}"
+                                                    data-package-add-all data-package-target="package-deal-{{ package.id }}">
+                                                    <span class="btn-text">Add bundle to cart</span>
+                                                    <i class="fas fa-cart-plus"></i>
+                                                </a>
+                                            </div>
+                                            <div class="bundle-action-in">
+                                                <span class="storefront-promo-card-in-cart"><i class="fas fa-check-circle"></i> Bundle added to cart</span>
+                                                <a class="storefront-promo-card-link" href="{% url 'accounts:store_cart' %}">
+                                                    View cart
+                                                    <i class="fas fa-arrow-right"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <span class="storefront-promo-card-link is-disabled">Out of stock</span>
+                                        {% endif %}
+                                        {% else %}
+                                        <div class="storefront-promo-card-bundle{% if primary.id|stringformat:'s' in cart_product_ids %}{% if free and not free.id|stringformat:'s' in cart_product_ids %}{% else %} is-in-cart{% endif %}{% endif %}" data-package-status="package-deal-{{ package.id }}">
+                                            <div class="bundle-action-add">
+                                                <a class="storefront-promo-card-link"
+                                                    href="{% url 'accounts:store_product_detail' package.primary_product.id %}"
+                                                    data-package-add-all data-package-target="package-deal-{{ package.id }}">
+                                                    <span class="btn-text">Add bundle to cart</span>
+                                                    <i class="fas fa-cart-plus"></i>
+                                                </a>
+                                            </div>
+                                            <div class="bundle-action-in">
+                                                <span class="storefront-promo-card-in-cart"><i class="fas fa-check-circle"></i> Bundle added to cart</span>
+                                                <a class="storefront-promo-card-link" href="{% url 'accounts:store_cart' %}">
+                                                    View cart
+                                                    <i class="fas fa-arrow-right"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        {% else %}
+                                        <span class="storefront-promo-card-link is-disabled">Out of stock</span>
+                                        {% endif %}
+                                        {% else %}
+                                        <a class="storefront-promo-card-link"
+                                            href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">
+                                            Log in to add
+                                            <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% endwith %}
+                                        {% else %}
+                                        <a class="storefront-promo-card-link" href="{{ store_url }}">
+                                            Shop all parts
+                                            <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="storefront-promo-card-badge">
                                     {% if package.free_product and package.discount_percent %}
                                     Free {{ package.free_product.name }} + {{ package.discount_percent }}% off
                                     {% elif package.free_product %}
@@ -1495,68 +2318,41 @@
                                     {% else %}
                                     Bundle deal
                                     {% endif %}
-                                </span>
-                            </div>
-                            <p class="hero-showcase-package-subtitle">
-                                {{ package.subtitle|default:"Bundle savings for fleet-ready orders." }}
-                            </p>
-                            <div class="hero-showcase-package-products">
-                                {% if package.primary_product %}
-                                <div class="hero-showcase-package-item">
-                                    {% if package.primary_product.image %}
-                                    <img src="{{ package.primary_product.image.url }}" alt="{{ package.primary_product.name }}" loading="lazy">
-                                    {% else %}
-                                    <i class="fas fa-box"></i>
-                                    {% endif %}
-                                    <span>{{ package.primary_product.name }}</span>
                                 </div>
-                                {% endif %}
-                                {% if package.secondary_product %}
-                                <div class="hero-showcase-package-item">
-                                    {% if package.secondary_product.image %}
-                                    <img src="{{ package.secondary_product.image.url }}" alt="{{ package.secondary_product.name }}" loading="lazy">
-                                    {% else %}
-                                    <i class="fas fa-box"></i>
-                                    {% endif %}
-                                    <span>{{ package.secondary_product.name }}</span>
-                                </div>
-                                {% endif %}
-                                {% if package.free_product %}
-                                <div class="hero-showcase-package-item">
-                                    {% if package.free_product.image %}
-                                    <img src="{{ package.free_product.image.url }}" alt="{{ package.free_product.name }}" loading="lazy">
-                                    {% else %}
-                                    <i class="fas fa-gift"></i>
-                                    {% endif %}
-                                    <span>{{ package.free_product.name }}</span>
-                                </div>
-                                {% endif %}
-                            </div>
-                            {% if package.primary_product %}
-                            <a class="hero-showcase-link" href="{% url 'accounts:store_product_detail' package.primary_product.id %}">View deal</a>
-                            {% else %}
-                            <a class="hero-showcase-link" href="{{ store_url }}">View deal</a>
+                            </article>
+                            {% endwith %}
                             {% endif %}
+                            {% endfor %}
                         </div>
-                        {% endwith %}
+                        {% if hero_cards|length > 1 %}
+                        <div class="storefront-hero-promo-controls">
+                            <button class="storefront-hero-promo-control" type="button" data-promo-prev
+                                aria-label="Previous promo">
+                                <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                            </button>
+                            <div class="storefront-hero-promo-dots" data-promo-dots>
+                                {% for card in hero_cards %}
+                                <button class="storefront-hero-promo-dot{% if forloop.first %} is-active{% endif %}"
+                                    type="button" data-promo-dot="{{ forloop.counter0 }}"
+                                    aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+                                    aria-label="Promo {{ forloop.counter }}"></button>
+                                {% endfor %}
+                            </div>
+                            <button class="storefront-hero-promo-control" type="button" data-promo-next
+                                aria-label="Next promo">
+                                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                            </button>
+                        </div>
                         {% endif %}
-                    </article>
-                    {% endfor %}
-                    <div class="hero-showcase-dots" data-hero-dots>
-                        {% for card in hero_cards %}
-                        <button
-                            type="button"
-                            class="hero-showcase-dot{% if forloop.first %} is-active{% endif %}"
-                            data-hero-dot="{{ forloop.counter0 }}"
-                            aria-label="Go to slide {{ forloop.counter }}">
-                        </button>
-                        {% endfor %}
                     </div>
                 </div>
+                {% endif %}
             </div>
         </div>
     </section>
-    {% endif %}
+
+    {% include 'store/partials/_package_deal_modals.html' %}
+
 
     {% if flyer and flyer_has_content %}
     <div class="flyer-modal" data-flyer-modal aria-hidden="true">
@@ -1568,7 +2364,8 @@
                         <i class="fas fa-print"></i>
                         Print
                     </button>
-                    <a class="flyer-action-btn" href="{% url 'accounts:storefront_flyer_pdf' %}" target="_blank" rel="noopener">
+                    <a class="flyer-action-btn" href="{% url 'accounts:storefront_flyer_pdf' %}" target="_blank"
+                        rel="noopener">
                         <i class="fas fa-file-pdf"></i>
                         Download PDF
                     </a>
@@ -1587,47 +2384,48 @@
     </div>
     {% endif %}
 
-    <section class="storefront-section category-groups-section">
+    <section class="storefront-section category-groups-section" id="categories">
         <div class="container">
             {% if grouped_categories %}
-                {% for bundle in grouped_categories %}
-                <div class="category-group-block">
-                    <div class="group-banner">
-                        <div>
-                            <div class="group-banner-title">{{ bundle.group.name }}</div>
-                            {% if bundle.group.description %}
-                            <div class="group-banner-subtitle">{{ bundle.group.description|truncatewords:18 }}</div>
+            {% for bundle in grouped_categories %}
+            <div class="category-group-block">
+                <div class="group-banner">
+                    <div>
+                        <div class="group-banner-title">{{ bundle.group.name }}</div>
+                        {% if bundle.group.description %}
+                        <div class="group-banner-subtitle">{{ bundle.group.description|truncatewords:18 }}</div>
+                        {% else %}
+                        <div class="group-banner-subtitle">Browse {{ bundle.group.name|lower }} parts and accessories.
+                        </div>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'accounts:store_group_detail' bundle.group.id %}">View Group</a>
+                </div>
+                {% if bundle.categories %}
+                <div class="category-grid">
+                    {% for category in bundle.categories %}
+                    <a href="{% url 'accounts:store_category_detail' category.id %}" class="category-card">
+                        <div class="category-card-media">
+                            {% if category.image %}
+                            <img src="{{ category.image.url }}" alt="{{ category.name }}" loading="lazy">
                             {% else %}
-                            <div class="group-banner-subtitle">Browse {{ bundle.group.name|lower }} parts and accessories.</div>
+                            <i class="fas fa-box-open fa-2x text-muted"></i>
                             {% endif %}
                         </div>
-                        <a href="{% url 'accounts:store_group_detail' bundle.group.id %}">View Group</a>
-                    </div>
-                    {% if bundle.categories %}
-                    <div class="category-grid">
-                        {% for category in bundle.categories %}
-                        <a href="{% url 'accounts:store_category_detail' category.id %}" class="category-card">
-                            <div class="category-card-media">
-                                {% if category.image %}
-                                <img src="{{ category.image.url }}" alt="{{ category.name }}" loading="lazy">
-                                {% else %}
-                                <i class="fas fa-box-open fa-2x text-muted"></i>
-                                {% endif %}
-                            </div>
-                            <div class="category-card-body">
-                                <div class="category-card-title">{{ category.name }}</div>
-                                {% if category.description %}
-                                <div class="category-card-meta">{{ category.description|truncatewords:12 }}</div>
-                                {% endif %}
-                            </div>
-                        </a>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <div class="empty-state">No categories added to this group yet.</div>
-                    {% endif %}
+                        <div class="category-card-body">
+                            <div class="category-card-title">{{ category.name }}</div>
+                            {% if category.description %}
+                            <div class="category-card-meta">{{ category.description|truncatewords:12 }}</div>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
                 </div>
-                {% endfor %}
+                {% else %}
+                <div class="empty-state">No categories added to this group yet.</div>
+                {% endif %}
+            </div>
+            {% endfor %}
             {% else %}
             <div class="category-group-block">
                 <div class="empty-state">No category groups available yet.</div>
@@ -1637,7 +2435,7 @@
     </section>
 </div>
 
-<section class="featured-products-section">
+<section class="featured-products-section" id="featured-products">
     <div class="container">
         <div class="section-header">
             <span class="section-eyebrow">
@@ -1653,11 +2451,11 @@
             <div class="col-md-6 col-lg-4 d-flex">
                 <div class="product-card w-100">
                     {% if product.has_promotion %}
-                        {% if product.promotion_discount_percent %}
-                        <div class="featured-discount-badge">Save {{ product.promotion_discount_percent }}%</div>
-                        {% else %}
-                        <div class="featured-discount-badge">Promo</div>
-                        {% endif %}
+                    {% if product.promotion_discount_percent %}
+                    <div class="featured-discount-badge">Save {{ product.promotion_discount_percent }}%</div>
+                    {% else %}
+                    <div class="featured-discount-badge">Promo</div>
+                    {% endif %}
                     {% endif %}
                     <div class="product-media">
                         {% if product.image %}
@@ -1781,4 +2579,41 @@
         </div>
     </div>
 </section>
+
+{% if brand_logos %}
+<section class="brand-banner" id="brands" aria-label="Brand partners">
+    <div class="container">
+        <div class="brand-banner-header">
+            <span class="brand-banner-eyebrow">
+                <i class="fas fa-star"></i>
+                Trusted Brands
+            </span>
+            <h2 class="brand-banner-title">Stocked with the names you know</h2>
+            <p class="brand-banner-subtitle">
+                OEM-grade partners and fleet favorites rotating through our shelves.
+            </p>
+        </div>
+    </div>
+    <div class="brand-carousel">
+        <div class="brand-carousel-rows" style="--brand-count: {{ brand_logos|length }};">
+            {% for row in "1234" %}
+            <div class="brand-carousel-row{% if forloop.counter|divisibleby:2 %} is-reverse{% endif %}">
+                <div class="brand-carousel-track">
+                    {% for brand in brand_logos %}
+                    <div class="brand-logo-card">
+                        <img src="{{ brand.logo.url }}" alt="{{ brand.name }} logo" loading="lazy">
+                    </div>
+                    {% endfor %}
+                    {% for brand in brand_logos %}
+                    <div class="brand-logo-card" data-duplicate="true" aria-hidden="true">
+                        <img src="{{ brand.logo.url }}" alt="" aria-hidden="true" loading="lazy">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
 {% endblock %}

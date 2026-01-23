@@ -1,15 +1,19 @@
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Sum
 
 from django.conf import settings
 from django.templatetags.static import static
 
-from .models import Profile
+from .models import Category, Product, ProductBrand, Profile, StorefrontCartItem
 from .utils import (
+    get_default_store_owner,
+    get_product_user_ids,
     get_storefront_owner,
     get_storefront_profiles,
     resolve_storefront_root_user,
+    resolve_storefront_category_flags,
 )
 
 
@@ -173,13 +177,30 @@ def branding_defaults(request):
 def cart_summary(request):
     """Expose cart item count for storefront navigation."""
 
-    cart = getattr(request, "session", {}).get("cart", {}) or {}
-    item_count = 0
-    for qty in cart.values():
+    customer_account = None
+    user = getattr(request, "user", None)
+    if user and getattr(user, "is_authenticated", False):
         try:
-            item_count += int(qty)
-        except (TypeError, ValueError):
-            continue
+            customer_account = user.customer_portal
+        except ObjectDoesNotExist:
+            customer_account = None
+
+    if not customer_account:
+        return {
+            "cart_item_count": 0,
+        }
+
+    store_owner = get_storefront_owner(request)
+    if not store_owner:
+        return {
+            "cart_item_count": 0,
+        }
+
+    item_count = StorefrontCartItem.objects.filter(
+        customer=customer_account,
+        store_owner=store_owner,
+    ).aggregate(total=Sum("quantity"))["total"]
+    item_count = int(item_count or 0)
 
     return {
         "cart_item_count": max(item_count, 0),
@@ -224,4 +245,93 @@ def storefront_location_context(request):
         "storefront_selected_profile": selected_profile,
         "storefront_selected_owner": selected_owner,
         "storefront_has_multiple_locations": len(profiles) > 1,
+    }
+
+
+def storefront_nav_context(request):
+    """Expose storefront category/brand navigation data for public menus."""
+
+    default_owner = get_default_store_owner()
+    store_owner = get_storefront_owner(request) or default_owner
+    if not store_owner:
+        return {
+            "nav_categories": [],
+            "nav_brand_logos": [],
+        }
+
+    def build_categories(owner):
+        if not owner:
+            return []
+        product_user_ids = get_product_user_ids(owner)
+        category_flags = resolve_storefront_category_flags(request, owner)
+        show_empty_categories = category_flags["show_empty_categories"]
+        available_products = None
+
+        categories_qs = Category.objects.filter(is_active=True, parent__isnull=True)
+        if show_empty_categories:
+            if product_user_ids:
+                categories_qs = categories_qs.filter(user__in=product_user_ids)
+            else:
+                categories_qs = categories_qs.filter(user=owner)
+        else:
+            available_products = Product.objects.filter(is_published_to_store=True)
+            if product_user_ids:
+                available_products = available_products.filter(user__in=product_user_ids)
+            else:
+                available_products = available_products.filter(user=owner)
+            categories_qs = categories_qs.filter(products__in=available_products)
+
+        categories = list(
+            categories_qs.select_related("group", "parent")
+            .distinct()
+            .order_by("sort_order", "name")
+        )
+        if categories:
+            return categories
+
+        fallback_qs = Category.objects.filter(is_active=True)
+        if show_empty_categories:
+            if product_user_ids:
+                fallback_qs = fallback_qs.filter(user__in=product_user_ids)
+            else:
+                fallback_qs = fallback_qs.filter(user=owner)
+        else:
+            if available_products is None:
+                available_products = Product.objects.filter(is_published_to_store=True)
+                if product_user_ids:
+                    available_products = available_products.filter(user__in=product_user_ids)
+                else:
+                    available_products = available_products.filter(user=owner)
+            fallback_qs = fallback_qs.filter(products__in=available_products)
+
+        return list(
+            fallback_qs.select_related("group", "parent")
+            .distinct()
+            .order_by("sort_order", "name")
+        )
+
+    def build_brand_logos(owner):
+        if not owner:
+            return []
+        product_user_ids = get_product_user_ids(owner)
+        brand_qs = ProductBrand.objects.filter(is_active=True)
+        if product_user_ids:
+            brand_qs = brand_qs.filter(user__in=product_user_ids)
+        else:
+            brand_qs = brand_qs.filter(user=owner)
+        return list(brand_qs.order_by("sort_order", "name"))
+
+    categories = build_categories(store_owner)
+    brand_logos = build_brand_logos(store_owner)
+
+    fallback_owner = default_owner
+    if fallback_owner and fallback_owner != store_owner:
+        if not categories:
+            categories = build_categories(fallback_owner)
+        if not brand_logos:
+            brand_logos = build_brand_logos(fallback_owner)
+
+    return {
+        "nav_categories": categories,
+        "nav_brand_logos": brand_logos,
     }

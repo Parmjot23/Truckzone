@@ -1,0 +1,71 @@
+{% extends portal_base_template|default:"store/customer_portal_base.html" %}
+{% block title %}Returns{% endblock %}
+{% block portal_content %}
+<div class="customer-portal-section">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+      <h2 class="h4 mb-1">Returns &amp; credits</h2>
+      <p class="text-muted mb-0">Credits issued for returned parts appear here.</p>
+    </div>
+    <a href="{% url 'accounts:customer_settlement_summary' %}" class="btn btn-outline-secondary btn-sm mt-3 mt-md-0">
+      <i class="fas fa-scale-balanced me-1"></i> View balance
+    </a>
+  </div>
+
+  {% if credit_rows %}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+          <div>
+            <div class="text-muted text-uppercase small">Total credits</div>
+            <div class="h4 mb-0 text-info">-${{ total_credit|floatformat:2 }}</div>
+          </div>
+          <a href="{% url 'accounts:customer_invoice_list' %}" class="btn btn-outline-secondary btn-sm mt-3 mt-md-0">
+            <i class="fas fa-file-invoice-dollar me-1"></i> View invoices
+          </a>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped mb-0 align-middle">
+          <thead class="thead-light">
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Credit #</th>
+              <th scope="col">Memo</th>
+              <th scope="col">Returned items</th>
+              <th scope="col">Credit total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in credit_rows %}
+              <tr>
+                <td data-label="Date">{{ row.credit.date|date:"M d, Y" }}</td>
+                <td data-label="Credit #">{{ row.credit.credit_no|default:"-" }}</td>
+                <td data-label="Memo">{{ row.credit.memo|default:"-" }}</td>
+                <td data-label="Returned items">
+                  <ul class="list-unstyled mb-0">
+                    {% for item in row.items %}
+                      <li>
+                        {{ item.qty }}x {{ item.label }}
+                        {% if item.invoice_number %}
+                          (Invoice {{ item.invoice_number }})
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </td>
+                <td data-label="Credit total">-${{ row.total_incl_tax|floatformat:2 }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="text-center py-5">
+      <p class="lead mb-1">No returns have been recorded yet.</p>
+      <p class="text-muted mb-0">If you return parts, your credit memo will appear here.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
