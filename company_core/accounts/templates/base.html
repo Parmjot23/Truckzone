@@ -1742,7 +1742,8 @@
             </button>
 
             <form class="navbar-search" method="get" action="{% url 'accounts:store_search' %}" role="search"
-                data-storefront-search-form data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}">
+                data-storefront-search-form data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}"
+                data-storefront-category-root="{% url 'accounts:store_product_list' %}">
                 <i class="fas fa-search" aria-hidden="true"></i>
                 <input type="search" name="q"
                     value="{{ search_query|default:'' }}"

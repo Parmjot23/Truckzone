@@ -805,11 +805,15 @@ class StorefrontPriceVisibilityForm(forms.ModelForm):
 class StorefrontMessageBannerForm(forms.ModelForm):
     class Meta:
         model = StorefrontMessageBanner
-        fields = ['is_active', 'message', 'link_text', 'link_url']
+        fields = ['is_active', 'message', 'link_text', 'link_url', 'theme']
         widgets = {
             'message': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter banner message'}),
             'link_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Optional link label'}),
             'link_url': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'https:// or /path'}),
+            'theme': forms.Select(attrs={'class': 'form-select'}),
+        }
+        labels = {
+            'theme': 'Banner style',
         }
 
     def __init__(self, *args, **kwargs):

@@ -321,6 +321,12 @@
                         <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
                         <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial</option>
                     </select>
+                    <label class="text-muted small mb-0 ms-2">Order source:</label>
+                    <select class="form-select form-select-sm" name="order_source" id="order-source-filter" style="max-width: 220px;" data-select2-skip="true">
+                        <option value="" {% if not order_source_filter %}selected{% endif %}>All</option>
+                        <option value="online" {% if order_source_filter == 'online' %}selected{% endif %}>Online orders</option>
+                        <option value="offline" {% if order_source_filter == 'offline' %}selected{% endif %}>Offline orders</option>
+                    </select>
                     <label class="text-muted small mb-0 ms-2">Period:</label>
                     <select class="form-select form-select-sm" name="date_range" id="date-range-filter" style="max-width: 220px;" data-select2-skip="true">
                         {% for value,label in date_range_options %}
@@ -496,6 +502,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('search-input');
         const statusFilter = document.getElementById('status-filter');
+        const orderSourceFilter = document.getElementById('order-source-filter');
         const dateRangeFilter = document.getElementById('date-range-filter');
         const customDateRange = document.getElementById('custom-date-range');
         const startDateInput = document.getElementById('start-date');
@@ -635,6 +642,9 @@
         searchInput.addEventListener('input', debounce(fetchInvoices, 300));
         statusFilter?.addEventListener('change', () => {
             syncStatusBars();
+            fetchInvoices();
+        });
+        orderSourceFilter?.addEventListener('change', () => {
             fetchInvoices();
         });
         dateRangeFilter?.addEventListener('change', () => {

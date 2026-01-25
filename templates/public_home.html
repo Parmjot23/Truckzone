@@ -37,9 +37,15 @@
 
     /* === MESSAGE BANNER === */
     .hero-message-banner {
+        --banner-text: #0f172a;
+        --banner-link: #0f172a;
+        --banner-link-hover: #0f172a;
+        --banner-border: rgba(15, 23, 42, 0.08);
+        --banner-sheen: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
         background: var(--banner-gradient);
+        color: var(--banner-text);
         padding: 0.65rem 0;
-        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        border-bottom: 1px solid var(--banner-border);
         position: relative;
         overflow: hidden;
     }
@@ -48,7 +54,7 @@
         content: '';
         position: absolute;
         inset: 0;
-        background: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
+        background: var(--banner-sheen);
         opacity: 0.7;
         pointer-events: none;
     }
@@ -73,6 +79,24 @@
         --banner-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
     }
 
+    .hero-message-banner--midnight {
+        --banner-gradient: linear-gradient(135deg, #0f172a 0%, #111827 45%, #1f2937 100%);
+        --banner-text: #f8fafc;
+        --banner-link: #f8fafc;
+        --banner-link-hover: #ffffff;
+        --banner-border: rgba(255, 255, 255, 0.12);
+        --banner-sheen: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.18), transparent 60%);
+    }
+
+    .hero-message-banner--signal {
+        --banner-gradient: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 45%, #f43f5e 100%);
+        --banner-text: #fff1f2;
+        --banner-link: #ffe4e6;
+        --banner-link-hover: #ffffff;
+        --banner-border: rgba(255, 255, 255, 0.15);
+        --banner-sheen: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.2), transparent 60%);
+    }
+
     .hero-message-content {
         position: relative;
         z-index: 1;
@@ -82,7 +106,7 @@
         justify-content: center;
         gap: 0.75rem;
         font-weight: 600;
-        color: #0f172a;
+        color: var(--banner-text);
         text-align: center;
     }
 
@@ -98,13 +122,13 @@
         text-transform: uppercase;
         letter-spacing: 0.05em;
         font-size: 0.8rem;
-        color: #0f172a;
+        color: var(--banner-link);
         text-decoration: none;
     }
 
     .hero-message-link:hover {
         text-decoration: underline;
-        color: #0f172a;
+        color: var(--banner-link-hover);
     }
 
     /* === HERO SECTION - FEATURED PRODUCTS === */
@@ -1444,7 +1468,7 @@
         pointer-events: none;
     }
 
-    .catalog-group > * {
+    .catalog-group>* {
         position: relative;
         z-index: 1;
     }
@@ -1590,6 +1614,7 @@
             opacity: 0;
             transform: translateY(12px) scale(0.98);
         }
+
         to {
             opacity: 1;
             transform: translateY(0) scale(1);
@@ -2086,7 +2111,8 @@
                             {% if show_prices_hero %}
                             <div class="hero-showcase-price">
                                 {% if product.has_promotion %}
-                                <span class="text-decoration-line-through text-muted">${{ product.sale_price|floatformat:2 }}</span>
+                                <span class="text-decoration-line-through text-muted">${{
+                                    product.sale_price|floatformat:2 }}</span>
                                 <span class="ms-2">${{ product.promotion_price|floatformat:2 }}</span>
                                 {% elif product.sale_price %}
                                 ${{ product.sale_price|floatformat:2 }}
@@ -2315,7 +2341,8 @@
                         {% if show_prices_featured %}
                         <div class="product-price">
                             {% if product.has_promotion %}
-                            <span class="text-muted text-decoration-line-through">${{ product.sale_price|floatformat:2 }}</span>
+                            <span class="text-muted text-decoration-line-through">${{ product.sale_price|floatformat:2
+                                }}</span>
                             <span class="ms-2">${{ product.promotion_price|floatformat:2 }}</span>
                             {% elif product.sale_price %}
                             ${{ product.sale_price|floatformat:2 }}

@@ -11,6 +11,7 @@
     const iconEl = panel.querySelector('[data-weather-icon] i');
     const tempEl = panel.querySelector('[data-weather-temp]');
     const descEl = panel.querySelector('[data-weather-desc]');
+    const locationEl = panel.querySelector('[data-weather-location]');
     const timeEl = panel.querySelector('[data-weather-time]') || document.querySelector('[data-weather-time]');
     const sunriseEl = panel.querySelector('[data-sunrise]');
     const sunsetEl = panel.querySelector('[data-sunset]');
@@ -343,6 +344,15 @@
 
     const normalizeKey = (value) => normalizeAddress(value).toLowerCase();
 
+    const formatLocation = (city, province) => {
+        const cityValue = normalizeAddress(city);
+        const provinceValue = normalizeAddress(province);
+        if (cityValue && provinceValue && normalizeKey(cityValue) !== normalizeKey(provinceValue)) {
+            return `${cityValue}, ${provinceValue}`;
+        }
+        return cityValue || provinceValue || '';
+    };
+
     const extractPostal = (address) => {
         if (!address) {
             return '';
@@ -424,7 +434,10 @@
         };
     };
 
-    const weatherCacheVersion = 2;
+    let storeParts = null;
+
+    const weatherCacheVersion = 3;
+    const weatherCacheTtlMs = 1000 * 60 * 10;
 
     const loadCachedWeather = (addressKey) => {
         if (!window.localStorage) {
@@ -437,6 +450,13 @@
             }
             const cached = JSON.parse(raw);
             if (!cached || cached.version !== weatherCacheVersion) {
+                return null;
+            }
+            if (!Number.isFinite(cached.timestamp)) {
+                return null;
+            }
+            const ageMs = Date.now() - cached.timestamp;
+            if (ageMs > weatherCacheTtlMs) {
                 return null;
             }
             return cached;
@@ -592,6 +612,8 @@
                 return {
                     latitude: picked.latitude,
                     longitude: picked.longitude,
+                    city: picked.name || '',
+                    province: picked.admin1 || '',
                 };
             }
         }
@@ -735,6 +757,13 @@
         setInterval(tick, 60000);
     };
 
+    const setLocation = (value) => {
+        if (!locationEl) {
+            return;
+        }
+        locationEl.textContent = value || '';
+    };
+
     const setFallback = (message) => {
         if (descEl) {
             descEl.textContent = message || 'Weather unavailable';
@@ -742,6 +771,7 @@
         if (tempEl) {
             tempEl.textContent = '--';
         }
+        setLocation('');
     };
 
     const applyWeatherSnapshot = (snapshot) => {
@@ -754,6 +784,12 @@
         const sunriseValue = snapshot.sunrise || null;
         const sunsetValue = snapshot.sunset || null;
         const timeZone = snapshot.timeZone || 'UTC';
+        const location = formatLocation(
+            snapshot.city || (storeParts && storeParts.city),
+            snapshot.province || (storeParts && storeParts.province),
+        );
+
+        setLocation(location);
 
         if (Number.isFinite(temperature) && tempEl) {
             tempEl.textContent = `${Math.round(temperature)} ${temperatureLabel}`;
@@ -788,7 +824,12 @@
     (async () => {
         try {
             const parts = buildStoreParts(panel.dataset || {});
+            storeParts = parts;
             const storeAddress = buildStoreAddress(panel.dataset || {});
+            const fallbackLocation = formatLocation(parts.city, parts.province);
+            if (fallbackLocation) {
+                setLocation(fallbackLocation);
+            }
             if (!weatherEndpoint && !storeAddress && !parts.city && !parts.postal) {
                 setFallback('Set store address');
                 return;
@@ -828,8 +869,13 @@
                     setFallback();
                     return;
                 }
-                storeCachedWeather(addressKey, payload);
-                applyWeatherSnapshot(payload);
+                const normalizedPayload = {
+                    ...payload,
+                    city: payload.city || parts.city,
+                    province: payload.province || parts.province,
+                };
+                storeCachedWeather(addressKey, normalizedPayload);
+                applyWeatherSnapshot(normalizedPayload);
                 return;
             }
 
@@ -844,6 +890,8 @@
             const temperature = current.temperature_2m ?? current.temperature;
             const weatherCode = Number(current.weathercode);
             const isDay = Number(current.is_day) === 1;
+            const resolvedCity = coords.city || parts.city;
+            const resolvedProvince = coords.province || parts.province;
 
             const sunriseValue = data.daily && data.daily.sunrise ? data.daily.sunrise[0] : null;
             const sunsetValue = data.daily && data.daily.sunset ? data.daily.sunset[0] : null;
@@ -859,6 +907,8 @@
                 timeZone,
                 snowfall: snowfallRaw,
                 snowfallUnit: snowfallUnits,
+                city: resolvedCity,
+                province: resolvedProvince,
             };
             storeCachedWeather(addressKey, snapshot);
             applyWeatherSnapshot(snapshot);

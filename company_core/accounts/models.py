@@ -1599,6 +1599,15 @@ class Driver(models.Model):
         return self.name
 
 class GroupedInvoice(models.Model):
+    ONLINE_ORDER_STATUS_NEW = "new"
+    ONLINE_ORDER_STATUS_READY = "ready"
+    ONLINE_ORDER_STATUS_PICKED = "picked"
+    ONLINE_ORDER_STATUS_CHOICES = (
+        (ONLINE_ORDER_STATUS_NEW, "New"),
+        (ONLINE_ORDER_STATUS_READY, "Ready"),
+        (ONLINE_ORDER_STATUS_PICKED, "Picked"),
+    )
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     stripe_invoice_id = models.CharField(
         max_length=255, null=True, blank=True,
@@ -1661,6 +1670,14 @@ class GroupedInvoice(models.Model):
     tax_exempt_reason = models.CharField(max_length=255, null=True, blank=True)
     driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, blank=True, null=True)
     notes = models.TextField(null=True, blank=True)
+    is_online_order = models.BooleanField(default=False, db_index=True)
+    online_order_status = models.CharField(
+        max_length=20,
+        choices=ONLINE_ORDER_STATUS_CHOICES,
+        null=True,
+        blank=True,
+        db_index=True,
+    )
 
 
     def recalculate_total_amount(self):
@@ -1928,6 +1945,12 @@ class GroupedInvoice(models.Model):
         update_fields_list = list(update_fields) if update_fields else []
         skip_quickbooks_flag = getattr(self, '_skip_quickbooks_sync_flag', False)
         mark_for_quickbooks_sync = False
+
+        if self.is_online_order and not self.online_order_status:
+            self.online_order_status = self.ONLINE_ORDER_STATUS_NEW
+            if update_fields_list and 'online_order_status' not in update_fields_list:
+                update_fields_list.append('online_order_status')
+                kwargs['update_fields'] = update_fields_list
 
         if skip_quickbooks_flag:
             kwargs = dict(kwargs)
@@ -3236,7 +3259,10 @@ HERO_GRADIENT_CHOICES = (
     ('ice', 'Icy Light'),
 )
 
-BANNER_THEME_CHOICES = HERO_GRADIENT_CHOICES
+BANNER_THEME_CHOICES = HERO_GRADIENT_CHOICES + (
+    ('midnight', 'Midnight'),
+    ('signal', 'Signal Red'),
+)
 
 
 class StorefrontHeroShowcase(models.Model):

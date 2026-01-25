@@ -119,22 +119,25 @@
     };
 
     const renderSuggestions = (dropdown, payload, query, form) => {
-        dropdown.innerHTML = '';
+        const fragment = document.createDocumentFragment();
         const results = Array.isArray(payload?.results) ? payload.results : [];
         const categories = Array.isArray(payload?.categories) ? payload.categories : [];
 
         if (!results.length && !categories.length) {
             const empty = document.createElement('div');
             empty.className = 'storefront-suggest-empty';
-            empty.textContent = `No matches for "${query}".`;
-            dropdown.appendChild(empty);
+            empty.textContent = 'Browse the full catalog or try a different keyword.';
+            fragment.appendChild(empty);
         } else {
-            if (categories.length) {
-                const categoryHeader = document.createElement('div');
-                categoryHeader.className = 'storefront-suggest-section';
-                categoryHeader.textContent = 'Categories';
-                dropdown.appendChild(categoryHeader);
-            }
+            const grid = document.createElement('div');
+            grid.className = 'storefront-suggest-grid';
+
+            const categoryCol = document.createElement('div');
+            categoryCol.className = 'storefront-suggest-col';
+            const categoryHeader = document.createElement('div');
+            categoryHeader.className = 'storefront-suggest-section';
+            categoryHeader.textContent = 'Categories';
+            categoryCol.appendChild(categoryHeader);
 
             categories.forEach((item) => {
                 const link = document.createElement('a');
@@ -171,92 +174,143 @@
 
                 link.appendChild(media);
                 link.appendChild(body);
-                dropdown.appendChild(link);
+                categoryCol.appendChild(link);
             });
 
-            if (results.length) {
-                const productHeader = document.createElement('div');
-                productHeader.className = 'storefront-suggest-section';
-                productHeader.textContent = 'Products';
-                dropdown.appendChild(productHeader);
+            if (!categories.length) {
+                const fallbackLink = document.createElement('a');
+                fallbackLink.className = 'storefront-suggest-item storefront-suggest-category';
+                fallbackLink.href =
+                    form?.dataset.storefrontCategoryRoot || buildSearchResultsUrl(form, '');
+
+                const media = document.createElement('div');
+                media.className = 'storefront-suggest-media';
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-layer-group';
+                media.appendChild(icon);
+
+                const body = document.createElement('div');
+                body.className = 'storefront-suggest-body';
+                const title = document.createElement('div');
+                title.className = 'storefront-suggest-title';
+                title.textContent = 'Browse all categories';
+                body.appendChild(title);
+
+                fallbackLink.appendChild(media);
+                fallbackLink.appendChild(body);
+                categoryCol.appendChild(fallbackLink);
             }
+
+            const productCol = document.createElement('div');
+            productCol.className = 'storefront-suggest-col';
+            const productHeader = document.createElement('div');
+            productHeader.className = 'storefront-suggest-section';
+            productHeader.textContent = 'Products';
+            productCol.appendChild(productHeader);
 
             results.forEach((item) => {
                 const link = document.createElement('a');
                 link.className = 'storefront-suggest-item';
                 link.href = item.url || '#';
 
+                    const media = document.createElement('div');
+                    media.className = 'storefront-suggest-media';
+                    if (item.image) {
+                        const img = document.createElement('img');
+                        img.src = item.image;
+                        img.alt = item.name || 'Product';
+                        img.loading = 'lazy';
+                        media.appendChild(img);
+                    } else {
+                        const icon = document.createElement('i');
+                        icon.className = 'fas fa-box-open';
+                        media.appendChild(icon);
+                    }
+
+                    const body = document.createElement('div');
+                    body.className = 'storefront-suggest-body';
+
+                    const title = document.createElement('div');
+                    title.className = 'storefront-suggest-title';
+                    title.textContent = item.name || 'Untitled product';
+                    body.appendChild(title);
+
+                    const metaParts = [];
+                    if (item.sku) {
+                        metaParts.push(`#${item.sku}`);
+                    }
+                    if (item.brand) {
+                        metaParts.push(item.brand);
+                    }
+                    if (item.category) {
+                        metaParts.push(item.category);
+                    }
+                    if (metaParts.length) {
+                        const meta = document.createElement('div');
+                        meta.className = 'storefront-suggest-meta';
+                        meta.textContent = metaParts.join(' | ');
+                        body.appendChild(meta);
+                    }
+
+                    if (item.stock_label) {
+                        const stock = document.createElement('div');
+                        stock.className = 'storefront-suggest-meta';
+                        stock.textContent = item.stock_label;
+                        body.appendChild(stock);
+                    }
+
+                    if (item.note) {
+                        const note = document.createElement('div');
+                        note.className = 'storefront-suggest-meta';
+                        note.textContent = item.note;
+                        body.appendChild(note);
+                    }
+
+                    link.appendChild(media);
+                    link.appendChild(body);
+
+                    if (item.price) {
+                        const price = document.createElement('div');
+                        price.className = 'storefront-suggest-price';
+                        price.textContent = item.price;
+                        if (item.price_badge) {
+                            const badge = document.createElement('span');
+                            badge.className = 'storefront-suggest-badge';
+                            badge.textContent = item.price_badge;
+                            price.appendChild(badge);
+                        }
+                        link.appendChild(price);
+                    }
+
+                productCol.appendChild(link);
+            });
+
+            if (!results.length) {
+                const fallbackLink = document.createElement('a');
+                fallbackLink.className = 'storefront-suggest-item';
+                fallbackLink.href = buildSearchResultsUrl(form, '');
+
                 const media = document.createElement('div');
                 media.className = 'storefront-suggest-media';
-                if (item.image) {
-                    const img = document.createElement('img');
-                    img.src = item.image;
-                    img.alt = item.name || 'Product';
-                    img.loading = 'lazy';
-                    media.appendChild(img);
-                } else {
-                    const icon = document.createElement('i');
-                    icon.className = 'fas fa-box-open';
-                    media.appendChild(icon);
-                }
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-boxes-stacked';
+                media.appendChild(icon);
 
                 const body = document.createElement('div');
                 body.className = 'storefront-suggest-body';
-
                 const title = document.createElement('div');
                 title.className = 'storefront-suggest-title';
-                title.textContent = item.name || 'Untitled product';
+                title.textContent = 'Browse all products';
                 body.appendChild(title);
 
-                const metaParts = [];
-                if (item.sku) {
-                    metaParts.push(`#${item.sku}`);
-                }
-                if (item.brand) {
-                    metaParts.push(item.brand);
-                }
-                if (item.category) {
-                    metaParts.push(item.category);
-                }
-                if (metaParts.length) {
-                    const meta = document.createElement('div');
-                    meta.className = 'storefront-suggest-meta';
-                    meta.textContent = metaParts.join(' | ');
-                    body.appendChild(meta);
-                }
+                fallbackLink.appendChild(media);
+                fallbackLink.appendChild(body);
+                productCol.appendChild(fallbackLink);
+            }
 
-                if (item.stock_label) {
-                    const stock = document.createElement('div');
-                    stock.className = 'storefront-suggest-meta';
-                    stock.textContent = item.stock_label;
-                    body.appendChild(stock);
-                }
-
-                if (item.note) {
-                    const note = document.createElement('div');
-                    note.className = 'storefront-suggest-meta';
-                    note.textContent = item.note;
-                    body.appendChild(note);
-                }
-
-                link.appendChild(media);
-                link.appendChild(body);
-
-                if (item.price) {
-                    const price = document.createElement('div');
-                    price.className = 'storefront-suggest-price';
-                    price.textContent = item.price;
-                    if (item.price_badge) {
-                        const badge = document.createElement('span');
-                        badge.className = 'storefront-suggest-badge';
-                        badge.textContent = item.price_badge;
-                        price.appendChild(badge);
-                    }
-                    link.appendChild(price);
-                }
-
-                dropdown.appendChild(link);
-            });
+            grid.appendChild(categoryCol);
+            grid.appendChild(productCol);
+            fragment.appendChild(grid);
         }
 
         const footer = document.createElement('div');
@@ -265,7 +319,8 @@
         resultsLink.href = buildSearchResultsUrl(form, query);
         resultsLink.textContent = `See all results for "${query}"`;
         footer.appendChild(resultsLink);
-        dropdown.appendChild(footer);
+        fragment.appendChild(footer);
+        dropdown.replaceChildren(fragment);
         dropdown.classList.add('is-open');
     };
 
@@ -300,14 +355,34 @@
 
         const runSuggest = debounce(async () => {
             const query = input.value.trim();
+            dropdown.classList.remove('is-loading');
+            const existingError = dropdown.querySelector('.storefront-suggest-error');
+            if (existingError) {
+                existingError.remove();
+            }
             if (query.length < SUGGEST_MIN_CHARS) {
-                dropdown.classList.remove('is-open');
-                dropdown.innerHTML = '';
+                if (query.length) {
+                    dropdown.innerHTML = '';
+                    const hint = document.createElement('div');
+                    hint.className = 'storefront-suggest-empty';
+                    hint.textContent = 'Keep typing for suggestions.';
+                    dropdown.appendChild(hint);
+                    dropdown.classList.add('is-open');
+                } else {
+                    dropdown.innerHTML = '';
+                    dropdown.classList.remove('is-open');
+                }
                 return;
             }
 
-            dropdown.innerHTML = '<div class="storefront-suggest-loading">Searching...</div>';
             dropdown.classList.add('is-open');
+            dropdown.classList.add('is-loading');
+            if (!dropdown.children.length) {
+                const loading = document.createElement('div');
+                loading.className = 'storefront-suggest-loading';
+                loading.textContent = 'Searching...';
+                dropdown.appendChild(loading);
+            }
 
             if (controller) {
                 controller.abort();
@@ -332,13 +407,19 @@
                     throw new Error('Suggestion request failed');
                 }
                 const payload = await response.json();
+                dropdown.classList.remove('is-loading');
                 renderSuggestions(dropdown, payload, query, form);
             } catch (err) {
                 if (err.name === 'AbortError') {
                     return;
                 }
-                dropdown.classList.remove('is-open');
+                dropdown.classList.remove('is-loading');
                 dropdown.innerHTML = '';
+                const error = document.createElement('div');
+                error.className = 'storefront-suggest-empty storefront-suggest-error';
+                error.textContent = 'Suggestions are unavailable. Press Enter to search.';
+                dropdown.appendChild(error);
+                dropdown.classList.add('is-open');
             }
         }, SUGGEST_DELAY);
 

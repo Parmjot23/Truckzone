@@ -72,6 +72,17 @@
     z-index: 2;
 }
 
+.storefront-hero--centered .container {
+    min-height: clamp(240px, 32vh, 360px);
+    display: flex;
+    flex-direction: column;
+}
+
+.storefront-hero--centered .storefront-hero-inner {
+    margin: auto 0;
+    align-items: center;
+}
+
 .storefront-hero-inner {
     display: grid;
     --promo-column-min: 384px;
@@ -102,6 +113,8 @@
     border: 1px solid rgba(148, 163, 184, 0.3);
     box-shadow: 0 28px 60px rgba(2, 6, 23, 0.45);
     overflow: hidden;
+    --promo-card-height: clamp(210px, 28vh, 260px);
+    --promo-media-size: 96px;
 }
 
 .storefront-hero-promos-label {
@@ -123,11 +136,41 @@
     z-index: 1;
 }
 
+.storefront-hero-promos-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    position: relative;
+    z-index: 1;
+}
+
+.storefront-hero-promos-badge {
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: #0b1220;
+    background: linear-gradient(135deg, #facc15, #f59e0b);
+    border: 1px solid rgba(15, 23, 42, 0.35);
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    box-shadow: 0 12px 20px rgba(250, 204, 21, 0.25);
+    white-space: nowrap;
+    max-width: 55%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.storefront-hero-promos-badge:empty {
+    display: none;
+}
+
 .storefront-hero-promo-slider {
     display: grid;
     gap: 0.6rem;
     height: 100%;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: var(--promo-card-height) auto;
     min-height: 0;
     position: relative;
     z-index: 1;
@@ -135,7 +178,6 @@
 
 .storefront-hero-promo-track {
     position: relative;
-    min-height: 170px;
     height: 100%;
 }
 
@@ -241,6 +283,23 @@
     height: 100%;
     backdrop-filter: blur(6px);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.storefront-hero-promos .storefront-promo-card {
+    align-items: center;
+}
+
+.storefront-hero-promos .storefront-promo-card-body {
+    align-self: center;
+}
+
+.storefront-hero-promos .storefront-promo-card:not(.storefront-promo-card--package) {
+    grid-template-columns: var(--promo-media-size) minmax(0, 1fr);
+}
+
+.storefront-hero-promos .storefront-promo-card:not(.storefront-promo-card--package) .storefront-promo-card-media {
+    width: var(--promo-media-size);
+    height: var(--promo-media-size);
 }
 
 .storefront-promo-card-media {
@@ -489,6 +548,10 @@
     text-overflow: ellipsis;
 }
 
+.storefront-hero-promos .storefront-promo-card-badge {
+    display: none;
+}
+
 .storefront-promo-card.is-active {
     transform: translateY(-2px);
     box-shadow: 0 28px 60px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -496,6 +559,61 @@
 
 .storefront-promo-card--package .storefront-promo-card-media {
     background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(34, 197, 94, 0.18));
+}
+
+.storefront-promo-card.storefront-promo-card--package {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.storefront-promo-card--package .storefront-promo-card-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    grid-template-areas:
+        "type items"
+        "title items"
+        "subtitle items"
+        "actions items";
+    gap: 0.5rem 1rem;
+    align-items: start;
+}
+
+.storefront-promo-card--package .storefront-promo-card-type {
+    grid-area: type;
+}
+
+.storefront-promo-card--package .storefront-promo-card-title {
+    grid-area: title;
+}
+
+.storefront-promo-card--package .storefront-promo-card-subtitle {
+    grid-area: subtitle;
+}
+
+.storefront-promo-card--package .storefront-promo-card-actions {
+    grid-area: actions;
+}
+
+.storefront-promo-card--package .storefront-promo-card-items {
+    grid-area: items;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    align-content: start;
+    min-height: 100%;
+}
+
+.storefront-promo-card--package .storefront-promo-card-item {
+    grid-template-columns: 40px minmax(0, 1fr);
+    padding: 0.4rem 0.6rem;
+    font-size: 0.72rem;
+}
+
+.storefront-promo-card--package .storefront-promo-card-item-media {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+}
+
+.storefront-promo-card--package .storefront-promo-card-item-media img {
+    object-fit: contain;
 }
 
 .storefront-promo-card--package .storefront-promo-card-type {
@@ -649,10 +767,36 @@
 }
 
 .topbar-weather .weather-desc {
-    font-size: 0.6rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: rgba(226, 232, 240, 0.75);
+}
+
+.topbar-weather .weather-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.6rem;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.topbar-weather .weather-location {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: rgba(226, 232, 240, 0.9);
+}
+
+.topbar-weather .weather-location:empty {
+    display: none;
+}
+
+.topbar-weather .weather-location:empty + .weather-separator {
+    display: none;
+}
+
+.topbar-weather .weather-separator {
+    color: rgba(226, 232, 240, 0.45);
 }
 
 .topbar-weather .weather-time {
@@ -879,6 +1023,11 @@
         grid-template-columns: 1fr;
     }
 
+    .storefront-hero-promos {
+        --promo-card-height: 280px;
+        --promo-media-size: 88px;
+    }
+
     .storefront-hero-promos,
     .storefront-hero-weather {
         grid-column: 1;
@@ -894,6 +1043,20 @@
     .topbar-weather {
         display: none;
     }
+
+    .storefront-promo-card--package .storefront-promo-card-body {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "type"
+            "title"
+            "subtitle"
+            "items"
+            "actions";
+    }
+
+    .storefront-promo-card--package .storefront-promo-card-items {
+        min-height: 0;
+    }
 }
 
 @media (max-width: 767px) {
@@ -903,6 +1066,10 @@
 }
 
 @media (max-width: 575px) {
+    .storefront-hero-promos {
+        --promo-media-size: 72px;
+    }
+
     .storefront-promo-card {
         grid-template-columns: 60px minmax(0, 1fr);
         min-height: 150px;
@@ -916,6 +1083,20 @@
 
     .storefront-promo-card-items {
         grid-template-columns: 1fr;
+    }
+
+    .storefront-promo-card.storefront-promo-card--package {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .storefront-promo-card--package .storefront-promo-card-item {
+        grid-template-columns: 32px minmax(0, 1fr);
+        padding: 0.3rem 0.45rem;
+    }
+
+    .storefront-promo-card--package .storefront-promo-card-item-media {
+        width: 32px;
+        height: 32px;
     }
 
     .storefront-promo-card-item {

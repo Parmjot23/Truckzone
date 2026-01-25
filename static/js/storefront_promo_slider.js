@@ -1,12 +1,12 @@
 (() => {
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
   const initSlider = (slider) => {
     const slides = Array.from(slider.querySelectorAll('[data-promo-slide]'));
     if (!slides.length) {
       return;
     }
 
+    const promoBadge = slider.closest('.storefront-hero-promos')?.querySelector('[data-promo-hero-badge]');
     const dots = Array.from(slider.querySelectorAll('[data-promo-dot]'));
     const prevButton = slider.querySelector('[data-promo-prev]');
     const nextButton = slider.querySelector('[data-promo-next]');
@@ -16,6 +16,14 @@
     }
     let timerId = null;
 
+    const updatePromoBadge = (slide) => {
+      if (!promoBadge) {
+        return;
+      }
+      const badge = slide.querySelector('.storefront-promo-card-badge');
+      promoBadge.textContent = badge ? badge.textContent.trim() : '';
+    };
+
     const setActive = (index) => {
       slides.forEach((slide, slideIndex) => {
         slide.classList.toggle('is-active', slideIndex === index);
@@ -24,6 +32,7 @@
         dot.classList.toggle('is-active', dotIndex === index);
         dot.setAttribute('aria-pressed', dotIndex === index ? 'true' : 'false');
       });
+      updatePromoBadge(slides[index]);
       currentIndex = index;
     };
 

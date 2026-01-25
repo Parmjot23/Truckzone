@@ -51,6 +51,7 @@
                         {% endif %}
                     </a>
                 </th>
+                <th>Order source</th>
                 <th class="text-end">
                     <a class="table-sort-link js-sort-link" href="?{% if sort_query_string %}{{ sort_query_string }}&{% endif %}sort_by=total_amount&order={% if sort_by == 'total_amount' and order != 'desc' %}desc{% else %}asc{% endif %}">
                         Total Amount
@@ -113,6 +114,13 @@
                         </button>
                     {% endif %}
                 </td>
+                <td data-label="Order source">
+                    {% if invoice.is_online_order %}
+                        <span class="badge rounded-pill bg-info-subtle text-info-emphasis border border-info-subtle">Online</span>
+                    {% else %}
+                        <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle">In-store</span>
+                    {% endif %}
+                </td>
                 <td data-label="Total Amount" class="text-end">{{ invoice.total_amount|currency }}</td>
                 <td data-label="Actions" class="text-center">
                     <div class="d-flex flex-wrap gap-1 justify-content-center">
@@ -155,7 +163,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="8">
+                <td colspan="9">
                     <div class="empty-state">
                         <div class="icon"><i class="fa-regular fa-file-lines"></i></div>
                         <h5 class="mb-1">No invoices found.</h5>

@@ -24,9 +24,15 @@
 
     /* === MESSAGE BANNER === */
     .hero-message-banner {
+        --banner-text: #0f172a;
+        --banner-link: #0f172a;
+        --banner-link-hover: #0f172a;
+        --banner-border: rgba(15, 23, 42, 0.08);
+        --banner-sheen: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
         background: var(--banner-gradient);
+        color: var(--banner-text);
         padding: 0.65rem 0;
-        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        border-bottom: 1px solid var(--banner-border);
         position: relative;
         overflow: hidden;
     }
@@ -35,7 +41,7 @@
         content: '';
         position: absolute;
         inset: 0;
-        background: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
+        background: var(--banner-sheen);
         opacity: 0.7;
         pointer-events: none;
     }
@@ -60,6 +66,24 @@
         --banner-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
     }
 
+    .hero-message-banner--midnight {
+        --banner-gradient: linear-gradient(135deg, #0f172a 0%, #111827 45%, #1f2937 100%);
+        --banner-text: #f8fafc;
+        --banner-link: #f8fafc;
+        --banner-link-hover: #ffffff;
+        --banner-border: rgba(255, 255, 255, 0.12);
+        --banner-sheen: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.18), transparent 60%);
+    }
+
+    .hero-message-banner--signal {
+        --banner-gradient: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 45%, #f43f5e 100%);
+        --banner-text: #fff1f2;
+        --banner-link: #ffe4e6;
+        --banner-link-hover: #ffffff;
+        --banner-border: rgba(255, 255, 255, 0.15);
+        --banner-sheen: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.2), transparent 60%);
+    }
+
     .hero-message-content {
         position: relative;
         z-index: 1;
@@ -69,7 +93,7 @@
         justify-content: center;
         gap: 0.75rem;
         font-weight: 600;
-        color: #0f172a;
+        color: var(--banner-text);
         text-align: center;
     }
 
@@ -85,13 +109,13 @@
         text-transform: uppercase;
         letter-spacing: 0.05em;
         font-size: 0.8rem;
-        color: #0f172a;
+        color: var(--banner-link);
         text-decoration: none;
     }
 
     .hero-message-link:hover {
         text-decoration: underline;
-        color: #0f172a;
+        color: var(--banner-link-hover);
     }
 
     /* === HERO SECTION - FEATURED PRODUCTS === */
@@ -615,6 +639,7 @@
         from {
             transform: translateX(0);
         }
+
         to {
             transform: translateX(calc(-50% - (var(--brand-gap) / 2)));
         }
@@ -833,108 +858,141 @@
         color: #475569;
     }
 
-    .feature-card {
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid #e2e8f0;
-        border-radius: 20px;
-        padding: 2.5rem;
-        text-align: center;
-        transition: all 0.4s ease;
-        height: 100%;
-        position: relative;
+      .feature-card {
+          background: linear-gradient(160deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.92) 100%);
+          border: 1px solid rgba(148, 163, 184, 0.35);
+          border-radius: 26px;
+          padding: 2.75rem 2.5rem 2.5rem;
+          text-align: center;
+          transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+          height: 100%;
+          position: relative;
         overflow: hidden;
-        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-        -webkit-backdrop-filter: blur(8px);
-        backdrop-filter: blur(8px);
+        box-shadow: 0 24px 50px rgba(15, 23, 42, 0.12);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.8rem;
     }
 
     .feature-card::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, transparent 70%);
-        opacity: 0;
-        transition: opacity 0.4s ease;
+        inset: 0;
+        background:
+            radial-gradient(circle at 20% 0%, rgba(37, 99, 235, 0.2) 0%, transparent 55%),
+            radial-gradient(circle at 85% 100%, rgba(14, 116, 144, 0.18) 0%, transparent 55%);
+        opacity: 0.6;
+        transition: opacity 0.35s ease;
+        pointer-events: none;
     }
 
     .feature-card::after {
         content: '';
         position: absolute;
-        inset: 0;
-        border-radius: 20px;
-        border: 1px solid rgba(37, 99, 235, 0.25);
+        inset: 12px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.7);
         opacity: 0;
-        transition: opacity 0.4s ease;
+        transition: opacity 0.35s ease;
+        pointer-events: none;
     }
 
     .feature-card:hover {
         border-color: rgba(37, 99, 235, 0.45);
         transform: translateY(-10px);
+        box-shadow: 0 30px 60px rgba(15, 23, 42, 0.18);
     }
 
     .feature-card:hover::before {
-        opacity: 1;
+        opacity: 0.9;
     }
 
     .feature-card:hover::after {
         opacity: 1;
     }
 
-    .feature-icon {
-        width: 84px;
-        height: 84px;
-        margin: 0 auto 1.5rem;
-        background: linear-gradient(135deg, var(--2g-blue) 0%, var(--2g-blue-light) 100%);
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        z-index: 1;
-        border: 1px solid rgba(255, 255, 255, 0.25);
-        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.2);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .feature-icon img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        padding: 0.65rem;
-        box-sizing: border-box;
-        display: block;
-    }
-
-    .feature-icon i {
-        font-size: 2rem;
-        color: var(--2g-white);
+      .feature-icon {
+          width: 120px;
+          height: 120px;
+          margin: 0.6rem auto 0.7rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          z-index: 10;
+        transition: transform 0.35s ease, box-shadow 0.35s ease;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(226, 232, 240, 0.65));
+        border-radius: 26px;
+        padding: 0.85rem;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.18);
     }
 
     .feature-card:hover .feature-icon {
-        transform: translateY(-4px);
-        box-shadow: 0 18px 32px rgba(15, 23, 42, 0.28);
+        transform: translateY(-6px) scale(1.03);
+        box-shadow: 0 24px 44px rgba(15, 23, 42, 0.22);
     }
+
+      .feature-icon img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          object-position: center;
+          display: block;
+          box-sizing: border-box;
+          filter: drop-shadow(0 16px 24px rgba(15, 23, 42, 0.22));
+      }
 
     .feature-title {
         font-family: 'Space Grotesk', sans-serif;
-        font-size: 1.25rem;
-        font-weight: 700;
+        font-size: 1.3rem;
+        font-weight: 800;
         color: var(--2g-charcoal);
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.4rem;
+        letter-spacing: -0.01em;
         position: relative;
         z-index: 1;
     }
 
     .feature-text {
-        color: #475569;
-        font-size: 0.95rem;
+        color: #51607a;
+        font-size: 0.98rem;
         line-height: 1.7;
         position: relative;
         z-index: 1;
     }
+
+    .feature-card > * {
+        position: relative;
+        z-index: 1;
+    }
+
+      @media (max-width: 991px) {
+          .feature-card {
+              padding: 2.5rem 2rem 2.2rem;
+          }
+
+          .feature-icon {
+              width: 110px;
+              height: 110px;
+              margin-top: 0.5rem;
+          }
+      }
+
+      @media (max-width: 640px) {
+          .feature-card {
+              padding: 2.25rem 1.75rem 2rem;
+          }
+
+          .feature-icon {
+              width: 100px;
+              height: 100px;
+              margin-top: 0.45rem;
+          }
+      }
 
     /* === CTA SECTION - BOLD BANNER === */
     .cta-section {
@@ -1141,6 +1199,7 @@
             opacity: 0;
             transform: translateY(12px) scale(0.98);
         }
+
         to {
             opacity: 1;
             transform: translateY(0) scale(1);
@@ -1857,6 +1916,81 @@
         color: #475569;
     }
 
+    .flyer-card-actions,
+    .flyer-package-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        align-items: center;
+    }
+
+    .flyer-card-actions form,
+    .flyer-package-actions form {
+        margin: 0;
+    }
+
+    .flyer-card-action {
+        border: 1px solid #0f172a;
+        background: #0f172a;
+        color: #ffffff;
+        padding: 0.4rem 0.9rem;
+        border-radius: 999px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        white-space: nowrap;
+        cursor: pointer;
+        min-height: 30px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease,
+            border-color 0.15s ease;
+        max-width: 100%;
+    }
+
+    .flyer-card-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 12px rgba(15, 23, 42, 0.15);
+        color: #ffffff;
+    }
+
+    .flyer-card-action.secondary {
+        background: transparent;
+        color: #0f172a;
+        border-color: #94a3b8;
+    }
+
+    .flyer-card-action.secondary:hover {
+        background: #0f172a;
+        color: #ffffff;
+        border-color: #0f172a;
+    }
+
+    .flyer-card-action.is-disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        border-color: #cbd5f5;
+        background: #e2e8f0;
+        color: #64748b;
+    }
+
+    .flyer-card-action:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        border-color: #cbd5f5;
+        background: #e2e8f0;
+        color: #64748b;
+    }
+
+    .flyer-package-add-forms {
+        display: none;
+    }
+
     .flyer-card-badge {
         position: absolute;
         top: 0.6rem;
@@ -1877,7 +2011,7 @@
     .flyer-package-card {
         border: 2px dashed #e2e8f0;
         border-radius: 16px;
-        padding: 1.1rem 1.1rem 1.1rem 1.35rem;
+        padding: 2.4rem 1.1rem 1.1rem 1.35rem;
         background: rgba(255, 255, 255, 0.9);
         box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
         position: relative;
@@ -1946,6 +2080,9 @@
         letter-spacing: 0.08em;
         border: 1px solid #0f172a;
         box-shadow: 0 10px 16px rgba(15, 23, 42, 0.2);
+        position: absolute;
+        top: 0.65rem;
+        right: 0.65rem;
     }
 
     .flyer-footer {
@@ -1977,6 +2114,17 @@
             width: 100%;
             height: 140px;
             justify-self: stretch;
+        }
+
+        .flyer-card-actions,
+        .flyer-package-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .flyer-card-action {
+            width: 100%;
+            justify-content: center;
         }
     }
 
@@ -2063,7 +2211,6 @@
 
 {% block extra_js %}
 <script src="{% static 'js/storefront_search.js' %}" defer></script>
-<script src="{% static 'js/storefront_flyer.js' %}" defer></script>
 <script src="{% static 'js/storefront_promo_slider.js' %}" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
 <script src="{% static 'js/storefront_confetti.js' %}" defer></script>
@@ -2075,8 +2222,8 @@
 {% url 'accounts:public_contact' as contact_url %}
 
 <div class="storefront-shell">
-    {% if hero_banner %}
-    <section class="hero-message-banner hero-message-banner--sky">
+{% if hero_banner %}
+    <section class="hero-message-banner hero-message-banner--{{ hero_banner.theme|default:'sunrise' }}">
         <div class="container">
             <div class="hero-message-content">
                 <span class="hero-message-text">{{ hero_banner.message }}</span>
@@ -2091,7 +2238,7 @@
     </section>
     {% endif %}
 
-    <section class="storefront-hero">
+    <section class="storefront-hero storefront-hero--centered">
         <div class="container">
             <nav class="storefront-breadcrumbs" aria-label="Breadcrumb">
                 {% for crumb in breadcrumbs %}
@@ -2116,13 +2263,17 @@
                 </div>
                 {% if hero_cards %}
                 <div class="storefront-hero-promos">
-                    <div class="storefront-hero-promos-label">Promo Products &amp; Packages</div>
+                    <div class="storefront-hero-promos-header">
+                        <div class="storefront-hero-promos-label">Promo Products &amp; Packages</div>
+                        <div class="storefront-hero-promos-badge" data-promo-hero-badge></div>
+                    </div>
                     <div class="storefront-hero-promo-slider" data-promo-slider>
                         <div class="storefront-hero-promo-track">
                             {% for card in hero_cards %}
                             {% if card.kind == 'product' %}
                             {% with product=card.product %}
-                            <article class="storefront-promo-card{% if forloop.first %} is-active{% endif %}" data-promo-slide>
+                            <article class="storefront-promo-card{% if forloop.first %} is-active{% endif %}"
+                                data-promo-slide>
                                 <div class="storefront-promo-card-media">
                                     {% if product.image %}
                                     <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
@@ -2136,12 +2287,12 @@
                                     {% if show_prices_hero %}
                                     <div class="storefront-promo-card-price">
                                         {% if product.has_promotion %}
-                                            {% if product.sale_price %}
-                                            <span class="storefront-promo-card-price-old">
-                                                ${{ product.sale_price|floatformat:2 }}
-                                            </span>
-                                            {% endif %}
-                                            <span>${{ product.promotion_price|floatformat:2 }}</span>
+                                        {% if product.sale_price %}
+                                        <span class="storefront-promo-card-price-old">
+                                            ${{ product.sale_price|floatformat:2 }}
+                                        </span>
+                                        {% endif %}
+                                        <span>${{ product.promotion_price|floatformat:2 }}</span>
                                         {% elif product.sale_price %}
                                         <span>${{ product.sale_price|floatformat:2 }}</span>
                                         {% else %}
@@ -2151,54 +2302,56 @@
                                     {% endif %}
                                     <div class="storefront-promo-card-actions">
                                         {% if customer_account %}
-                                        <div class="cart-slot{% if product.id|stringformat:'s' in cart_product_ids %} is-in-cart{% endif %}" data-cart-slot data-product-id="{{ product.id }}">
+                                        <div class="cart-slot{% if product.id|stringformat:'s' in cart_product_ids %} is-in-cart{% endif %}"
+                                            data-cart-slot data-product-id="{{ product.id }}">
                                             <div class="cart-action-add">
-                                                <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" data-add-to-cart>
+                                                <form method="post"
+                                                    action="{% url 'accounts:store_add_to_cart' product.id %}"
+                                                    data-add-to-cart>
                                                     {% csrf_token %}
                                                     <input type="hidden" name="quantity" value="1">
-                                                    <button type="submit" class="storefront-promo-card-link" data-loading-label="Adding..." data-success-label="Added" {% if product.quantity_in_stock <= 0 %}disabled{% endif %}>
+                                                    <button type="submit" class="storefront-promo-card-link"
+                                                        data-loading-label="Adding..." data-success-label="Added"{% if product.quantity_in_stock <= 0 %} disabled{% endif %}>
                                                         <span class="btn-text">Add to cart</span>
                                                         <i class="fas fa-cart-plus"></i>
                                                     </button>
                                                 </form>
                                             </div>
                                             <div class="cart-action-in">
-                                                <span class="storefront-promo-card-in-cart"><i class="fas fa-check-circle"></i> Added to cart</span>
-                                                <a class="storefront-promo-card-link" href="{% url 'accounts:store_cart' %}">
+                                                <span class="storefront-promo-card-in-cart"><i
+                                                        class="fas fa-check-circle"></i> Added to cart</span>
+                                                <a class="storefront-promo-card-link"
+                                                    href="{% url 'accounts:store_cart' %}">
                                                     View cart
                                                     <i class="fas fa-arrow-right"></i>
                                                 </a>
                                             </div>
                                         </div>
-                                        <a class="storefront-promo-card-link storefront-promo-card-link--secondary" href="{% url 'accounts:store_product_detail' product.id %}">
-                                            View product
-                                            <i class="fas fa-arrow-right"></i>
-                                        </a>
-                                        {% else %}
-                                        <a class="storefront-promo-card-link" href="{% url 'accounts:store_product_detail' product.id %}">
-                                            View product
-                                            <i class="fas fa-arrow-right"></i>
-                                        </a>
                                         {% endif %}
+                                        <a class="storefront-promo-card-link{% if customer_account %} storefront-promo-card-link--secondary{% endif %}"
+                                            href="{% url 'accounts:store_product_detail' product.id %}">
+                                            View product
+                                            <i class="fas fa-arrow-right"></i>
+                                        </a>
                                     </div>
                                 </div>
                                 {% if card.slide.discount_percent %}
                                 <div class="storefront-promo-card-badge">Save {{ card.slide.discount_percent }}%</div>
                                 {% elif product.has_promotion %}
-                                    {% if product.promotion_discount_percent %}
-                                    <div class="storefront-promo-card-badge">Save {{ product.promotion_discount_percent }}%</div>
-                                    {% else %}
-                                    <div class="storefront-promo-card-badge">Promo</div>
-                                    {% endif %}
+                                {% if product.promotion_discount_percent %}
+                                <div class="storefront-promo-card-badge">Save {{ product.promotion_discount_percent }}%
+                                </div>
+                                {% else %}
+                                <div class="storefront-promo-card-badge">Promo</div>
+                                {% endif %}
                                 {% endif %}
                             </article>
                             {% endwith %}
                             {% else %}
                             {% with package=card.package %}
-                            <article class="storefront-promo-card storefront-promo-card--package{% if forloop.first %} is-active{% endif %}" data-promo-slide>
-                                <div class="storefront-promo-card-media">
-                                    <i class="fas fa-boxes-stacked"></i>
-                                </div>
+                            <article
+                                class="storefront-promo-card storefront-promo-card--package{% if forloop.first %} is-active{% endif %}"
+                                data-promo-slide>
                                 <div class="storefront-promo-card-body">
                                     <div class="storefront-promo-card-type">Package deal</div>
                                     <div class="storefront-promo-card-title">{{ package.title }}</div>
@@ -2210,7 +2363,8 @@
                                         <div class="storefront-promo-card-item">
                                             <div class="storefront-promo-card-item-media">
                                                 {% if package.primary_product.image %}
-                                                <img src="{{ package.primary_product.image.url }}" alt="{{ package.primary_product.name }}" loading="lazy">
+                                                <img src="{{ package.primary_product.image.url }}"
+                                                    alt="{{ package.primary_product.name }}" loading="lazy">
                                                 {% else %}
                                                 <i class="fas fa-box"></i>
                                                 {% endif %}
@@ -2222,7 +2376,8 @@
                                         <div class="storefront-promo-card-item">
                                             <div class="storefront-promo-card-item-media">
                                                 {% if package.secondary_product.image %}
-                                                <img src="{{ package.secondary_product.image.url }}" alt="{{ package.secondary_product.name }}" loading="lazy">
+                                                <img src="{{ package.secondary_product.image.url }}"
+                                                    alt="{{ package.secondary_product.name }}" loading="lazy">
                                                 {% else %}
                                                 <i class="fas fa-box"></i>
                                                 {% endif %}
@@ -2234,7 +2389,8 @@
                                         <div class="storefront-promo-card-item">
                                             <div class="storefront-promo-card-item-media">
                                                 {% if package.free_product.image %}
-                                                <img src="{{ package.free_product.image.url }}" alt="{{ package.free_product.name }}" loading="lazy">
+                                                <img src="{{ package.free_product.image.url }}"
+                                                    alt="{{ package.free_product.name }}" loading="lazy">
                                                 {% else %}
                                                 <i class="fas fa-gift"></i>
                                                 {% endif %}
@@ -2250,18 +2406,22 @@
                                         {% if primary.quantity_in_stock > 0 %}
                                         {% if secondary %}
                                         {% if secondary.quantity_in_stock > 0 %}
-                                        <div class="storefront-promo-card-bundle{% if primary.id|stringformat:'s' in cart_product_ids %}{% if secondary and not secondary.id|stringformat:'s' in cart_product_ids %}{% elif free and not free.id|stringformat:'s' in cart_product_ids %}{% else %} is-in-cart{% endif %}{% endif %}" data-package-status="package-deal-{{ package.id }}">
+                                        <div class="storefront-promo-card-bundle{% if primary.id|stringformat:'s' in cart_product_ids %}{% if secondary and not secondary.id|stringformat:'s' in cart_product_ids %}{% elif free and not free.id|stringformat:'s' in cart_product_ids %}{% else %} is-in-cart{% endif %}{% endif %}"
+                                            data-package-status="package-deal-{{ package.id }}">
                                             <div class="bundle-action-add">
                                                 <a class="storefront-promo-card-link"
                                                     href="{% url 'accounts:store_product_detail' package.primary_product.id %}"
-                                                    data-package-add-all data-package-target="package-deal-{{ package.id }}">
+                                                    data-package-add-all
+                                                    data-package-target="package-deal-{{ package.id }}">
                                                     <span class="btn-text">Add bundle to cart</span>
                                                     <i class="fas fa-cart-plus"></i>
                                                 </a>
                                             </div>
                                             <div class="bundle-action-in">
-                                                <span class="storefront-promo-card-in-cart"><i class="fas fa-check-circle"></i> Bundle added to cart</span>
-                                                <a class="storefront-promo-card-link" href="{% url 'accounts:store_cart' %}">
+                                                <span class="storefront-promo-card-in-cart"><i
+                                                        class="fas fa-check-circle"></i> Bundle added to cart</span>
+                                                <a class="storefront-promo-card-link"
+                                                    href="{% url 'accounts:store_cart' %}">
                                                     View cart
                                                     <i class="fas fa-arrow-right"></i>
                                                 </a>
@@ -2271,18 +2431,22 @@
                                         <span class="storefront-promo-card-link is-disabled">Out of stock</span>
                                         {% endif %}
                                         {% else %}
-                                        <div class="storefront-promo-card-bundle{% if primary.id|stringformat:'s' in cart_product_ids %}{% if free and not free.id|stringformat:'s' in cart_product_ids %}{% else %} is-in-cart{% endif %}{% endif %}" data-package-status="package-deal-{{ package.id }}">
+                                        <div class="storefront-promo-card-bundle{% if primary.id|stringformat:'s' in cart_product_ids %}{% if free and not free.id|stringformat:'s' in cart_product_ids %}{% else %} is-in-cart{% endif %}{% endif %}"
+                                            data-package-status="package-deal-{{ package.id }}">
                                             <div class="bundle-action-add">
                                                 <a class="storefront-promo-card-link"
                                                     href="{% url 'accounts:store_product_detail' package.primary_product.id %}"
-                                                    data-package-add-all data-package-target="package-deal-{{ package.id }}">
+                                                    data-package-add-all
+                                                    data-package-target="package-deal-{{ package.id }}">
                                                     <span class="btn-text">Add bundle to cart</span>
                                                     <i class="fas fa-cart-plus"></i>
                                                 </a>
                                             </div>
                                             <div class="bundle-action-in">
-                                                <span class="storefront-promo-card-in-cart"><i class="fas fa-check-circle"></i> Bundle added to cart</span>
-                                                <a class="storefront-promo-card-link" href="{% url 'accounts:store_cart' %}">
+                                                <span class="storefront-promo-card-in-cart"><i
+                                                        class="fas fa-check-circle"></i> Bundle added to cart</span>
+                                                <a class="storefront-promo-card-link"
+                                                    href="{% url 'accounts:store_cart' %}">
                                                     View cart
                                                     <i class="fas fa-arrow-right"></i>
                                                 </a>
@@ -2353,36 +2517,6 @@
 
     {% include 'store/partials/_package_deal_modals.html' %}
 
-
-    {% if flyer and flyer_has_content %}
-    <div class="flyer-modal" data-flyer-modal aria-hidden="true">
-        <div class="flyer-modal-dialog" role="dialog" aria-modal="true" aria-label="Storefront flyer">
-            <div class="flyer-modal-header">
-                <div class="flyer-modal-title">Storefront Flyer</div>
-                <div class="flyer-modal-actions">
-                    <button type="button" class="flyer-action-btn secondary" data-flyer-print>
-                        <i class="fas fa-print"></i>
-                        Print
-                    </button>
-                    <a class="flyer-action-btn" href="{% url 'accounts:storefront_flyer_pdf' %}" target="_blank"
-                        rel="noopener">
-                        <i class="fas fa-file-pdf"></i>
-                        Download PDF
-                    </a>
-                    <button type="button" class="flyer-action-btn ghost flyer-modal-close" data-flyer-close>
-                        <i class="fas fa-xmark"></i>
-                        Close
-                    </button>
-                </div>
-            </div>
-            <div class="flyer-modal-body">
-                <div class="flyer-print-surface">
-                    {% include 'store/partials/_storefront_flyer_content.html' %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
     <section class="storefront-section category-groups-section" id="categories">
         <div class="container">
@@ -2516,45 +2650,45 @@
         </div>
 
         <div class="row g-4">
-            <div class="col-md-6 col-lg-3">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-headset"></i>
-                    </div>
-                    <h3 class="feature-title">Fitment Support</h3>
-                    <p class="feature-text">Confirm specs fast so you get the right part on the first order.</p>
-                </div>
-            </div>
+              <div class="col-md-6 col-lg-3">
+                  <div class="feature-card">
+                      <h3 class="feature-title">Fitment Support</h3>
+                      <div class="feature-icon">
+                          <img src="{% static 'images/fitment_support_icon.png' %}" alt="Fitment Support">
+                      </div>
+                      <p class="feature-text">Confirm specs fast so you get the right part on the first order.</p>
+                  </div>
+              </div>
 
-            <div class="col-md-6 col-lg-3">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-truck"></i>
-                    </div>
-                    <h3 class="feature-title">Fast Fulfillment</h3>
-                    <p class="feature-text">Same-day pickup options and quick delivery across the region.</p>
-                </div>
-            </div>
+              <div class="col-md-6 col-lg-3">
+                  <div class="feature-card">
+                      <h3 class="feature-title">Fast Fulfillment</h3>
+                      <div class="feature-icon">
+                          <img src="{% static 'images/fast_fulfillment_icon.png' %}" alt="Fast Fulfillment">
+                      </div>
+                      <p class="feature-text">Same-day pickup options and quick delivery across the region.</p>
+                  </div>
+              </div>
 
-            <div class="col-md-6 col-lg-3">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-tags"></i>
-                    </div>
-                    <h3 class="feature-title">Fleet Pricing</h3>
-                    <p class="feature-text">Account pricing and volume programs tailored for operators.</p>
-                </div>
-            </div>
+              <div class="col-md-6 col-lg-3">
+                  <div class="feature-card">
+                      <h3 class="feature-title">Fleet Pricing</h3>
+                      <div class="feature-icon">
+                          <img src="{% static 'images/fleet_pricing_icon.png' %}" alt="Fleet Pricing">
+                      </div>
+                      <p class="feature-text">Account pricing and volume programs tailored for operators.</p>
+                  </div>
+              </div>
 
-            <div class="col-md-6 col-lg-3">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <h3 class="feature-title">OEM-Grade Quality</h3>
-                    <p class="feature-text">Trusted brands built for heavy-duty performance.</p>
-                </div>
-            </div>
+              <div class="col-md-6 col-lg-3">
+                  <div class="feature-card">
+                      <h3 class="feature-title">OEM-Grade Quality</h3>
+                      <div class="feature-icon">
+                          <img src="{% static 'images/oem_quality_icon.png' %}" alt="OEM-Grade Quality">
+                      </div>
+                      <p class="feature-text">Trusted brands built for heavy-duty performance.</p>
+                  </div>
+              </div>
         </div>
     </div>
 </section>

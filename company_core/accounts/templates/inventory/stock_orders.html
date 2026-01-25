@@ -1,0 +1,249 @@
+{% extends 'customer_portal_base.html' %}
+{% load humanize %}
+
+{% block title %}Stock Orders{% endblock %}
+
+{% block extra_css %}
+<style>
+  .order-summary {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #f8fafc;
+  }
+
+  .supplier-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #ffffff;
+  }
+
+  .supplier-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-right: 1rem;
+  }
+
+  .order-qty {
+    font-weight: 700;
+    color: #b91c1c;
+  }
+
+  .email-draft {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 1rem;
+  }
+
+  .email-body-text {
+    min-height: 160px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+  {% include 'inventory/partials/_inventory_nav.html' %}
+  <div class="page-header">
+    <div>
+      <h2 class="mb-1">Stock Orders</h2>
+      <p class="text-muted mb-0">Review low stock items by supplier and send reorder emails quickly.</p>
+    </div>
+  </div>
+
+  <div class="surface-card p-4 mb-4 order-summary">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div>
+        <div class="text-muted small text-uppercase fw-semibold">Low stock items</div>
+        <div class="h4 mb-0">{{ low_stock_total|intcomma }}</div>
+      </div>
+      <div class="text-muted small">Group by supplier to prepare purchase emails.</div>
+    </div>
+  </div>
+
+  {% if not supplier_groups %}
+    <div class="alert alert-success">
+      All set. No low stock items found.
+    </div>
+  {% endif %}
+
+  {% for group in supplier_groups %}
+    <div class="surface-card p-4 mb-4 supplier-card" data-supplier-card data-supplier-email="{{ group.email|default:'' }}">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+          <div class="d-flex align-items-center gap-2">
+            <h3 class="h5 mb-0">{{ group.supplier_name }}</h3>
+            {% if not group.supplier %}
+              <span class="badge bg-warning-subtle text-warning">No supplier assigned</span>
+            {% endif %}
+          </div>
+          <div class="text-muted small supplier-meta mt-1">
+            {% if group.contact_person %}
+              <span><i class="fa-solid fa-user"></i> {{ group.contact_person }}</span>
+            {% endif %}
+            {% if group.phone %}
+              <span><i class="fa-solid fa-phone"></i> {{ group.phone }}</span>
+            {% endif %}
+            {% if group.email %}
+              <span><i class="fa-solid fa-envelope"></i> {{ group.email }}</span>
+            {% endif %}
+            {% if not group.contact_person and not group.phone and not group.email %}
+              <span>No contact details on file.</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="text-end">
+          <div class="small text-muted">Items: {{ group.product_count }}</div>
+          <div class="fw-semibold">Total order qty: {{ group.total_order_qty|intcomma }}</div>
+        </div>
+      </div>
+
+      <div class="table-responsive mt-3">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>SKU</th>
+              <th class="text-center">On hand</th>
+              <th class="text-center">Reorder level</th>
+              <th class="text-center">Order qty</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for product in group.products %}
+              <tr>
+                <td class="fw-semibold">{{ product.name }}</td>
+                <td class="text-muted">{{ product.sku|default:"-" }}</td>
+                <td class="text-center">{{ product.quantity_in_stock|intcomma }}</td>
+                <td class="text-center">{{ product.reorder_level|intcomma }}</td>
+                <td class="text-center order-qty">{{ product.order_qty|intcomma }}</td>
+                <td class="text-muted">{{ product.location|default:"-" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="order-email mt-3">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <button type="button" class="btn btn-outline-primary btn-sm" data-email-toggle>Show email draft</button>
+          {% if not group.email %}
+            <span class="text-muted small">Add an email address to open a new message.</span>
+          {% endif %}
+        </div>
+        <div class="email-draft d-none" data-email-draft>
+          <div class="row g-3">
+            <div class="col-lg-4">
+              <label class="form-label fw-semibold small">Subject</label>
+              <input type="text" class="form-control form-control-sm" data-email-subject value="{{ group.email_subject }}">
+            </div>
+            <div class="col-lg-8">
+              <label class="form-label fw-semibold small">Email body</label>
+              <textarea class="form-control form-control-sm email-body-text" rows="6" data-email-body>{{ group.email_body }}</textarea>
+            </div>
+          </div>
+          <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+            <button type="button" class="btn btn-primary btn-sm" data-email-open {% if not group.email %}disabled{% endif %}>
+              <i class="fa-solid fa-paper-plane me-1"></i> Open email
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-email-copy>
+              <i class="fa-regular fa-copy me-1"></i> Copy email
+            </button>
+            <span class="text-muted small" data-email-status></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    function updateStatus(card, message) {
+      const status = card.querySelector('[data-email-status]');
+      if (!status) return;
+      status.textContent = message;
+      if (message) {
+        setTimeout(() => {
+          status.textContent = '';
+        }, 2500);
+      }
+    }
+
+    function getDraftValues(card) {
+      const subjectInput = card.querySelector('[data-email-subject]');
+      const bodyInput = card.querySelector('[data-email-body]');
+      return {
+        subject: subjectInput ? subjectInput.value.trim() : '',
+        body: bodyInput ? bodyInput.value.trim() : ''
+      };
+    }
+
+    function copyToClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+      }
+
+      return new Promise((resolve) => {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        resolve();
+      });
+    }
+
+    document.querySelectorAll('[data-email-toggle]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const card = button.closest('[data-supplier-card]');
+        if (!card) return;
+        const draft = card.querySelector('[data-email-draft]');
+        if (!draft) return;
+        const willShow = draft.classList.contains('d-none');
+        draft.classList.toggle('d-none');
+        button.textContent = willShow ? 'Hide email draft' : 'Show email draft';
+      });
+    });
+
+    document.querySelectorAll('[data-email-open]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const card = button.closest('[data-supplier-card]');
+        if (!card) return;
+        const email = card.dataset.supplierEmail || '';
+        if (!email) {
+          updateStatus(card, 'Supplier email not available.');
+          return;
+        }
+        const draft = getDraftValues(card);
+        const subject = encodeURIComponent(draft.subject);
+        const body = encodeURIComponent(draft.body);
+        window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      });
+    });
+
+    document.querySelectorAll('[data-email-copy]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const card = button.closest('[data-supplier-card]');
+        if (!card) return;
+        const draft = getDraftValues(card);
+        const text = `Subject: ${draft.subject}\n\n${draft.body}`;
+        try {
+          await copyToClipboard(text);
+          updateStatus(card, 'Email copied.');
+        } catch (err) {
+          updateStatus(card, 'Copy failed. Please copy manually.');
+        }
+      });
+    });
+  })();
+</script>
+{% endblock %}

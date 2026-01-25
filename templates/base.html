@@ -231,10 +231,36 @@
         }
 
         .topbar-weather .weather-desc {
-            font-size: 0.6rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
             color: rgba(226, 232, 240, 0.75);
+        }
+
+        .topbar-weather .weather-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.6rem;
+            line-height: 1.1;
+            white-space: nowrap;
+        }
+
+        .topbar-weather .weather-location {
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: rgba(226, 232, 240, 0.9);
+        }
+
+        .topbar-weather .weather-location:empty {
+            display: none;
+        }
+
+        .topbar-weather .weather-location:empty + .weather-separator {
+            display: none;
+        }
+
+        .topbar-weather .weather-separator {
+            color: rgba(226, 232, 240, 0.45);
         }
 
         .topbar-btn {
@@ -665,7 +691,7 @@
             box-shadow: var(--nav-shadow-lg);
             padding: 1.1rem 1.35rem 1.35rem;
             opacity: 0;
-            transform: translateY(8px);
+            transform: translate(var(--nav-panel-x, 0), 8px);
             pointer-events: none;
             transition: opacity 0.2s ease, transform 0.2s ease;
             max-height: 70vh;
@@ -675,13 +701,14 @@
         .nav-links-panel--brands {
             left: auto;
             right: 0;
+            --nav-panel-x: 60%;
             width: min(720px, 92vw);
         }
 
         .nav-links-dropdown.is-open .nav-links-panel,
         .nav-links-dropdown:focus-within .nav-links-panel {
             opacity: 1;
-            transform: translateY(0);
+            transform: translate(var(--nav-panel-x, 0), 0);
             pointer-events: auto;
         }
 
@@ -1847,7 +1874,11 @@
                                 <span data-weather-icon><i class="fas fa-cloud-sun"></i></span>
                                 <div>
                                     <div class="weather-temp" data-weather-temp>--</div>
-                                    <div class="weather-desc" data-weather-desc>Loading</div>
+                                    <div class="weather-meta">
+                                        <span class="weather-location" data-weather-location></span>
+                                        <span class="weather-separator" aria-hidden="true">|</span>
+                                        <span class="weather-desc" data-weather-desc>Loading</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1883,7 +1914,8 @@
                 </a>
 
                 <form class="nav-search" method="get" action="{% url 'accounts:store_search' %}" role="search"
-                    data-storefront-search-form data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}">
+                    data-storefront-search-form data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}"
+                    data-storefront-category-root="{% url 'accounts:store_product_list' %}">
                     <i class="fas fa-search" aria-hidden="true"></i>
                     <input type="search" name="q"
                         value="{{ search_query|default:'' }}"
@@ -2023,7 +2055,7 @@
                                     <i class="fas fa-star"></i>
                                     Featured Products
                                 </a>
-                                <a href="{% url 'accounts:storefront_flyer_pdf' %}" data-flyer-open>
+                                <a href="{% url 'accounts:storefront_flyer' %}">
                                     <i class="fas fa-file-lines"></i>
                                     View Flyer
                                 </a>
@@ -2094,7 +2126,7 @@
                     <span>Featured Products</span>
                     <i class="fas fa-chevron-right mobile-link-arrow"></i>
                 </a>
-                <a href="{% url 'accounts:storefront_flyer_pdf' %}" class="mobile-link" data-flyer-open>
+                <a href="{% url 'accounts:storefront_flyer' %}" class="mobile-link">
                     <div class="mobile-link-icon"><i class="fas fa-file-lines"></i></div>
                     <span>View Flyer</span>
                     <i class="fas fa-chevron-right mobile-link-arrow"></i>
@@ -2274,8 +2306,11 @@
                 <div class="col-6 col-md-6 col-lg-2 mb-4 mb-lg-0">
                     <h6 class="footer-heading">Quick Links</h6>
                     <ul class="footer-links">
+                        <li><a href="{% url 'accounts:public_home' %}">Home</a></li>
                         <li><a href="{% url 'accounts:public_about' %}">About Us</a></li>
-                        <li><a href="{% url 'accounts:store_product_list' %}">Parts</a></li>
+                        <li><a href="{% url 'accounts:public_services' %}">Services</a></li>
+                        <li><a href="{% url 'accounts:public_faq' %}">FAQ</a></li>
+                        <li><a href="{% url 'accounts:public_booking' %}">Book Service</a></li>
                         <li><a href="{% url 'accounts:public_contact' %}">Contact</a></li>
                     </ul>
                 </div>
@@ -2285,7 +2320,10 @@
                     <h6 class="footer-heading">Parts Catalog</h6>
                     <ul class="footer-links">
                         <li><a href="{% url 'accounts:store_product_list' %}">Shop All Parts</a></li>
+                        <li><a href="{% url 'accounts:store_product_list' %}#featured-products">Featured Parts</a></li>
                         <li><a href="{% url 'accounts:store_product_list' %}">Browse Categories</a></li>
+                        <li><a href="{% url 'accounts:store_cart' %}">View Cart</a></li>
+                        <li><a href="{% url 'accounts:storefront_flyer' %}">Weekly Flyer</a></li>
                         <li><a href="{% url 'accounts:customer_signup' %}">Fleet Accounts</a></li>
                         <li><a href="{% url 'accounts:public_contact' %}">Contact Parts Desk</a></li>
                     </ul>
@@ -2311,11 +2349,20 @@
                         </div>
                         <div class="footer-contact-item">
                             <i class="fas fa-map-marker-alt footer-contact-icon"></i>
-                            <span class="text-white-50">
-                                2362 46th Ave, Lachine, Quebec H8T 2P3<br>
-                                2860 Rue du Meunier Unit 140, Vaudreuil-Dorion, Quebec J7V 8P2<br>
-                                2015 Vincent Massey Dr, Cornwall, ON K6H 5R6
-                            </span>
+                            <div class="footer-location-list">
+                                <div class="footer-location-card">
+                                    <span class="footer-location-name">Lachine, QC</span>
+                                    <span class="footer-location-address">2362 46th Ave, Lachine, Quebec H8T 2P3</span>
+                                </div>
+                                <div class="footer-location-card">
+                                    <span class="footer-location-name">Vaudreuil-Dorion, QC</span>
+                                    <span class="footer-location-address">2860 Rue du Meunier Unit 140, Vaudreuil-Dorion, Quebec J7V 8P2</span>
+                                </div>
+                                <div class="footer-location-card">
+                                    <span class="footer-location-name">Cornwall, ON</span>
+                                    <span class="footer-location-address">2015 Vincent Massey Dr, Cornwall, ON K6H 5R6</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2342,15 +2389,21 @@
             </div>
 
             <div class="footer-bottom">
-                <div class="row">
-                    <div class="col-md-6 text-center text-md-start">
+                <div class="footer-bottom-row">
+                    <div class="footer-bottom-left">
                         <p class="mb-0 text-white-50">&copy; {% now "Y" %} {{ business_name|default:default_business_name }}. All rights
                             reserved.</p>
+                        <div class="footer-legal-links">
+                            <a href="{% url 'accounts:privacy_policy' %}">Privacy</a>
+                            <a href="{% url 'accounts:terms_and_conditions' %}">Terms &amp; Conditions</a>
+                            <a href="{% url 'accounts:cookies_policy' %}">Cookies</a>
+                        </div>
                     </div>
-                    <div class="col-md-6 text-center text-md-end">
-                        <a href="{% url 'accounts:privacy_policy' %}" class="mx-2 text-white-50 small">Privacy</a>
-                        <a href="{% url 'accounts:terms_and_conditions' %}" class="mx-2 text-white-50 small">Terms</a>
-                        <a href="{% url 'accounts:cookies_policy' %}" class="mx-2 text-white-50 small">Cookies</a>
+                    <div class="footer-credit">
+                        <span>Designed &amp; Developed by</span>
+                        <a class="footer-credit-logo" href="https://www.madebyparm.com" target="_blank" rel="noopener">
+                            <img src="{% static 'images/logo-31399bfa.png' %}" alt="MP Studio logo">
+                        </a>
                     </div>
                 </div>
             </div>

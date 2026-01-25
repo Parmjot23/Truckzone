@@ -28,6 +28,7 @@ from .views_inventory import (
     inventory_hub,
     inventory_transactions_view,
     inventory_products_view,
+    inventory_stock_orders_view,
     inventory_suppliers_view,
     inventory_categories_view,
     inventory_category_groups_view,
@@ -222,6 +223,7 @@ urlpatterns = [
     path('store/cart/', store_views.cart_view, name='store_cart'),
     path('store/update/<int:product_id>/', store_views.update_cart, name='store_update_cart'),
     path('store/checkout/', store_views.checkout, name='store_checkout'),
+    path('store/flyer/', store_views.storefront_flyer, name='storefront_flyer'),
     path('store/flyer/pdf/', store_views.storefront_flyer_pdf, name='storefront_flyer_pdf'),
     path('account/store/', store_views.customer_dashboard, name='customer_dashboard'),
     path(
@@ -229,6 +231,7 @@ urlpatterns = [
         RedirectView.as_view(pattern_name='accounts:customer_dashboard', permanent=True),
     ),
     path('store/profile/', store_views.customer_profile, name='customer_profile'),
+    path('store/orders/', store_views.customer_orders, name='customer_orders'),
     path('store/invoices/', store_views.customer_invoice_list, name='customer_invoice_list'),
     path('store/returns/', store_views.customer_returns, name='customer_returns'),
     path('store/invoices/<int:invoice_id>/download/', store_views.customer_invoice_download, name='customer_invoice_download'),
@@ -249,6 +252,9 @@ urlpatterns = [
     path('store/manage/', store_views.manage_storefront, name='store_manage'),
     path('store/hero/', store_views.manage_storefront_hero, name='store_hero'),
     path('dashboard/', views.home, name='home'),  # Authenticated home page URL
+    path('dashboard/parts-store/feed/', views.parts_store_dashboard_feed, name='parts_store_dashboard_feed'),
+    path('dashboard/parts-store/orders/<int:invoice_id>/status/', views.update_online_order_status, name='parts_store_order_status'),
+    path('dashboard/parts-store/orders/<int:invoice_id>/cancel/', views.cancel_online_order, name='parts_store_order_cancel'),
     # Analytics lives at /analytics. Keep /dashboard/analytics as a backwards-compatible redirect.
     path('analytics/', views.analytics_overview, name='analytics'),
     path('accountant/', views.accountant_hub, name='accountant_hub'),
@@ -549,6 +555,7 @@ urlpatterns = [
     path('inventory/hub/', inventory_hub, name='inventory_hub'),
     path('inventory/transactions/', inventory_transactions_view, name='inventory_transactions'),
     path('inventory/products/', inventory_products_view, name='inventory_products'),
+    path('inventory/stock-orders/', inventory_stock_orders_view, name='inventory_stock_orders'),
     path('inventory/suppliers/', inventory_suppliers_view, name='inventory_suppliers'),
     path('inventory/categories/', inventory_categories_view, name='inventory_categories'),
     path('inventory/category-groups/', inventory_category_groups_view, name='inventory_category_groups'),

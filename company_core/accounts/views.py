@@ -5449,6 +5449,111 @@ def public_contact(request):
 def public_faq(request):
     return render(request, 'public/faq.html')
 
+
+def _serialize_online_orders(invoices):
+    from decimal import Decimal
+
+    payload = []
+    for invoice in invoices:
+        records = list(invoice.income_records.all())
+        items_preview = []
+        items_full = []
+        total_qty = Decimal('0.00')
+        for record in records:
+            qty = record.qty or Decimal('0.00')
+            try:
+                total_qty += Decimal(str(qty))
+            except Exception:
+                pass
+            label = ''
+            if getattr(record, 'product_id', None) and getattr(record, 'product', None):
+                label = record.product.name or ''
+            if not label:
+                label = record.job or 'Item'
+            image_url = ''
+            if getattr(record, 'product', None) and getattr(record.product, 'image', None):
+                try:
+                    image_url = record.product.image.url
+                except Exception:
+                    image_url = ''
+            location = ''
+            stock_left = None
+            stock_left_after = None
+            sku = ''
+            if getattr(record, 'product', None):
+                location = record.product.location or ''
+                sku = record.product.sku or ''
+                try:
+                    stock_left = int(record.product.quantity_in_stock)
+                    stock_left_after = Decimal(str(stock_left)) - (qty or Decimal('0.00'))
+                except Exception:
+                    stock_left = None
+                    stock_left_after = None
+            item_payload = {
+                'label': label,
+                'qty': float(qty) if qty is not None else 0.0,
+                'image_url': image_url,
+                'location': location,
+                'stock_left': stock_left,
+                'stock_left_after': float(stock_left_after) if stock_left_after is not None else None,
+                'sku': sku,
+            }
+            items_preview.append(item_payload)
+            items_full.append(item_payload)
+
+        preview_lines = []
+        for item in items_preview[:3]:
+            qty_val = item.get('qty', 0)
+            qty_display = int(qty_val) if float(qty_val).is_integer() else qty_val
+            preview_lines.append(f"{qty_display}x {item.get('label', '')}".strip())
+
+        status_value = invoice.online_order_status or GroupedInvoice.ONLINE_ORDER_STATUS_NEW
+        status_label = (
+            invoice.get_online_order_status_display()
+            if invoice.online_order_status
+            else "New"
+        )
+
+        payload.append(
+            {
+                'id': invoice.id,
+                'invoice_number': invoice.invoice_number or '',
+                'customer_name': (
+                    invoice.customer.name
+                    if getattr(invoice, 'customer', None) and invoice.customer
+                    else (invoice.bill_to or '')
+                ),
+                'total_amount': float(invoice.total_amount or Decimal('0.00')),
+                'created_at': invoice.created_at.isoformat() if invoice.created_at else '',
+                'date': invoice.date.isoformat() if invoice.date else '',
+                'status': status_value,
+                'status_label': status_label,
+                'line_count': len(records),
+                'item_count': float(total_qty),
+                'items_preview': preview_lines,
+                'items_overflow': max(0, len(items_preview) - 3),
+                'items': items_full,
+            }
+        )
+    return payload
+
+
+def _serialize_customer_approvals(customers):
+    payload = []
+    for customer in customers:
+        portal_user = getattr(customer, 'portal_user', None)
+        payload.append(
+            {
+                'id': customer.id,
+                'name': customer.name or '',
+                'email': customer.email or '',
+                'requested_at': portal_user.date_joined.isoformat() if portal_user else '',
+                'approve_url': reverse('accounts:approve_customer_signup', args=[customer.id]),
+            }
+        )
+    return payload
+
+
 @login_required
 def home(request):
     # --- Profile and Template Determination ---
@@ -5907,6 +6012,26 @@ def home(request):
     )
     pending_customer_approvals_count = pending_customer_approvals_qs.count()
     pending_customer_approvals = list(pending_customer_approvals_qs[:5])
+
+    online_orders = []
+    online_orders_count = 0
+    online_orders_payload = []
+    if occupation == 'parts_store':
+        online_orders_qs = GroupedInvoice.objects.filter(
+            user=request.user,
+            is_online_order=True,
+        ).exclude(
+            online_order_status=GroupedInvoice.ONLINE_ORDER_STATUS_PICKED,
+        )
+        online_orders_count = online_orders_qs.count()
+        online_orders = list(
+            online_orders_qs.select_related('customer')
+            .prefetch_related('income_records__product')
+            .order_by('-created_at', '-id')[:8]
+        )
+        online_orders_payload = _serialize_online_orders(online_orders)
+    pending_customer_approvals_payload = _serialize_customer_approvals(pending_customer_approvals)
+
     stock_owner = get_stock_owner(request.user)
     inventory_value_expr = ExpressionWrapper(
         F('products__cost_price') * F('products__stock_levels__quantity_in_stock'),
@@ -6157,6 +6282,10 @@ def home(request):
         'supplier_names': supplier_names,
         'pending_customer_approvals': pending_customer_approvals,
         'pending_customer_approvals_count': pending_customer_approvals_count,
+        'pending_customer_approvals_payload': pending_customer_approvals_payload,
+        'online_orders': online_orders,
+        'online_orders_count': online_orders_count,
+        'online_orders_payload': online_orders_payload,
         'top_suppliers': top_suppliers,
         'category_group_sales': category_group_sales,
         'category_group_sales_total': category_group_sales_total,
@@ -10537,12 +10666,18 @@ def approve_customer_signup(request, customer_id):
         user__in=business_user_ids,
     )
     if customer.portal_signup_status != Customer.PORTAL_STATUS_PENDING:
-        messages.info(request, f"{customer.name} is already approved.")
+        message = f"{customer.name} is already approved."
+        messages.info(request, message)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'info', 'message': message, 'customer_id': customer.id})
         return redirect('accounts:customer_approvals')
 
     portal_user = customer.portal_user
     if not portal_user:
-        messages.error(request, "No portal account found for this customer.")
+        message = "No portal account found for this customer."
+        messages.error(request, message)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'message': message}, status=400)
         return redirect('accounts:customer_approvals')
 
     if not portal_user.is_active:
@@ -10558,8 +10693,104 @@ def approve_customer_signup(request, customer_id):
         object_id=customer.id,
         description=f"Approved customer portal access for {customer.name}.",
     )
-    messages.success(request, f"{customer.name} has been approved for portal access.")
+    message = f"{customer.name} has been approved for portal access."
+    messages.success(request, message)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'success', 'message': message, 'customer_id': customer.id})
     return redirect('accounts:customer_approvals')
+
+
+@login_required
+def parts_store_dashboard_feed(request):
+    business_user_ids = get_customer_user_ids(request.user)
+    pending_customer_approvals_qs = (
+        Customer.objects.filter(
+            user__in=business_user_ids,
+            portal_signup_status=Customer.PORTAL_STATUS_PENDING,
+            portal_user__isnull=False,
+        )
+        .select_related('portal_user')
+        .order_by('portal_user__date_joined', 'name')
+    )
+    pending_customer_approvals_count = pending_customer_approvals_qs.count()
+    pending_customer_approvals = list(pending_customer_approvals_qs[:5])
+
+    online_orders_qs = GroupedInvoice.objects.filter(
+        user=request.user,
+        is_online_order=True,
+    ).exclude(
+        online_order_status=GroupedInvoice.ONLINE_ORDER_STATUS_PICKED,
+    )
+    online_orders_count = online_orders_qs.count()
+    online_orders = list(
+        online_orders_qs.select_related('customer')
+        .prefetch_related('income_records__product')
+        .order_by('-created_at', '-id')[:8]
+    )
+
+    return JsonResponse(
+        {
+            'status': 'success',
+            'online_orders_count': online_orders_count,
+            'online_orders': _serialize_online_orders(online_orders),
+            'pending_customer_approvals_count': pending_customer_approvals_count,
+            'pending_customer_approvals': _serialize_customer_approvals(pending_customer_approvals),
+        }
+    )
+
+
+@login_required
+@require_POST
+def update_online_order_status(request, invoice_id: int):
+    invoice = get_object_or_404(
+        GroupedInvoice,
+        pk=invoice_id,
+        user=request.user,
+        is_online_order=True,
+    )
+    next_status = (request.POST.get('status') or '').strip().lower()
+    allowed = {
+        GroupedInvoice.ONLINE_ORDER_STATUS_READY,
+        GroupedInvoice.ONLINE_ORDER_STATUS_PICKED,
+    }
+    if next_status not in allowed:
+        return JsonResponse(
+            {'status': 'error', 'message': 'Invalid order status.'},
+            status=400,
+        )
+    invoice.online_order_status = next_status
+    invoice.save(update_fields=['online_order_status'])
+    payload = _serialize_online_orders([invoice])
+    return JsonResponse(
+        {
+            'status': 'success',
+            'online_order': payload[0] if payload else {},
+        }
+    )
+
+
+@login_required
+@require_POST
+def cancel_online_order(request, invoice_id: int):
+    invoice = get_object_or_404(
+        GroupedInvoice,
+        pk=invoice_id,
+        user=request.user,
+        is_online_order=True,
+    )
+    if invoice.online_order_status == GroupedInvoice.ONLINE_ORDER_STATUS_PICKED:
+        return JsonResponse(
+            {'status': 'error', 'message': 'Picked orders cannot be canceled.'},
+            status=400,
+        )
+    invoice.delete()
+    return JsonResponse(
+        {
+            'status': 'success',
+            'order_id': invoice_id,
+            'message': 'Order canceled.',
+        }
+    )
 
 
 @login_required
@@ -13672,6 +13903,7 @@ class GroupedInvoiceListView(LoginRequiredMixin, ListView):
 
         query = self.request.GET.get('search')
         status_filter = (self.request.GET.get('status') or '').strip().lower()
+        order_source_filter = (self.request.GET.get('order_source') or '').strip().lower()
         sort_by, order = self._get_sorting()
         user = self.request.user
         date_range_key, start_date, end_date = _get_date_range_bounds(
@@ -13788,6 +14020,11 @@ class GroupedInvoiceListView(LoginRequiredMixin, ListView):
                 total_settled__gt=Decimal('0.00'),
                 balance_due__gt=Decimal('0.00'),
             )
+
+        if order_source_filter == 'online':
+            queryset = queryset.filter(is_online_order=True)
+        elif order_source_filter == 'offline':
+            queryset = queryset.filter(is_online_order=False)
 
         if query:
             filters = (
@@ -13962,6 +14199,7 @@ class GroupedInvoiceListView(LoginRequiredMixin, ListView):
         context['documentType'] = 'invoice'
         context['search_query'] = self.request.GET.get('search', '')
         context['status_filter'] = (self.request.GET.get('status') or '').strip().lower()
+        context['order_source_filter'] = (self.request.GET.get('order_source') or '').strip().lower()
         context['date_range_options'] = _get_invoice_date_range_options(self.request.user)
         date_range_key, start_date, end_date = _get_date_range_bounds(
             self.request,

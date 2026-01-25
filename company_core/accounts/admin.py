@@ -563,7 +563,7 @@ class GroupedInvoiceAdmin(CustomAdmin):
     form = GroupedInvoiceForm
     list_display = ('date', 'bill_to', 'invoice_number', 'driver', 'vin_no', 'format_mileage', 'unit_no', 'format_total_amount', 'view_jobs_link') # User added dynamically
     search_fields = ('user__username', 'date', 'bill_to', 'invoice_number', 'driver__name', 'vin_no', 'unit_no') # Added user, driver name search
-    list_filter = ('date', 'bill_to', 'driver') # Base filters
+    list_filter = ('date', 'bill_to', 'driver', 'is_online_order', 'online_order_status') # Base filters
     inlines = [IncomeRecord2Inline]
     readonly_fields = ('total_amount',) # Make total_amount readonly as it's calculated
 

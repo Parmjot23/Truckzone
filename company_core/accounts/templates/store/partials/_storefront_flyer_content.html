@@ -53,6 +53,27 @@
             {% endif %}
           </div>
           {% endif %}
+          <div class="flyer-card-actions">
+            {% if customer_account %}
+            <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" data-add-to-cart data-product-id="{{ product.id }}">
+              {% csrf_token %}
+              <input type="hidden" name="quantity" value="1">
+              <button type="submit" class="flyer-card-action" data-loading-label="Adding..." data-success-label="Added" {% if product.quantity_in_stock <= 0 %}disabled{% endif %}>
+                <span class="btn-text">Add to cart</span>
+                <i class="fas fa-cart-plus"></i>
+              </button>
+            </form>
+            {% else %}
+            <a class="flyer-card-action" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">
+              Add to cart
+              <i class="fas fa-arrow-right"></i>
+            </a>
+            {% endif %}
+            <a class="flyer-card-action secondary" href="{% url 'accounts:store_product_detail' product.id %}">
+              View product
+              <i class="fas fa-arrow-right"></i>
+            </a>
+          </div>
         </div>
         <div class="flyer-card-media">
           {% if product.image %}
@@ -117,6 +138,86 @@
           </div>
           {% endif %}
         </div>
+        <div class="flyer-package-actions">
+          {% if package.primary_product %}
+          {% with primary=package.primary_product secondary=package.secondary_product free=package.free_product %}
+          {% if customer_account %}
+          {% if primary.quantity_in_stock > 0 %}
+          {% if secondary %}
+          {% if secondary.quantity_in_stock > 0 %}
+          <a class="flyer-card-action" href="{% url 'accounts:store_product_detail' primary.id %}"
+            data-package-add-all data-package-target="flyer-package-{{ package.id }}"
+            data-loading-label="Adding bundle..." data-success-label="Bundle added">
+            <span class="btn-text">Add bundle to cart</span>
+            <i class="fas fa-cart-plus"></i>
+          </a>
+          {% else %}
+          <span class="flyer-card-action is-disabled">Out of stock</span>
+          {% endif %}
+          {% else %}
+          <a class="flyer-card-action" href="{% url 'accounts:store_product_detail' primary.id %}"
+            data-package-add-all data-package-target="flyer-package-{{ package.id }}"
+            data-loading-label="Adding bundle..." data-success-label="Bundle added">
+            <span class="btn-text">Add bundle to cart</span>
+            <i class="fas fa-cart-plus"></i>
+          </a>
+          {% endif %}
+          {% else %}
+          <span class="flyer-card-action is-disabled">Out of stock</span>
+          {% endif %}
+          {% else %}
+          <a class="flyer-card-action" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">
+            Add to cart
+            <i class="fas fa-arrow-right"></i>
+          </a>
+          {% endif %}
+          <a class="flyer-card-action secondary" href="{% url 'accounts:store_product_detail' primary.id %}">
+            View product
+            <i class="fas fa-arrow-right"></i>
+          </a>
+          {% endwith %}
+          {% else %}
+          <a class="flyer-card-action secondary" href="{% url 'accounts:store_product_list' %}">
+            Shop all parts
+            <i class="fas fa-arrow-right"></i>
+          </a>
+          {% endif %}
+        </div>
+        {% if customer_account and package.primary_product %}
+        <div class="flyer-package-add-forms" id="flyer-package-{{ package.id }}">
+          {% with product=package.primary_product %}
+          <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" data-add-to-cart data-product-id="{{ product.id }}">
+            {% csrf_token %}
+            <input type="hidden" name="quantity" value="1">
+            <button type="submit" {% if product.quantity_in_stock <= 0 %}disabled{% endif %}>
+              <span class="btn-text">Add to cart</span>
+            </button>
+          </form>
+          {% endwith %}
+          {% if package.secondary_product %}
+          {% with product=package.secondary_product %}
+          <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" data-add-to-cart data-product-id="{{ product.id }}">
+            {% csrf_token %}
+            <input type="hidden" name="quantity" value="1">
+            <button type="submit" {% if product.quantity_in_stock <= 0 %}disabled{% endif %}>
+              <span class="btn-text">Add to cart</span>
+            </button>
+          </form>
+          {% endwith %}
+          {% endif %}
+          {% if package.free_product %}
+          {% with product=package.free_product %}
+          <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" data-add-to-cart data-product-id="{{ product.id }}">
+            {% csrf_token %}
+            <input type="hidden" name="quantity" value="1">
+            <button type="submit" {% if product.quantity_in_stock <= 0 %}disabled{% endif %}>
+              <span class="btn-text">Add to cart</span>
+            </button>
+          </form>
+          {% endwith %}
+          {% endif %}
+        </div>
+        {% endif %}
         <div class="flyer-package-badge">
           {% if package.free_product and package.discount_percent %}
           Free {{ package.free_product.name }} + {{ package.discount_percent }}% off

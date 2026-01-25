@@ -7,62 +7,257 @@
 
 {% block content %}
 <style>
-    .parts-dashboard { padding: 0.9rem 0.9rem 1.6rem; }
-    .parts-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
-    .hero-eyebrow { text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.2em; color: #64748b; font-weight: 700; }
-    .hero-title { font-size: 1.8rem; font-weight: 800; margin: 0.2rem 0; color: #0f172a; }
-    .hero-sub { margin: 0; color: #64748b; font-weight: 500; }
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+
+    .parts-dashboard {
+        --ink: #0b1220;
+        --muted: #52637a;
+        --accent: #2563eb;
+        --accent-strong: #1d4ed8;
+        --border: rgba(148,163,184,0.4);
+        --wash-ice: linear-gradient(135deg, #f7f9fc 0%, #eef2f7 55%, #fdfdff 100%);
+        --wash-sky: linear-gradient(135deg, #f3f8ff 0%, #e6f1ff 55%, #f8fbff 100%);
+        --wash-mint: linear-gradient(135deg, #f1fff7 0%, #e4fbef 55%, #f8fffb 100%);
+        --wash-sun: linear-gradient(135deg, #fff8ee 0%, #ffefdb 55%, #fff8ef 100%);
+        --wash-peach: linear-gradient(135deg, #fff3ef 0%, #ffe7d7 55%, #fff7f2 100%);
+        --panel-wash: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(246,248,252,0.92) 100%);
+        padding: 1.1rem 1.1rem 2rem;
+        border-radius: 24px;
+        border: 1px solid rgba(148,163,184,0.4);
+        background:
+            radial-gradient(circle at 12% 0%, rgba(125,211,252,0.28), transparent 55%),
+            radial-gradient(circle at 88% 8%, rgba(134,239,172,0.22), transparent 45%),
+            linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+        box-shadow: 0 24px 60px rgba(15,23,42,0.08);
+        font-family: 'Space Grotesk', 'Manrope', sans-serif;
+    }
+    .parts-dashboard * { box-sizing: border-box; }
+    .parts-dashboard > * { position: relative; }
+    .parts-hero {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        padding: 1rem 1.1rem;
+        border-radius: 20px;
+        background: var(--wash-ice);
+        border: 1px solid rgba(148,163,184,0.45);
+        box-shadow: 0 18px 40px rgba(15,23,42,0.08);
+    }
+    .hero-eyebrow { text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.32em; color: #0ea5e9; font-weight: 700; }
+    .hero-location { display: inline-flex; align-items: center; gap: 0.45rem; margin-top: 0.35rem; }
+    .hero-location i { color: #0ea5e9; }
+    .hero-location-label { text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.6rem; color: #64748b; font-weight: 700; }
+    .hero-location-value { font-size: 0.85rem; color: var(--ink); font-weight: 700; }
+    .hero-title { font-size: 2rem; font-weight: 800; margin: 0.25rem 0; color: var(--ink); font-family: 'Manrope', 'Space Grotesk', sans-serif; letter-spacing: -0.02em; }
+    .hero-sub { margin: 0; color: var(--muted); font-weight: 500; max-width: 480px; }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; }
-    .ghost-btn { border: 1px solid #e2e8f0; background: #fff; padding: 0.55rem 0.9rem; border-radius: 12px; color: #0f172a; font-weight: 600; box-shadow: 0 8px 22px rgba(15,23,42,0.08); text-decoration: none; }
-    .ghost-btn:hover { border-color: #2563eb; color: #2563eb; }
-    .primary-pill { background: linear-gradient(120deg, #2563eb, #1d4ed8); color: #fff; border: none; padding: 0.6rem 1.05rem; border-radius: 12px; box-shadow: 0 12px 30px rgba(37,99,235,0.25); font-weight: 700; text-decoration: none; }
+    .ghost-btn {
+        border: 1px solid rgba(148,163,184,0.45);
+        background: rgba(255,255,255,0.88);
+        padding: 0.6rem 0.95rem;
+        border-radius: 999px;
+        color: var(--ink);
+        font-weight: 600;
+        box-shadow: 0 12px 26px rgba(15,23,42,0.08);
+        text-decoration: none;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .ghost-btn:hover { border-color: #38bdf8; color: #0284c7; transform: translateY(-1px); }
+    .primary-pill {
+        background: linear-gradient(120deg, #2563eb 0%, #0ea5e9 100%);
+        color: #fff;
+        border: none;
+        padding: 0.65rem 1.1rem;
+        border-radius: 999px;
+        box-shadow: 0 16px 34px rgba(14,165,233,0.32);
+        font-weight: 700;
+        text-decoration: none;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .primary-pill:hover { transform: translateY(-1px); box-shadow: 0 18px 36px rgba(14,165,233,0.4); }
     .primary-pill i { margin-right: 0.4rem; }
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.7rem; margin-bottom: 1rem; }
-    .summary-card { background: #fff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 0.9rem; box-shadow: 0 10px 26px rgba(15,23,42,0.08); }
-    .summary-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.18em; color: #64748b; font-weight: 700; }
-    .summary-value { font-size: 1.45rem; font-weight: 800; color: #0f172a; margin-top: 0.25rem; }
-    .summary-meta { color: #64748b; font-size: 0.85rem; margin-top: 0.1rem; }
-    .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.7rem; margin-bottom: 1rem; }
-    .action-card { background: #f8fafc; border-radius: 14px; border: 1px dashed #dbeafe; padding: 0.85rem; text-decoration: none; color: inherit; transition: transform 0.15s ease, box-shadow 0.15s ease; }
-    .action-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(37,99,235,0.12); border-color: #93c5fd; }
-    .action-title { font-weight: 700; color: #0f172a; }
-    .action-sub { color: #64748b; font-size: 0.9rem; margin-top: 0.35rem; }
-    .panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem; }
-    .panel { background: #fff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 0.85rem; box-shadow: 0 10px 26px rgba(15,23,42,0.08); }
-    .panel-meta { color: #64748b; font-size: 0.85rem; }
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.7rem;
+        margin-bottom: 1rem;
+        padding: 0.65rem;
+        border-radius: 20px;
+        background: var(--wash-mint);
+        border: 1px solid rgba(148,163,184,0.35);
+        box-shadow: 0 16px 40px rgba(15,23,42,0.06);
+    }
+    .summary-card {
+        border-radius: 16px;
+        border: 1px solid rgba(148,163,184,0.35);
+        padding: 0.95rem;
+        box-shadow: 0 10px 26px rgba(15,23,42,0.08);
+        background: var(--panel-wash);
+    }
+    .summary-card:nth-child(1) { background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(219,234,254,0.6) 100%); }
+    .summary-card:nth-child(2) { background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(220,252,231,0.6) 100%); }
+    .summary-card:nth-child(3) { background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(254,243,199,0.6) 100%); }
+    .summary-card:nth-child(4) { background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,228,214,0.6) 100%); }
+    .summary-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--muted); font-weight: 700; }
+    .summary-value { font-size: 1.55rem; font-weight: 800; color: var(--ink); margin-top: 0.25rem; }
+    .summary-meta { color: var(--muted); font-size: 0.85rem; margin-top: 0.1rem; }
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 0.7rem;
+        margin-bottom: 1rem;
+        padding: 0.65rem;
+        border-radius: 20px;
+        background: var(--wash-sun);
+        border: 1px solid rgba(148,163,184,0.35);
+        box-shadow: 0 16px 40px rgba(15,23,42,0.06);
+    }
+    .action-card {
+        border-radius: 16px;
+        border: 1px solid rgba(148,163,184,0.35);
+        padding: 0.95rem;
+        text-decoration: none;
+        color: inherit;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+        box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+        background: var(--panel-wash);
+    }
+    .action-card:nth-child(3n + 1) { background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(219,234,254,0.55) 100%); }
+    .action-card:nth-child(3n + 2) { background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(220,252,231,0.55) 100%); }
+    .action-card:nth-child(3n + 3) { background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(254,249,195,0.55) 100%); }
+    .action-card:hover { transform: translateY(-3px); box-shadow: 0 18px 32px rgba(14,165,233,0.16); border-color: rgba(56,189,248,0.6); }
+    .action-title { font-weight: 700; color: var(--ink); }
+    .action-sub { color: var(--muted); font-size: 0.9rem; margin-top: 0.35rem; }
+    .panel-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 0.9rem;
+        padding: 0.65rem;
+        border-radius: 20px;
+        background: var(--wash-sky);
+        border: 1px solid rgba(148,163,184,0.35);
+        box-shadow: 0 16px 40px rgba(15,23,42,0.06);
+    }
+    .panel {
+        background: var(--panel-wash);
+        border-radius: 16px;
+        border: 1px solid rgba(148,163,184,0.35);
+        padding: 0.9rem;
+        box-shadow: 0 10px 26px rgba(15,23,42,0.08);
+    }
+    .panel-meta { color: var(--muted); font-size: 0.85rem; }
     .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.6rem; }
-    .panel-title { font-weight: 700; color: #0f172a; }
-    .panel-sub { color: #64748b; font-size: 0.85rem; }
-    .panel-link { color: #2563eb; font-weight: 600; text-decoration: none; }
+    .panel-title { font-weight: 700; color: var(--ink); }
+    .panel-sub { color: var(--muted); font-size: 0.85rem; }
+    .panel-link { color: var(--accent); font-weight: 600; text-decoration: none; }
     .panel-link:hover { text-decoration: underline; }
-    .list-item { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px solid #f1f5f9; }
+    .list-item { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px solid rgba(148,163,184,0.2); }
     .list-item:last-child { border-bottom: none; padding-bottom: 0; }
-    .item-title { font-weight: 600; color: #0f172a; }
-    .item-sub { color: #64748b; font-size: 0.85rem; }
+    .item-title { font-weight: 600; color: var(--ink); }
+    .item-sub { color: var(--muted); font-size: 0.85rem; }
     .item-meta { text-align: right; }
-    .item-amount { font-weight: 700; color: #0f172a; }
+    .item-amount { font-weight: 700; color: var(--ink); }
     .status-pill { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
     .status-paid { background: #dcfce7; color: #166534; }
     .status-partial { background: #fef9c3; color: #854d0e; }
     .status-unpaid { background: #fee2e2; color: #991b1b; }
-    .empty-state { color: #94a3b8; font-size: 0.9rem; padding: 0.6rem 0; }
-    .panel-grid-triple { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; margin-bottom: 0.75rem; }
-    .queue-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    .queue-table th, .queue-table td { padding: 0.55rem 0.65rem; border-bottom: 1px solid #e5e7eb; vertical-align: middle; background: #fff; }
-    .queue-table th { color: #64748b; font-weight: 800; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
-    .chart-panel { background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); border-color: #dbeafe; }
+    .order-status-pill { display: inline-flex; align-items: center; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+    .order-status-new { background: #dbeafe; color: #1d4ed8; }
+    .order-status-ready { background: #dcfce7; color: #166534; }
+    .order-status-picked { background: #e2e8f0; color: #475569; }
+    .order-row--new { background: rgba(59,130,246,0.08); }
+    .order-row--new td { background: rgba(59,130,246,0.08); }
+    .order-item-preview { color: var(--muted); font-size: 0.82rem; }
+    .order-item-thumb {
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
+        border: 1px solid rgba(148,163,184,0.35);
+        object-fit: cover;
+        background: #f8fafc;
+        position: relative;
+        cursor: zoom-in;
+        transform-origin: left center;
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
+        z-index: 1;
+    }
+    @media (hover: hover) {
+        .order-item-thumb:hover {
+            transform: scale(2.8);
+            box-shadow: 0 18px 40px rgba(15,23,42,0.28);
+            z-index: 5;
+        }
+    }
+    .order-item-thumb--empty {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+    .empty-state { color: #8a97ab; font-size: 0.9rem; padding: 0.6rem 0; }
+    .panel-grid-triple {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 0.9rem;
+        padding: 0.65rem;
+        border-radius: 20px;
+        background: var(--wash-peach);
+        border: 1px solid rgba(148,163,184,0.35);
+        box-shadow: 0 16px 40px rgba(15,23,42,0.06);
+    }
+    .queue-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9rem; background: rgba(255,255,255,0.9); border-radius: 14px; overflow: hidden; border: 1px solid rgba(148,163,184,0.3); }
+    .queue-table th, .queue-table td { padding: 0.55rem 0.65rem; border-bottom: 1px solid rgba(148,163,184,0.25); vertical-align: middle; background: rgba(255,255,255,0.9); }
+    .queue-table th { color: var(--muted); font-weight: 800; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(248,250,252,0.9); }
+    .chart-panel { background: linear-gradient(135deg, #f0f9ff 0%, #ecfdf3 50%, #fff7ed 100%); border-color: rgba(125,211,252,0.6); }
     .chart-grid { display: grid; grid-template-columns: minmax(180px, 0.9fr) minmax(0, 1.1fr); gap: 0.8rem; align-items: center; }
-    .donut { width: 200px; height: 200px; border-radius: 50%; background: conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg); position: relative; margin: 0 auto; box-shadow: 0 16px 40px rgba(15,23,42,0.12); }
-    .donut-center { position: absolute; inset: 22%; background: #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: inset 0 0 0 1px #e2e8f0; }
-    .donut-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.16em; color: #64748b; font-weight: 700; }
-    .donut-value { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-top: 0.2rem; }
+    .donut { width: 200px; height: 200px; border-radius: 50%; background: conic-gradient(#e2e8f0 0deg, #e2e8f0 360deg); position: relative; margin: 0 auto; box-shadow: 0 18px 42px rgba(15,23,42,0.12); }
+    .donut-center { position: absolute; inset: 22%; background: rgba(255,255,255,0.95); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: inset 0 0 0 1px rgba(148,163,184,0.3); }
+    .donut-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--muted); font-weight: 700; }
+    .donut-value { font-size: 1.05rem; font-weight: 800; color: var(--ink); margin-top: 0.2rem; }
     .legend-list { display: flex; flex-direction: column; gap: 0.35rem; }
     .legend-item { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.35rem 0; border-bottom: 1px solid rgba(148,163,184,0.2); }
     .legend-item:last-child { border-bottom: none; }
     .legend-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--dot-color, #94a3b8); box-shadow: 0 0 0 4px rgba(15,23,42,0.06); flex-shrink: 0; }
-    .legend-text { font-weight: 600; color: #0f172a; flex: 1; }
-    .legend-meta { color: #64748b; font-size: 0.82rem; text-align: right; }
+    .legend-text { font-weight: 600; color: var(--ink); flex: 1; }
+    .legend-meta { color: var(--muted); font-size: 0.82rem; text-align: right; }
     .chart-footer { margin-top: 0.4rem; color: #475569; font-size: 0.85rem; font-weight: 600; }
+    @keyframes riseIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .parts-hero,
+    .summary-card,
+    .action-card,
+    .panel { animation: riseIn 0.6s ease both; }
+    .summary-card:nth-child(1) { animation-delay: 0.05s; }
+    .summary-card:nth-child(2) { animation-delay: 0.1s; }
+    .summary-card:nth-child(3) { animation-delay: 0.15s; }
+    .summary-card:nth-child(4) { animation-delay: 0.2s; }
+    .action-card:nth-child(1) { animation-delay: 0.12s; }
+    .action-card:nth-child(2) { animation-delay: 0.16s; }
+    .action-card:nth-child(3) { animation-delay: 0.2s; }
+    .action-card:nth-child(4) { animation-delay: 0.24s; }
+    .action-card:nth-child(5) { animation-delay: 0.28s; }
+    .action-card:nth-child(6) { animation-delay: 0.32s; }
+    .panel-grid-triple .panel:nth-child(1) { animation-delay: 0.14s; }
+    .panel-grid-triple .panel:nth-child(2) { animation-delay: 0.18s; }
+    .panel-grid-triple .panel:nth-child(3) { animation-delay: 0.22s; }
+    .panel-grid .panel:nth-child(1) { animation-delay: 0.2s; }
+    .panel-grid .panel:nth-child(2) { animation-delay: 0.24s; }
+    @media (prefers-reduced-motion: reduce) {
+        .parts-hero,
+        .summary-card,
+        .action-card,
+        .panel { animation: none; }
+    }
     @media (max-width: 1199.98px) {
         .panel-grid-triple { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
     }
@@ -71,7 +266,8 @@
         .donut { width: 170px; height: 170px; }
     }
     @media (max-width: 575.98px) {
-        .hero-title { font-size: 1.5rem; }
+        .parts-dashboard { padding: 0.9rem 0.9rem 1.6rem; }
+        .hero-title { font-size: 1.6rem; }
         .summary-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
     }
 </style>
@@ -80,6 +276,13 @@
     <div class="parts-hero">
         <div>
             <div class="hero-eyebrow">Parts Store</div>
+            {% if storefront_selected_profile %}
+            <div class="hero-location">
+                <i class="fa-solid fa-location-dot"></i>
+                <span class="hero-location-label">Location</span>
+                <span class="hero-location-value">{{ storefront_selected_profile.storefront_label }}</span>
+            </div>
+            {% endif %}
             <div class="hero-title">{{ business_name|default:default_business_name }}</div>
             <p class="hero-sub">Manage inventory, pricing, and storefront activity in one place.</p>
         </div>
@@ -96,54 +299,87 @@
         </div>
     </div>
 
-    <div class="summary-grid">
-        <div class="summary-card">
-            <div class="summary-label">Inventory items</div>
-            <div class="summary-value">{{ inventory_products_data|length|intcomma }}</div>
-            <div class="summary-meta">Products ready to sell</div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-label">Pending invoices</div>
-            <div class="summary-value">{{ pending_invoices_count|intcomma }}</div>
-            <div class="summary-meta">Awaiting payment</div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-label">Pending balance</div>
-            <div class="summary-value">{{ pending_invoices_total|currency }}</div>
-            <div class="summary-meta">Total outstanding</div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-label">Overdue balance</div>
-            <div class="summary-value">{{ overdue_balance_last_365_days|currency }}</div>
-            <div class="summary-meta">Past due (365 days)</div>
-        </div>
-    </div>
-
-    <div class="action-grid">
-        <a class="action-card" href="{% url 'accounts:inventory_products' %}">
-            <div class="action-title">Products</div>
-            <div class="action-sub">Add SKUs, pricing, and stock data.</div>
-        </a>
-        <a class="action-card" href="{% url 'accounts:inventory_category_groups' %}">
-            <div class="action-title">Category groups</div>
-            <div class="action-sub">Organize parts into storefront groups.</div>
-        </a>
-        <a class="action-card" href="{% url 'accounts:inventory_categories' %}">
-            <div class="action-title">Categories</div>
-            <div class="action-sub">Curate the catalog and collections.</div>
-        </a>
-        <a class="action-card" href="{% url 'accounts:customer_list' %}">
-            <div class="action-title">Customers</div>
-            <div class="action-sub">Review accounts and contact details.</div>
-        </a>
-        <a class="action-card" href="{% url 'accounts:supplier_list' %}">
-            <div class="action-title">Suppliers</div>
-            <div class="action-sub">Manage vendor records and lead times.</div>
-        </a>
-        <a class="action-card" href="{% url 'accounts:groupedinvoice_list' %}">
-            <div class="action-title">Invoices</div>
-            <div class="action-sub">Track billing and payment progress.</div>
-        </a>
+    <div class="panel-grid">
+        <section class="panel" id="online-orders-panel"
+                 data-feed-url="{% url 'accounts:parts_store_dashboard_feed' %}"
+                 data-status-url-template="{% url 'accounts:parts_store_order_status' 0 %}"
+                 data-cancel-url-template="{% url 'accounts:parts_store_order_cancel' 0 %}"
+                 data-invoice-detail-url-template="{% url 'accounts:groupedinvoice_detail' 0 %}">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">Online orders</div>
+                    <div class="panel-sub"><span id="online-orders-count">{{ online_orders_count|default:0 }}</span> active orders</div>
+                </div>
+                <a class="panel-link" href="{% url 'accounts:groupedinvoice_list' %}?order_source=online">View all</a>
+            </div>
+            <div class="table-responsive">
+                <table class="queue-table{% if not online_orders %} d-none{% endif %}" id="online-orders-table">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Items</th>
+                            <th>Placed</th>
+                            <th>Status</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="online-orders-tbody">
+                        {% if online_orders %}
+                            {% for order in online_orders %}
+                            <tr class="{% if order.online_order_status == 'new' or not order.online_order_status %}order-row--new{% endif %}">
+                                <td>
+                                    <a class="item-title text-decoration-none" href="{% url 'accounts:groupedinvoice_detail' order.pk %}">#{{ order.invoice_number }}</a>
+                                    <div class="item-sub">{{ order.customer.name|default:order.bill_to|default:"Customer" }}</div>
+                                </td>
+                                <td>
+                                    {% with records=order.income_records.all %}
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <div class="order-item-preview">
+                                                {{ records|length }} item{{ records|length|pluralize }}
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary js-online-order-items"
+                                                data-order-id="{{ order.pk }}">
+                                                View items
+                                            </button>
+                                        </div>
+                                    {% endwith %}
+                                </td>
+                                <td>{{ order.created_at|date:"M d, Y g:i a" }}</td>
+                                <td>
+                                    {% if order.online_order_status == 'ready' %}
+                                        <span class="order-status-pill order-status-ready">Ready</span>
+                                    {% elif order.online_order_status == 'picked' %}
+                                        <span class="order-status-pill order-status-picked">Picked</span>
+                                    {% else %}
+                                        <span class="order-status-pill order-status-new">New</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">{{ order.total_amount|currency }}</td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-2 justify-content-end flex-wrap">
+                                        <a class="btn btn-sm btn-outline-secondary order-action-btn" href="{% url 'accounts:groupedinvoice_detail' order.pk %}" target="_blank" rel="noopener">View</a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger order-action-btn js-online-order-cancel"
+                                            data-order-id="{{ order.pk }}">Cancel</button>
+                                        {% if order.online_order_status == 'ready' %}
+                                            <button type="button" class="btn btn-sm btn-outline-success order-action-btn js-online-order-action"
+                                                data-order-id="{{ order.pk }}" data-next-status="picked">Mark picked</button>
+                                        {% elif order.online_order_status == 'picked' %}
+                                            <span class="text-muted small">Picked</span>
+                                        {% else %}
+                                            <button type="button" class="btn btn-sm btn-outline-primary order-action-btn js-online-order-action"
+                                                data-order-id="{{ order.pk }}" data-next-status="ready">Mark ready</button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="empty-state{% if online_orders %} d-none{% endif %}" id="online-orders-empty">No online orders yet.</div>
+        </section>
     </div>
 
     <div class="panel-grid-triple">
@@ -199,113 +435,67 @@
             <div class="panel-header">
                 <div>
                     <div class="panel-title">Customer approvals</div>
-                    <div class="panel-sub">{{ pending_customer_approvals_count|default:0 }} pending requests</div>
+                    <div class="panel-sub"><span id="customer-approvals-count">{{ pending_customer_approvals_count|default:0 }}</span> pending requests</div>
                 </div>
                 <a class="panel-link" href="{% url 'accounts:customer_list' %}">View customers</a>
             </div>
-            {% if pending_customer_approvals %}
-                {% for customer in pending_customer_approvals %}
-                <div class="list-item">
-                    <div>
-                        <div class="item-title">{{ customer.name }}</div>
-                        <div class="item-sub">{{ customer.email|default:"No email on file" }}</div>
-                        <div class="item-sub">Requested {{ customer.portal_user.date_joined|date:"M d, Y" }}</div>
+            <div id="customer-approvals-list">
+                {% if pending_customer_approvals %}
+                    {% for customer in pending_customer_approvals %}
+                    <div class="list-item">
+                        <div>
+                            <div class="item-title">{{ customer.name }}</div>
+                            <div class="item-sub">{{ customer.email|default:"No email on file" }}</div>
+                            <div class="item-sub">Requested {{ customer.portal_user.date_joined|date:"M d, Y" }}</div>
+                        </div>
+                        <div class="item-meta">
+                            <form method="post" action="{% url 'accounts:approve_customer_signup' customer.id %}" class="js-approval-form">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                            </form>
+                        </div>
                     </div>
-                    <div class="item-meta">
-                        <form method="post" action="{% url 'accounts:approve_customer_signup' customer.id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                        </form>
-                    </div>
-                </div>
-                {% endfor %}
-            {% else %}
-            <div class="empty-state">No pending customer approvals.</div>
-            {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <div class="empty-state{% if pending_customer_approvals %} d-none{% endif %}" id="customer-approvals-empty">No pending customer approvals.</div>
         </section>
 
-        <section class="panel">
-            <div class="panel-header">
-                <div>
-                    <div class="panel-title">Suppliers</div>
-                    <div class="panel-sub">Inventory value on hand</div>
-                </div>
-                <a class="panel-link" href="{% url 'accounts:supplier_list' %}">View all</a>
-            </div>
-            {% if top_suppliers %}
-                {% for supplier in top_suppliers %}
-                <div class="list-item">
-                    <div class="item-title">{{ supplier.name }}</div>
-                    <div class="item-meta">
-                        <div class="item-amount">{{ supplier.total_inventory_value|default:0|currency }}</div>
-                    </div>
-                </div>
-                {% endfor %}
-            {% else %}
-            <div class="empty-state">No suppliers on file.</div>
-            {% endif %}
-        </section>
-    </div>
-
-    <div class="panel-grid">
-        <section class="panel">
-            <div class="panel-header">
-                <div>
-                    <div class="panel-title">Recent invoices</div>
-                    <div class="panel-sub">Latest billing activity</div>
-                </div>
-                <a class="panel-link" href="{% url 'accounts:groupedinvoice_list' %}">View all</a>
-            </div>
-            {% if recent_invoices %}
-                {% for invoice in recent_invoices|slice:":5" %}
-                <div class="list-item">
-                    <div>
-                        <div class="item-title">Invoice #{{ invoice.invoice_number }}</div>
-                        <div class="item-sub">{{ invoice.customer.name|default:"Customer" }}</div>
-                    </div>
-                    <div class="item-meta">
-                        <div class="item-amount">{{ invoice.total_amount|currency }}</div>
-                        {% if invoice.display_status == 'Paid' %}
-                            <span class="status-pill status-paid">Paid</span>
-                        {% elif invoice.display_status == 'Partially Paid' %}
-                            <span class="status-pill status-partial">Partial</span>
-                        {% else %}
-                            <span class="status-pill status-unpaid">Unpaid</span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            {% else %}
-            <div class="empty-state">No invoices yet. Start billing when orders are ready.</div>
-            {% endif %}
-        </section>
-
-        <section class="panel h-100 chart-panel">
-            <div class="panel-header">
-                <div>
-                    <div class="panel-title">Sales mix by category group</div>
-                    <div class="panel-sub">Inventory sold in the last 30 days</div>
-                </div>
-                <div class="panel-meta" id="categorySalesTotalDisplay">{{ category_group_sales_total|default:0|currency }}</div>
-            </div>
-            <div class="chart-grid" id="categorySalesChart">
-                <div class="donut" id="categorySalesDonut">
-                    <div class="donut-center">
-                        <div class="donut-label">Total</div>
-                        <div class="donut-value" id="categorySalesTotal">{{ category_group_sales_total|default:0|currency }}</div>
-                    </div>
-                </div>
-                <div class="legend-list" id="categorySalesLegend"></div>
-            </div>
-            <div class="empty-state d-none" id="categorySalesEmpty">No inventory sales recorded in the last 30 days.</div>
-            <div class="chart-footer" id="categorySalesHighlight"></div>
-        </section>
     </div>
 </div>
 <div class="alert d-none" id="form-status" role="alert"></div>
 
 {{ overdue_customers_json|default:"[]"|json_script:"parts-overdue-customers-data" }}
-{{ category_group_sales|default:"[]"|json_script:"parts-category-sales-data" }}
+{{ online_orders_payload|default:"[]"|json_script:"parts-online-orders-data" }}
+{{ pending_customer_approvals_payload|default:"[]"|json_script:"parts-customer-approvals-data" }}
+
+<div class="modal fade" id="onlineOrderItemsModal" tabindex="-1" aria-labelledby="onlineOrderItemsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="onlineOrderItemsModalLabel">Order items</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-muted small mb-2" id="online-order-items-meta"></div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 70px;">Image</th>
+                                <th class="text-end" style="width: 90px;">Qty</th>
+                                <th>Item</th>
+                                <th style="width: 160px;">Location</th>
+                                <th class="text-end" style="width: 130px;">Stock left after</th>
+                            </tr>
+                        </thead>
+                        <tbody id="online-order-items-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Customer Payment Modal (Overdue Customers grid) -->
 <div class="modal fade" id="customerPaymentModal" tabindex="-1" aria-labelledby="customerPaymentModalLabel" aria-hidden="true" data-today="{% now 'Y-m-d' %}">

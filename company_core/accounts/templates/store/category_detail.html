@@ -11,7 +11,7 @@
 
 {% block content %}
 <div class="storefront-shell">
-    <section class="storefront-hero">
+    <section class="storefront-hero storefront-hero--centered">
         <div class="container">
             <nav class="storefront-breadcrumbs" aria-label="Breadcrumb">
                 {% for crumb in breadcrumbs %}
@@ -40,7 +40,10 @@
                 </div>
                 {% if hero_cards %}
                 <div class="storefront-hero-promos">
-                    <div class="storefront-hero-promos-label">Promo Products &amp; Packages</div>
+                    <div class="storefront-hero-promos-header">
+                        <div class="storefront-hero-promos-label">Promo Products &amp; Packages</div>
+                        <div class="storefront-hero-promos-badge" data-promo-hero-badge></div>
+                    </div>
                     <div class="storefront-hero-promo-slider" data-promo-slider>
                         <div class="storefront-hero-promo-track">
                             {% for card in hero_cards %}
@@ -120,9 +123,6 @@
                             {% else %}
                             {% with package=card.package %}
                             <article class="storefront-promo-card storefront-promo-card--package{% if forloop.first %} is-active{% endif %}" data-promo-slide>
-                                <div class="storefront-promo-card-media">
-                                    <i class="fas fa-boxes-stacked"></i>
-                                </div>
                                 <div class="storefront-promo-card-body">
                                     <div class="storefront-promo-card-type">Package deal</div>
                                     <div class="storefront-promo-card-title">{{ package.title }}</div>

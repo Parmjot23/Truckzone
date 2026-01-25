@@ -156,42 +156,6 @@
                     <div class="text-muted small">Only the business owner can manage connected businesses.</div>
                 {% endif %}
             </div>
-            <div class="settings-card">
-                <h5>Copy inventory</h5>
-                <p class="text-muted small mb-2">Copy categories, suppliers, brands, models, VINs, locations, and products into another connected business. Existing items stay unchanged.</p>
-                {% if connected_can_manage %}
-                    {% if connected_members|length > 1 %}
-                        <form method="post" action="{% url 'accounts:connected_business_copy_inventory' %}">
-                            {% csrf_token %}
-                            <div class="row g-2">
-                                <div class="col-12 col-lg-6">
-                                    <label class="form-label small" for="inventoryCopySource">Source business</label>
-                                    <select class="form-select" id="inventoryCopySource" name="source_business_id">
-                                        {% for member in connected_members %}
-                                            <option value="{{ member.id }}" {% if member.is_current %}selected{% endif %}>{{ member.display_name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-12 col-lg-6">
-                                    <label class="form-label small" for="inventoryCopyTarget">Destination business</label>
-                                    <select class="form-select" id="inventoryCopyTarget" name="target_business_id">
-                                        {% for member in connected_members %}
-                                            <option value="{{ member.id }}">{{ member.display_name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            <button type="submit" class="pill-primary btn-sm mt-3" onclick="return confirm('Copy inventory to the selected business?');">
-                                Copy inventory
-                            </button>
-                        </form>
-                    {% else %}
-                        <div class="text-muted small">Add at least one more business to enable inventory copy.</div>
-                    {% endif %}
-                {% else %}
-                    <div class="text-muted small">Only the business owner can copy inventory.</div>
-                {% endif %}
-            </div>
         </div>
     </div>
 

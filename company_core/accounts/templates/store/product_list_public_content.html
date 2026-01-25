@@ -74,7 +74,8 @@
 
     <main class="storefront-main">
         <form method="get" class="storefront-toolbar" data-storefront-toolbar
-            data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}">
+            data-storefront-suggest-url="{% url 'accounts:store_search_suggestions' %}"
+            data-storefront-category-root="{% url 'accounts:store_product_list' %}">
             <input type="hidden" name="view" value="{{ view_mode }}">
             {% for brand_id in selected_brand_ids %}
             <input type="hidden" name="brand" value="{{ brand_id }}">
@@ -323,9 +324,9 @@
                 </div>
             </div>
             {% elif search_query %}
-            <div class="empty-state">No products found for "{{ search_query }}". Try adjusting your search or filters.</div>
+            <div class="empty-state">Try a different keyword or browse categories to keep exploring.</div>
             {% else %}
-            <div class="empty-state">No products found. Try adjusting your search or filters.</div>
+            <div class="empty-state">Browse categories or adjust filters to keep exploring.</div>
             {% endif %}
         {% endif %}
 

@@ -11,6 +11,7 @@ from django.core.paginator import Paginator
 from django.urls import reverse  # for building URL for redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.conf import settings
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import timedelta, datetime, date
 import json
@@ -203,6 +204,8 @@ def inventory_view(request):
         return redirect("accounts:inventory_transactions")
     if tab == "products":
         return redirect("accounts:inventory_products")
+    if tab == "stock-orders":
+        return redirect("accounts:inventory_stock_orders")
     if tab == "suppliers":
         return redirect("accounts:inventory_suppliers")
     if tab == "categories":
@@ -2561,6 +2564,100 @@ def export_category_groups_template(request):
             "Active": 12,
         },
     )
+
+
+@login_required
+def inventory_stock_orders_view(request):
+    product_user_ids = _get_inventory_user_ids(request)
+    products = (
+        Product.objects.filter(user__in=product_user_ids, item_type="inventory")
+        .select_related("supplier")
+        .order_by("supplier__name", "name")
+    )
+    products = annotate_products_with_stock(products, request.user)
+    low_stock_products = products.filter(stock_quantity__lt=F("stock_reorder"))
+    low_stock_products = apply_stock_fields(list(low_stock_products))
+
+    business_name = getattr(getattr(request.user, "profile", None), "company_name", None)
+    if not business_name:
+        business_name = getattr(settings, "DEFAULT_BUSINESS_NAME", "Truck Zone") or "Truck Zone"
+
+    def build_email_body(supplier_label, contact_name, items):
+        greeting_target = contact_name or supplier_label or "there"
+        lines = [
+            f"Hello {greeting_target},",
+            "",
+            "We need to reorder the following low-stock items:",
+            "",
+        ]
+        for item in items:
+            sku = item["sku"] or "N/A"
+            lines.append(
+                f"- {item['name']} (SKU: {sku}) | On hand: {item['quantity_in_stock']} | Reorder level: {item['reorder_level']} | Order qty: {item['order_qty']}"
+            )
+        lines.extend(
+            [
+                "",
+                "Please confirm availability, pricing, and ETA.",
+                "",
+                "Thank you,",
+                business_name,
+            ]
+        )
+        return "\n".join(lines)
+
+    supplier_groups = []
+    supplier_lookup = {}
+    for product in low_stock_products:
+        supplier = product.supplier
+        supplier_key = supplier.id if supplier else "unassigned"
+        group = supplier_lookup.get(supplier_key)
+        if not group:
+            supplier_name = supplier.name if supplier else "Unassigned supplier"
+            contact_person = supplier.contact_person if supplier else ""
+            email = supplier.email if supplier else ""
+            phone = supplier.phone_number if supplier else ""
+            group = {
+                "supplier": supplier,
+                "supplier_name": supplier_name,
+                "contact_person": contact_person,
+                "email": email,
+                "phone": phone,
+                "products": [],
+                "total_order_qty": 0,
+            }
+            supplier_lookup[supplier_key] = group
+            supplier_groups.append(group)
+
+        order_qty = max((product.reorder_level or 0) - (product.quantity_in_stock or 0), 0)
+        group["products"].append(
+            {
+                "id": product.id,
+                "sku": product.sku,
+                "name": product.name,
+                "quantity_in_stock": product.quantity_in_stock or 0,
+                "reorder_level": product.reorder_level or 0,
+                "order_qty": order_qty,
+                "location": product.location or "",
+            }
+        )
+        group["total_order_qty"] += order_qty
+
+    subject = f"Stock order request - {business_name}"
+    for group in supplier_groups:
+        group["product_count"] = len(group["products"])
+        group["email_subject"] = subject
+        group["email_body"] = build_email_body(
+            group["supplier_name"],
+            group["contact_person"],
+            group["products"],
+        )
+
+    context = {
+        "supplier_groups": supplier_groups,
+        "low_stock_total": len(low_stock_products),
+    }
+    return render(request, "inventory/stock_orders.html", context)
 
     output = BytesIO()
     workbook.save(output)

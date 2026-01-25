@@ -149,11 +149,10 @@ def _customer_portal_nav_items(request, active_slug):
     if is_parts_store:
         nav_items = [
             {
-                'slug': 'shop',
-                'label': 'Shop',
-                'icon': 'fa-store',
-                'url': reverse('accounts:store_product_list'),
-                'is_external': True,
+                'slug': 'orders',
+                'label': 'Orders',
+                'icon': 'fa-boxes-stacked',
+                'url': reverse('accounts:customer_orders'),
             },
             {
                 'slug': 'invoices',
@@ -192,7 +191,8 @@ def _customer_portal_nav_items(request, active_slug):
                 'url': f"{reverse('accounts:logout')}?next={reverse('accounts:store_product_list')}",
             },
         ]
-        active_slug = 'shop' if active_slug == 'overview' else active_slug
+        if active_slug == 'shop':
+            active_slug = 'orders'
     else:
         nav_items = [
             {
@@ -1334,6 +1334,8 @@ def storefront_weather(request):
         "timeZone": data.get("timezone") or "UTC",
         "snowfall": _resolve_snowfall_amount(data),
         "snowfallUnit": _resolve_snowfall_units(data),
+        "city": parts.get("city", ""),
+        "province": parts.get("province", ""),
     }
     cache.set(cache_key, payload, 600)
     return JsonResponse(payload)
@@ -1764,11 +1766,16 @@ def _build_product_list_context(
         products = products.filter(category_id__in=descendant_ids)
 
     if search_query:
+        terms = [term for term in re.split(r"[\s/_,-]+", search_query) if term]
+        alternate_query = Q(sku__icontains=search_query)
+        for term in terms:
+            if term != search_query:
+                alternate_query |= Q(sku__icontains=term)
         alternate_ids = ProductAlternateSku.objects.filter(
-            sku__icontains=search_query,
+            alternate_query,
             kind__in=['interchange', 'equivalent'],
         ).values('product_id')
-        products = products.filter(
+        search_q = (
             Q(name__icontains=search_query)
             | Q(description__icontains=search_query)
             | Q(sku__icontains=search_query)
@@ -1776,8 +1783,21 @@ def _build_product_list_context(
             | Q(brand__name__icontains=search_query)
             | Q(vehicle_model__name__icontains=search_query)
             | Q(vin_number__vin__icontains=search_query)
-            | Q(pk__in=alternate_ids)
         )
+        if terms:
+            token_q = Q()
+            for term in terms:
+                token_q |= (
+                    Q(name__icontains=term)
+                    | Q(description__icontains=term)
+                    | Q(sku__icontains=term)
+                    | Q(category__name__icontains=term)
+                    | Q(brand__name__icontains=term)
+                    | Q(vehicle_model__name__icontains=term)
+                    | Q(vin_number__vin__icontains=term)
+                )
+            search_q |= token_q
+        products = products.filter(search_q | Q(pk__in=alternate_ids))
 
     filter_base = products
     models = list(
@@ -2376,12 +2396,18 @@ def store_search_suggestions(request):
     store_owner = get_storefront_owner(request)
     category_flags = resolve_storefront_category_flags(request, store_owner)
     show_empty_categories = category_flags["show_empty_categories"]
+    terms = [term for term in re.split(r"[\s/_,-]+", query) if term]
 
+    alternate_query = Q(sku__icontains=query)
+    for term in terms:
+        if term != query:
+            alternate_query |= Q(sku__icontains=term)
     alternate_ids = ProductAlternateSku.objects.filter(
-        sku__icontains=query,
+        alternate_query,
         kind__in=['interchange', 'equivalent'],
     ).values('product_id')
-    products = products.filter(
+
+    search_q = (
         Q(name__icontains=query)
         | Q(description__icontains=query)
         | Q(sku__icontains=query)
@@ -2389,8 +2415,20 @@ def store_search_suggestions(request):
         | Q(brand__name__icontains=query)
         | Q(vehicle_model__name__icontains=query)
         | Q(vin_number__vin__icontains=query)
-        | Q(pk__in=alternate_ids)
     )
+    if terms:
+        token_q = Q()
+        for term in terms:
+            token_q |= (
+                Q(name__icontains=term)
+                | Q(description__icontains=term)
+                | Q(sku__icontains=term)
+                | Q(category__name__icontains=term)
+                | Q(brand__name__icontains=term)
+                | Q(vehicle_model__name__icontains=term)
+                | Q(vin_number__vin__icontains=term)
+            )
+        search_q |= token_q
 
     brand_ids = [value for value in request.GET.getlist('brand') if value]
     model_ids = [value for value in request.GET.getlist('model') if value]
@@ -2465,10 +2503,15 @@ def store_search_suggestions(request):
     limit = max(1, min(limit, 12))
     category_limit = 5
 
-    products = products.order_by('-is_featured', 'name')
-    product_list = list(products[: limit + 1])
+    search_products = products.filter(search_q | Q(pk__in=alternate_ids)).order_by('-is_featured', 'name')
+    product_list = list(search_products[: limit + 1])
     has_more = len(product_list) > limit
     product_list = product_list[:limit]
+    if not product_list:
+        fallback_products = products.order_by('-is_featured', 'name')
+        product_list = list(fallback_products[: limit + 1])
+        has_more = len(product_list) > limit
+        product_list = product_list[:limit]
 
     price_flags = resolve_storefront_price_flags(request, store_owner)
     show_prices = price_flags.get('catalog', False)
@@ -2514,20 +2557,38 @@ def store_search_suggestions(request):
             'stock_label': stock_label,
         })
 
+    category_match = (
+        Q(name__icontains=query)
+        | Q(group__name__icontains=query)
+        | Q(parent__name__icontains=query)
+    )
+    if terms:
+        token_category_q = Q()
+        for term in terms:
+            token_category_q |= (
+                Q(name__icontains=term)
+                | Q(group__name__icontains=term)
+                | Q(parent__name__icontains=term)
+            )
+        category_match |= token_category_q
+
     categories = (
         _storefront_categories_queryset(
             available_products,
             owner=store_owner,
             include_empty=show_empty_categories,
         )
-        .filter(
-            Q(name__icontains=query)
-            | Q(group__name__icontains=query)
-            | Q(parent__name__icontains=query)
-        )
+        .filter(category_match)
         .order_by('sort_order', 'name')
     )
     category_list = list(categories[:category_limit])
+    if not category_list:
+        fallback_categories = _storefront_categories_queryset(
+            available_products,
+            owner=store_owner,
+            include_empty=show_empty_categories,
+        ).order_by('sort_order', 'name')
+        category_list = list(fallback_categories[:category_limit])
     category_results = []
     for category in category_list:
         category_path = _build_category_path(category)
@@ -2718,6 +2779,32 @@ def customer_dashboard(request):
     }
     context.update(_customer_portal_layout_context(request, active_slug='overview'))
     return render(request, 'store/customer_dashboard.html', context)
+
+
+@customer_login_required
+def customer_orders(request):
+    """Display recent online orders for customer portal users until picked."""
+
+    customer_account = request.user.customer_portal
+    if not is_parts_store_business():
+        return redirect('accounts:customer_dashboard')
+
+    orders_qs = (
+        customer_account.invoices
+        .filter(is_online_order=True)
+        .exclude(online_order_status=GroupedInvoice.ONLINE_ORDER_STATUS_PICKED)
+        .order_by('-created_at', '-id')
+    )
+    orders_count = orders_qs.count()
+    recent_orders = list(orders_qs[:25])
+
+    context = {
+        'customer_account': customer_account,
+        'recent_orders': recent_orders,
+        'orders_count': orders_count,
+    }
+    context.update(_customer_portal_layout_context(request, active_slug='orders'))
+    return render(request, 'store/customer_orders.html', context)
 
 
 def product_detail(request, pk):
@@ -3042,6 +3129,8 @@ def checkout(request):
                 bill_to=customer_info['name'],
                 bill_to_email=customer_info['email'] or None,
                 bill_to_address=customer_info['address'] or None,
+                is_online_order=True,
+                online_order_status=GroupedInvoice.ONLINE_ORDER_STATUS_NEW,
             )
 
             for item in paid_items:
@@ -3309,6 +3398,42 @@ def manage_storefront_hero(request):
         'show_prices_hero': price_flags['hero'],
     }
     return render(request, 'store/storefront_hero.html', context)
+
+
+def storefront_flyer(request):
+    store_owner = get_storefront_owner(request)
+    if not store_owner:
+        return HttpResponse("Flyer unavailable.", status=404)
+
+    flyer = StorefrontFlyer.objects.filter(user=store_owner, is_active=True).first()
+    if not flyer:
+        return HttpResponse("Flyer unavailable.", status=404)
+
+    available_products = _storefront_product_queryset(request, owner=store_owner)
+    marketing_context = _build_storefront_marketing_context(
+        request,
+        available_products,
+        store_owner=store_owner,
+    )
+    if not marketing_context.get('flyer_has_content'):
+        return HttpResponse("Flyer unavailable.", status=404)
+
+    profile = getattr(store_owner, 'profile', None)
+    context = {
+        **marketing_context,
+        'flyer': flyer,
+        'profile': profile,
+        'business_user': store_owner,
+        'store_url': request.build_absolute_uri(reverse('accounts:store_product_list')),
+        'contact_url': request.build_absolute_uri(reverse('accounts:public_contact')),
+        'request': request,
+        'customer_account': (
+            getattr(request.user, 'customer_portal', None)
+            if request.user.is_authenticated
+            else None
+        ),
+    }
+    return render(request, 'store/storefront_flyer.html', context)
 
 
 def storefront_flyer_pdf(request):

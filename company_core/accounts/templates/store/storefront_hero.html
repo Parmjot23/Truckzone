@@ -83,9 +83,15 @@
   }
 
   .hero-preview-shell .hero-message-banner {
+    --banner-text: #0f172a;
+    --banner-link: #0f172a;
+    --banner-link-hover: #0f172a;
+    --banner-border: rgba(15, 23, 42, 0.08);
+    --banner-sheen: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
     background: var(--banner-gradient);
+    color: var(--banner-text);
     padding: 0.65rem 0;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    border-bottom: 1px solid var(--banner-border);
     position: relative;
     overflow: hidden;
   }
@@ -94,7 +100,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
+    background: var(--banner-sheen);
     opacity: 0.7;
     pointer-events: none;
   }
@@ -119,6 +125,24 @@
     --banner-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
   }
 
+  .hero-preview-shell .hero-message-banner--midnight {
+    --banner-gradient: linear-gradient(135deg, #0f172a 0%, #111827 45%, #1f2937 100%);
+    --banner-text: #f8fafc;
+    --banner-link: #f8fafc;
+    --banner-link-hover: #ffffff;
+    --banner-border: rgba(255, 255, 255, 0.12);
+    --banner-sheen: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.18), transparent 60%);
+  }
+
+  .hero-preview-shell .hero-message-banner--signal {
+    --banner-gradient: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 45%, #f43f5e 100%);
+    --banner-text: #fff1f2;
+    --banner-link: #ffe4e6;
+    --banner-link-hover: #ffffff;
+    --banner-border: rgba(255, 255, 255, 0.15);
+    --banner-sheen: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.2), transparent 60%);
+  }
+
   .hero-preview-shell .hero-message-content {
     position: relative;
     z-index: 1;
@@ -128,7 +152,7 @@
     justify-content: center;
     gap: 0.75rem;
     font-weight: 600;
-    color: #0f172a;
+    color: var(--banner-text);
     text-align: center;
   }
 
@@ -144,13 +168,13 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-size: 0.8rem;
-    color: #0f172a;
+    color: var(--banner-link);
     text-decoration: none;
   }
 
   .hero-preview-shell .hero-message-link:hover {
     text-decoration: underline;
-    color: #0f172a;
+    color: var(--banner-link-hover);
   }
 
   .hero-preview-shell .hero-showcase {
@@ -756,7 +780,7 @@
   .flyer-preview-shell .flyer-package-card {
     border: 2px dashed #e2e8f0;
     border-radius: 16px;
-    padding: 1.1rem 1.1rem 1.1rem 1.35rem;
+    padding: 2.4rem 1.1rem 1.1rem 1.35rem;
     background: rgba(255, 255, 255, 0.9);
     box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
     position: relative;
@@ -825,6 +849,9 @@
     letter-spacing: 0.08em;
     border: 1px solid #0f172a;
     box-shadow: 0 10px 16px rgba(15, 23, 42, 0.2);
+    position: absolute;
+    top: 0.65rem;
+    right: 0.65rem;
   }
 
   .flyer-preview-shell .flyer-footer {
@@ -944,11 +971,15 @@
   }
 
   .hero-preview-banner {
+    --banner-text: #0f172a;
+    --banner-link: #0f172a;
+    --banner-link-hover: #0f172a;
+    --banner-sheen: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
     border-radius: 16px;
     padding: 0.7rem 1.25rem;
     margin-bottom: 1.25rem;
     background: var(--banner-gradient);
-    color: #0f172a;
+    color: var(--banner-text);
     font-weight: 600;
     position: relative;
     overflow: hidden;
@@ -959,7 +990,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.7), transparent 60%);
+    background: var(--banner-sheen);
     opacity: 0.7;
   }
 
@@ -983,6 +1014,22 @@
     --banner-gradient: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
   }
 
+  .hero-preview-banner[data-theme="midnight"] {
+    --banner-gradient: linear-gradient(135deg, #0f172a 0%, #111827 45%, #1f2937 100%);
+    --banner-text: #f8fafc;
+    --banner-link: #f8fafc;
+    --banner-link-hover: #ffffff;
+    --banner-sheen: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.18), transparent 60%);
+  }
+
+  .hero-preview-banner[data-theme="signal"] {
+    --banner-gradient: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 45%, #f43f5e 100%);
+    --banner-text: #fff1f2;
+    --banner-link: #ffe4e6;
+    --banner-link-hover: #ffffff;
+    --banner-sheen: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.2), transparent 60%);
+  }
+
   .hero-preview-banner-content {
     position: relative;
     z-index: 1;
@@ -999,13 +1046,13 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-size: 0.8rem;
-    color: #0f172a;
+    color: var(--banner-link);
     text-decoration: none;
   }
 
   .hero-preview-banner-link:hover {
     text-decoration: underline;
-    color: #0f172a;
+    color: var(--banner-link-hover);
   }
 
   .hero-preview {
@@ -1424,22 +1471,29 @@
             <div class="text-danger small">{{ banner_form.message.errors }}</div>
             {% endif %}
           </div>
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-6 col-lg-4">
             <label class="form-label" for="{{ banner_form.link_text.id_for_label }}">Link text</label>
             {{ banner_form.link_text }}
             {% if banner_form.link_text.errors %}
             <div class="text-danger small">{{ banner_form.link_text.errors }}</div>
             {% endif %}
           </div>
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-6 col-lg-5">
             <label class="form-label" for="{{ banner_form.link_url.id_for_label }}">Link URL</label>
             {{ banner_form.link_url }}
             {% if banner_form.link_url.errors %}
             <div class="text-danger small">{{ banner_form.link_url.errors }}</div>
             {% endif %}
           </div>
+          <div class="col-12 col-lg-3">
+            <label class="form-label" for="{{ banner_form.theme.id_for_label }}">Banner style</label>
+            {{ banner_form.theme }}
+            {% if banner_form.theme.errors %}
+            <div class="text-danger small">{{ banner_form.theme.errors }}</div>
+            {% endif %}
+          </div>
         </div>
-        <div class="form-text mt-2">Shown between the navigation bar and hero section. Link appears when both fields are filled.</div>
+        <div class="form-text mt-2">Shown between the navigation bar and hero section. Choose a banner style that matches the message priority. Link appears when both fields are filled.</div>
       </div>
     </div>
 

@@ -1,0 +1,67 @@
+{% extends portal_base_template|default:"store/customer_portal_base.html" %}
+{% block title %}Orders{% endblock %}
+{% block portal_content %}
+<div class="customer-portal-section">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div>
+      <h2 class="h4 mb-1">Recent orders</h2>
+      <p class="text-muted mb-0">Online orders stay here until they are picked up.</p>
+    </div>
+    <a href="{% url 'accounts:store_product_list' %}" class="btn btn-outline-secondary btn-sm mt-3 mt-md-0">
+      <i class="fas fa-store me-1"></i> Continue shopping
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body pb-0">
+      <div class="text-muted small">Active online orders: {{ orders_count|default:0 }}</div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-striped mb-0 align-middle">
+        <thead class="thead-light">
+          <tr>
+            <th scope="col">Order #</th>
+            <th scope="col">Placed</th>
+            <th scope="col">Status</th>
+            <th scope="col">Total</th>
+            <th scope="col" class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in recent_orders %}
+            <tr>
+              <td data-label="Order">{{ order.invoice_number }}</td>
+              <td data-label="Placed">
+                {% if order.created_at %}
+                  {{ order.created_at|date:"M d, Y g:i a" }}
+                {% else %}
+                  {{ order.date|date:"M d, Y" }}
+                {% endif %}
+              </td>
+              <td data-label="Status">
+                {% if order.online_order_status == 'ready' %}
+                  <span class="badge bg-success">Ready</span>
+                {% elif order.online_order_status == 'picked' %}
+                  <span class="badge bg-secondary">Picked</span>
+                {% else %}
+                  <span class="badge bg-primary">New</span>
+                {% endif %}
+              </td>
+              <td data-label="Total">${{ order.total_amount|floatformat:2 }}</td>
+              <td class="text-end" data-label="Action">
+                <a href="{% url 'accounts:customer_invoice_print' order.pk %}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
+                  <i class="fas fa-print me-1"></i> View
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-4">No active online orders right now.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
