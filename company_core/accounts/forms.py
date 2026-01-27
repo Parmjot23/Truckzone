@@ -3,6 +3,7 @@ import datetime
 from django import forms
 import re
 from django.db import IntegrityError
+from django.db.models import Sum
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import UserCreationForm
 from crispy_forms.helper import FormHelper
@@ -86,7 +87,7 @@ from .models import (
     PayrollEmployerTax,
     ConnectedBusinessGroup,
 )
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from django.forms import BaseInlineFormSet
 from .utils import (
     get_business_user,
@@ -139,6 +140,30 @@ def normalize_cc_emails(value):
         plural = "es" if len(invalid) > 1 else ""
         raise ValidationError(f"Invalid email address{plural}: {', '.join(invalid)}")
     return ", ".join(cleaned)
+
+
+_ALTERNATE_SKU_SPLIT = re.compile(r"[,\n]+")
+
+
+def _normalize_alternate_skus(value):
+    if not value:
+        return []
+    if isinstance(value, (list, tuple)):
+        raw_items = value
+    else:
+        raw_items = _ALTERNATE_SKU_SPLIT.split(str(value))
+    normalized = []
+    seen = set()
+    for entry in raw_items:
+        sku = str(entry).strip()
+        if not sku:
+            continue
+        key = sku.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(sku)
+    return normalized
 
 class CustomAuthenticationForm(AuthenticationForm):
     username = forms.CharField(label="Username or Email")
@@ -1510,6 +1535,80 @@ class BaseSupplierCreditItemFormSet(BaseInlineFormSet):
                 continue
             form.cleaned_data['DELETE'] = True
             form._errors = form.error_class()
+
+        profile = getattr(self.user, 'profile', None)
+        enforce_invoice_links = bool(profile and getattr(profile, 'occupation', None) == 'parts_store')
+        if enforce_invoice_links:
+            for form in self.forms:
+                if not hasattr(form, 'cleaned_data'):
+                    continue
+                if form.cleaned_data.get('DELETE'):
+                    continue
+                if form.cleaned_data.get('source_invoice_item'):
+                    continue
+                if getattr(form, 'instance', None) and getattr(form.instance, 'pk', None):
+                    continue
+                if form.has_meaningful_data(form.cleaned_data):
+                    form.add_error(
+                        'source_invoice_item',
+                        'Select an invoice item to return.',
+                    )
+
+        # Prevent returning more than was invoiced for linked invoice items.
+        items_to_check = []
+        source_ids = set()
+        for form in self.forms:
+            if not hasattr(form, 'cleaned_data'):
+                continue
+            if form.cleaned_data.get('DELETE'):
+                continue
+            source_item = form.cleaned_data.get('source_invoice_item')
+            if not source_item:
+                continue
+            line_type = getattr(source_item, 'line_type', '') or ''
+            if line_type in ('', 'custom') and getattr(source_item, 'product_id', None):
+                line_type = 'product'
+            if line_type not in ('product', 'core_charge'):
+                form.add_error(
+                    'source_invoice_item',
+                    'Only product or core returns are allowed from invoices.',
+                )
+                continue
+            qty_raw = form.cleaned_data.get('qty')
+            try:
+                qty_dec = Decimal(str(qty_raw or 0))
+            except (TypeError, ValueError, InvalidOperation):
+                qty_dec = Decimal('0.00')
+            if qty_dec <= Decimal('0.00'):
+                continue
+            items_to_check.append((form, source_item, qty_dec))
+            source_ids.add(source_item.id)
+
+        if not source_ids:
+            return
+
+        existing_qs = CustomerCreditItem.objects.filter(source_invoice_item_id__in=source_ids)
+        if getattr(self.instance, 'pk', None):
+            existing_qs = existing_qs.exclude(customer_credit=self.instance)
+
+        existing_totals = {
+            row['source_invoice_item_id']: Decimal(str(row['total_qty'] or 0))
+            for row in existing_qs.values('source_invoice_item_id').annotate(total_qty=Sum('qty'))
+        }
+
+        pending_totals = {}
+        for form, source_item, qty_dec in items_to_check:
+            item_id = source_item.id
+            pending_totals[item_id] = pending_totals.get(item_id, Decimal('0.00')) + qty_dec
+            max_qty = Decimal(str(source_item.qty or 0))
+            remaining = max_qty - existing_totals.get(item_id, Decimal('0.00'))
+            if pending_totals[item_id] > remaining:
+                available = remaining if remaining > Decimal('0.00') else Decimal('0.00')
+                available_display = available.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                form.add_error(
+                    'qty',
+                    f"Only {available_display} available to return for this invoice line.",
+                )
 
 
 SupplierCreditItemFormSet = inlineformset_factory(
@@ -3076,6 +3175,18 @@ class InventoryLocationForm(forms.ModelForm):
 
 
 class ProductForm(forms.ModelForm):
+    alternate_skus = forms.CharField(
+        required=False,
+        label="Alternate / Interchange SKUs",
+        help_text="Separate multiple SKUs with commas or new lines.",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 2,
+                "placeholder": "e.g. ABC-123, DEF-456",
+            }
+        ),
+    )
+
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         category_id_override = kwargs.pop('category_id', None)
@@ -3120,6 +3231,18 @@ class ProductForm(forms.ModelForm):
             self.fields['sale_price'].required = False
         if 'promotion_price' in self.fields:
             self.fields['promotion_price'].required = False
+        if 'core_price' in self.fields:
+            self.fields['core_price'].required = False
+        if 'environmental_fee' in self.fields:
+            self.fields['environmental_fee'].required = False
+        if 'alternate_skus' in self.fields:
+            self.fields['alternate_skus'].required = False
+            if self.instance and self.instance.pk:
+                alternate_values = list(
+                    self.instance.alternate_skus.order_by('kind', 'sku').values_list('sku', flat=True)
+                )
+                if alternate_values:
+                    self.fields['alternate_skus'].initial = ", ".join(alternate_values)
         self._init_attribute_fields()
         self.attribute_fields = [self[name] for name in self.attribute_field_names]
 
@@ -3233,6 +3356,12 @@ class ProductForm(forms.ModelForm):
         vehicle_model = cleaned_data.get('vehicle_model')
         if vehicle_model and vehicle_model.brand_id and brand and vehicle_model.brand_id != brand.id:
             self.add_error('vehicle_model', 'Selected model does not match the chosen brand.')
+        alternate_skus = cleaned_data.get('alternate_skus') or []
+        main_sku = (cleaned_data.get('sku') or self.instance.sku or '').strip()
+        if main_sku:
+            main_key = main_sku.casefold()
+            if any(alt.casefold() == main_key for alt in alternate_skus):
+                self.add_error('alternate_skus', 'Alternate SKUs cannot include the primary SKU.')
         return cleaned_data
 
     class Meta:
@@ -3252,6 +3381,8 @@ class ProductForm(forms.ModelForm):
             'sale_price': 'Sale Price',
             'margin': 'Margin',
             'promotion_price': 'Promotion Price',
+            'core_price': 'Core Charge',
+            'environmental_fee': 'Environmental Fee',
             'quantity_in_stock': 'Quantity in Stock',
             'reorder_level': 'Reorder Level',
             'image': 'Product Image',
@@ -3275,6 +3406,8 @@ class ProductForm(forms.ModelForm):
             'sale_price': forms.NumberInput(attrs={'placeholder': 'Selling price of the product'}),
             'margin': forms.NumberInput(attrs={'placeholder': 'Margin (sale price minus cost price)', 'step': 'any'}),
             'promotion_price': forms.NumberInput(attrs={'placeholder': 'Promo price (optional)', 'step': 'any'}),
+            'core_price': forms.NumberInput(attrs={'placeholder': 'Core charge (optional)', 'step': 'any'}),
+            'environmental_fee': forms.NumberInput(attrs={'placeholder': 'Environmental fee (optional)', 'step': 'any'}),
             'quantity_in_stock': forms.NumberInput(attrs={'placeholder': 'Current stock quantity'}),
             'reorder_level': forms.NumberInput(attrs={'placeholder': 'Level at which to reorder stock'}),
             'warranty_expiry_date': forms.DateInput(attrs={'type': 'date'}),
@@ -3300,6 +3433,13 @@ class ProductForm(forms.ModelForm):
             if qs.exists():
                 raise forms.ValidationError('You already have a product with this SKU.')
         return normalized
+
+    def clean_alternate_skus(self):
+        alternate_skus = _normalize_alternate_skus(self.cleaned_data.get('alternate_skus'))
+        for sku in alternate_skus:
+            if len(sku) > 100:
+                raise forms.ValidationError('Alternate SKUs must be 100 characters or fewer.')
+        return alternate_skus
 
     def save_attribute_values(self, product):
         if not product or not product.pk:
@@ -3375,6 +3515,17 @@ class ProductAttributeForm(ProductForm):
 class ProductInlineForm(forms.ModelForm):
     """Slimmed-down product form for inline editing in the product library."""
 
+    alternate_skus = forms.CharField(
+        required=False,
+        label="Alternate / Interchange SKUs",
+        help_text="Separate multiple SKUs with commas.",
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Alternate SKUs (optional)",
+            }
+        ),
+    )
+
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         self.user = user
@@ -3403,6 +3554,18 @@ class ProductInlineForm(forms.ModelForm):
             self.fields['sku'].required = False
         if 'sale_price' in self.fields:
             self.fields['sale_price'].required = False
+        if 'core_price' in self.fields:
+            self.fields['core_price'].required = False
+        if 'environmental_fee' in self.fields:
+            self.fields['environmental_fee'].required = False
+        if 'alternate_skus' in self.fields:
+            self.fields['alternate_skus'].required = False
+            if self.instance and self.instance.pk:
+                alternate_values = list(
+                    self.instance.alternate_skus.order_by('kind', 'sku').values_list('sku', flat=True)
+                )
+                if alternate_values:
+                    self.fields['alternate_skus'].initial = ", ".join(alternate_values)
         if 'category' in self.fields:
             self.fields['category'].required = False
         if 'supplier' in self.fields:
@@ -3424,6 +3587,8 @@ class ProductInlineForm(forms.ModelForm):
             'vin_number',
             'cost_price',
             'sale_price',
+            'core_price',
+            'environmental_fee',
             'quantity_in_stock',
             'reorder_level',
             'item_type',
@@ -3441,6 +3606,8 @@ class ProductInlineForm(forms.ModelForm):
             'vin_number': 'VIN Number',
             'cost_price': 'Cost Price',
             'sale_price': 'Sale Price',
+            'core_price': 'Core Charge',
+            'environmental_fee': 'Environmental Fee',
             'quantity_in_stock': 'Quantity in Stock',
             'reorder_level': 'Reorder Level',
             'item_type': 'Item Type',
@@ -3467,12 +3634,25 @@ class ProductInlineForm(forms.ModelForm):
                 raise forms.ValidationError('You already have a product with this SKU.')
         return normalized
 
+    def clean_alternate_skus(self):
+        alternate_skus = _normalize_alternate_skus(self.cleaned_data.get('alternate_skus'))
+        for sku in alternate_skus:
+            if len(sku) > 100:
+                raise forms.ValidationError('Alternate SKUs must be 100 characters or fewer.')
+        return alternate_skus
+
     def clean(self):
         cleaned_data = super().clean()
         brand = cleaned_data.get('brand')
         vehicle_model = cleaned_data.get('vehicle_model')
         if vehicle_model and vehicle_model.brand_id and brand and vehicle_model.brand_id != brand.id:
             self.add_error('vehicle_model', 'Selected model does not match the chosen brand.')
+        alternate_skus = cleaned_data.get('alternate_skus') or []
+        main_sku = (cleaned_data.get('sku') or self.instance.sku or '').strip()
+        if main_sku:
+            main_key = main_sku.casefold()
+            if any(alt.casefold() == main_key for alt in alternate_skus):
+                self.add_error('alternate_skus', 'Alternate SKUs cannot include the primary SKU.')
         return cleaned_data
 
 class QuickProductCreateForm(forms.ModelForm):

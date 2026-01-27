@@ -1442,6 +1442,7 @@ Add {% if documentType == 'estimate' %}Estimate{% else %}Mechanic Job Log{% endi
                         <label for="id_bill_to_address">Billing address</label>
                         <textarea id="id_bill_to_address" class="form-control" rows="3" readonly></textarea>
                     </div>
+                    {% if show_vehicle_details %}
                     <div class="muted-box mt-3">
                         <div class="inline-actions wrap">
                             <button type="button" class="btn btn-outline-primary text-sm" id="vehicle-history-button"
@@ -1459,6 +1460,7 @@ Add {% if documentType == 'estimate' %}Estimate{% else %}Mechanic Job Log{% endi
                             <span id="vehicle-maintenance-hint">Select a vehicle to review maintenance reminders.</span>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
                 <div class="qb-top-right">
                     <div class="qb-inline-grid">
@@ -1484,6 +1486,7 @@ Add {% if documentType == 'estimate' %}Estimate{% else %}Mechanic Job Log{% endi
                         </div>
                         {% endif %}
                     </div>
+                    {% if show_vehicle_details %}
                     <div class="vehicle-card">
                         <div class="panel-header">
                             <div class="panel-title">Vehicle details</div>
@@ -1520,6 +1523,7 @@ Add {% if documentType == 'estimate' %}Estimate{% else %}Mechanic Job Log{% endi
                             {% endif %}
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </section>
@@ -2254,6 +2258,7 @@ Add {% if documentType == 'estimate' %}Estimate{% else %}Mechanic Job Log{% endi
     </div>
 </div>
 
+{% if show_vehicle_details %}
 {# Add Vehicle Modal #}
 <div class="modal fade" id="addVehicleModal" tabindex="-1" role="dialog" aria-labelledby="addVehicleModalLabel"
     aria-hidden="true">
@@ -2404,6 +2409,7 @@ Add {% if documentType == 'estimate' %}Estimate{% else %}Mechanic Job Log{% endi
         </div>
     </div>
 </div>
+{% endif %}
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>

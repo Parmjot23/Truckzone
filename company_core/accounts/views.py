@@ -196,6 +196,9 @@ from .models import (
     IncomeRecord,
     InvoiceDetail,
     IncomeRecord2,
+    INVOICE_LINE_TYPE_CORE,
+    INVOICE_LINE_TYPE_ENV,
+    INVOICE_LINE_TYPE_PRODUCT,
     GroupedInvoice,
     Profile,
     PendingInvoice,
@@ -676,6 +679,7 @@ def _ensure_inventory_product_for_item(
     normalized_part_no = (part_no or '').strip()
     normalized_description = (description or '').strip()
     product = existing_product
+    matched_by_alternate = False
 
     category = _get_or_create_category_for_user(user, category_name)
 
@@ -684,6 +688,13 @@ def _ensure_inventory_product_for_item(
             user=user,
             sku__iexact=normalized_part_no,
         ).first()
+    if not product and normalized_part_no:
+        product = Product.objects.filter(
+            user=user,
+            alternate_skus__sku__iexact=normalized_part_no,
+        ).distinct().first()
+        if product:
+            matched_by_alternate = True
 
     if not product and normalized_description:
         product = Product.objects.filter(
@@ -714,10 +725,11 @@ def _ensure_inventory_product_for_item(
         ).exclude(pk=product.pk).first()
         if conflict:
             product = conflict
+            matched_by_alternate = False
 
     fields_to_update = []
 
-    if normalized_part_no and product.sku != normalized_part_no:
+    if normalized_part_no and product.sku != normalized_part_no and not matched_by_alternate:
         product.sku = normalized_part_no
         fields_to_update.append('sku')
 
@@ -2242,7 +2254,11 @@ class MechExpenseInventoryMixin:
         qs = Product.objects.filter(user=user)
         product = None
         if part:
-            product = qs.filter(models.Q(sku__iexact=part) | models.Q(name__iexact=part)).first()
+            product = qs.filter(
+                models.Q(sku__iexact=part)
+                | models.Q(name__iexact=part)
+                | models.Q(alternate_skus__sku__iexact=part)
+            ).distinct().first()
         if not product and desc:
             product = qs.filter(name__iexact=desc).first()
         if product:
@@ -2672,7 +2688,11 @@ class SupplierCreditInventoryMixin:
         qs = Product.objects.filter(user=credit.user)
         product = None
         if part:
-            product = qs.filter(Q(sku__iexact=part) | Q(name__iexact=part)).first()
+            product = qs.filter(
+                Q(sku__iexact=part)
+                | Q(name__iexact=part)
+                | Q(alternate_skus__sku__iexact=part)
+            ).distinct().first()
         if not product and desc:
             product = qs.filter(name__iexact=desc).first()
 
@@ -2728,7 +2748,11 @@ class CustomerCreditInventoryMixin:
         qs = Product.objects.filter(user=credit.user)
         product = None
         if part:
-            product = qs.filter(Q(sku__iexact=part) | Q(name__iexact=part)).first()
+            product = qs.filter(
+                Q(sku__iexact=part)
+                | Q(name__iexact=part)
+                | Q(alternate_skus__sku__iexact=part)
+            ).distinct().first()
         if not product and desc:
             product = qs.filter(name__iexact=desc).first()
 
@@ -3858,22 +3882,56 @@ def customer_credit_invoices(request):
         .prefetch_related('income_records', 'income_records__product')
         .order_by('-date', '-id')
     )
+    invoice_items = []
+    for invoice in invoices:
+        invoice_items.extend(list(invoice.income_records.all()))
+
+    returned_totals = {}
+    if invoice_items:
+        item_ids = [item.id for item in invoice_items]
+        returned_rows = (
+            CustomerCreditItem.objects
+            .filter(source_invoice_item_id__in=item_ids)
+            .values('source_invoice_item_id')
+            .annotate(total_qty=Sum('qty'))
+        )
+        returned_totals = {
+            row['source_invoice_item_id']: ensure_decimal(row['total_qty'])
+            for row in returned_rows
+        }
+
     invoice_payload = []
     for invoice in invoices:
         items_payload = []
         for item in invoice.income_records.all():
+            line_type = getattr(item, "line_type", "") or ""
+            if line_type == "" or line_type == "custom":
+                if item.product_id:
+                    line_type = INVOICE_LINE_TYPE_PRODUCT
+            if line_type not in (INVOICE_LINE_TYPE_PRODUCT, INVOICE_LINE_TYPE_CORE):
+                continue
+
             product = item.product
+            if line_type in (INVOICE_LINE_TYPE_CORE, INVOICE_LINE_TYPE_ENV):
+                product = None
+            item_qty = ensure_decimal(item.qty)
+            returned_qty = returned_totals.get(item.id, Decimal('0.00'))
+            available_qty = item_qty - returned_qty
+            if available_qty <= Decimal('0.00'):
+                continue
             part_no = product.sku if product and product.sku else ''
             description = item.job or (product.description if product else '') or (product.name if product else '')
             items_payload.append({
                 'id': item.id,
                 'part_no': part_no,
                 'description': description or '',
-                'qty': float(item.qty or 0),
+                'qty': float(item_qty or 0),
+                'available_qty': float(available_qty),
                 'price': float(item.rate or 0),
                 'amount': float(item.amount or 0),
                 'product_id': str(product.id) if product else '',
                 'invoice_id': invoice.id,
+                'line_type': line_type,
             })
         invoice_payload.append({
             'id': invoice.id,
@@ -3906,9 +3964,10 @@ def supplier_credit_receipts(request):
             if part:
                 product = Product.objects.filter(
                     user=request.user,
-                    sku__iexact=part,
                     supplier=supplier,
-                ).first()
+                ).filter(
+                    Q(sku__iexact=part) | Q(alternate_skus__sku__iexact=part)
+                ).distinct().first()
             if not product and desc:
                 product = Product.objects.filter(
                     user=request.user,
@@ -5054,11 +5113,12 @@ def _build_storefront_context(request, available_products):
             Q(name__icontains=search_query)
             | Q(description__icontains=search_query)
             | Q(sku__icontains=search_query)
+            | Q(alternate_skus__sku__icontains=search_query)
             | Q(category__name__icontains=search_query)
             | Q(brand__name__icontains=search_query)
             | Q(vehicle_model__name__icontains=search_query)
             | Q(vin_number__vin__icontains=search_query)
-        )
+        ).distinct()
 
     if group_ids:
         products = products.filter(category__group_id__in=group_ids)
@@ -9035,6 +9095,9 @@ def add_dailylog(request):
             document_records = list(grouped_form.instance.estimate_records.all())
     document_totals = _calculate_grouped_doc_totals(document_records)
 
+    business_owner = get_business_user(request.user) or request.user
+    show_vehicle_details = not is_parts_store_business(business_owner)
+
     context = {
         'grouped_invoice_form': grouped_form,
         'formset': formset,
@@ -9079,6 +9142,7 @@ def add_dailylog(request):
         'vehicle_maintenance': vehicle_maintenance_payload,
         'vehicle_maintenance_json': json.dumps(vehicle_maintenance_payload, cls=DjangoJSONEncoder),
         'vehicle_maintenance_api': reverse('accounts:vehicle_maintenance_summary'),
+        'show_vehicle_details': show_vehicle_details,
     }
     return render(request, template_name, context)
 
@@ -15111,6 +15175,9 @@ def edit_dailylog(request, pk):
 
     document_totals = _calculate_grouped_doc_totals(invoice.income_records.all())
 
+    business_owner = get_business_user(request.user) or request.user
+    show_vehicle_details = not is_parts_store_business(business_owner)
+
     context = {
         'invoice': invoice,
         'grouped_invoice_form': grouped_form,
@@ -15153,6 +15220,7 @@ def edit_dailylog(request, pk):
         'vehicle_maintenance': vehicle_maintenance_payload,
         'vehicle_maintenance_json': json.dumps(vehicle_maintenance_payload, cls=DjangoJSONEncoder),
         'vehicle_maintenance_api': reverse('accounts:vehicle_maintenance_summary'),
+        'show_vehicle_details': show_vehicle_details,
     }
     return render(request, template_name, context)
 
@@ -15452,6 +15520,9 @@ def add_estimate(request):
         document_records = list(grouped_estimate_form.instance.estimate_records.all())
     document_totals = _calculate_grouped_doc_totals(document_records)
 
+    business_owner = get_business_user(request.user) or request.user
+    show_vehicle_details = not is_parts_store_business(business_owner)
+
     context = {
         'grouped_estimate_form': grouped_estimate_form,
         'grouped_invoice_form': grouped_estimate_form,
@@ -15482,6 +15553,7 @@ def add_estimate(request):
         'subtotal_after_interest_amount': document_totals['subtotal_after_interest'],
         'tax_total_amount': document_totals['tax_total'],
         'grand_total_amount': document_totals['grand_total'],
+        'show_vehicle_details': show_vehicle_details,
     }
     return render(request, template_name, context)
 
@@ -15612,6 +15684,9 @@ def edit_estimate(request, pk):
 
     document_totals = _calculate_grouped_doc_totals(estimate.estimate_records.all())
 
+    business_owner = get_business_user(request.user) or request.user
+    show_vehicle_details = not is_parts_store_business(business_owner)
+
     context = {
         'grouped_estimate_form': grouped_estimate_form,
         'grouped_invoice_form': grouped_estimate_form,
@@ -15648,6 +15723,7 @@ def edit_estimate(request, pk):
         'vehicle_maintenance': vehicle_maintenance_payload,
         'vehicle_maintenance_json': json.dumps(vehicle_maintenance_payload, cls=DjangoJSONEncoder),
         'vehicle_maintenance_api': reverse('accounts:vehicle_maintenance_summary'),
+        'show_vehicle_details': show_vehicle_details,
     }
     return render(request, template_name, context)
 

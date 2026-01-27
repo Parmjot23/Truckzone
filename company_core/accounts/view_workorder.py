@@ -3024,7 +3024,11 @@ def mechanic_products(request):
     )
     query = request.GET.get('q')
     if query:
-        products = products.filter(Q(name__icontains=query) | Q(sku__icontains=query))
+        products = products.filter(
+            Q(name__icontains=query)
+            | Q(sku__icontains=query)
+            | Q(alternate_skus__sku__icontains=query)
+        ).distinct()
     products = list(products.order_by('name'))
     apply_stock_fields(products)
     context = {

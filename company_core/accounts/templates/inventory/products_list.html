@@ -104,6 +104,10 @@
                 <label for="newProductDescription" class="form-label">Description</label>
                 <textarea class="form-control" id="newProductDescription" rows="2" placeholder="Add product details"></textarea>
             </div>
+            <div class="col-lg-4">
+                <label for="newProductAlternateSkus" class="form-label">Alternate / Interchange SKUs</label>
+                <input type="text" class="form-control" id="newProductAlternateSkus" placeholder="Comma-separated (optional)">
+            </div>
             <div class="col-lg-2">
                 <label for="newProductCostPrice" class="form-label">Cost price</label>
                 <input type="number" class="form-control" id="newProductCostPrice" placeholder="e.g. 45.00" min="0" step="0.01">
@@ -111,6 +115,14 @@
             <div class="col-lg-2">
                 <label for="newProductSalePrice" class="form-label">Sale price</label>
                 <input type="number" class="form-control" id="newProductSalePrice" placeholder="Optional" min="0" step="0.01">
+            </div>
+            <div class="col-lg-2">
+                <label for="newProductCorePrice" class="form-label">Core charge</label>
+                <input type="number" class="form-control" id="newProductCorePrice" placeholder="Optional" min="0" step="0.01">
+            </div>
+            <div class="col-lg-2">
+                <label for="newProductEnvironmentalFee" class="form-label">Environmental fee</label>
+                <input type="number" class="form-control" id="newProductEnvironmentalFee" placeholder="Optional" min="0" step="0.01">
             </div>
             <div class="col-lg-2">
                 <label for="newProductQuantity" class="form-label">On hand</label>
@@ -138,7 +150,7 @@
                     <label for="productSearchInput" class="form-label fw-semibold">Search products</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="search" class="form-control" id="productSearchInput" name="q" placeholder="Search name, SKU, supplier, category, brand, model, VIN, or location" value="{{ search_query }}">
+                        <input type="search" class="form-control" id="productSearchInput" name="q" placeholder="Search name, SKU, alternate SKU, supplier, category, brand, model, VIN, or location" value="{{ search_query }}">
                     </div>
                 </div>
                 <div class="col-md-5 col-lg-4 ms-lg-auto">
@@ -220,6 +232,7 @@
                         data-product-id="{{ product.id }}"
                         data-product-name="{{ product.name|default_if_none:''|escape }}"
                         data-product-sku="{{ product.sku|default_if_none:''|escape }}"
+                        data-product-alternate-skus="{% for alt in product.alternate_skus.all %}{{ alt.sku|escape }}{% if not forloop.last %}, {% endif %}{% endfor %}"
                         data-product-description="{{ product.description|default_if_none:''|escape }}"
                         data-product-category-id="{{ product.category_id|default_if_none:'' }}"
                         data-product-category-name="{{ product.category.name|default_if_none:''|escape }}"
@@ -233,6 +246,8 @@
                         data-product-vin="{{ product.vin_number.vin|default_if_none:''|escape }}"
                         data-product-cost-price="{{ product.cost_price|default_if_none:'' }}"
                         data-product-sale-price="{{ product.sale_price|default_if_none:'' }}"
+                        data-product-core-price="{{ product.core_price|default_if_none:'' }}"
+                        data-product-environmental-fee="{{ product.environmental_fee|default_if_none:'' }}"
                         {% if product.user_id in stock_user_ids %}
                         data-product-quantity="{{ product.quantity_in_stock|default_if_none:'' }}"
                         data-product-reorder="{{ product.reorder_level|default_if_none:'' }}"
@@ -263,10 +278,12 @@
                             <div class="product-display">
                                 <div class="product-name-display fw-semibold"></div>
                                 <div class="product-sku-display text-muted small"></div>
+                                <div class="product-alt-sku-display text-muted small"></div>
                             </div>
                             <div class="product-edit d-none">
                                 <input type="text" class="form-control form-control-sm product-name-input" placeholder="Product name">
                                 <input type="text" class="form-control form-control-sm mt-2 product-sku-input" placeholder="SKU (optional)">
+                                <input type="text" class="form-control form-control-sm mt-2 product-alternate-skus-input" placeholder="Alternate SKUs (comma separated)">
                             </div>
                         </td>
                         <td>
@@ -320,10 +337,14 @@
                             <div class="product-display">
                                 <div class="product-cost-price-display fw-semibold"></div>
                                 <div class="product-sale-price-display text-muted small"></div>
+                                <div class="product-core-price-display text-muted small"></div>
+                                <div class="product-env-fee-display text-muted small"></div>
                             </div>
                             <div class="product-edit d-none">
                                 <input type="number" class="form-control form-control-sm product-cost-price-input" min="0" step="0.01" placeholder="Cost">
                                 <input type="number" class="form-control form-control-sm mt-2 product-sale-price-input" min="0" step="0.01" placeholder="Sale (optional)">
+                                <input type="number" class="form-control form-control-sm mt-2 product-core-price-input" min="0" step="0.01" placeholder="Core (optional)">
+                                <input type="number" class="form-control form-control-sm mt-2 product-env-fee-input" min="0" step="0.01" placeholder="Env fee (optional)">
                             </div>
                         </td>
                         <td>
@@ -530,6 +551,7 @@
         data-product-id=""
         data-product-name=""
         data-product-sku=""
+        data-product-alternate-skus=""
         data-product-description=""
         data-product-category-id=""
         data-product-category-name=""
@@ -543,6 +565,8 @@
         data-product-vin=""
         data-product-cost-price=""
         data-product-sale-price=""
+        data-product-core-price=""
+        data-product-environmental-fee=""
         data-product-quantity=""
         data-product-reorder=""
         data-stock-visible="true"
@@ -567,10 +591,12 @@
             <div class="product-display">
                 <div class="product-name-display fw-semibold"></div>
                 <div class="product-sku-display text-muted small"></div>
+                <div class="product-alt-sku-display text-muted small"></div>
             </div>
             <div class="product-edit d-none">
                 <input type="text" class="form-control form-control-sm product-name-input" placeholder="Product name">
                 <input type="text" class="form-control form-control-sm mt-2 product-sku-input" placeholder="SKU (optional)">
+                <input type="text" class="form-control form-control-sm mt-2 product-alternate-skus-input" placeholder="Alternate SKUs (comma separated)">
             </div>
         </td>
         <td>
@@ -624,10 +650,14 @@
             <div class="product-display">
                 <div class="product-cost-price-display fw-semibold"></div>
                 <div class="product-sale-price-display text-muted small"></div>
+                <div class="product-core-price-display text-muted small"></div>
+                <div class="product-env-fee-display text-muted small"></div>
             </div>
             <div class="product-edit d-none">
                 <input type="number" class="form-control form-control-sm product-cost-price-input" min="0" step="0.01" placeholder="Cost">
                 <input type="number" class="form-control form-control-sm mt-2 product-sale-price-input" min="0" step="0.01" placeholder="Sale (optional)">
+                <input type="number" class="form-control form-control-sm mt-2 product-core-price-input" min="0" step="0.01" placeholder="Core (optional)">
+                <input type="number" class="form-control form-control-sm mt-2 product-env-fee-input" min="0" step="0.01" placeholder="Env fee (optional)">
             </div>
         </td>
         <td>
@@ -1507,10 +1537,15 @@
         const brand = raw.brand || {};
         const model = raw.vehicle_model || raw.model || {};
         const vin = raw.vin_number || raw.vin || {};
+        const alternateRaw = raw.alternate_skus || raw.alternateSkus || '';
+        const alternateText = Array.isArray(alternateRaw)
+            ? alternateRaw.filter(Boolean).join(', ')
+            : valueOrEmpty(alternateRaw);
         return {
             id: valueOrEmpty(raw.id),
             name: valueOrEmpty(raw.name),
             sku: valueOrEmpty(raw.sku),
+            alternate_skus: alternateText,
             description: valueOrEmpty(raw.description),
             category_id: valueOrEmpty(raw.category_id || category.id),
             category_name: valueOrEmpty(raw.category_name || category.name),
@@ -1524,6 +1559,8 @@
             vin_value: valueOrEmpty(raw.vin_number || raw.vin_value || vin.vin),
             cost_price: valueOrEmpty(raw.cost_price),
             sale_price: valueOrEmpty(raw.sale_price),
+            core_price: valueOrEmpty(raw.core_price),
+            environmental_fee: valueOrEmpty(raw.environmental_fee),
             quantity_in_stock: valueOrEmpty(raw.quantity_in_stock),
             reorder_level: valueOrEmpty(raw.reorder_level),
             stock_visible: normalizeStockVisibility(raw.stock_visible, true),
@@ -1538,6 +1575,7 @@
             id: row.dataset.productId,
             name: row.dataset.productName,
             sku: row.dataset.productSku,
+            alternate_skus: row.dataset.productAlternateSkus,
             description: row.dataset.productDescription,
             category_id: row.dataset.productCategoryId,
             category_name: row.dataset.productCategoryName,
@@ -1551,6 +1589,8 @@
             vin_value: row.dataset.productVin,
             cost_price: row.dataset.productCostPrice,
             sale_price: row.dataset.productSalePrice,
+            core_price: row.dataset.productCorePrice,
+            environmental_fee: row.dataset.productEnvironmentalFee,
             quantity_in_stock: row.dataset.productQuantity,
             reorder_level: row.dataset.productReorder,
             stock_visible: row.dataset.stockVisible,
@@ -1568,6 +1608,7 @@
         row.dataset.productId = product.id || '';
         row.dataset.productName = product.name || '';
         row.dataset.productSku = product.sku || '';
+        row.dataset.productAlternateSkus = product.alternate_skus || '';
         row.dataset.productDescription = product.description || '';
         row.dataset.productCategoryId = product.category_id || '';
         row.dataset.productCategoryName = product.category_name || '';
@@ -1582,6 +1623,8 @@
         const stockVisible = normalizeStockVisibility(product.stock_visible, true);
         row.dataset.productCostPrice = product.cost_price || '';
         row.dataset.productSalePrice = product.sale_price || '';
+        row.dataset.productCorePrice = product.core_price || '';
+        row.dataset.productEnvironmentalFee = product.environmental_fee || '';
         row.dataset.productQuantity = stockVisible ? (product.quantity_in_stock || '0') : '';
         row.dataset.productReorder = stockVisible ? (product.reorder_level || '0') : '';
         row.dataset.stockVisible = stockVisible ? 'true' : 'false';
@@ -1591,6 +1634,7 @@
 
         const nameDisplay = row.querySelector('.product-name-display');
         const skuDisplay = row.querySelector('.product-sku-display');
+        const altSkuDisplay = row.querySelector('.product-alt-sku-display');
         const descriptionDisplay = row.querySelector('.product-description-display');
         const categoryDisplay = row.querySelector('.product-category-display');
         const supplierDisplay = row.querySelector('.product-supplier-display');
@@ -1599,6 +1643,8 @@
         const vinDisplay = row.querySelector('.product-vin-display');
         const costDisplay = row.querySelector('.product-cost-price-display');
         const saleDisplay = row.querySelector('.product-sale-price-display');
+        const coreDisplay = row.querySelector('.product-core-price-display');
+        const envDisplay = row.querySelector('.product-env-fee-display');
         const quantityDisplay = row.querySelector('.product-quantity-display');
         const reorderDisplay = row.querySelector('.product-reorder-display');
         const itemTypeDisplay = row.querySelector('.product-item-type-display');
@@ -1611,6 +1657,11 @@
         }
         if (skuDisplay) {
             skuDisplay.textContent = product.sku ? 'SKU: ' + product.sku : 'No SKU';
+        }
+        if (altSkuDisplay) {
+            altSkuDisplay.textContent = product.alternate_skus
+                ? 'Alt: ' + product.alternate_skus
+                : '';
         }
         if (descriptionDisplay) {
             descriptionDisplay.textContent = product.description || 'No description';
@@ -1637,6 +1688,14 @@
         if (saleDisplay) {
             const saleValue = formatMoney(product.sale_price);
             saleDisplay.textContent = saleValue ? 'Sale: ' + saleValue : 'Sale: -';
+        }
+        if (coreDisplay) {
+            const coreValue = formatMoney(product.core_price);
+            coreDisplay.textContent = coreValue ? 'Core: ' + coreValue : 'Core: -';
+        }
+        if (envDisplay) {
+            const envValue = formatMoney(product.environmental_fee);
+            envDisplay.textContent = envValue ? 'Env: ' + envValue : 'Env: -';
         }
         if (quantityDisplay) {
             quantityDisplay.textContent = stockVisible
@@ -1671,6 +1730,7 @@
 
         const nameInput = row.querySelector('.product-name-input');
         const skuInput = row.querySelector('.product-sku-input');
+        const alternateSkuInput = row.querySelector('.product-alternate-skus-input');
         const descriptionInput = row.querySelector('.product-description-input');
         const categoryInput = row.querySelector('.product-category-input');
         const supplierInput = row.querySelector('.product-supplier-input');
@@ -1679,6 +1739,8 @@
         const vinInput = row.querySelector('.product-vin-input');
         const costInput = row.querySelector('.product-cost-price-input');
         const saleInput = row.querySelector('.product-sale-price-input');
+        const coreInput = row.querySelector('.product-core-price-input');
+        const envInput = row.querySelector('.product-env-fee-input');
         const quantityInput = row.querySelector('.product-quantity-input');
         const reorderInput = row.querySelector('.product-reorder-input');
         const itemTypeInput = row.querySelector('.product-item-type-input');
@@ -1691,6 +1753,9 @@
         }
         if (skuInput) {
             skuInput.value = product.sku || '';
+        }
+        if (alternateSkuInput) {
+            alternateSkuInput.value = product.alternate_skus || '';
         }
         if (descriptionInput) {
             descriptionInput.value = product.description || '';
@@ -1715,6 +1780,12 @@
         }
         if (saleInput) {
             saleInput.value = product.sale_price || '';
+        }
+        if (coreInput) {
+            coreInput.value = product.core_price || '';
+        }
+        if (envInput) {
+            envInput.value = product.environmental_fee || '';
         }
         if (quantityInput) {
             quantityInput.value = stockVisible ? (product.quantity_in_stock || '0') : '';
@@ -1746,6 +1817,7 @@
         const searchText = [
             product.name,
             product.sku,
+            product.alternate_skus,
             product.description,
             product.category_name,
             product.supplier_name,
@@ -2235,6 +2307,7 @@
             id: row.dataset.productId || null,
             name: (row.querySelector('.product-name-input')?.value || '').trim(),
             sku: (row.querySelector('.product-sku-input')?.value || '').trim(),
+            alternate_skus: (row.querySelector('.product-alternate-skus-input')?.value || '').trim(),
             description: (row.querySelector('.product-description-input')?.value || '').trim(),
             category_id: row.querySelector('.product-category-input')?.value || '',
             supplier_id: row.querySelector('.product-supplier-input')?.value || '',
@@ -2243,6 +2316,8 @@
             vin_number_id: row.querySelector('.product-vin-input')?.value || '',
             cost_price: (row.querySelector('.product-cost-price-input')?.value || '').trim(),
             sale_price: (row.querySelector('.product-sale-price-input')?.value || '').trim(),
+            core_price: (row.querySelector('.product-core-price-input')?.value || '').trim(),
+            environmental_fee: (row.querySelector('.product-env-fee-input')?.value || '').trim(),
             quantity_in_stock: (row.querySelector('.product-quantity-input')?.value || '').trim(),
             reorder_level: (row.querySelector('.product-reorder-input')?.value || '').trim(),
             item_type: row.querySelector('.product-item-type-input')?.value || 'inventory',
@@ -2294,6 +2369,20 @@
             const saleValue = Number(payload.sale_price);
             if (!isFinite(saleValue) || saleValue < 0) {
                 showStatus(statusTarget, 'Sale price must be a non-negative number.', 'error');
+                return false;
+            }
+        }
+        if (payload.core_price) {
+            const coreValue = Number(payload.core_price);
+            if (!isFinite(coreValue) || coreValue < 0) {
+                showStatus(statusTarget, 'Core charge must be a non-negative number.', 'error');
+                return false;
+            }
+        }
+        if (payload.environmental_fee) {
+            const envValue = Number(payload.environmental_fee);
+            if (!isFinite(envValue) || envValue < 0) {
+                showStatus(statusTarget, 'Environmental fee must be a non-negative number.', 'error');
                 return false;
             }
         }
@@ -2400,6 +2489,7 @@
         const nameInput = document.getElementById('newProductName');
         const skuInput = document.getElementById('newProductSku');
         const descriptionInput = document.getElementById('newProductDescription');
+        const alternateSkusInput = document.getElementById('newProductAlternateSkus');
         const categoryInput = document.getElementById('newProductCategory');
         const supplierInput = document.getElementById('newProductSupplier');
         const brandInput = document.getElementById('newProductBrand');
@@ -2407,6 +2497,8 @@
         const vinInput = document.getElementById('newProductVin');
         const costInput = document.getElementById('newProductCostPrice');
         const saleInput = document.getElementById('newProductSalePrice');
+        const coreInput = document.getElementById('newProductCorePrice');
+        const envInput = document.getElementById('newProductEnvironmentalFee');
         const quantityInput = document.getElementById('newProductQuantity');
         const reorderInput = document.getElementById('newProductReorder');
         const itemTypeInput = document.getElementById('newProductItemType');
@@ -2420,6 +2512,7 @@
         const payload = {
             name: (nameInput.value || '').trim(),
             sku: (skuInput?.value || '').trim(),
+            alternate_skus: (alternateSkusInput?.value || '').trim(),
             description: (descriptionInput?.value || '').trim(),
             category_id: categoryInput?.value || '',
             supplier_id: supplierInput?.value || '',
@@ -2428,6 +2521,8 @@
             vin_number_id: vinInput?.value || '',
             cost_price: (costInput.value || '').trim(),
             sale_price: (saleInput?.value || '').trim(),
+            core_price: (coreInput?.value || '').trim(),
+            environmental_fee: (envInput?.value || '').trim(),
             quantity_in_stock: (quantityInput?.value || '').trim(),
             reorder_level: (reorderInput?.value || '').trim(),
             item_type: itemTypeInput?.value || 'inventory',
@@ -2463,6 +2558,9 @@
                 if (descriptionInput) {
                     descriptionInput.value = '';
                 }
+                if (alternateSkusInput) {
+                    alternateSkusInput.value = '';
+                }
                 if (categoryInput) {
                     categoryInput.value = '';
                 }
@@ -2483,6 +2581,12 @@
                 }
                 if (saleInput) {
                     saleInput.value = '';
+                }
+                if (coreInput) {
+                    coreInput.value = '';
+                }
+                if (envInput) {
+                    envInput.value = '';
                 }
                 if (quantityInput) {
                     quantityInput.value = '';
@@ -2716,6 +2820,7 @@
             'newProductName',
             'newProductSku',
             'newProductDescription',
+            'newProductAlternateSkus',
             'newProductCategory',
             'newProductSupplier',
             'newProductBrand',
@@ -2723,6 +2828,8 @@
             'newProductVin',
             'newProductCostPrice',
             'newProductSalePrice',
+            'newProductCorePrice',
+            'newProductEnvironmentalFee',
             'newProductQuantity',
             'newProductReorder',
             'newProductItemType',

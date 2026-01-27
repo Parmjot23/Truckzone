@@ -62,6 +62,12 @@
                 {% if not item.is_free and item.discount_total %}
                 <div class="small text-success">Discount: -${{ item.discount_total|floatformat:2 }}</div>
                 {% endif %}
+                {% if item.core_fee_unit and item.core_fee_unit > 0 %}
+                <div class="small text-muted">Core charge: ${{ item.core_fee_unit|floatformat:2 }} each</div>
+                {% endif %}
+                {% if item.environmental_fee_unit and item.environmental_fee_unit > 0 %}
+                <div class="small text-muted">Environmental fee: ${{ item.environmental_fee_unit|floatformat:2 }} each</div>
+                {% endif %}
               </div>
             </td>
             <td>
@@ -142,6 +148,12 @@
           <div class="h3 mb-0 fw-bold text-primary">${{ total|floatformat:2 }}</div>
           {% if discount_total %}
           <div class="small text-success mt-1">You saved ${{ discount_total|floatformat:2 }}</div>
+          {% endif %}
+          {% if core_fee_total %}
+          <div class="small text-muted mt-1">Core charges: ${{ core_fee_total|floatformat:2 }}</div>
+          {% endif %}
+          {% if environmental_fee_total %}
+          <div class="small text-muted">Environmental fees: ${{ environmental_fee_total|floatformat:2 }}</div>
           {% endif %}
         </div>
         <a href="{% url 'accounts:store_checkout' %}" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm">

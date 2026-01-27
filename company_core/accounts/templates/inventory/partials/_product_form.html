@@ -15,6 +15,14 @@
     {{ form.description.label_tag }}
     {{ form.description }}
   </div>
+  <div class="form-group span-2">
+    {{ form.alternate_skus.label_tag }}
+    {{ form.alternate_skus }}
+    {% if form.alternate_skus.help_text %}
+    <small class="form-text text-muted">{{ form.alternate_skus.help_text }}</small>
+    {% endif %}
+    {{ form.alternate_skus.errors }}
+  </div>
   <div class="form-group">
     {{ form.category.label_tag }}
     <div class="input-group">
@@ -52,6 +60,14 @@
   <div class="form-group">
     {{ form.promotion_price.label_tag }}
     {{ form.promotion_price }}
+  </div>
+  <div class="form-group">
+    {{ form.core_price.label_tag }}
+    {{ form.core_price }}
+  </div>
+  <div class="form-group">
+    {{ form.environmental_fee.label_tag }}
+    {{ form.environmental_fee }}
   </div>
   <div class="form-group">
     {{ form.margin.label_tag }}

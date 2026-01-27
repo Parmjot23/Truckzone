@@ -68,6 +68,12 @@
                     {% if not item.is_free and item.discount_total %}
                     <div class="small text-success">Discount: -${{ item.discount_total|floatformat:2 }}</div>
                     {% endif %}
+                    {% if item.core_fee_unit and item.core_fee_unit > 0 %}
+                    <div class="small text-muted">Core charge: ${{ item.core_fee_unit|floatformat:2 }} each</div>
+                    {% endif %}
+                    {% if item.environmental_fee_unit and item.environmental_fee_unit > 0 %}
+                    <div class="small text-muted">Environmental fee: ${{ item.environmental_fee_unit|floatformat:2 }} each</div>
+                    {% endif %}
                   </div>
                 </div>
                 <div class="fw-bold">
@@ -90,6 +96,18 @@
             <div class="d-flex justify-content-between mb-2 text-success">
               <span>Discounts</span>
               <span>- ${{ discount_total|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% if core_fee_total %}
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Core charges</span>
+              <span class="fw-semibold">${{ core_fee_total|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% if environmental_fee_total %}
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Environmental fees</span>
+              <span class="fw-semibold">${{ environmental_fee_total|floatformat:2 }}</span>
             </div>
             {% endif %}
             <div class="d-flex justify-content-between mb-2">

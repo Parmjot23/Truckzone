@@ -782,6 +782,7 @@
       const priceField = row.querySelector('input[name$="-price"]');
       const sourceInvoice = row.querySelector('input[name$="-source_invoice"]');
       const sourceInvoiceItem = row.querySelector('input[name$="-source_invoice_item"]');
+      const createInventory = row.querySelector('input[name$="-create_inventory_product"]');
 
       if (productSelect && itemData.product_id) {
         productSelect.value = itemData.product_id;
@@ -792,6 +793,9 @@
       if (priceField) { priceField.value = itemData.price || 0; }
       if (sourceInvoice) { sourceInvoice.value = itemData.invoice_id || ''; }
       if (sourceInvoiceItem) { sourceInvoiceItem.value = itemData.id || ''; }
+      if (createInventory && ['core_charge', 'environment_fee'].includes(itemData.line_type)) {
+        createInventory.checked = false;
+      }
     }
 
     attachProductListeners(row);
@@ -820,6 +824,7 @@
       invoiceSelect.innerHTML = '<option value="">Select an invoice</option>';
       invoiceItemsBody.innerHTML = '';
       invoiceItems.hidden = true;
+      addInvoiceItemsBtn.disabled = true;
       if (!customerId) {
         return;
       }
@@ -845,17 +850,40 @@
     const selectedOption = invoiceSelect.options[invoiceSelect.selectedIndex];
     const items = selectedOption && selectedOption.dataset.items ? JSON.parse(selectedOption.dataset.items) : [];
     if (!items.length) {
-      invoiceItems.hidden = true;
+      invoiceItems.hidden = false;
+      addInvoiceItemsBtn.disabled = true;
+      invoiceItemsBody.innerHTML = `
+        <tr>
+          <td colspan="4" class="text-muted text-center py-3">No returnable items remaining on this invoice.</td>
+        </tr>
+      `;
       return;
     }
+    addInvoiceItemsBtn.disabled = false;
     items.forEach(item => {
+      const availableQty = (typeof item.available_qty === 'number') ? item.available_qty : (item.qty || 0);
+      const isDisabled = availableQty <= 0;
+      const displayText = `${item.part_no || ''} ${item.description || ''}`.trim();
+      const qtyMaxAttr = availableQty > 0 ? `max="${availableQty}"` : '';
+      const checkboxAttrs = isDisabled ? 'disabled' : '';
+      const qtyAttrs = isDisabled ? 'disabled' : '';
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td><input type="checkbox" class="invoice-item-check" data-item='${JSON.stringify(item)}'></td>
-        <td>${item.part_no || ''} ${item.description || ''}</td>
-        <td><input type="number" min="0" step="1" class="form-control form-control-sm invoice-qty" value="${item.qty || 0}"></td>
-        <td><input type="number" min="0" step="0.01" class="form-control form-control-sm invoice-price" value="${item.price || 0}"></td>
+        <td><input type="checkbox" class="invoice-item-check" data-item='${JSON.stringify(item)}' ${checkboxAttrs}></td>
+        <td>${displayText}</td>
+        <td><input type="number" min="0" step="1" class="form-control form-control-sm invoice-qty" value="${availableQty}" ${qtyMaxAttr} ${qtyAttrs}></td>
+        <td><input type="number" min="0" step="0.01" class="form-control form-control-sm invoice-price" value="${item.price || 0}" ${qtyAttrs}></td>
       `;
+      const qtyInput = row.querySelector('.invoice-qty');
+      if (qtyInput) {
+        qtyInput.addEventListener('input', () => {
+          const max = parseFloat(qtyInput.getAttribute('max') || '');
+          const current = parseFloat(qtyInput.value || '0');
+          if (!isNaN(max) && current > max) {
+            qtyInput.value = max;
+          }
+        });
+      }
       invoiceItemsBody.appendChild(row);
     });
     invoiceItems.hidden = false;

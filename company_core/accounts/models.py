@@ -867,6 +867,24 @@ class MechExpenseItem(models.Model):
     tax_paid = models.FloatField(editable=False, default=0)
 
     def save(self, *args, **kwargs):
+        if self.source_invoice_item:
+            line_type = getattr(self.source_invoice_item, "line_type", "") or ""
+            label = ""
+            if line_type == "core_charge":
+                label = "Core return"
+            elif line_type == "product":
+                label = "Product return"
+            if label:
+                base_desc = (
+                    (self.description or "").strip()
+                    or (self.source_invoice_item.job or "").strip()
+                    or (self.source_invoice_item.product.name if self.source_invoice_item.product else "").strip()
+                    or (self.part_no or "").strip()
+                    or "Item"
+                )
+                if not base_desc.lower().startswith(label.lower()):
+                    self.description = f"{label} - {base_desc}"
+
         qty_dec = ensure_decimal(self.qty)
         price_dec = ensure_decimal(self.price)
         amount_dec = (qty_dec * price_dec).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
@@ -2904,6 +2922,22 @@ class Product(models.Model):
         blank=True,
         help_text="Optional promotional price shown on the storefront.",
     )
+    core_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=Decimal("0.00"),
+        help_text="Core charge applied per unit (refundable when core is returned).",
+    )
+    environmental_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=Decimal("0.00"),
+        help_text="Environmental fee applied per unit when applicable.",
+    )
     margin = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     quantity_in_stock = models.PositiveIntegerField(default=0)
     reorder_level = models.PositiveIntegerField(default=0)
@@ -3089,6 +3123,12 @@ class Product(models.Model):
                 raise ValidationError("Promotion price cannot be negative.")
             if self.sale_price is not None and self.promotion_price > self.sale_price:
                 raise ValidationError("Promotion price must be less than or equal to sale price.")
+
+        if self.core_price is not None and self.core_price < Decimal("0"):
+            raise ValidationError("Core price cannot be negative.")
+
+        if self.environmental_fee is not None and self.environmental_fee < Decimal("0"):
+            raise ValidationError("Environmental fee cannot be negative.")
 
     def clean(self):
         super().clean()
@@ -3470,12 +3510,37 @@ class InventoryTransaction(models.Model):
 
 
 
+INVOICE_LINE_TYPE_PRODUCT = "product"
+INVOICE_LINE_TYPE_CORE = "core_charge"
+INVOICE_LINE_TYPE_ENV = "environment_fee"
+INVOICE_LINE_TYPE_CUSTOM = "custom"
+
+INVOICE_LINE_TYPE_CHOICES = (
+    (INVOICE_LINE_TYPE_PRODUCT, "Product"),
+    (INVOICE_LINE_TYPE_CORE, "Core charge"),
+    (INVOICE_LINE_TYPE_ENV, "Environmental fee"),
+    (INVOICE_LINE_TYPE_CUSTOM, "Custom"),
+)
+
+
 class IncomeRecord2(models.Model):
     grouped_invoice = models.ForeignKey('GroupedInvoice', null=True, on_delete=models.CASCADE, related_name='income_records') # Assuming GroupedInvoice is defined above
     pending_invoice = models.ForeignKey('PendingInvoice', null=True, blank=True, on_delete=models.SET_NULL, related_name='income_records') # Assuming PendingInvoice is defined above
     paid_invoice = models.ForeignKey('PaidInvoice', null=True, blank=True, on_delete=models.SET_NULL, related_name='income_records') # Assuming PaidInvoice is defined above
     payment = models.ForeignKey('Payment', null=True, blank=True, on_delete=models.SET_NULL, related_name='income_records') # Assuming Payment is defined above
     product = models.ForeignKey('Product', null=True, blank=True, on_delete=models.SET_NULL) # Assuming Product is defined above
+    parent_line = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='fee_lines',
+    )
+    line_type = models.CharField(
+        max_length=20,
+        choices=INVOICE_LINE_TYPE_CHOICES,
+        default=INVOICE_LINE_TYPE_CUSTOM,
+    )
     job = models.CharField(max_length=2000, blank=True)
     qty = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), null=True) # Default to Decimal
     rate = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), null=True) # Default to Decimal
@@ -3510,6 +3575,8 @@ class IncomeRecord2(models.Model):
 
     def _create_inventory_transaction(self, transaction_type, quantity, product_override=None, remarks_suffix="", user=None):
         """Helper to create inventory transaction."""
+        if self.line_type in {INVOICE_LINE_TYPE_CORE, INVOICE_LINE_TYPE_ENV}:
+            return
         product_to_use = product_override if product_override else self.product
         if not product_to_use or quantity is None or quantity <= 0:
             return # Don't log if no product or zero/negative quantity
@@ -3542,7 +3609,94 @@ class IncomeRecord2(models.Model):
                 user=owner_user,
             )
 
+    def _should_sync_fee_lines(self):
+        if self.line_type != INVOICE_LINE_TYPE_PRODUCT:
+            return False
+        if not self.grouped_invoice_id or not self.product_id:
+            return False
+        if self.quickbooks_line_id:
+            return False
+        profile = getattr(getattr(self.grouped_invoice, "user", None), "profile", None)
+        if not profile or getattr(profile, "occupation", None) != "parts_store":
+            return False
+        return True
+
+    def _sync_fee_lines(self):
+        if not self._should_sync_fee_lines():
+            return
+
+        qty_dec = ensure_decimal(self.qty)
+        if qty_dec <= Decimal("0.00"):
+            IncomeRecord2.objects.filter(
+                parent_line=self,
+                line_type__in=[INVOICE_LINE_TYPE_CORE, INVOICE_LINE_TYPE_ENV],
+            ).delete()
+            return
+
+        core_fee = ensure_decimal(getattr(self.product, "core_price", None))
+        env_fee = ensure_decimal(getattr(self.product, "environmental_fee", None))
+        base_order = self.line_order or 0
+
+        def _upsert_fee(line_type, unit_fee, label, order_offset):
+            existing = IncomeRecord2.objects.filter(parent_line=self, line_type=line_type).first()
+            if unit_fee <= Decimal("0.00"):
+                if existing:
+                    existing.delete()
+                return
+
+            job_label = f"{label} - {self.product.name}" if self.product else label
+            line_order = base_order + order_offset if base_order else 0
+
+            if existing:
+                updates = {}
+                if existing.job != job_label:
+                    updates["job"] = job_label
+                if existing.qty != qty_dec:
+                    updates["qty"] = qty_dec
+                if existing.rate != unit_fee:
+                    updates["rate"] = unit_fee
+                if existing.line_order != line_order:
+                    updates["line_order"] = line_order
+                if existing.product_id is not None:
+                    updates["product"] = None
+                if existing.pending_invoice_id != self.pending_invoice_id:
+                    updates["pending_invoice_id"] = self.pending_invoice_id
+                if existing.paid_invoice_id != self.paid_invoice_id:
+                    updates["paid_invoice_id"] = self.paid_invoice_id
+                if existing.payment_id != self.payment_id:
+                    updates["payment_id"] = self.payment_id
+                if updates:
+                    for field, value in updates.items():
+                        setattr(existing, field, value)
+                    existing.save()
+                return
+
+            IncomeRecord2.objects.create(
+                grouped_invoice=self.grouped_invoice,
+                pending_invoice=self.pending_invoice,
+                paid_invoice=self.paid_invoice,
+                payment=self.payment,
+                product=None,
+                parent_line=self,
+                line_type=line_type,
+                job=job_label,
+                qty=qty_dec,
+                rate=unit_fee,
+                line_order=line_order,
+                date=self.date,
+                ticket=self.ticket,
+                jobsite=self.jobsite,
+                truck=self.truck,
+                driver=self.driver,
+            )
+
+        _upsert_fee(INVOICE_LINE_TYPE_CORE, core_fee, "Core charge", 1)
+        _upsert_fee(INVOICE_LINE_TYPE_ENV, env_fee, "Environmental fee", 2)
+
     def save(self, *args, **kwargs):
+        if self.product_id and (not self.line_type or self.line_type == INVOICE_LINE_TYPE_CUSTOM):
+            self.line_type = INVOICE_LINE_TYPE_PRODUCT
+
         # --- Calculate amount and tax (your existing logic) ---
         qty_dec = ensure_decimal(self.qty)
         rate_dec = ensure_decimal(self.rate)
@@ -3620,6 +3774,9 @@ class IncomeRecord2(models.Model):
         self._original_qty = ensure_decimal(self.qty)
         # --- End Inventory Logic ---
 
+        # Sync any core/environment fee lines for parts store products
+        self._sync_fee_lines()
+
 
         # Recalculate parent invoice total *after* this record is saved and inventory adjusted
         if self.grouped_invoice:
@@ -3629,6 +3786,12 @@ class IncomeRecord2(models.Model):
             self.grouped_invoice.recalculate_total_amount()
 
     def delete(self, *args, **kwargs):
+        if self.line_type == INVOICE_LINE_TYPE_PRODUCT:
+            IncomeRecord2.objects.filter(
+                parent_line=self,
+                line_type__in=[INVOICE_LINE_TYPE_CORE, INVOICE_LINE_TYPE_ENV],
+            ).delete()
+
         # Store necessary info before deletion
         product_to_reverse = self.product
         qty_to_reverse = ensure_decimal(self.qty)

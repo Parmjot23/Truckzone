@@ -32,6 +32,7 @@ from .models import (
     CategoryAttributeOption,
     Supplier,
     Product,
+    ProductAlternateSku,
     ProductStock,
     InventoryTransaction,
     InventoryLocation,
@@ -195,6 +196,47 @@ def _product_transaction_scope_filter(user_ids):
         transactions__user__isnull=True,
         transactions__product__user__in=user_ids,
     )
+
+
+def _sync_alternate_skus(product, sku_list):
+    if product is None or sku_list is None:
+        return
+    normalized = []
+    seen = set()
+    for sku in sku_list:
+        if not sku:
+            continue
+        key = sku.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(sku)
+
+    main_sku = (product.sku or "").strip()
+    if main_sku:
+        main_key = main_sku.casefold()
+        normalized = [sku for sku in normalized if sku.casefold() != main_key]
+
+    existing = list(product.alternate_skus.all())
+    existing_map = {alt.sku.casefold(): alt for alt in existing}
+    desired_keys = {sku.casefold() for sku in normalized}
+
+    for alt in existing:
+        if alt.sku.casefold() not in desired_keys:
+            alt.delete()
+
+    for sku in normalized:
+        key = sku.casefold()
+        existing_alt = existing_map.get(key)
+        if existing_alt:
+            if existing_alt.sku != sku:
+                existing_alt.sku = sku
+                existing_alt.save(update_fields=["sku"])
+            continue
+        ProductAlternateSku.objects.create(
+            product=product,
+            sku=sku,
+        )
 
 
 @login_required
@@ -404,10 +446,11 @@ def inventory_transactions_view(request):
         transactions = transactions.filter(
             Q(product__name__icontains=query)
             | Q(product__sku__icontains=query)
+            | Q(product__alternate_skus__sku__icontains=query)
             | Q(remarks__icontains=query)
             | Q(product__category__name__icontains=query)
             | Q(product__supplier__name__icontains=query)
-        )
+        ).distinct()
 
     transactions_page, querystring = _paginate_queryset(request, transactions, per_page=100)
 
@@ -429,6 +472,7 @@ def inventory_products_view(request):
     products_qs = (
         Product.objects.filter(user__in=product_user_ids)
         .select_related("supplier", "category", "brand", "vehicle_model", "vin_number")
+        .prefetch_related("alternate_skus")
         .order_by("name")
     )
 
@@ -436,6 +480,7 @@ def inventory_products_view(request):
         products_qs = products_qs.filter(
             Q(name__icontains=search_query)
             | Q(sku__icontains=search_query)
+            | Q(alternate_skus__sku__icontains=search_query)
             | Q(description__icontains=search_query)
             | Q(category__name__icontains=search_query)
             | Q(supplier__name__icontains=search_query)
@@ -443,7 +488,7 @@ def inventory_products_view(request):
             | Q(vehicle_model__name__icontains=search_query)
             | Q(vin_number__vin__icontains=search_query)
             | Q(location__icontains=search_query)
-        )
+        ).distinct()
 
     if group_ids:
         products_qs = products_qs.filter(category__group_id__in=group_ids)
@@ -1642,6 +1687,9 @@ def _serialize_product(product, *, stock_user_ids=None, stock_owner=None):
         "id": product.pk,
         "name": product.name,
         "sku": product.sku or "",
+        "alternate_skus": list(
+            product.alternate_skus.order_by("kind", "sku").values_list("sku", flat=True)
+        ),
         "description": product.description or "",
         "category": {
             "id": product.category_id,
@@ -1665,6 +1713,10 @@ def _serialize_product(product, *, stock_user_ids=None, stock_owner=None):
         },
         "cost_price": str(product.cost_price) if product.cost_price is not None else "",
         "sale_price": str(product.sale_price) if product.sale_price is not None else "",
+        "core_price": str(product.core_price) if product.core_price is not None else "",
+        "environmental_fee": (
+            str(product.environmental_fee) if product.environmental_fee is not None else ""
+        ),
         "quantity_in_stock": quantity_in_stock,
         "reorder_level": reorder_level,
         "stock_visible": stock_visible,
@@ -1729,6 +1781,7 @@ def save_product_inline(request):
     form_data = {
         "name": _normalize(payload.get("name")),
         "sku": _normalize(payload.get("sku")),
+        "alternate_skus": payload.get("alternate_skus", ""),
         "description": _normalize(payload.get("description")),
         "category": _normalize(payload.get("category_id")),
         "supplier": _normalize(payload.get("supplier_id")),
@@ -1737,6 +1790,8 @@ def save_product_inline(request):
         "vin_number": _normalize(payload.get("vin_number_id", payload.get("vin_number"))),
         "cost_price": _normalize(payload.get("cost_price")),
         "sale_price": _normalize(payload.get("sale_price")),
+        "core_price": _normalize(payload.get("core_price")),
+        "environmental_fee": _normalize(payload.get("environmental_fee")),
         "quantity_in_stock": _normalize_quantity(quantity_raw),
         "reorder_level": _normalize_quantity(reorder_raw),
         "item_type": item_type,
@@ -1759,6 +1814,7 @@ def save_product_inline(request):
         product.quantity_in_stock = original_quantity or 0
         product.reorder_level = original_reorder or 0
     product.save()
+    _sync_alternate_skus(product, form.cleaned_data.get("alternate_skus"))
 
     stock_quantity = form.cleaned_data.get("quantity_in_stock") or 0
     stock_reorder = form.cleaned_data.get("reorder_level") or 0
@@ -1822,6 +1878,8 @@ def bulk_update_products(request):
         "description": "description",
         "cost_price": "cost_price",
         "sale_price": "sale_price",
+        "core_price": "core_price",
+        "environmental_fee": "environmental_fee",
         "quantity_in_stock": "quantity_in_stock",
         "reorder_level": "reorder_level",
     }
@@ -1857,6 +1915,10 @@ def bulk_update_products(request):
             "vin_number": product.vin_number_id or "",
             "cost_price": str(product.cost_price) if product.cost_price is not None else "",
             "sale_price": str(product.sale_price) if product.sale_price is not None else "",
+            "core_price": str(product.core_price) if product.core_price is not None else "",
+            "environmental_fee": (
+                str(product.environmental_fee) if product.environmental_fee is not None else ""
+            ),
             "quantity_in_stock": (
                 str(product.quantity_in_stock) if product.quantity_in_stock is not None else "0"
             ),
@@ -1943,6 +2005,7 @@ def add_product(request):
             product.user = stock_owner or request.user
             product.save()
             form.save_attribute_values(product)
+            _sync_alternate_skus(product, form.cleaned_data.get("alternate_skus"))
             stock_quantity = form.cleaned_data.get("quantity_in_stock") or 0
             stock_reorder = form.cleaned_data.get("reorder_level") or 0
             if form.cleaned_data.get("item_type") != "inventory":
@@ -2043,6 +2106,7 @@ def edit_product(request):
                 product.reorder_level = original_reorder or 0
             product.save()
             form.save_attribute_values(product)
+            _sync_alternate_skus(product, form.cleaned_data.get("alternate_skus"))
             stock_quantity = form.cleaned_data.get("quantity_in_stock") or 0
             stock_reorder = form.cleaned_data.get("reorder_level") or 0
             if form.cleaned_data.get("item_type") != "inventory":
@@ -4599,11 +4663,13 @@ def search_inventory(request):
             .filter(
                 Q(name__icontains=query)
                 | Q(sku__icontains=query)
+                | Q(alternate_skus__sku__icontains=query)
                 | Q(description__icontains=query)
                 | Q(category__name__icontains=query)
                 | Q(supplier__name__icontains=query)
             )
-            .select_related("category", "supplier")[:5]
+            .select_related("category", "supplier")
+            .distinct()[:5]
         )
 
         for p in products:

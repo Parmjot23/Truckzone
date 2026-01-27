@@ -776,6 +776,8 @@ def _build_storefront_cart_items(cart, product_qs):
     subtotal = Decimal('0.00')
     subtotal_before_discounts = Decimal('0.00')
     discount_total = Decimal('0.00')
+    core_fee_total = Decimal('0.00')
+    env_fee_total = Decimal('0.00')
     sellers = set()
     cart_quantities = {}
 
@@ -804,6 +806,17 @@ def _build_storefront_cart_items(cart, product_qs):
         if line_discount < Decimal('0.00'):
             line_discount = Decimal('0.00')
 
+        core_fee_unit = Decimal('0.00')
+        env_fee_unit = Decimal('0.00')
+        owner_profile = getattr(product.user, "profile", None)
+        if owner_profile and getattr(owner_profile, "occupation", None) == "parts_store":
+            core_fee_unit = product.core_price if product.core_price is not None else Decimal('0.00')
+            env_fee_unit = product.environmental_fee if product.environmental_fee is not None else Decimal('0.00')
+        core_fee_line = core_fee_unit * quantity
+        env_fee_line = env_fee_unit * quantity
+        core_fee_total += core_fee_line
+        env_fee_total += env_fee_line
+
         subtotal += line_subtotal
         subtotal_before_discounts += line_base_total
         discount_total += line_discount
@@ -815,12 +828,25 @@ def _build_storefront_cart_items(cart, product_qs):
             'unit_price': unit_price,
             'original_unit_price': base_price,
             'discount_total': line_discount,
+            'core_fee_unit': core_fee_unit,
+            'environmental_fee_unit': env_fee_unit,
+            'core_fee_total': core_fee_line,
+            'environmental_fee_total': env_fee_line,
             'is_free': False,
         })
         sellers.add(product.user)
         cart_quantities[product.id] = quantity
 
-    return items, subtotal, subtotal_before_discounts, discount_total, sellers, cart_quantities
+    return (
+        items,
+        subtotal,
+        subtotal_before_discounts,
+        discount_total,
+        sellers,
+        cart_quantities,
+        core_fee_total,
+        env_fee_total,
+    )
 
 
 def _resolve_storefront_free_items(store_owner, cart_quantities):
@@ -861,6 +887,14 @@ def _resolve_storefront_free_items(store_owner, cart_quantities):
         if base_price is None:
             base_price = Decimal('0.00')
         free_value = base_price * free_qty
+        core_fee_unit = Decimal('0.00')
+        env_fee_unit = Decimal('0.00')
+        owner_profile = getattr(free_product.user, "profile", None)
+        if owner_profile and getattr(owner_profile, "occupation", None) == "parts_store":
+            core_fee_unit = free_product.core_price if free_product.core_price is not None else Decimal('0.00')
+            env_fee_unit = free_product.environmental_fee if free_product.environmental_fee is not None else Decimal('0.00')
+        core_fee_total = core_fee_unit * free_qty
+        env_fee_total = env_fee_unit * free_qty
         free_items.append({
             'product': free_product,
             'quantity': free_qty,
@@ -869,6 +903,10 @@ def _resolve_storefront_free_items(store_owner, cart_quantities):
             'original_unit_price': base_price,
             'discount_total': Decimal('0.00'),
             'free_value': free_value,
+            'core_fee_unit': core_fee_unit,
+            'environmental_fee_unit': env_fee_unit,
+            'core_fee_total': core_fee_total,
+            'environmental_fee_total': env_fee_total,
             'is_free': True,
             'package_title': package.title,
         })
@@ -2927,18 +2965,33 @@ def cart_view(request):
     customer_account = request.user.customer_portal
     store_owner = get_storefront_owner(request)
     product_qs = _storefront_product_queryset(request, owner=store_owner)
-    paid_items, total, subtotal_before_discounts, discount_total, _, cart_quantities = _build_storefront_cart_items(
-        cart,
-        product_qs,
-    )
+    (
+        paid_items,
+        subtotal,
+        subtotal_before_discounts,
+        discount_total,
+        _,
+        cart_quantities,
+        core_fee_total,
+        env_fee_total,
+    ) = _build_storefront_cart_items(cart, product_qs)
     free_items = _resolve_storefront_free_items(store_owner, cart_quantities)
     items = paid_items + free_items
+    free_core_fee_total = sum((item.get('core_fee_total') or Decimal('0.00') for item in free_items), Decimal('0.00'))
+    free_env_fee_total = sum((item.get('environmental_fee_total') or Decimal('0.00') for item in free_items), Decimal('0.00'))
+    core_fee_total += free_core_fee_total
+    env_fee_total += free_env_fee_total
+    fee_total = core_fee_total + env_fee_total
+    total = subtotal + fee_total
     return render(
         request,
         'store/cart.html',
         {
             'items': items,
             'total': total,
+            'core_fee_total': core_fee_total,
+            'environmental_fee_total': env_fee_total,
+            'fee_total': fee_total,
             'customer_account': customer_account,
             'subtotal_before_discounts': subtotal_before_discounts,
             'discount_total': discount_total,
@@ -3034,12 +3087,23 @@ def checkout(request):
 
     store_owner = get_storefront_owner(request)
     product_qs = _storefront_product_queryset(request, owner=store_owner)
-    paid_items, subtotal, subtotal_before_discounts, discount_total, sellers, cart_quantities = _build_storefront_cart_items(
-        cart,
-        product_qs,
-    )
+    (
+        paid_items,
+        subtotal,
+        subtotal_before_discounts,
+        discount_total,
+        sellers,
+        cart_quantities,
+        core_fee_total,
+        env_fee_total,
+    ) = _build_storefront_cart_items(cart, product_qs)
     free_items = _resolve_storefront_free_items(store_owner, cart_quantities)
     items = paid_items + free_items
+    free_core_fee_total = sum((item.get('core_fee_total') or Decimal('0.00') for item in free_items), Decimal('0.00'))
+    free_env_fee_total = sum((item.get('environmental_fee_total') or Decimal('0.00') for item in free_items), Decimal('0.00'))
+    core_fee_total += free_core_fee_total
+    env_fee_total += free_env_fee_total
+    fee_total = core_fee_total + env_fee_total
 
     if not paid_items:
         messages.error(
@@ -3077,6 +3141,9 @@ def checkout(request):
                 'subtotal_before_discounts': subtotal_before_discounts,
                 'discount_total': discount_total,
                 'subtotal': subtotal,
+                'core_fee_total': core_fee_total,
+                'environmental_fee_total': env_fee_total,
+                'fee_total': fee_total,
                 'customer_info': customer_info,
                 'missing_fields': missing_fields,
                 'error': 'Products from multiple sellers cannot be purchased together.',
@@ -3099,8 +3166,8 @@ def checkout(request):
     if seller_profile:
         tax_label = seller_profile.get_tax_name() if hasattr(seller_profile, 'get_tax_name') else 'Tax'
         if seller_profile.province:
-            tax_total = calculate_tax_total(subtotal, seller_profile.province)
-    total_due = subtotal + tax_total
+            tax_total = calculate_tax_total(subtotal + fee_total, seller_profile.province)
+    total_due = subtotal + fee_total + tax_total
 
     if request.method == 'POST' and not error:
         if not customer_account:
@@ -3174,6 +3241,9 @@ def checkout(request):
         'subtotal_before_discounts': subtotal_before_discounts,
         'discount_total': discount_total,
         'subtotal': subtotal,
+        'core_fee_total': core_fee_total,
+        'environmental_fee_total': env_fee_total,
+        'fee_total': fee_total,
         'tax_label': tax_label,
         'tax_total': tax_total,
         'total_due': total_due,
