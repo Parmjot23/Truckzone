@@ -1957,7 +1957,15 @@
                         </div>
                         {% endif %}
                     {% endif %}
+                    <a href="{% url 'accounts:store_quick_order' %}" class="nav-cart" aria-label="Quick order">
+                        <i class="fas fa-bolt"></i>
+                        <span>Quick Order</span>
+                    </a>
                     {% if customer_account %}
+                    <a href="{% url 'accounts:store_favorites' %}" class="nav-cart" aria-label="Favorites">
+                        <i class="fas fa-heart"></i>
+                        <span>Favorites</span>
+                    </a>
                     <a href="{% url 'accounts:store_cart' %}" class="nav-cart" aria-label="Cart">
                         <i class="fas fa-shopping-cart"></i>
                         <span>Cart</span>
@@ -2142,6 +2150,19 @@
                     <span>FAQ</span>
                     <i class="fas fa-chevron-right mobile-link-arrow"></i>
                 </a>
+                <div class="mobile-section-label">My Store</div>
+                <a href="{% url 'accounts:store_quick_order' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-bolt"></i></div>
+                    <span>Quick Order</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                {% if customer_account %}
+                <a href="{% url 'accounts:store_favorites' %}" class="mobile-link">
+                    <div class="mobile-link-icon"><i class="fas fa-heart"></i></div>
+                    <span>Favorites</span>
+                    <i class="fas fa-chevron-right mobile-link-arrow"></i>
+                </a>
+                {% endif %}
                 {% if customer_account and customer_account.user.profile.occupation == 'parts_store' %}
                 <a href="{% url 'accounts:customer_invoice_list' %}" class="mobile-link">
                     <div class="mobile-link-icon"><i class="fas fa-file-invoice-dollar"></i></div>
@@ -2904,6 +2925,7 @@
     </script>
 
     <script src="{% static 'js/storefront_weather.js' %}" defer></script>
+    <script src="{% static 'js/storefront_favorites.js' %}" defer></script>
 
     {% block extra_js %}{% endblock %}
 </body>

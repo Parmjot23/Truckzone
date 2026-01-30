@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 import json
 import requests
 
-from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse, FileResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.cache import cache
 from django.core.paginator import Paginator
@@ -34,12 +34,13 @@ from django.db.models import (
     When,
 )
 from django.db.models.functions import Coalesce, TruncMonth, Cast
-from django.forms import modelformset_factory, inlineformset_factory
+from django.forms import modelformset_factory, inlineformset_factory, BaseModelFormSet
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.urls import reverse, resolve
 from django.urls.exceptions import Resolver404
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.html import format_html
 from django.views.decorators.http import require_GET, require_POST
 
 try:
@@ -58,6 +59,7 @@ from .models import (
         Product,
         ProductStock,
         StorefrontCartItem,
+        StorefrontFavorite,
         ProductAlternateSku,
         Category,
         CategoryGroup,
@@ -69,11 +71,17 @@ from .models import (
         StorefrontHeroPackage,
         StorefrontMessageBanner,
         StorefrontFlyer,
+        StorefrontJobBundle,
+        StorefrontKit,
+        StorefrontCategoryCrossSell,
+        ProductInstallEssential,
+        StorefrontCoreChargePolicy,
         ProductModel,
         ProductVin,
         Customer,
         GroupedInvoice,
         IncomeRecord2,
+        INVOICE_LINE_TYPE_PRODUCT,
         PendingInvoice,
         Payment,
         CustomerCredit,
@@ -108,6 +116,10 @@ from .forms import (
     StorefrontMessageBannerForm,
     StorefrontFlyerForm,
     StorefrontPriceVisibilityForm,
+    StorefrontJobBundleForm,
+    StorefrontKitForm,
+    StorefrontCategoryCrossSellForm,
+    ProductInstallEssentialForm,
 )
 from .utils import (
     apply_stock_fields,
@@ -140,6 +152,18 @@ STATEMENT_PDF_CSS = CSS(
 ) if WEASYPRINT_AVAILABLE else None
 
 
+class _UserScopedFormSet(BaseModelFormSet):
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        if self.user:
+            kwargs["user"] = self.user
+        return kwargs
+
+
 def _customer_portal_nav_items(request, active_slug):
     """Return ordered navigation items for the customer portal layout."""
 
@@ -153,6 +177,12 @@ def _customer_portal_nav_items(request, active_slug):
                 'label': 'Orders',
                 'icon': 'fa-boxes-stacked',
                 'url': reverse('accounts:customer_orders'),
+            },
+            {
+                'slug': 'favorites',
+                'label': 'Favorites',
+                'icon': 'fa-heart',
+                'url': reverse('accounts:store_favorites'),
             },
             {
                 'slug': 'invoices',
@@ -768,6 +798,77 @@ def _get_cart_product_ids(request):
         store_owner=store_owner,
     ).values_list("product_id", flat=True)
     return {str(product_id) for product_id in product_ids}
+
+
+def _get_favorite_product_ids(request, *, store_owner=None):
+    """Return favorite product ids as strings for template checks."""
+    customer_account = _get_customer_portal_account(request)
+    if not customer_account:
+        return set()
+    store_owner = store_owner or get_storefront_owner(request)
+    if not store_owner:
+        return set()
+    product_ids = StorefrontFavorite.objects.filter(
+        customer=customer_account,
+        store_owner=store_owner,
+    ).values_list("product_id", flat=True)
+    return {str(product_id) for product_id in product_ids}
+
+
+def _add_product_to_cart(customer_account, store_owner, product, qty):
+    if not customer_account or not store_owner or not product:
+        return 0
+    if qty <= 0:
+        return 0
+    available_qty = getattr(product, "stock_quantity", product.quantity_in_stock)
+    if available_qty <= 0:
+        return 0
+    qty = max(1, min(int(qty), available_qty))
+    cart_item = StorefrontCartItem.objects.filter(
+        customer=customer_account,
+        store_owner=store_owner,
+        product=product,
+    ).first()
+    if cart_item:
+        new_qty = min(cart_item.quantity + qty, available_qty)
+        added = max(0, new_qty - cart_item.quantity)
+        if added:
+            cart_item.quantity = new_qty
+            cart_item.save(update_fields=["quantity", "updated_at"])
+        return added
+    StorefrontCartItem.objects.create(
+        customer=customer_account,
+        store_owner=store_owner,
+        product=product,
+        quantity=qty,
+    )
+    return qty
+
+
+def _add_product_to_session_cart(request, product, qty):
+    if not request or not getattr(request, "session", None) or not product:
+        return 0
+    try:
+        qty = int(qty)
+    except (TypeError, ValueError):
+        qty = 1
+    available_qty = getattr(product, "stock_quantity", product.quantity_in_stock)
+    if available_qty <= 0:
+        return 0
+    qty = max(1, min(qty, available_qty))
+    cart = request.session.get("cart", {}) or {}
+    key = str(product.id)
+    try:
+        existing = int(cart.get(key, 0) or 0)
+    except (TypeError, ValueError):
+        existing = 0
+    new_qty = min(existing + qty, available_qty)
+    if new_qty <= 0:
+        return 0
+    cart[key] = new_qty
+    request.session["cart"] = cart
+    request.session.modified = True
+    return max(0, new_qty - existing)
 
 
 def _build_storefront_cart_items(cart, product_qs):
@@ -1392,6 +1493,192 @@ def _storefront_product_queryset(request=None, *, owner=None):
             queryset = queryset.filter(user=store_owner)
         queryset = annotate_products_with_stock(queryset, store_owner)
     return queryset
+
+
+def _storefront_products_by_ids(request, product_ids, *, owner=None):
+    if not product_ids:
+        return []
+    queryset = (
+        _storefront_product_queryset(request, owner=owner)
+        .filter(id__in=product_ids)
+        .select_related('brand', 'category')
+    )
+    products = list(queryset)
+    apply_stock_fields(products)
+    product_map = {product.id: product for product in products}
+    return [product_map[product_id] for product_id in product_ids if product_id in product_map]
+
+
+def _resolve_install_essentials(product, *, owner=None):
+    essentials = list(
+        ProductInstallEssential.objects.filter(product=product).select_related('related_product')
+    )
+    related_ids = [
+        essential.related_product_id
+        for essential in essentials
+        if essential.related_product_id
+    ]
+    related_products = {}
+    if related_ids:
+        related_products = {
+            item.id: item
+            for item in _storefront_products_by_ids(None, related_ids, owner=owner)
+        }
+    enriched = []
+    for essential in essentials:
+        related = related_products.get(essential.related_product_id)
+        enriched.append(
+            {
+                "label": essential.label,
+                "is_required": essential.is_required,
+                "product": related,
+            }
+        )
+    return enriched
+
+
+def _resolve_category_cross_sell_products(category, *, owner=None):
+    if not category:
+        return []
+    cross_sell = StorefrontCategoryCrossSell.objects.filter(
+        user=owner,
+        category=category,
+        is_active=True,
+    ).first()
+    if not cross_sell:
+        return []
+    cross_sell_ids = list(
+        cross_sell.products.values_list("id", flat=True)
+    )
+    return _storefront_products_by_ids(None, cross_sell_ids, owner=owner)
+
+
+def _resolve_job_bundle_cards(product, *, owner=None):
+    bundles = (
+        StorefrontJobBundle.objects.filter(
+            user=owner,
+            is_active=True,
+            products=product,
+        )
+        .select_related("job_name")
+        .prefetch_related("products")
+        .order_by("sort_order", "title")
+    )
+    bundle_cards = []
+    for bundle in bundles:
+        product_ids = list(
+            bundle.products.exclude(id=product.id).values_list("id", flat=True)
+        )
+        products = _storefront_products_by_ids(None, product_ids, owner=owner)
+        if not products:
+            continue
+        bundle_cards.append(
+            {
+                "bundle": bundle,
+                "products": products,
+            }
+        )
+    return bundle_cards
+
+
+def _resolve_curated_kits(product, *, owner=None):
+    kits = (
+        StorefrontKit.objects.filter(
+            user=owner,
+            is_active=True,
+            products=product,
+        )
+        .prefetch_related("products")
+        .order_by("sort_order", "title")
+    )
+    kit_cards = []
+    for kit in kits:
+        product_ids = list(
+            kit.products.exclude(id=product.id).values_list("id", flat=True)
+        )
+        products = _storefront_products_by_ids(None, product_ids, owner=owner)
+        if not products:
+            continue
+        kit_cards.append(
+            {
+                "kit": kit,
+                "products": products,
+            }
+        )
+    return kit_cards
+
+
+def _resolve_frequently_bought_together(product, *, owner=None, limit=6):
+    if not owner:
+        return []
+    invoice_ids = (
+        IncomeRecord2.objects.filter(
+            grouped_invoice__is_online_order=True,
+            grouped_invoice__user=owner,
+            product_id=product.id,
+            line_type=INVOICE_LINE_TYPE_PRODUCT,
+        )
+        .values_list("grouped_invoice_id", flat=True)
+    )
+    if not invoice_ids:
+        return []
+    co_products = (
+        IncomeRecord2.objects.filter(
+            grouped_invoice_id__in=invoice_ids,
+            product__isnull=False,
+            line_type=INVOICE_LINE_TYPE_PRODUCT,
+        )
+        .exclude(product_id=product.id)
+        .values("product_id")
+        .annotate(total=Count("id"))
+        .order_by("-total")[: limit * 2]
+    )
+    co_ids = [row["product_id"] for row in co_products if row.get("product_id")]
+    return _storefront_products_by_ids(None, co_ids[:limit], owner=owner)
+
+
+def _resolve_cart_suggestions(cart_products, *, owner=None, limit=8):
+    if not cart_products or not owner:
+        return []
+    cart_ids = {product.id for product in cart_products}
+    suggestion_ids = []
+
+    essentials = ProductInstallEssential.objects.filter(
+        product__in=cart_products,
+        related_product__isnull=False,
+    ).values_list("related_product_id", flat=True)
+    for product_id in essentials:
+        if product_id and product_id not in cart_ids and product_id not in suggestion_ids:
+            suggestion_ids.append(product_id)
+
+    category_ids = {product.category_id for product in cart_products if product.category_id}
+    if category_ids:
+        cross_sells = StorefrontCategoryCrossSell.objects.filter(
+            user=owner,
+            category_id__in=category_ids,
+            is_active=True,
+        ).prefetch_related("products")
+        for cross_sell in cross_sells:
+            for product_id in cross_sell.products.values_list("id", flat=True):
+                if product_id and product_id not in cart_ids and product_id not in suggestion_ids:
+                    suggestion_ids.append(product_id)
+
+    bundles = StorefrontJobBundle.objects.filter(
+        user=owner,
+        is_active=True,
+        products__in=cart_products,
+    ).prefetch_related("products")
+    for bundle in bundles:
+        for product_id in bundle.products.values_list("id", flat=True):
+            if product_id and product_id not in cart_ids and product_id not in suggestion_ids:
+                suggestion_ids.append(product_id)
+
+    for product in cart_products:
+        for co_product in _resolve_frequently_bought_together(product, owner=owner, limit=2):
+            if co_product.id not in cart_ids and co_product.id not in suggestion_ids:
+                suggestion_ids.append(co_product.id)
+
+    return _storefront_products_by_ids(None, suggestion_ids[:limit], owner=owner)
 
 
 PRODUCT_OVERVIEW_ATTRIBUTE_NAMES = {
@@ -2206,6 +2493,9 @@ def _render_product_list_page(request, available_products, *, group=None, catego
     context["cart_product_ids"] = (
         _get_cart_product_ids(request) if request.user.is_authenticated else set()
     )
+    context["favorite_product_ids"] = (
+        _get_favorite_product_ids(request, store_owner=store_owner) if request.user.is_authenticated else set()
+    )
     category_path = _build_category_path(category) if category else []
     breadcrumbs = _build_storefront_breadcrumbs(
         group=group,
@@ -2304,6 +2594,7 @@ def product_list(request):
         "search_query": (request.GET.get('q') or '').strip(),
         "customer_account": getattr(request.user, 'customer_portal', None) if request.user.is_authenticated else None,
         "cart_product_ids": _get_cart_product_ids(request) if request.user.is_authenticated else set(),
+        "favorite_product_ids": _get_favorite_product_ids(request, store_owner=store_owner) if request.user.is_authenticated else set(),
     }
     context.update(
         _build_storefront_marketing_context(
@@ -2663,12 +2954,18 @@ def customer_dashboard(request):
             customer_account,
             limit=3,
         )
+        store_owner = get_storefront_owner(request)
+        core_policy = StorefrontCoreChargePolicy.objects.filter(
+            user=store_owner,
+            is_active=True,
+        ).first() if store_owner else None
         context = {
             'customer_account': customer_account,
             'invoice_summary': invoice_summary,
             'recent_invoices': recent_invoices,
             'recent_credit_rows': recent_credit_rows,
             'recent_credit_total': recent_credit_total,
+            'core_policy': core_policy,
         }
         context.update(_customer_portal_layout_context(request, active_slug='shop'))
         return render(request, 'store/customer_dashboard_storefront.html', context)
@@ -2877,6 +3174,35 @@ def product_detail(request, pk):
         category_path=category_path,
         label=product.name,
     )
+    store_owner = get_storefront_owner(request)
+
+    install_essentials = _resolve_install_essentials(product, owner=store_owner)
+    category_cross_sell_products = _resolve_category_cross_sell_products(
+        product.category,
+        owner=store_owner,
+    )
+    job_bundle_cards = _resolve_job_bundle_cards(product, owner=store_owner)
+    kit_cards = _resolve_curated_kits(product, owner=store_owner)
+    frequently_bought = _resolve_frequently_bought_together(product, owner=store_owner, limit=6)
+    core_policy = StorefrontCoreChargePolicy.objects.filter(
+        user=store_owner,
+        is_active=True,
+    ).first() if store_owner else None
+    suggested_products = []
+    seen_ids = {product.id}
+    for collection in (
+        [item["product"] for item in install_essentials if item.get("product")],
+        category_cross_sell_products,
+        frequently_bought,
+        [prod for card in job_bundle_cards for prod in card["products"]],
+        [prod for card in kit_cards for prod in card["products"]],
+    ):
+        for item in collection:
+            if not item or item.id in seen_ids:
+                continue
+            seen_ids.add(item.id)
+            suggested_products.append(item)
+    suggested_products = suggested_products[:8]
 
     query_params = request.GET.copy()
     query_params.pop('partial', None)
@@ -2902,16 +3228,346 @@ def product_detail(request, pk):
         'customer_account': getattr(request.user, 'customer_portal', None),
         'breadcrumbs': breadcrumbs,
         'back_url': back_url,
+        'install_essentials': install_essentials,
+        'category_cross_sell_products': category_cross_sell_products,
+        'job_bundle_cards': job_bundle_cards,
+        'kit_cards': kit_cards,
+        'frequently_bought': frequently_bought,
+        'suggested_products': suggested_products,
+        'core_policy': core_policy,
     }
-    store_owner = get_storefront_owner(request)
     price_flags = resolve_storefront_price_flags(request, store_owner)
     context['show_prices_catalog'] = price_flags['catalog']
     if request.user.is_authenticated:
         cart_product_ids = _get_cart_product_ids(request)
         context['in_cart'] = str(product.id) in cart_product_ids
+        context['cart_product_ids'] = cart_product_ids
+        favorite_product_ids = _get_favorite_product_ids(request, store_owner=store_owner)
+        context['favorite_product_ids'] = favorite_product_ids
+        context['is_favorite'] = str(product.id) in favorite_product_ids
     else:
         context['in_cart'] = False
+        context['cart_product_ids'] = []
     return render(request, 'store/product_detail.html', context)
+
+
+def _resolve_quick_order_match(available_products, term):
+    if not term:
+        return None
+    term = term.strip()
+    if term.startswith('#'):
+        term = term[1:].strip()
+    if not term:
+        return None
+    product = available_products.filter(sku__iexact=term).first()
+    if product:
+        return product
+    alternate_ids = ProductAlternateSku.objects.filter(
+        sku__iexact=term,
+    ).values_list('product_id', flat=True)
+    if alternate_ids:
+        return available_products.filter(id__in=alternate_ids).first()
+    return None
+
+
+@customer_login_required
+@require_POST
+def toggle_favorite(request, product_id):
+    customer_account = request.user.customer_portal
+    store_owner = get_storefront_owner(request)
+    if not store_owner:
+        return HttpResponseForbidden("Storefront not available.")
+    product = get_object_or_404(
+        _storefront_product_queryset(request, owner=store_owner),
+        pk=product_id,
+    )
+    favorite = StorefrontFavorite.objects.filter(
+        customer=customer_account,
+        store_owner=store_owner,
+        product=product,
+    ).first()
+    if favorite:
+        favorite.delete()
+        is_favorite = False
+        status = "removed"
+    else:
+        StorefrontFavorite.objects.create(
+            customer=customer_account,
+            store_owner=store_owner,
+            product=product,
+        )
+        is_favorite = True
+        status = "added"
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse(
+            {
+                'status': status,
+                'is_favorite': is_favorite,
+                'product_id': product_id,
+            }
+        )
+    return redirect(request.META.get('HTTP_REFERER') or reverse('accounts:store_product_detail', args=[product_id]))
+
+
+@customer_login_required
+def favorites_view(request):
+    customer_account = request.user.customer_portal
+    store_owner = get_storefront_owner(request)
+    if not store_owner:
+        messages.error(request, "Storefront location not available for favorites.")
+        return redirect('accounts:store_product_list')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'add_selected':
+            selected_ids = [value for value in request.POST.getlist('favorite_id') if value]
+            if not selected_ids:
+                messages.info(request, "Select at least one favorite to add to your cart.")
+                return redirect('accounts:store_favorites')
+
+            _sync_session_cart_to_db(request, customer_account, store_owner)
+            available_products = _storefront_product_queryset(request, owner=store_owner)
+            product_map = {
+                str(product.id): product
+                for product in available_products.filter(id__in=selected_ids)
+            }
+            added_lines = 0
+            out_of_stock = 0
+            for product_id in selected_ids:
+                product = product_map.get(str(product_id))
+                if not product:
+                    continue
+                try:
+                    qty = int(request.POST.get(f'quantity_{product_id}', 1))
+                except (TypeError, ValueError):
+                    qty = 1
+                added = _add_product_to_cart(customer_account, store_owner, product, qty)
+                if added:
+                    added_lines += 1
+                else:
+                    out_of_stock += 1
+
+            if added_lines:
+                messages.success(
+                    request,
+                    format_html(
+                        "Added {} favorite item(s) to your cart. <a href=\"{}\">View cart</a>",
+                        added_lines,
+                        reverse('accounts:store_cart'),
+                    ),
+                )
+            if out_of_stock:
+                messages.warning(request, f"{out_of_stock} favorite item(s) were out of stock.")
+            return redirect('accounts:store_favorites')
+
+    favorite_rows = []
+    favorites_qs = StorefrontFavorite.objects.filter(
+        customer=customer_account,
+        store_owner=store_owner,
+    ).order_by('-created_at')
+    favorite_ids = list(favorites_qs.values_list('product_id', flat=True))
+    available_products = _storefront_product_queryset(request, owner=store_owner).select_related(
+        'brand',
+        'category',
+    )
+    product_map = {product.id: product for product in available_products.filter(id__in=favorite_ids)}
+    for favorite in favorites_qs:
+        product = product_map.get(favorite.product_id)
+        if not product:
+            continue
+        stock_qty = getattr(product, "quantity_in_stock", 0)
+        stock_label = f"{stock_qty} in stock" if stock_qty > 0 else "Out of stock"
+        favorite_rows.append(
+            {
+                "product": product,
+                "stock_label": stock_label,
+            }
+        )
+
+    context = _customer_portal_layout_context(request, 'favorites')
+    price_flags = resolve_storefront_price_flags(request, store_owner)
+    context.update(
+        {
+            "favorites": favorite_rows,
+            "favorite_product_ids": {str(pid) for pid in favorite_ids},
+            "cart_product_ids": _get_cart_product_ids(request),
+            "show_prices_catalog": price_flags["catalog"],
+        }
+    )
+    return render(request, 'store/favorites.html', context)
+
+
+def quick_order(request):
+    customer_account = (
+        getattr(request.user, 'customer_portal', None)
+        if getattr(request, 'user', None) and request.user.is_authenticated
+        else None
+    )
+    store_owner = get_storefront_owner(request)
+    if not store_owner:
+        messages.error(request, "Storefront location not available for quick order.")
+        return redirect('accounts:store_product_list')
+
+    if request.method == 'POST':
+        if customer_account:
+            _sync_session_cart_to_db(request, customer_account, store_owner)
+        product_ids = request.POST.getlist('product_id')
+        quantities = request.POST.getlist('quantity')
+        search_terms = request.POST.getlist('search')
+
+        max_len = max(len(product_ids), len(quantities), len(search_terms))
+        items = []
+        unresolved = 0
+        available_products = _storefront_product_queryset(request, owner=store_owner)
+        for idx in range(max_len):
+            product_id = product_ids[idx].strip() if idx < len(product_ids) else ''
+            qty_raw = quantities[idx] if idx < len(quantities) else ''
+            term = (search_terms[idx] if idx < len(search_terms) else '').strip()
+
+            if not product_id:
+                if not term:
+                    continue
+                match = _resolve_quick_order_match(available_products, term)
+                if match:
+                    product_id = str(match.id)
+                else:
+                    unresolved += 1
+                    continue
+
+            try:
+                qty = int(qty_raw)
+            except (TypeError, ValueError):
+                qty = 1
+            items.append((product_id, qty))
+
+        if not items:
+            messages.info(request, "Add at least one product to place a quick order.")
+            if unresolved:
+                messages.warning(
+                    request,
+                    f"We could not match {unresolved} line(s). Please choose from suggestions or verify the part number.",
+                )
+            return redirect('accounts:store_quick_order')
+
+        product_map = {
+            str(product.id): product
+            for product in available_products.filter(id__in={pid for pid, _ in items})
+        }
+        added_lines = 0
+        out_of_stock = 0
+        missing = 0
+        for product_id, qty in items:
+            product = product_map.get(str(product_id))
+            if not product:
+                missing += 1
+                continue
+            if customer_account:
+                added = _add_product_to_cart(customer_account, store_owner, product, qty)
+            else:
+                added = _add_product_to_session_cart(request, product, qty)
+            if added:
+                added_lines += 1
+            else:
+                out_of_stock += 1
+
+        if added_lines:
+            messages.success(
+                request,
+                format_html(
+                    "Added {} quick order item(s) to your cart. <a href=\"{}\">View cart</a>",
+                    added_lines,
+                    reverse('accounts:store_cart'),
+                ),
+            )
+            if not customer_account:
+                messages.info(
+                    request,
+                    f"Log in when you're ready to review your cart."
+                )
+        if unresolved:
+            messages.warning(
+                request,
+                f"We could not match {unresolved} line(s). Please choose from suggestions or verify the part number.",
+            )
+        if missing:
+            messages.warning(request, f"{missing} item(s) were unavailable.")
+        if out_of_stock:
+            messages.warning(request, f"{out_of_stock} item(s) were out of stock.")
+
+        if added_lines:
+            return redirect('accounts:store_cart')
+        return redirect('accounts:store_quick_order')
+
+    context = {
+        "customer_account": customer_account,
+        "quick_order_rows": range(6),
+    }
+    return render(request, 'store/quick_order.html', context)
+
+
+@require_GET
+def quick_order_suggestions(request):
+    query = (request.GET.get('q') or '').strip()
+    if len(query) < 2:
+        return JsonResponse({'query': query, 'results': [], 'has_more': False})
+
+    try:
+        limit = int(request.GET.get('limit', 8))
+    except ValueError:
+        limit = 8
+    limit = max(1, min(limit, 12))
+
+    available_products = _storefront_product_queryset(request)
+    products = available_products.select_related('category', 'brand')
+    terms = [term for term in re.split(r"[\s/_,-]+", query) if term]
+
+    alternate_ids = ProductAlternateSku.objects.filter(
+        sku__icontains=query,
+    ).values('product_id')
+
+    search_q = (
+        Q(name__icontains=query)
+        | Q(description__icontains=query)
+        | Q(sku__icontains=query)
+        | Q(category__name__icontains=query)
+        | Q(brand__name__icontains=query)
+        | Q(id__in=alternate_ids)
+    )
+    if terms:
+        token_q = Q()
+        for term in terms:
+            token_q |= (
+                Q(name__icontains=term)
+                | Q(description__icontains=term)
+                | Q(sku__icontains=term)
+                | Q(category__name__icontains=term)
+                | Q(brand__name__icontains=term)
+            )
+        search_q |= token_q
+
+    product_list = list(products.filter(search_q).distinct()[: limit + 1])
+    results = []
+    for product in product_list[:limit]:
+        stock_qty = getattr(product, "quantity_in_stock", 0)
+        stock_label = f"{stock_qty} in stock" if stock_qty > 0 else "Out of stock"
+        results.append(
+            {
+                "id": product.id,
+                "name": product.name,
+                "sku": product.sku,
+                "brand": product.brand.name if product.brand else "",
+                "category": product.category.name if product.category else "",
+                "image": product.image.url if product.image else "",
+                "stock_label": stock_label,
+            }
+        )
+    return JsonResponse(
+        {
+            "query": query,
+            "results": results,
+            "has_more": len(product_list) > limit,
+        }
+    )
 
 
 @customer_login_required
@@ -2959,6 +3615,35 @@ def add_to_cart(request, product_id):
 
 
 @customer_login_required
+@require_POST
+def add_kit_to_cart(request, kit_id):
+    """Add all products in a curated kit to the cart."""
+    customer_account = request.user.customer_portal
+    store_owner = get_storefront_owner(request)
+    if not store_owner:
+        messages.error(request, "Storefront not available.")
+        return redirect('accounts:store_cart')
+    kit = get_object_or_404(
+        StorefrontKit.objects.filter(user=store_owner, is_active=True),
+        pk=kit_id,
+    )
+    product_ids = list(kit.products.values_list("id", flat=True))
+    if not product_ids:
+        messages.info(request, "This kit does not have products assigned yet.")
+        return redirect(request.META.get('HTTP_REFERER') or reverse('accounts:store_cart'))
+
+    products = _storefront_product_queryset(request, owner=store_owner).filter(id__in=product_ids)
+    added_total = 0
+    for product in products:
+        added_total += _add_product_to_cart(customer_account, store_owner, product, 1)
+    if added_total:
+        messages.success(request, f"Added {added_total} kit item(s) to your cart.")
+    else:
+        messages.info(request, "Kit items were already in your cart or out of stock.")
+    return redirect(request.META.get('HTTP_REFERER') or reverse('accounts:store_cart'))
+
+
+@customer_login_required
 def cart_view(request):
     """Display cart contents."""
     cart = _get_cart(request)
@@ -2983,6 +3668,24 @@ def cart_view(request):
     env_fee_total += free_env_fee_total
     fee_total = core_fee_total + env_fee_total
     total = subtotal + fee_total
+    paid_products = [item.get('product') for item in paid_items if item.get('product')]
+    suggested_products = _resolve_cart_suggestions(paid_products, owner=store_owner)
+    suggested_kits = (
+        StorefrontKit.objects.filter(
+            user=store_owner,
+            is_active=True,
+            products__in=paid_products,
+        )
+        .prefetch_related("products")
+        .distinct()
+        .order_by("sort_order", "title")
+        if store_owner and paid_products
+        else []
+    )
+    core_policy = StorefrontCoreChargePolicy.objects.filter(
+        user=store_owner,
+        is_active=True,
+    ).first() if store_owner else None
     return render(
         request,
         'store/cart.html',
@@ -2996,6 +3699,10 @@ def cart_view(request):
             'subtotal_before_discounts': subtotal_before_discounts,
             'discount_total': discount_total,
             'free_items': free_items,
+            'suggested_products': suggested_products,
+            'suggested_kits': suggested_kits,
+            'core_policy': core_policy,
+            'cart_product_ids': {str(product_id) for product_id in cart.keys()},
         },
     )
 
@@ -3104,6 +3811,24 @@ def checkout(request):
     core_fee_total += free_core_fee_total
     env_fee_total += free_env_fee_total
     fee_total = core_fee_total + env_fee_total
+    paid_products = [item.get('product') for item in paid_items if item.get('product')]
+    suggested_products = _resolve_cart_suggestions(paid_products, owner=store_owner)
+    suggested_kits = (
+        StorefrontKit.objects.filter(
+            user=store_owner,
+            is_active=True,
+            products__in=paid_products,
+        )
+        .prefetch_related("products")
+        .distinct()
+        .order_by("sort_order", "title")
+        if store_owner and paid_products
+        else []
+    )
+    core_policy = StorefrontCoreChargePolicy.objects.filter(
+        user=store_owner,
+        is_active=True,
+    ).first() if store_owner else None
 
     if not paid_items:
         messages.error(
@@ -3149,6 +3874,10 @@ def checkout(request):
                 'error': 'Products from multiple sellers cannot be purchased together.',
                 'customer_account': customer_account,
                 'free_items': free_items,
+                'suggested_products': suggested_products,
+                'suggested_kits': suggested_kits,
+                'core_policy': core_policy,
+                'cart_product_ids': cart_product_ids,
             })
         seller = sellers.pop()
     else:
@@ -3252,6 +3981,10 @@ def checkout(request):
         'error': error,
         'customer_account': customer_account,
         'free_items': free_items,
+        'suggested_products': suggested_products,
+        'suggested_kits': suggested_kits,
+        'core_policy': core_policy,
+        'cart_product_ids': cart_product_ids,
     })
 
 
@@ -3347,6 +4080,153 @@ def manage_storefront(request):
         'category_options': category_qs,
     }
     return render(request, 'store/manage_storefront.html', context)
+
+
+@login_required
+def manage_storefront_suggestions(request):
+    """Manage suggested products, kits, and install essentials for the storefront."""
+
+    business_user = get_business_user(request.user) or request.user
+    store_user_ids = get_product_user_ids(business_user)
+
+    JobBundleFormSet = modelformset_factory(
+        StorefrontJobBundle,
+        form=StorefrontJobBundleForm,
+        formset=_UserScopedFormSet,
+        extra=1,
+        can_delete=True,
+    )
+    KitFormSet = modelformset_factory(
+        StorefrontKit,
+        form=StorefrontKitForm,
+        formset=_UserScopedFormSet,
+        extra=1,
+        can_delete=True,
+    )
+    CrossSellFormSet = modelformset_factory(
+        StorefrontCategoryCrossSell,
+        form=StorefrontCategoryCrossSellForm,
+        formset=_UserScopedFormSet,
+        extra=1,
+        can_delete=True,
+    )
+    EssentialsFormSet = modelformset_factory(
+        ProductInstallEssential,
+        form=ProductInstallEssentialForm,
+        formset=_UserScopedFormSet,
+        extra=1,
+        can_delete=True,
+    )
+
+    job_bundle_qs = StorefrontJobBundle.objects.filter(user=business_user).order_by('sort_order', 'title')
+    kit_qs = StorefrontKit.objects.filter(user=business_user).order_by('sort_order', 'title')
+    cross_sell_qs = StorefrontCategoryCrossSell.objects.filter(user=business_user).select_related('category').order_by('category__name')
+    essentials_qs = ProductInstallEssential.objects.filter(
+        product__user__in=store_user_ids
+    ).select_related('product', 'related_product').order_by('product__name', 'sort_order', 'label')
+
+    def _save_formset(formset, *, set_user=True):
+        instances = formset.save(commit=False)
+        for obj in formset.deleted_objects:
+            obj.delete()
+        for obj in instances:
+            if set_user and not obj.user_id:
+                obj.user = business_user
+            obj.save()
+        formset.save_m2m()
+
+    job_bundle_formset = JobBundleFormSet(queryset=job_bundle_qs, prefix='job', user=business_user)
+    kit_formset = KitFormSet(queryset=kit_qs, prefix='kit', user=business_user)
+    cross_sell_formset = CrossSellFormSet(queryset=cross_sell_qs, prefix='cross', user=business_user)
+    essentials_formset = EssentialsFormSet(queryset=essentials_qs, prefix='ess', user=business_user)
+
+    if request.method == 'POST':
+        if 'save_job_bundles' in request.POST:
+            job_bundle_formset = JobBundleFormSet(
+                request.POST,
+                queryset=job_bundle_qs,
+                prefix='job',
+                user=business_user,
+            )
+            if job_bundle_formset.is_valid():
+                _save_formset(job_bundle_formset, set_user=True)
+                messages.success(request, "Job bundles updated.")
+                return redirect('accounts:store_suggestions')
+            messages.error(request, "Please fix the job bundle errors below.")
+        elif 'save_kits' in request.POST:
+            kit_formset = KitFormSet(
+                request.POST,
+                queryset=kit_qs,
+                prefix='kit',
+                user=business_user,
+            )
+            if kit_formset.is_valid():
+                _save_formset(kit_formset, set_user=True)
+                messages.success(request, "Curated kits updated.")
+                return redirect('accounts:store_suggestions')
+            messages.error(request, "Please fix the curated kit errors below.")
+        elif 'save_cross_sells' in request.POST:
+            cross_sell_formset = CrossSellFormSet(
+                request.POST,
+                queryset=cross_sell_qs,
+                prefix='cross',
+                user=business_user,
+            )
+            if cross_sell_formset.is_valid():
+                try:
+                    _save_formset(cross_sell_formset, set_user=True)
+                    messages.success(request, "Category cross-sell settings updated.")
+                    return redirect('accounts:store_suggestions')
+                except IntegrityError:
+                    messages.error(request, "Each category can only have one cross-sell set.")
+            else:
+                messages.error(request, "Please fix the category cross-sell errors below.")
+        elif 'save_essentials' in request.POST:
+            essentials_formset = EssentialsFormSet(
+                request.POST,
+                queryset=essentials_qs,
+                prefix='ess',
+                user=business_user,
+            )
+            if essentials_formset.is_valid():
+                _save_formset(essentials_formset, set_user=False)
+                messages.success(request, "Install essentials updated.")
+                return redirect('accounts:store_suggestions')
+            messages.error(request, "Please fix the install essentials errors below.")
+
+    context = {
+        "job_bundle_formset": job_bundle_formset,
+        "kit_formset": kit_formset,
+        "cross_sell_formset": cross_sell_formset,
+        "essentials_formset": essentials_formset,
+        "product_count": Product.objects.filter(user__in=store_user_ids).count(),
+    }
+    return render(request, "store/manage_storefront_suggestions.html", context)
+
+
+@login_required
+def storefront_core_policy_download(request):
+    """Download the active core charge policy for the current storefront."""
+
+    store_owner = None
+    if hasattr(request.user, "customer_portal"):
+        store_owner = get_storefront_owner(request)
+    if not store_owner:
+        store_owner = get_business_user(request.user) or request.user
+    if not store_owner:
+        return HttpResponseForbidden("Storefront not available.")
+
+    policy = StorefrontCoreChargePolicy.objects.filter(
+        user=store_owner,
+        is_active=True,
+    ).first()
+    if not policy or not policy.policy_file:
+        return HttpResponse("No core charge policy is available.", status=404)
+
+    policy.policy_file.open("rb")
+    response = FileResponse(policy.policy_file, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{policy.policy_file.name}"'
+    return response
 
 
 @login_required

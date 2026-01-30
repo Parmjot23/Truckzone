@@ -55,7 +55,21 @@
     </div>
     <div class="col-lg-6">
       <div class="product-detail-panel">
-        <h1 class="product-detail-title">{{ product.name }}</h1>
+        <div class="product-detail-title-row">
+          <h1 class="product-detail-title">{{ product.name }}</h1>
+          {% if customer_account %}
+          <form method="post" action="{% url 'accounts:store_favorite_toggle' product.id %}" class="favorite-form favorite-form--detail">
+            {% csrf_token %}
+            <button type="submit"
+              class="favorite-toggle{% if is_favorite %} is-active{% endif %}"
+              data-favorite-toggle data-product-id="{{ product.id }}"
+              aria-pressed="{% if is_favorite %}true{% else %}false{% endif %}"
+              title="{% if is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}">
+              <i class="{% if is_favorite %}fa-solid{% else %}fa-regular{% endif %} fa-heart"></i>
+            </button>
+          </form>
+          {% endif %}
+        </div>
         <div class="product-detail-meta">
           {% if product.brand %}
             <span class="badge bg-light text-dark me-2">{{ product.brand.name }}</span>
@@ -88,6 +102,27 @@
           {% endif %}
         {% else %}
           <div class="product-detail-meta">Sign in to view price</div>
+        {% endif %}
+
+        {% if core_policy and product.core_price and product.core_price > 0 %}
+          <div class="core-policy-card mt-3">
+            <div class="core-policy-title">Core charge policy</div>
+            <div class="core-policy-meta">
+              Refund timeline: {{ core_policy.refund_timeline_days }} days.
+            </div>
+            {% if core_policy.summary %}
+            <div class="core-policy-summary">{{ core_policy.summary|linebreaks }}</div>
+            {% endif %}
+            {% if core_policy.policy_file %}
+              {% if customer_account %}
+              <a href="{% url 'accounts:store_core_policy_download' %}" class="btn btn-outline-secondary btn-sm mt-2">
+                <i class="fas fa-file-arrow-down me-1"></i> Download policy
+              </a>
+              {% else %}
+              <div class="text-muted small mt-2">Sign in to download the core charge policy.</div>
+              {% endif %}
+            {% endif %}
+          </div>
         {% endif %}
 
         {% if not customer_account %}
@@ -149,6 +184,217 @@
     </div>
   </div>
 
+  {% if install_essentials %}
+    <div class="product-detail-sections mt-5">
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">Install essentials checklist</h2>
+        <ul class="install-essentials-list">
+          {% for item in install_essentials %}
+            <li>
+              <span class="install-essentials-label">
+                {% if item.is_required %}
+                  <span class="badge bg-warning text-dark me-2">Required</span>
+                {% endif %}
+                {{ item.label }}
+              </span>
+              {% if item.product %}
+                <a href="{% url 'accounts:store_product_detail' item.product.id %}" class="install-essentials-link">
+                  {{ item.product.name }}
+                </a>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    </div>
+  {% endif %}
+
+  {% if job_bundle_cards %}
+    <div class="product-detail-sections mt-5">
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">Job type bundles</h2>
+        <div class="bundle-grid">
+          {% for card in job_bundle_cards %}
+            <div class="bundle-card">
+              <div class="bundle-card-header">
+                <div>
+                  <div class="bundle-card-title">{{ card.bundle.title }}</div>
+                  {% if card.bundle.job_name %}<div class="bundle-card-meta">{{ card.bundle.job_name.name }}</div>{% endif %}
+                </div>
+              </div>
+              {% if card.bundle.description %}
+                <p class="bundle-card-description">{{ card.bundle.description }}</p>
+              {% endif %}
+              <div class="bundle-card-products">
+                {% for bundle_product in card.products %}
+                  <div class="bundle-card-item">
+                    <a href="{% url 'accounts:store_product_detail' bundle_product.id %}">{{ bundle_product.name }}</a>
+                    {% if bundle_product.storefront_price %}
+                      <span>${{ bundle_product.storefront_price|floatformat:2 }}</span>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  {% endif %}
+
+  {% if kit_cards %}
+    <div class="product-detail-sections mt-5">
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">Curated kits</h2>
+        <div class="bundle-grid">
+          {% for card in kit_cards %}
+            <div class="bundle-card">
+              <div class="bundle-card-header">
+                <div>
+                  <div class="bundle-card-title">{{ card.kit.title }}</div>
+                  <div class="bundle-card-meta">{{ card.kit.get_kit_type_display }}</div>
+                </div>
+                {% if customer_account %}
+                <form method="post" action="{% url 'accounts:store_add_kit_to_cart' card.kit.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-primary btn-sm">Add kit</button>
+                </form>
+                {% endif %}
+              </div>
+              {% if card.kit.description %}
+                <p class="bundle-card-description">{{ card.kit.description }}</p>
+              {% endif %}
+              <div class="bundle-card-products">
+                {% for kit_product in card.products %}
+                  <div class="bundle-card-item">
+                    <a href="{% url 'accounts:store_product_detail' kit_product.id %}">{{ kit_product.name }}</a>
+                    {% if kit_product.storefront_price %}
+                      <span>${{ kit_product.storefront_price|floatformat:2 }}</span>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  {% endif %}
+
+  {% if frequently_bought %}
+    <div class="product-detail-sections mt-5">
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">Frequently bought together</h2>
+        <div class="product-grid product-related-grid">
+          {% for item in frequently_bought %}
+            <div class="product-card">
+              <div class="product-card-media">
+                {% if item.image %}
+                <img src="{{ item.image.url }}" alt="{{ item.name }}" loading="lazy">
+                {% else %}
+                <i class="fas fa-box-open fa-2x text-muted"></i>
+                {% endif %}
+              </div>
+              <div class="product-card-body">
+                {% if item.brand %}
+                <div class="product-card-meta">{{ item.brand.name }}</div>
+                {% endif %}
+                <div class="product-card-title">
+                  <a href="{% url 'accounts:store_product_detail' item.id %}">{{ item.name }}</a>
+                </div>
+                {% if item.sku %}
+                <div class="product-card-meta">#{{ item.sku }}</div>
+                {% endif %}
+                {% if customer_account or show_prices_catalog %}
+                  {% if item.storefront_price %}
+                  <div class="product-card-price">${{ item.storefront_price|floatformat:2 }}</div>
+                  {% endif %}
+                {% endif %}
+                {% if customer_account %}
+                <div class="product-card-actions">
+                  <div class="cart-slot {% if item.id|stringformat:'s' in cart_product_ids %}is-in-cart{% endif %}" data-cart-slot data-product-id="{{ item.id }}">
+                    <div class="cart-action-add">
+                      <form method="post" action="{% url 'accounts:store_add_to_cart' item.id %}" data-add-to-cart>
+                        {% csrf_token %}
+                        <input type="hidden" name="quantity" value="1">
+                        <button type="submit" class="btn btn-primary btn-sm" data-loading-label="Adding..." data-success-label="Added" {% if item.quantity_in_stock <= 0 %}disabled{% endif %}>
+                          <i class="fas fa-cart-plus me-1"></i>
+                          <span class="btn-text">Add</span>
+                        </button>
+                      </form>
+                    </div>
+                    <div class="cart-action-in">
+                      <span class="product-card-meta text-success">Added to cart</span>
+                      <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-primary btn-sm">View cart</a>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  {% endif %}
+
+  {% if suggested_products %}
+    <div class="product-detail-sections mt-5">
+      <section class="product-detail-section">
+        <h2 class="product-detail-section-title">You may also need these</h2>
+        <div class="product-grid product-related-grid">
+          {% for related in suggested_products %}
+            <div class="product-card">
+              <div class="product-card-media">
+                {% if related.image %}
+                <img src="{{ related.image.url }}" alt="{{ related.name }}" loading="lazy">
+                {% else %}
+                <i class="fas fa-box-open fa-2x text-muted"></i>
+                {% endif %}
+              </div>
+              <div class="product-card-body">
+                {% if related.brand %}
+                <div class="product-card-meta">{{ related.brand.name }}</div>
+                {% endif %}
+                <div class="product-card-title">
+                  <a href="{% url 'accounts:store_product_detail' related.id %}">{{ related.name }}</a>
+                </div>
+                {% if related.sku %}
+                <div class="product-card-meta">#{{ related.sku }}</div>
+                {% endif %}
+                {% if customer_account or show_prices_catalog %}
+                  {% if related.storefront_price %}
+                  <div class="product-card-price">${{ related.storefront_price|floatformat:2 }}</div>
+                  {% endif %}
+                {% endif %}
+                {% if customer_account %}
+                <div class="product-card-actions">
+                  <div class="cart-slot {% if related.id|stringformat:'s' in cart_product_ids %}is-in-cart{% endif %}" data-cart-slot data-product-id="{{ related.id }}">
+                    <div class="cart-action-add">
+                      <form method="post" action="{% url 'accounts:store_add_to_cart' related.id %}" data-add-to-cart>
+                        {% csrf_token %}
+                        <input type="hidden" name="quantity" value="1">
+                        <button type="submit" class="btn btn-primary btn-sm" data-loading-label="Adding..." data-success-label="Added" {% if related.quantity_in_stock <= 0 %}disabled{% endif %}>
+                          <i class="fas fa-cart-plus me-1"></i>
+                          <span class="btn-text">Add</span>
+                        </button>
+                      </form>
+                    </div>
+                    <div class="cart-action-in">
+                      <span class="product-card-meta text-success">Added to cart</span>
+                      <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-primary btn-sm">View cart</a>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  {% endif %}
+
   {% if feature_items %}
     <div class="product-detail-sections mt-5">
       <section class="product-detail-section">
@@ -162,4 +408,37 @@
     </div>
   {% endif %}
 </div>
+
+{% if customer_account %}
+<div class="product-sticky-bar d-lg-none">
+  <div class="product-sticky-info">
+    <div class="product-sticky-name">{{ product.name }}</div>
+    {% if product.storefront_price %}
+    <div class="product-sticky-price">${{ product.storefront_price|floatformat:2 }}</div>
+    {% endif %}
+  </div>
+  <div class="product-sticky-actions">
+    <div class="cart-slot{% if in_cart %} is-in-cart{% endif %}" data-cart-slot data-product-id="{{ product.id }}">
+      <div class="cart-action-add">
+        {% if product.quantity_in_stock > 0 %}
+        <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" class="d-flex align-items-center gap-2" data-add-to-cart>
+          {% csrf_token %}
+          <input type="number" name="quantity" value="1" min="1" max="{{ product.quantity_in_stock }}" class="form-control form-control-sm text-center" style="width: 70px;">
+          <button type="submit" class="btn btn-primary btn-sm" data-loading-label="Adding..." data-success-label="Added">
+            <i class="fas fa-cart-plus me-1"></i>
+            Add
+          </button>
+        </form>
+        {% else %}
+        <button type="button" class="btn btn-light btn-sm" disabled>Out of stock</button>
+        {% endif %}
+      </div>
+      <div class="cart-action-in">
+        <span class="product-card-meta text-success">Added</span>
+        <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-primary btn-sm">View cart</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

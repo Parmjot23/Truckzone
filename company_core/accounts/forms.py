@@ -60,6 +60,11 @@ from .models import (
     StorefrontHeroPackage,
     StorefrontMessageBanner,
     StorefrontFlyer,
+    StorefrontJobBundle,
+    StorefrontKit,
+    StorefrontCategoryCrossSell,
+    ProductInstallEssential,
+    StorefrontCoreChargePolicy,
     PAYMENT_LINK_PROVIDER_CHOICES,
     FleetVehicle,
     MaintenanceRecord,
@@ -860,6 +865,122 @@ class StorefrontFlyerForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if 'is_active' in self.fields:
             self.fields['is_active'].widget.attrs.setdefault('class', 'form-check-input')
+
+
+class StorefrontJobBundleForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            business_user = get_business_user(user) or user
+            product_user_ids = get_product_user_ids(business_user)
+            if "products" in self.fields:
+                self.fields["products"].queryset = Product.objects.filter(
+                    user__in=product_user_ids
+                ).order_by("name")
+            if "job_name" in self.fields:
+                self.fields["job_name"].queryset = ServiceJobName.objects.filter(
+                    user=business_user
+                ).order_by("name")
+
+    class Meta:
+        model = StorefrontJobBundle
+        fields = [
+            "title",
+            "job_name",
+            "description",
+            "products",
+            "sort_order",
+            "is_active",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 2}),
+            "products": forms.SelectMultiple(attrs={"size": 8}),
+        }
+
+
+class StorefrontKitForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user and "products" in self.fields:
+            business_user = get_business_user(user) or user
+            product_user_ids = get_product_user_ids(business_user)
+            self.fields["products"].queryset = Product.objects.filter(
+                user__in=product_user_ids
+            ).order_by("name")
+
+    class Meta:
+        model = StorefrontKit
+        fields = [
+            "title",
+            "kit_type",
+            "description",
+            "products",
+            "sort_order",
+            "is_active",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 2}),
+            "products": forms.SelectMultiple(attrs={"size": 8}),
+        }
+
+
+class StorefrontCategoryCrossSellForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            business_user = get_business_user(user) or user
+            product_user_ids = get_product_user_ids(business_user)
+            if "category" in self.fields:
+                self.fields["category"].queryset = Category.objects.filter(
+                    user__in=product_user_ids
+                ).order_by("name")
+            if "products" in self.fields:
+                self.fields["products"].queryset = Product.objects.filter(
+                    user__in=product_user_ids
+                ).order_by("name")
+
+    class Meta:
+        model = StorefrontCategoryCrossSell
+        fields = ["category", "title", "products", "is_active"]
+        widgets = {
+            "products": forms.SelectMultiple(attrs={"size": 8}),
+        }
+
+
+class ProductInstallEssentialForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user:
+            business_user = get_business_user(user) or user
+            product_user_ids = get_product_user_ids(business_user)
+            if "product" in self.fields:
+                self.fields["product"].queryset = Product.objects.filter(
+                    user__in=product_user_ids
+                ).order_by("name")
+            if "related_product" in self.fields:
+                self.fields["related_product"].queryset = Product.objects.filter(
+                    user__in=product_user_ids
+                ).order_by("name")
+
+    class Meta:
+        model = ProductInstallEssential
+        fields = ["product", "label", "related_product", "sort_order", "is_required"]
+        widgets = {
+            "label": forms.TextInput(attrs={"placeholder": "e.g. Brake cleaner"}),
+        }
+
+
+class StorefrontCoreChargePolicyForm(forms.ModelForm):
+    class Meta:
+        model = StorefrontCoreChargePolicy
+        fields = ["title", "summary", "refund_timeline_days", "policy_file", "is_active"]
+        widgets = {
+            "summary": forms.Textarea(attrs={"rows": 3}),
+        }
 
 
 class FlyerEmailForm(forms.Form):

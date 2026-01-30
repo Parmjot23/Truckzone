@@ -181,6 +181,16 @@
                         {% endif %}
 
                         {% if customer_account %}
+                        <form method="post" action="{% url 'accounts:store_favorite_toggle' product.id %}" class="favorite-form favorite-form--inline">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="favorite-toggle favorite-toggle--inline{% if product.id|stringformat:'s' in favorite_product_ids %} is-active{% endif %}"
+                                data-favorite-toggle data-product-id="{{ product.id }}"
+                                aria-pressed="{% if product.id|stringformat:'s' in favorite_product_ids %}true{% else %}false{% endif %}"
+                                title="{% if product.id|stringformat:'s' in favorite_product_ids %}Remove from favorites{% else %}Add to favorites{% endif %}">
+                                <i class="{% if product.id|stringformat:'s' in favorite_product_ids %}fa-solid{% else %}fa-regular{% endif %} fa-heart"></i>
+                            </button>
+                        </form>
                         <div class="cart-slot cart-slot-end {% if product.id|stringformat:'s' in cart_product_ids %}is-in-cart{% endif %}" data-cart-slot data-product-id="{{ product.id }}">
                             <div class="cart-action-add">
                                 <form method="post" action="{% url 'accounts:store_add_to_cart' product.id %}" data-add-to-cart>
@@ -222,6 +232,18 @@
                         <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
                         {% else %}
                         <i class="fas fa-box-open fa-2x text-muted"></i>
+                        {% endif %}
+                        {% if customer_account %}
+                        <form method="post" action="{% url 'accounts:store_favorite_toggle' product.id %}" class="favorite-form">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="favorite-toggle{% if product.id|stringformat:'s' in favorite_product_ids %} is-active{% endif %}"
+                                data-favorite-toggle data-product-id="{{ product.id }}"
+                                aria-pressed="{% if product.id|stringformat:'s' in favorite_product_ids %}true{% else %}false{% endif %}"
+                                title="{% if product.id|stringformat:'s' in favorite_product_ids %}Remove from favorites{% else %}Add to favorites{% endif %}">
+                                <i class="{% if product.id|stringformat:'s' in favorite_product_ids %}fa-solid{% else %}fa-regular{% endif %} fa-heart"></i>
+                            </button>
+                        </form>
                         {% endif %}
                     </div>
                     <div class="product-card-body">

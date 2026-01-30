@@ -2597,6 +2597,18 @@
                         {% else %}
                         <i class="fas fa-box-open fa-3x text-muted"></i>
                         {% endif %}
+                        {% if customer_account %}
+                        <form method="post" action="{% url 'accounts:store_favorite_toggle' product.id %}" class="favorite-form">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="favorite-toggle{% if product.id|stringformat:'s' in favorite_product_ids %} is-active{% endif %}"
+                                data-favorite-toggle data-product-id="{{ product.id }}"
+                                aria-pressed="{% if product.id|stringformat:'s' in favorite_product_ids %}true{% else %}false{% endif %}"
+                                title="{% if product.id|stringformat:'s' in favorite_product_ids %}Remove from favorites{% else %}Add to favorites{% endif %}">
+                                <i class="{% if product.id|stringformat:'s' in favorite_product_ids %}fa-solid{% else %}fa-regular{% endif %} fa-heart"></i>
+                            </button>
+                        </form>
+                        {% endif %}
                     </div>
                     <div class="product-body">
                         <div class="product-title">{{ product.name }}</div>

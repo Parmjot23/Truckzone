@@ -1,0 +1,227 @@
+{% extends 'customer_portal_base.html' %}
+{% load form_tags %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  {% include 'store/partials/_manage_store_nav.html' %}
+
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1">Storefront Suggestions</h1>
+      <p class="text-muted mb-0">Manage bundles, curated kits, category add-ons, and install essentials.</p>
+    </div>
+    <div class="text-muted small">{{ product_count }} products in catalog</div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 mb-1">Job type bundles</h2>
+          <p class="text-muted small mb-3">Attach suggested parts to service job types (e.g., brake service, PM inspection).</p>
+          <form method="post">
+            {% csrf_token %}
+            {{ job_bundle_formset.management_form }}
+            {% if job_bundle_formset.non_form_errors %}
+            <div class="alert alert-warning">{{ job_bundle_formset.non_form_errors }}</div>
+            {% endif %}
+            {% for form in job_bundle_formset %}
+              <div class="row g-3 align-items-end border-bottom pb-3 mb-3">
+                <div class="col-lg-3">
+                  {{ form.title.label_tag }}
+                  {{ form.title|add_class:'form-control' }}
+                </div>
+                <div class="col-lg-3">
+                  {{ form.job_name.label_tag }}
+                  {{ form.job_name|add_class:'form-select' }}
+                </div>
+                <div class="col-lg-3">
+                  {{ form.products.label_tag }}
+                  {{ form.products|add_class:'form-select' }}
+                </div>
+                <div class="col-lg-2">
+                  {{ form.sort_order.label_tag }}
+                  {{ form.sort_order|add_class:'form-control' }}
+                </div>
+                <div class="col-lg-1">
+                  <div class="form-check">
+                    {{ form.is_active|add_class:'form-check-input' }}
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+                  </div>
+                </div>
+                <div class="col-12">
+                  {{ form.description.label_tag }}
+                  {{ form.description|add_class:'form-control' }}
+                </div>
+                {% if form.DELETE %}
+                <div class="col-12">
+                  <div class="form-check">
+                    {{ form.DELETE|add_class:'form-check-input' }}
+                    <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">Delete bundle</label>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary" name="save_job_bundles">Save job bundles</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 mb-1">Curated kits</h2>
+          <p class="text-muted small mb-3">Build maintenance, seasonal, or DOT inspection kits customers can add quickly.</p>
+          <form method="post">
+            {% csrf_token %}
+            {{ kit_formset.management_form }}
+            {% if kit_formset.non_form_errors %}
+            <div class="alert alert-warning">{{ kit_formset.non_form_errors }}</div>
+            {% endif %}
+            {% for form in kit_formset %}
+              <div class="row g-3 align-items-end border-bottom pb-3 mb-3">
+                <div class="col-lg-3">
+                  {{ form.title.label_tag }}
+                  {{ form.title|add_class:'form-control' }}
+                </div>
+                <div class="col-lg-2">
+                  {{ form.kit_type.label_tag }}
+                  {{ form.kit_type|add_class:'form-select' }}
+                </div>
+                <div class="col-lg-4">
+                  {{ form.products.label_tag }}
+                  {{ form.products|add_class:'form-select' }}
+                </div>
+                <div class="col-lg-2">
+                  {{ form.sort_order.label_tag }}
+                  {{ form.sort_order|add_class:'form-control' }}
+                </div>
+                <div class="col-lg-1">
+                  <div class="form-check">
+                    {{ form.is_active|add_class:'form-check-input' }}
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+                  </div>
+                </div>
+                <div class="col-12">
+                  {{ form.description.label_tag }}
+                  {{ form.description|add_class:'form-control' }}
+                </div>
+                {% if form.DELETE %}
+                <div class="col-12">
+                  <div class="form-check">
+                    {{ form.DELETE|add_class:'form-check-input' }}
+                    <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">Delete kit</label>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary" name="save_kits">Save curated kits</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 mb-1">Category cross-sells</h2>
+          <p class="text-muted small mb-3">Map categories to automatic add-on suggestions (e.g., tires ? valve stems, weights).</p>
+          <form method="post">
+            {% csrf_token %}
+            {{ cross_sell_formset.management_form }}
+            {% if cross_sell_formset.non_form_errors %}
+            <div class="alert alert-warning">{{ cross_sell_formset.non_form_errors }}</div>
+            {% endif %}
+            {% for form in cross_sell_formset %}
+              <div class="row g-3 align-items-end border-bottom pb-3 mb-3">
+                <div class="col-lg-4">
+                  {{ form.category.label_tag }}
+                  {{ form.category|add_class:'form-select' }}
+                </div>
+                <div class="col-lg-4">
+                  {{ form.products.label_tag }}
+                  {{ form.products|add_class:'form-select' }}
+                </div>
+                <div class="col-lg-2">
+                  {{ form.title.label_tag }}
+                  {{ form.title|add_class:'form-control' }}
+                </div>
+                <div class="col-lg-2">
+                  <div class="form-check">
+                    {{ form.is_active|add_class:'form-check-input' }}
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+                  </div>
+                </div>
+                {% if form.DELETE %}
+                <div class="col-12">
+                  <div class="form-check">
+                    {{ form.DELETE|add_class:'form-check-input' }}
+                    <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">Delete cross-sell</label>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary" name="save_cross_sells">Save category cross-sells</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 mb-1">Install essentials checklist</h2>
+          <p class="text-muted small mb-3">Add reminder items per product (fluids, gaskets, fasteners).</p>
+          <form method="post">
+            {% csrf_token %}
+            {{ essentials_formset.management_form }}
+            {% if essentials_formset.non_form_errors %}
+            <div class="alert alert-warning">{{ essentials_formset.non_form_errors }}</div>
+            {% endif %}
+            {% for form in essentials_formset %}
+              <div class="row g-3 align-items-end border-bottom pb-3 mb-3">
+                <div class="col-lg-3">
+                  {{ form.product.label_tag }}
+                  {{ form.product|add_class:'form-select' }}
+                </div>
+                <div class="col-lg-3">
+                  {{ form.label.label_tag }}
+                  {{ form.label|add_class:'form-control' }}
+                </div>
+                <div class="col-lg-3">
+                  {{ form.related_product.label_tag }}
+                  {{ form.related_product|add_class:'form-select' }}
+                </div>
+                <div class="col-lg-1">
+                  {{ form.sort_order.label_tag }}
+                  {{ form.sort_order|add_class:'form-control' }}
+                </div>
+                <div class="col-lg-2">
+                  <div class="form-check">
+                    {{ form.is_required|add_class:'form-check-input' }}
+                    <label class="form-check-label" for="{{ form.is_required.id_for_label }}">Required</label>
+                  </div>
+                </div>
+                {% if form.DELETE %}
+                <div class="col-12">
+                  <div class="form-check">
+                    {{ form.DELETE|add_class:'form-check-input' }}
+                    <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">Delete item</label>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary" name="save_essentials">Save install essentials</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

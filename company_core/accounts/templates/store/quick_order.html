@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Quick Order - {{ business_name|default:default_business_name }}{% endblock %}
+{% block body_class %}public-page-road-bg page-without-hero topbar-light storefront-page no-scroll-animations{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/storefront_public.css' %}">
+<link rel="stylesheet" href="{% static 'css/storefront_live_search.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="storefront-shell">
+  <section class="storefront-section">
+    <div class="container">
+      <div class="quick-order-shell">
+        {% if messages %}
+        <div class="mb-3">
+          {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} mb-2 shadow-sm border-0" role="alert">
+            {{ message|safe }}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="quick-order-header">
+          <span class="section-eyebrow"><i class="fas fa-bolt"></i> Quick Order</span>
+          <h2 class="section-title">Build an order fast</h2>
+          <p class="section-subtitle">Search by part number or product name, set quantities, and add everything to your cart.</p>
+        </div>
+
+        <form method="post" class="quick-order-form" data-quick-order data-suggest-url="{% url 'accounts:store_quick_order_suggestions' %}">
+          {% csrf_token %}
+          <div class="quick-order-grid" data-quick-order-rows>
+            {% for row in quick_order_rows %}
+            <div class="quick-order-row" data-quick-order-row>
+              <div class="quick-order-field">
+                <label class="form-label">Product</label>
+                <div class="quick-order-search" data-quick-order-search-wrap>
+                  <input type="search" name="search" class="form-control" placeholder="Search part # or product"
+                    autocomplete="off" data-quick-order-search>
+                  <input type="hidden" name="product_id" data-quick-order-product-id>
+                  <div class="quick-order-selected" data-quick-order-selected hidden></div>
+                </div>
+              </div>
+              <div class="quick-order-field quick-order-field-qty">
+                <label class="form-label">Qty</label>
+                <div class="quick-order-qty-input">
+                  <button type="button" class="quick-order-qty-btn" data-quick-order-qty="down" aria-label="Decrease quantity">-</button>
+                  <input type="number" name="quantity" value="1" min="1" class="form-control text-center"
+                    data-quick-order-qty-input>
+                  <button type="button" class="quick-order-qty-btn" data-quick-order-qty="up" aria-label="Increase quantity">+</button>
+                </div>
+              </div>
+              <button type="button" class="quick-order-remove" data-quick-order-remove aria-label="Remove row">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="quick-order-actions quick-order-actions--floating">
+            <button type="button" class="btn btn-outline-secondary" data-quick-order-add>
+              <i class="fas fa-plus"></i> Add more parts
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-cart-plus"></i> Add to cart
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>
+
+<template data-quick-order-template>
+  <div class="quick-order-row" data-quick-order-row>
+    <div class="quick-order-field">
+      <label class="form-label">Product</label>
+      <div class="quick-order-search" data-quick-order-search-wrap>
+        <input type="search" name="search" class="form-control" placeholder="Search part # or product"
+          autocomplete="off" data-quick-order-search>
+        <input type="hidden" name="product_id" data-quick-order-product-id>
+        <div class="quick-order-selected" data-quick-order-selected hidden></div>
+      </div>
+    </div>
+    <div class="quick-order-field quick-order-field-qty">
+      <label class="form-label">Qty</label>
+      <div class="quick-order-qty-input">
+        <button type="button" class="quick-order-qty-btn" data-quick-order-qty="down" aria-label="Decrease quantity">-</button>
+        <input type="number" name="quantity" value="1" min="1" class="form-control text-center"
+          data-quick-order-qty-input>
+        <button type="button" class="quick-order-qty-btn" data-quick-order-qty="up" aria-label="Increase quantity">+</button>
+      </div>
+    </div>
+    <button type="button" class="quick-order-remove" data-quick-order-remove aria-label="Remove row">
+      <i class="fas fa-trash"></i>
+    </button>
+  </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/storefront_quick_order.js' %}" defer></script>
+{% endblock %}

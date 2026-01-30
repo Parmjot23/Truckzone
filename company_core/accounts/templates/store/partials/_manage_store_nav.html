@@ -12,6 +12,10 @@
     <i class="fa-solid fa-tags me-1"></i>
     Promotions
   </a>
+  <a href="{% url 'accounts:store_suggestions' %}" class="btn btn-sm {% if current == 'store_suggestions' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-layer-group me-1"></i>
+    Suggestions
+  </a>
   <a href="{% url 'accounts:store_hero' %}#flyer-settings" class="btn btn-sm btn-outline-secondary">
     <i class="fa-solid fa-file-lines me-1"></i>
     Flyer

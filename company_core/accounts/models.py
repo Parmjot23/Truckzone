@@ -1578,6 +1578,33 @@ class StorefrontCartItem(models.Model):
         return f"{self.customer} - {self.product} ({self.quantity})"
 
 
+class StorefrontFavorite(models.Model):
+    """Saved storefront favorites per customer and store location."""
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name="storefront_favorites",
+    )
+    store_owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="storefront_favorites",
+        help_text="Storefront location the favorite belongs to.",
+    )
+    product = models.ForeignKey(
+        "Product",
+        on_delete=models.CASCADE,
+        related_name="storefront_favorites",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("customer", "store_owner", "product")
+
+    def __str__(self):
+        return f"{self.customer} - {self.product}"
+
+
 class TaxExemptionReason(models.Model):
     """Stores user specific tax exemption reasons for quick reuse."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="tax_exemption_reasons")
@@ -3443,6 +3470,167 @@ class StorefrontFlyer(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Storefront Flyer"
+
+
+STORE_KIT_TYPE_CHOICES = (
+    ('maintenance', 'Maintenance kit'),
+    ('seasonal', 'Seasonal kit'),
+    ('dot', 'DOT inspection kit'),
+    ('custom', 'Custom kit'),
+)
+
+
+class StorefrontJobBundle(models.Model):
+    """Group suggested products for a specific job type."""
+
+    user = models.ForeignKey(
+        User,
+        related_name='storefront_job_bundles',
+        on_delete=models.CASCADE,
+    )
+    job_name = models.ForeignKey(
+        ServiceJobName,
+        related_name='storefront_job_bundles',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    title = models.CharField(max_length=140)
+    description = models.TextField(blank=True)
+    products = models.ManyToManyField(
+        Product,
+        related_name='storefront_job_bundles',
+        blank=True,
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['sort_order', 'title']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.title}"
+
+
+class StorefrontKit(models.Model):
+    """Curated kits like maintenance, seasonal, or DOT inspection bundles."""
+
+    user = models.ForeignKey(
+        User,
+        related_name='storefront_kits',
+        on_delete=models.CASCADE,
+    )
+    kit_type = models.CharField(
+        max_length=20,
+        choices=STORE_KIT_TYPE_CHOICES,
+        default='maintenance',
+    )
+    title = models.CharField(max_length=140)
+    description = models.TextField(blank=True)
+    products = models.ManyToManyField(
+        Product,
+        related_name='storefront_kits',
+        blank=True,
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['sort_order', 'title']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.title}"
+
+
+class StorefrontCategoryCrossSell(models.Model):
+    """Suggested add-ons tied to a category."""
+
+    user = models.ForeignKey(
+        User,
+        related_name='storefront_category_cross_sells',
+        on_delete=models.CASCADE,
+    )
+    category = models.ForeignKey(
+        Category,
+        related_name='storefront_cross_sells',
+        on_delete=models.CASCADE,
+    )
+    title = models.CharField(max_length=140, blank=True)
+    products = models.ManyToManyField(
+        Product,
+        related_name='storefront_cross_sells',
+        blank=True,
+    )
+    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['category__name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'category'],
+                name='unique_storefront_cross_sell_category',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.category.name}"
+
+
+class ProductInstallEssential(models.Model):
+    """Checklist items for installing a specific product."""
+
+    product = models.ForeignKey(
+        Product,
+        related_name='install_essentials',
+        on_delete=models.CASCADE,
+    )
+    label = models.CharField(max_length=160)
+    related_product = models.ForeignKey(
+        Product,
+        related_name='install_essential_links',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+    is_required = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['sort_order', 'label']
+
+    def __str__(self):
+        return f"{self.product.name} - {self.label}"
+
+
+class StorefrontCoreChargePolicy(models.Model):
+    """Core charge policy document shown to customers."""
+
+    user = models.OneToOneField(
+        User,
+        related_name='storefront_core_policy',
+        on_delete=models.CASCADE,
+    )
+    title = models.CharField(max_length=160, default="Core charge policy")
+    summary = models.TextField(blank=True)
+    refund_timeline_days = models.PositiveIntegerField(default=30)
+    policy_file = models.FileField(
+        upload_to="storefront_policies/",
+        blank=True,
+        null=True,
+    )
+    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - Core Charge Policy"
 
 
 class InventoryTransaction(models.Model):

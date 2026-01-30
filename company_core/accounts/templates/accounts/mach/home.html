@@ -80,6 +80,7 @@
     .quick-invoice-lines .invoice-line-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: 0.85rem; background: #fff; }
     .quick-invoice-actions { border-top: 1px dashed #e2e8f0; padding-top: 0.85rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
     .quick-invoice-help { color: #64748b; font-size: 0.85rem; }
+
     @media (max-width: 1200px) {
         .analytics-grid, .content-grid { grid-template-columns: 1fr; }
     }
@@ -2527,6 +2528,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setPickerLabel(invoiceVehiclePickerBtn, match ? vehicleDisplay(match) : 'Select vehicle');
         renderVehicleList();
     }
+
     function buildInvoiceSuggestions() {
         const suggestions = [];
         // Products

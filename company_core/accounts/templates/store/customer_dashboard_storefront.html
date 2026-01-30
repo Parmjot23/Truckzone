@@ -151,6 +151,19 @@
         </div>
       </div>
     </div>
+    {% if core_policy and core_policy.policy_file %}
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h6 mb-1">Core charge policy</h2>
+        <p class="text-muted small mb-3">
+          Refund timeline: {{ core_policy.refund_timeline_days }} days.
+        </p>
+        <a href="{% url 'accounts:store_core_policy_download' %}" class="btn btn-outline-primary btn-sm">
+          <i class="fas fa-file-arrow-down me-1"></i> Download policy
+        </a>
+      </div>
+    </div>
+    {% endif %}
     <div class="card shadow-sm">
       <div class="card-body">
         <h2 class="h6 mb-1">Continue shopping</h2>

@@ -1,0 +1,104 @@
+{% extends portal_base_template|default:"store/customer_portal_storefront_base.html" %}
+{% load static %}
+
+{% block portal_title %}My Favorites{% endblock %}
+
+{% block portal_content %}
+<div class="favorites-shell">
+  <div class="favorites-header">
+    <span class="section-eyebrow"><i class="fas fa-heart"></i> My Favorites</span>
+    <h2 class="section-title">Saved parts for fast reorders</h2>
+    <p class="section-subtitle">Select favorites, set quantities, and add them straight to your cart.</p>
+  </div>
+
+  {% if favorites %}
+  <form method="post" class="favorites-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_selected">
+    <div class="favorites-actions">
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-cart-plus"></i> Add selected to cart
+      </button>
+      <a href="{% url 'accounts:store_quick_order' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-bolt"></i> Quick Order
+      </a>
+    </div>
+
+    <div class="favorites-grid">
+      {% for item in favorites %}
+      {% with product=item.product %}
+      <div class="favorite-card">
+        <div class="favorite-media">
+          {% if product.image %}
+          <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+          {% else %}
+          <i class="fas fa-box-open fa-2x text-muted"></i>
+          {% endif %}
+          <label class="favorite-check">
+            <input type="checkbox" name="favorite_id" value="{{ product.id }}">
+            <span>Select</span>
+          </label>
+          <button type="button"
+            class="favorite-toggle{% if product.id|stringformat:'s' in favorite_product_ids %} is-active{% endif %}"
+            data-favorite-toggle data-favorite-url="{% url 'accounts:store_favorite_toggle' product.id %}"
+            data-product-id="{{ product.id }}"
+            aria-pressed="{% if product.id|stringformat:'s' in favorite_product_ids %}true{% else %}false{% endif %}"
+            title="{% if product.id|stringformat:'s' in favorite_product_ids %}Remove from favorites{% else %}Add to favorites{% endif %}">
+            <i class="{% if product.id|stringformat:'s' in favorite_product_ids %}fa-solid{% else %}fa-regular{% endif %} fa-heart"></i>
+          </button>
+        </div>
+        <div class="favorite-body">
+          <div class="favorite-title">
+            <a href="{% url 'accounts:store_product_detail' product.id %}">{{ product.name }}</a>
+          </div>
+          {% if product.sku %}
+          <div class="favorite-meta">#{{ product.sku }}</div>
+          {% endif %}
+          {% if product.brand %}
+          <div class="favorite-meta">{{ product.brand.name }}</div>
+          {% endif %}
+          <div class="favorite-meta">{{ item.stock_label }}</div>
+          {% if customer_account or show_prices_catalog %}
+            {% if product.has_promotion %}
+            <div class="favorite-price">
+              <span class="text-muted text-decoration-line-through me-2">${{ product.sale_price|floatformat:2 }}</span>
+              ${{ product.promotion_price|floatformat:2 }}
+            </div>
+            {% elif product.storefront_price %}
+            <div class="favorite-price">${{ product.storefront_price|floatformat:2 }}</div>
+            {% elif product.cost_price %}
+            <div class="favorite-price">${{ product.cost_price|floatformat:2 }}</div>
+            {% else %}
+            <div class="favorite-meta">Call for price</div>
+            {% endif %}
+          {% else %}
+          <div class="favorite-meta">Sign in to view price</div>
+          {% endif %}
+        </div>
+        <div class="favorite-controls">
+          <label class="form-label">Qty</label>
+          <input type="number" name="quantity_{{ product.id }}" value="1" min="1" class="form-control">
+        </div>
+        <div class="favorite-actions">
+          <a href="{% url 'accounts:store_product_detail' product.id %}" class="btn btn-outline-primary btn-sm">
+            View Details
+          </a>
+        </div>
+      </div>
+      {% endwith %}
+      {% endfor %}
+    </div>
+  </form>
+  {% else %}
+  <div class="storefront-empty">
+    <div class="storefront-empty-icon"><i class="fas fa-heart"></i></div>
+    <h3>No favorites yet</h3>
+    <p>Tap the heart icon on any product to save it for quick reorders.</p>
+    <div class="storefront-empty-actions">
+      <a href="{% url 'accounts:store_product_list' %}" class="btn btn-primary">Browse parts</a>
+      <a href="{% url 'accounts:store_quick_order' %}" class="btn btn-outline-primary">Quick Order</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
