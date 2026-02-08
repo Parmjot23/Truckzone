@@ -276,10 +276,13 @@ DATABASES = {
     }
 }
 
+# Keep SQLite when explicitly requested (used by the current Koyeb setup).
+_force_sqlite = os.getenv('FORCE_SQLITE', '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
 # Enable DATABASE_URL parsing when provided; fallback stays SQLite
 _raw_db_url = os.getenv('DATABASE_URL', '')
 _clean_db_url = _raw_db_url.strip().strip('"').strip("'")
-if _clean_db_url:
+if (not _force_sqlite) and _clean_db_url:
     try:
         DATABASES['default'] = dj_database_url.parse(
             _clean_db_url,

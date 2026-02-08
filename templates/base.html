@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&family=Merriweather:wght@400;500;700&family=Poppins:wght@400;500;600;700&family=Sora:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
         rel="stylesheet">
 
     <!-- Bootstrap 5.3 -->
@@ -1841,7 +1841,7 @@
     </script>
 </head>
 
-<body class="{% block body_class %}{% endblock %}">
+<body class="{% block body_class %}{% endblock %}" style="--ui-font-size-factor: {{ ui_public_font_size_factor }}; --font-sans: {{ ui_public_font_family_css }}; --font-primary: {{ ui_public_font_family_css }}; --font-heading: {{ ui_public_heading_font_family_css }}; --font-body-weight: {{ ui_public_font_weight }}; --font-heading-weight: {{ ui_public_heading_font_weight }};">
 
     <!-- Premium Top Bar -->
     <div class="premium-topbar">

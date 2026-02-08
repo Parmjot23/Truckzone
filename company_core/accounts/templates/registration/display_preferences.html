@@ -29,6 +29,42 @@
                             {% endif %}
                         </div>
                         <div class="mb-3">
+                            <label class="form-label" for="{{ form.ui_font_size_percentage.id_for_label }}">{{ form.ui_font_size_percentage.label }}</label>
+                            {{ form.ui_font_size_percentage }}
+                            {% if form.ui_font_size_percentage.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.ui_font_size_percentage.errors|striptags }}
+                                </div>
+                            {% endif %}
+                            {% if form.ui_font_size_percentage.help_text %}
+                                <div class="form-text">{{ form.ui_font_size_percentage.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.ui_font_family.id_for_label }}">{{ form.ui_font_family.label }}</label>
+                            {{ form.ui_font_family }}
+                            {% if form.ui_font_family.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.ui_font_family.errors|striptags }}
+                                </div>
+                            {% endif %}
+                            {% if form.ui_font_family.help_text %}
+                                <div class="form-text">{{ form.ui_font_family.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label" for="{{ form.ui_font_weight.id_for_label }}">{{ form.ui_font_weight.label }}</label>
+                            {{ form.ui_font_weight }}
+                            {% if form.ui_font_weight.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.ui_font_weight.errors|striptags }}
+                                </div>
+                            {% endif %}
+                            {% if form.ui_font_weight.help_text %}
+                                <div class="form-text">{{ form.ui_font_weight.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label" for="{{ form.ui_scale_public_percentage.id_for_label }}">{{ form.ui_scale_public_percentage.label }}</label>
                             {{ form.ui_scale_public_percentage }}
                             {% if form.ui_scale_public_percentage.errors %}
@@ -40,6 +76,42 @@
                                 <div class="form-text">{{ form.ui_scale_public_percentage.help_text }}</div>
                             {% endif %}
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.ui_font_public_size_percentage.id_for_label }}">{{ form.ui_font_public_size_percentage.label }}</label>
+                            {{ form.ui_font_public_size_percentage }}
+                            {% if form.ui_font_public_size_percentage.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.ui_font_public_size_percentage.errors|striptags }}
+                                </div>
+                            {% endif %}
+                            {% if form.ui_font_public_size_percentage.help_text %}
+                                <div class="form-text">{{ form.ui_font_public_size_percentage.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form.ui_font_public_family.id_for_label }}">{{ form.ui_font_public_family.label }}</label>
+                            {{ form.ui_font_public_family }}
+                            {% if form.ui_font_public_family.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.ui_font_public_family.errors|striptags }}
+                                </div>
+                            {% endif %}
+                            {% if form.ui_font_public_family.help_text %}
+                                <div class="form-text">{{ form.ui_font_public_family.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label" for="{{ form.ui_font_public_weight.id_for_label }}">{{ form.ui_font_public_weight.label }}</label>
+                            {{ form.ui_font_public_weight }}
+                            {% if form.ui_font_public_weight.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.ui_font_public_weight.errors|striptags }}
+                                </div>
+                            {% endif %}
+                            {% if form.ui_font_public_weight.help_text %}
+                                <div class="form-text">{{ form.ui_font_public_weight.help_text }}</div>
+                            {% endif %}
+                        </div>
                         <div class="d-flex align-items-center">
                             <button type="submit" class="btn btn-primary">Save changes</button>
                             <a href="{% url 'accounts:home' %}" class="btn btn-outline-secondary ms-2">Cancel</a>
@@ -49,7 +121,11 @@
             </div>
             <div class="mt-3 text-muted small mb-0">
                 <p class="mb-1">Current portal scale applied: {{ current_portal_scale }}%</p>
-                <p class="mb-0">Current public scale applied: {{ current_public_scale }}%</p>
+                <p class="mb-1">Current portal text size: {{ current_portal_font_size }}%</p>
+                <p class="mb-1">Current portal font: {{ current_portal_font_family }} (weight {{ current_portal_font_weight }})</p>
+                <p class="mb-1">Current public scale applied: {{ current_public_scale }}%</p>
+                <p class="mb-1">Current public text size: {{ current_public_font_size }}%</p>
+                <p class="mb-0">Current public font: {{ current_public_font_family }} (weight {{ current_public_font_weight }})</p>
             </div>
         </div>
     </div>

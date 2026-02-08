@@ -17,22 +17,30 @@
     <!-- Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;500;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Merriweather:wght@400;500;700&family=Poppins:wght@400;500;600;700&family=Sora:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <!-- Custom Styles -->
     <style>
         :root {
             --navbar-height: 70px;
+            --ui-font-size-factor: 1;
+            --font-primary: 'Poppins', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            --font-heading: 'Poppins', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            --font-body-weight: 400;
+            --font-heading-weight: 600;
         }
         /* Reset and Base Styles */
         html, body {
             height: 100%;
             margin: 0;
         }
+        html {
+            font-size: calc(16px * var(--ui-font-size-factor));
+        }
         body {
             display: flex;
             flex-direction: column; /* Accommodates fixed navbar */
-            font-family: 'Poppins', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-            font-weight: 400;
+            font-family: var(--font-primary);
+            font-weight: var(--font-body-weight);
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
@@ -59,8 +67,8 @@
         h4,
         h5,
         h6 {
-            font-family: 'Poppins', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-            font-weight: 600;
+            font-family: var(--font-heading);
+            font-weight: var(--font-heading-weight);
             letter-spacing: 0.02em;
         }
 
@@ -331,7 +339,7 @@
     <!-- External Scripts -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 </head>
-<body{% if ui_scale_public_is_active %} class="ui-scale-active" style="--ui-scale-factor: {{ ui_scale_public_factor }};"{% endif %}>
+<body{% if ui_scale_public_is_active %} class="ui-scale-active"{% endif %} style="--ui-scale-factor: {{ ui_scale_public_factor }}; --ui-font-size-factor: {{ ui_public_font_size_factor }}; --font-primary: {{ ui_public_font_family_css }}; --font-heading: {{ ui_public_heading_font_family_css }}; --font-body-weight: {{ ui_public_font_weight }}; --font-heading-weight: {{ ui_public_heading_font_weight }};">
     <div class="ui-scale-target">
     <!-- Side Navigation Bar with Updated Order -->
     <nav class="sidebar" id="sidebar-nav">
@@ -463,7 +471,7 @@
                     <a class="dropdown-item" href="{% url 'accounts:password_change' %}">Change Password</a>
                     <a class="dropdown-item" href="{% url 'accounts:account_settings' %}">Account Settings</a>
                     {% if request.user.is_superuser %}
-                        <a class="dropdown-item" href="{% url 'accounts:display_preferences' %}">Interface Scale</a>
+                        <a class="dropdown-item" href="{% url 'accounts:display_preferences' %}">Display Preferences</a>
                     {% endif %}
                     <div class="dropdown-divider"></div>
                     <!-- Navbar Logout Form -->

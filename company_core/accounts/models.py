@@ -383,6 +383,26 @@ class Profile(models.Model):
         (65, 'Mini (65%)'),
         (60, 'Minimum (60%)'),
     ]
+    UI_FONT_SIZE_CHOICES = [
+        (80, 'Small (80%)'),
+        (90, 'Comfortable Small (90%)'),
+        (100, 'Default (100%)'),
+        (110, 'Large (110%)'),
+        (120, 'Extra Large (120%)'),
+        (130, 'Maximum (130%)'),
+    ]
+    UI_FONT_FAMILY_CHOICES = [
+        ('manrope', 'Modern Sans (Manrope + Sora)'),
+        ('inter', 'Clean UI (Inter + Space Grotesk)'),
+        ('poppins', 'Classic Readable (Poppins + Merriweather)'),
+        ('system', 'System Default'),
+    ]
+    UI_FONT_WEIGHT_CHOICES = [
+        (400, 'Regular (400)'),
+        (500, 'Medium (500)'),
+        (600, 'Semi Bold (600)'),
+        (700, 'Bold (700)'),
+    ]
     ui_scale_percentage = models.PositiveIntegerField(
         default=100,
         choices=UI_SCALE_CHOICES,
@@ -392,6 +412,38 @@ class Profile(models.Model):
         default=100,
         choices=UI_SCALE_CHOICES,
         help_text="Controls how much the public website pages should be scaled.",
+    )
+    ui_font_size_percentage = models.PositiveIntegerField(
+        default=100,
+        choices=UI_FONT_SIZE_CHOICES,
+        help_text="Controls base text size for portal and dashboard pages.",
+    )
+    ui_font_family = models.CharField(
+        max_length=20,
+        default='manrope',
+        choices=UI_FONT_FAMILY_CHOICES,
+        help_text="Controls the font family for portal and dashboard pages.",
+    )
+    ui_font_weight = models.PositiveIntegerField(
+        default=500,
+        choices=UI_FONT_WEIGHT_CHOICES,
+        help_text="Controls base text weight for portal and dashboard pages.",
+    )
+    ui_font_public_size_percentage = models.PositiveIntegerField(
+        default=100,
+        choices=UI_FONT_SIZE_CHOICES,
+        help_text="Controls base text size for public website pages.",
+    )
+    ui_font_public_family = models.CharField(
+        max_length=20,
+        default='manrope',
+        choices=UI_FONT_FAMILY_CHOICES,
+        help_text="Controls the font family for public website pages.",
+    )
+    ui_font_public_weight = models.PositiveIntegerField(
+        default=500,
+        choices=UI_FONT_WEIGHT_CHOICES,
+        help_text="Controls base text weight for public website pages.",
     )
     storefront_show_prices_hero = models.BooleanField(
         default=False,

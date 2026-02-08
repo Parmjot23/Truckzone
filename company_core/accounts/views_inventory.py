@@ -33,6 +33,7 @@ from .models import (
     Supplier,
     Product,
     ProductAlternateSku,
+    ProductAttributeValue,
     ProductStock,
     InventoryTransaction,
     InventoryLocation,
@@ -237,6 +238,147 @@ def _sync_alternate_skus(product, sku_list):
             product=product,
             sku=sku,
         )
+
+
+def _sync_product_attributes_from_payload(product, user, payload):
+    if not product or not product.pk or not payload:
+        return
+
+    if hasattr(payload, "lists"):
+        payload_items = []
+        for key, values in payload.lists():
+            if not key.startswith("attr_"):
+                continue
+            payload_items.append((key, values[-1] if values else ""))
+    else:
+        payload_items = [
+            (key, value)
+            for key, value in payload.items()
+            if str(key).startswith("attr_")
+        ]
+
+    if not payload_items:
+        return
+
+    attribute_ids = []
+    attribute_payload = {}
+    for key, value in payload_items:
+        _, _, raw_id = str(key).partition("_")
+        try:
+            attr_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        attribute_ids.append(attr_id)
+        attribute_payload[attr_id] = value
+
+    if not attribute_ids:
+        return
+
+    product_user = product.user
+    attributes = {
+        attribute.id: attribute
+        for attribute in CategoryAttribute.objects.filter(
+            user=product_user,
+            id__in=attribute_ids,
+            is_active=True,
+        ).prefetch_related("options")
+    }
+
+    for attr_id, raw_value in attribute_payload.items():
+        attribute = attributes.get(attr_id)
+        if not attribute:
+            continue
+
+        existing = ProductAttributeValue.objects.filter(
+            product=product,
+            attribute=attribute,
+        ).first()
+        value = raw_value.strip() if isinstance(raw_value, str) else raw_value
+
+        if attribute.attribute_type == "select":
+            if value in ("", None):
+                if existing:
+                    existing.delete()
+                continue
+            try:
+                option_id = int(value)
+            except (TypeError, ValueError):
+                if existing:
+                    existing.delete()
+                continue
+            option = CategoryAttributeOption.objects.filter(
+                attribute=attribute,
+                id=option_id,
+                is_active=True,
+            ).first()
+            if not option:
+                if existing:
+                    existing.delete()
+                continue
+            if not existing:
+                existing = ProductAttributeValue(product=product, attribute=attribute)
+            existing.option = option
+            existing.value_text = ""
+            existing.value_number = None
+            existing.value_boolean = None
+            existing.save()
+            continue
+
+        if attribute.attribute_type == "number":
+            if value in ("", None):
+                if existing:
+                    existing.delete()
+                continue
+            try:
+                numeric_value = Decimal(str(value))
+            except (InvalidOperation, ValueError, TypeError):
+                if existing:
+                    existing.delete()
+                continue
+            if not existing:
+                existing = ProductAttributeValue(product=product, attribute=attribute)
+            existing.option = None
+            existing.value_text = ""
+            existing.value_number = numeric_value
+            existing.value_boolean = None
+            existing.save()
+            continue
+
+        if attribute.attribute_type == "boolean":
+            if value in ("", None, "None", "unknown"):
+                if existing:
+                    existing.delete()
+                continue
+            normalized = str(value).strip().lower()
+            if normalized in {"true", "1", "yes", "on"}:
+                bool_value = True
+            elif normalized in {"false", "0", "no", "off"}:
+                bool_value = False
+            else:
+                if existing:
+                    existing.delete()
+                continue
+            if not existing:
+                existing = ProductAttributeValue(product=product, attribute=attribute)
+            existing.option = None
+            existing.value_text = ""
+            existing.value_number = None
+            existing.value_boolean = bool_value
+            existing.save()
+            continue
+
+        text_value = str(value).strip() if value is not None else ""
+        if not text_value:
+            if existing:
+                existing.delete()
+            continue
+        if not existing:
+            existing = ProductAttributeValue(product=product, attribute=attribute)
+        existing.option = None
+        existing.value_text = text_value
+        existing.value_number = None
+        existing.value_boolean = None
+        existing.save()
 
 
 @login_required
@@ -467,6 +609,7 @@ def inventory_products_view(request):
     group_ids = _extract_ids(request.GET.getlist("group"))
     category_ids = _extract_ids(request.GET.getlist("category"))
     brand_ids = _extract_ids(request.GET.getlist("brand"))
+    stock_filter = request.GET.get("stock", "").strip()
     product_user_ids = _get_inventory_user_ids(request)
     stock_user_ids = _get_inventory_stock_user_ids(request)
     products_qs = (
@@ -498,6 +641,43 @@ def inventory_products_view(request):
         products_qs = products_qs.filter(brand_id__in=brand_ids)
 
     products_qs = annotate_products_with_stock(products_qs, request.user)
+    stock_metrics_qs = products_qs.filter(user_id__in=stock_user_ids)
+    price_expr = Coalesce("sale_price", "cost_price")
+    stock_value_expr = ExpressionWrapper(
+        F("stock_quantity") * price_expr,
+        output_field=DecimalField(max_digits=14, decimal_places=2),
+    )
+    stock_totals = stock_metrics_qs.aggregate(
+        total_stock_value=Sum(stock_value_expr),
+        total_stock_units=Sum("stock_quantity"),
+    )
+    low_stock_count = stock_metrics_qs.filter(
+        stock_reorder__gt=0,
+        stock_quantity__lte=F("stock_reorder"),
+        stock_quantity__gt=0,
+    ).count()
+    out_of_stock_count = stock_metrics_qs.filter(stock_quantity__lte=0).count()
+    missing_sku_count = products_qs.filter(Q(sku__isnull=True) | Q(sku="")).count()
+    missing_supplier_count = products_qs.filter(supplier__isnull=True).count()
+
+    if stock_filter == "low":
+        products_qs = products_qs.filter(
+            user_id__in=stock_user_ids,
+            stock_reorder__gt=0,
+            stock_quantity__lte=F("stock_reorder"),
+            stock_quantity__gt=0,
+        )
+    elif stock_filter == "out":
+        products_qs = products_qs.filter(
+            user_id__in=stock_user_ids,
+            stock_quantity__lte=0,
+        )
+    elif stock_filter == "no_sku":
+        products_qs = products_qs.filter(Q(sku__isnull=True) | Q(sku=""))
+    elif stock_filter == "no_supplier":
+        products_qs = products_qs.filter(supplier__isnull=True)
+    else:
+        stock_filter = ""
 
     products_page, querystring = _paginate_queryset(request, products_qs, per_page=100)
     apply_stock_fields(products_page.object_list)
@@ -509,6 +689,7 @@ def inventory_products_view(request):
     vins = ProductVin.objects.filter(user__in=product_user_ids).order_by("sort_order", "vin")
     locations = InventoryLocation.objects.filter(user__in=product_user_ids).order_by("name")
     item_type_choices = Product._meta.get_field("item_type").choices
+    attribute_types = CategoryAttribute._meta.get_field("attribute_type").choices
     return render(
         request,
         "inventory/products_list.html",
@@ -523,10 +704,18 @@ def inventory_products_view(request):
             "vins": vins,
             "locations": locations,
             "item_type_choices": item_type_choices,
+            "attribute_types": attribute_types,
             "search_query": search_query,
             "selected_group_ids": [str(value) for value in group_ids],
             "selected_category_ids": [str(value) for value in category_ids],
             "selected_brand_ids": [str(value) for value in brand_ids],
+            "selected_stock_filter": stock_filter,
+            "low_stock_count": low_stock_count,
+            "out_of_stock_count": out_of_stock_count,
+            "missing_sku_count": missing_sku_count,
+            "missing_supplier_count": missing_supplier_count,
+            "total_stock_units": stock_totals.get("total_stock_units") or 0,
+            "total_stock_value": stock_totals.get("total_stock_value") or Decimal("0.00"),
             "stock_user_ids": stock_user_ids,
             "querystring": querystring,
         },
@@ -1827,6 +2016,7 @@ def save_product_inline(request):
         quantity_in_stock=stock_quantity,
         reorder_level=stock_reorder,
     )
+    _sync_product_attributes_from_payload(product, request.user, payload)
 
     response_data = {
         "product": _serialize_product(

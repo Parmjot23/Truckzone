@@ -58,7 +58,6 @@ coverage.xml
 # Django stuff:
 *.log
 local_settings.py
-db.sqlite3
 db.sqlite3-journal
 
 # Flask stuff:
@@ -136,6 +135,7 @@ media/
 !transtex-mechanics-app/src/screens/media/
 *.sqlite3
 *.sqlite3-journal
+!db.sqlite3
 
 # IDE
 .vscode/

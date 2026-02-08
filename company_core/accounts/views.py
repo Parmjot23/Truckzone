@@ -123,7 +123,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from urllib.parse import urlencode, unquote
 from collections.abc import Mapping
@@ -197,7 +197,6 @@ from .models import (
     InvoiceDetail,
     IncomeRecord2,
     INVOICE_LINE_TYPE_CORE,
-    INVOICE_LINE_TYPE_ENV,
     INVOICE_LINE_TYPE_PRODUCT,
     GroupedInvoice,
     Profile,
@@ -3869,6 +3868,389 @@ class CustomerCreditDeleteView(CustomerCreditInventoryMixin, LoginRequiredMixin,
         return response
 
 
+def _normalize_parts_store_return_type(value):
+    normalized = (value or '').strip().lower()
+    if normalized in {'core', 'core_charge', 'core-return', 'core_return'}:
+        return 'core'
+    if normalized in {'product', 'products', 'part', 'parts', 'product-return', 'product_return'}:
+        return 'product'
+    return ''
+
+
+def _parts_store_return_line_type(return_type):
+    if return_type == 'core':
+        return INVOICE_LINE_TYPE_CORE
+    return INVOICE_LINE_TYPE_PRODUCT
+
+
+def _resolve_invoice_line_type(invoice_item):
+    line_type = getattr(invoice_item, 'line_type', '') or ''
+    if line_type in ('', 'custom') and getattr(invoice_item, 'product_id', None):
+        return INVOICE_LINE_TYPE_PRODUCT
+    return line_type
+
+
+def _resolve_core_return_product(invoice_item, line_type=None):
+    resolved_line_type = line_type or _resolve_invoice_line_type(invoice_item)
+    if resolved_line_type == INVOICE_LINE_TYPE_PRODUCT:
+        return getattr(invoice_item, 'product', None)
+    if resolved_line_type == INVOICE_LINE_TYPE_CORE:
+        parent_line = getattr(invoice_item, 'parent_line', None)
+        return getattr(parent_line, 'product', None) if parent_line else None
+    return None
+
+
+def _is_core_return_eligible(invoice_item, line_type=None):
+    source_product = _resolve_core_return_product(invoice_item, line_type=line_type)
+    return ensure_decimal(getattr(source_product, 'core_price', None)) > Decimal('0.00')
+
+
+def _safe_product_image_url(product):
+    try:
+        return product.image.url if product and getattr(product, 'image', None) else ''
+    except Exception:
+        return ''
+
+
+@login_required
+@require_GET
+def parts_store_return_lookup(request):
+    profile = getattr(request.user, 'profile', None)
+    if not profile or getattr(profile, 'occupation', None) != 'parts_store':
+        return JsonResponse(
+            {'success': False, 'error': 'POS returns are only available for parts store accounts.'},
+            status=403,
+        )
+
+    customer_id = (request.GET.get('customer_id') or '').strip()
+    return_type = _normalize_parts_store_return_type(request.GET.get('return_type'))
+    if not customer_id:
+        return JsonResponse({'success': False, 'error': 'Please select a customer.'}, status=400)
+    if not return_type:
+        return JsonResponse({'success': False, 'error': 'Choose return type: core or product.'}, status=400)
+
+    customer_user_ids = get_customer_user_ids(request.user)
+    store_user_ids = get_business_user_ids(request.user)
+    customer = Customer.objects.filter(pk=customer_id, user__in=customer_user_ids).first()
+    if not customer:
+        return JsonResponse({'success': False, 'error': 'Customer not found.'}, status=404)
+
+    target_line_type = _parts_store_return_line_type(return_type)
+    invoices = list(
+        GroupedInvoice.objects.filter(user__in=store_user_ids, customer=customer)
+        .prefetch_related(
+            'income_records',
+            'income_records__product',
+            'income_records__parent_line',
+            'income_records__parent_line__product',
+        )
+        .order_by('-date', '-id')[:200]
+    )
+
+    candidate_items = []
+    for invoice in invoices:
+        for item in invoice.income_records.all():
+            line_type = _resolve_invoice_line_type(item)
+            if line_type != target_line_type:
+                continue
+            if return_type == 'core' and not _is_core_return_eligible(item, line_type=line_type):
+                continue
+            candidate_items.append(item)
+
+    returned_totals = {}
+    if candidate_items:
+        returned_rows = (
+            CustomerCreditItem.objects
+            .filter(source_invoice_item_id__in=[item.id for item in candidate_items])
+            .values('source_invoice_item_id')
+            .annotate(total_qty=Sum('qty'))
+        )
+        returned_totals = {
+            row['source_invoice_item_id']: ensure_decimal(row['total_qty'])
+            for row in returned_rows
+        }
+
+    invoices_payload = []
+    line_count = 0
+    for invoice in invoices:
+        items_payload = []
+        for item in invoice.income_records.all():
+            resolved_line_type = _resolve_invoice_line_type(item)
+            if resolved_line_type != target_line_type:
+                continue
+            if return_type == 'core' and not _is_core_return_eligible(item, line_type=resolved_line_type):
+                continue
+
+            sold_qty = ensure_decimal(item.qty)
+            returned_qty = returned_totals.get(item.id, Decimal('0.00'))
+            available_qty = sold_qty - returned_qty
+            if available_qty <= Decimal('0.00'):
+                continue
+
+            product = (
+                item.product
+                if resolved_line_type == INVOICE_LINE_TYPE_PRODUCT
+                else _resolve_core_return_product(item, line_type=resolved_line_type)
+            )
+            description = (
+                (item.job or '').strip()
+                or ((product.description or '').strip() if product else '')
+                or ((product.name or '').strip() if product else '')
+                or 'Return line'
+            )
+            items_payload.append(
+                {
+                    'source_invoice_item_id': item.id,
+                    'invoice_id': invoice.id,
+                    'invoice_number': invoice.invoice_number or f"Invoice {invoice.id}",
+                    'invoice_date': invoice.date.isoformat() if invoice.date else '',
+                    'line_type': resolved_line_type,
+                    'part_no': (product.sku if product and product.sku else ''),
+                    'description': description,
+                    'sold_qty': float(sold_qty),
+                    'returned_qty': float(returned_qty),
+                    'available_qty': float(available_qty),
+                    'price': float(ensure_decimal(item.rate)),
+                    'amount': float(ensure_decimal(item.amount)),
+                    'product_id': str(product.id) if product else '',
+                    'image_url': _safe_product_image_url(product),
+                }
+            )
+            line_count += 1
+
+        if items_payload:
+            invoices_payload.append(
+                {
+                    'id': invoice.id,
+                    'invoice_number': invoice.invoice_number or f"Invoice {invoice.id}",
+                    'date': invoice.date.isoformat() if invoice.date else '',
+                    'items': items_payload,
+                }
+            )
+
+    return JsonResponse(
+        {
+            'success': True,
+            'return_type': return_type,
+            'line_type': target_line_type,
+            'customer': {
+                'id': customer.id,
+                'name': customer.name,
+                'email': customer.email or '',
+            },
+            'line_count': line_count,
+            'invoices': invoices_payload,
+        }
+    )
+
+
+@login_required
+@require_POST
+def parts_store_return_create(request):
+    profile = getattr(request.user, 'profile', None)
+    if not profile or getattr(profile, 'occupation', None) != 'parts_store':
+        return JsonResponse(
+            {'success': False, 'error': 'POS returns are only available for parts store accounts.'},
+            status=403,
+        )
+
+    def _json_error(message: str, status: int = 400):
+        return JsonResponse({'success': False, 'error': message}, status=status)
+
+    customer_id = (request.POST.get('customer_id') or request.POST.get('customer') or '').strip()
+    return_type = _normalize_parts_store_return_type(request.POST.get('return_type'))
+    raw_line_items = request.POST.get('line_items') or ''
+    raw_date = (request.POST.get('date') or '').strip()
+    memo = (request.POST.get('memo') or '').strip()
+
+    if not customer_id:
+        return _json_error('Please select a customer.')
+    if not return_type:
+        return _json_error('Choose return type: core or product.')
+    if not raw_line_items:
+        return _json_error('Choose at least one line to return.')
+
+    try:
+        line_items = json.loads(raw_line_items)
+    except json.JSONDecodeError:
+        return _json_error('Invalid return payload.')
+    if not isinstance(line_items, list) or not line_items:
+        return _json_error('Choose at least one line to return.')
+
+    customer_user_ids = get_customer_user_ids(request.user)
+    store_user_ids = get_business_user_ids(request.user)
+    customer = Customer.objects.filter(pk=customer_id, user__in=customer_user_ids).first()
+    if not customer:
+        return _json_error('Customer not found.', status=404)
+
+    credit_date = timezone.localdate()
+    if raw_date:
+        try:
+            credit_date = datetime.datetime.strptime(raw_date, '%Y-%m-%d').date()
+        except ValueError:
+            return _json_error('Please provide a valid return date (YYYY-MM-DD).')
+        if credit_date > timezone.localdate():
+            return _json_error('Return date cannot be in the future.')
+
+    requested_qty_by_item_id = {}
+    requested_order = []
+    for idx, row in enumerate(line_items, start=1):
+        if not isinstance(row, dict):
+            return _json_error(f'Line {idx}: invalid line payload.')
+        source_item_raw = str(row.get('source_invoice_item_id') or row.get('id') or '').strip()
+        qty_raw = str(row.get('qty') or '').strip()
+        if not source_item_raw:
+            return _json_error(f'Line {idx}: missing source invoice item.')
+        try:
+            source_item_id = int(source_item_raw)
+        except (TypeError, ValueError):
+            return _json_error(f'Line {idx}: invalid source invoice item.')
+        try:
+            qty_dec = Decimal(qty_raw)
+        except (InvalidOperation, TypeError, ValueError):
+            return _json_error(f'Line {idx}: quantity must be a valid number.')
+        if qty_dec <= Decimal('0.00'):
+            return _json_error(f'Line {idx}: quantity must be greater than zero.')
+
+        requested_qty_by_item_id[source_item_id] = (
+            requested_qty_by_item_id.get(source_item_id, Decimal('0.00')) + qty_dec
+        )
+        if source_item_id not in requested_order:
+            requested_order.append(source_item_id)
+
+    source_item_ids = list(requested_qty_by_item_id.keys())
+    source_items = list(
+        IncomeRecord2.objects.filter(
+            pk__in=source_item_ids,
+            grouped_invoice__customer=customer,
+            grouped_invoice__user__in=store_user_ids,
+        ).select_related(
+            'grouped_invoice',
+            'grouped_invoice__customer',
+            'product',
+            'parent_line',
+            'parent_line__product',
+        )
+    )
+    source_items_by_id = {item.id: item for item in source_items}
+    missing_ids = [item_id for item_id in source_item_ids if item_id not in source_items_by_id]
+    if missing_ids:
+        return _json_error('Some selected invoice lines could not be found for this customer.', status=404)
+
+    existing_return_rows = (
+        CustomerCreditItem.objects
+        .filter(source_invoice_item_id__in=source_item_ids)
+        .values('source_invoice_item_id')
+        .annotate(total_qty=Sum('qty'))
+    )
+    existing_returned_qty = {
+        row['source_invoice_item_id']: ensure_decimal(row['total_qty'])
+        for row in existing_return_rows
+    }
+
+    target_line_type = _parts_store_return_line_type(return_type)
+    validated_lines = []
+    for source_item_id in requested_order:
+        source_item = source_items_by_id[source_item_id]
+        requested_qty = requested_qty_by_item_id[source_item_id]
+        line_type = _resolve_invoice_line_type(source_item)
+        if line_type != target_line_type:
+            return _json_error(
+                f"Invoice line #{source_item_id} is not eligible for {return_type} returns."
+            )
+        if return_type == 'core' and not _is_core_return_eligible(source_item, line_type=line_type):
+            return _json_error(
+                f"Invoice line #{source_item_id} is not eligible for core returns because this product has no core charge configured."
+            )
+
+        sold_qty = ensure_decimal(source_item.qty)
+        already_returned = existing_returned_qty.get(source_item_id, Decimal('0.00'))
+        available_qty = sold_qty - already_returned
+        if requested_qty > available_qty:
+            available_display = max(available_qty, Decimal('0.00')).quantize(
+                Decimal('0.01'),
+                rounding=ROUND_HALF_UP,
+            )
+            return _json_error(
+                f"Only {available_display} is available to return for invoice line #{source_item_id}."
+            )
+        validated_lines.append((source_item, requested_qty))
+
+    if not validated_lines:
+        return _json_error('Choose at least one valid return line.')
+
+    memo_prefix = {
+        'core': 'POS core return',
+        'product': 'POS product return',
+    }.get(return_type, 'POS return')
+    full_memo = f"{memo_prefix}: {memo}" if memo else memo_prefix
+    record_in_inventory = return_type == 'product'
+
+    with transaction.atomic():
+        credit = CustomerCredit.objects.create(
+            user=request.user,
+            customer=customer,
+            date=credit_date,
+            memo=full_memo,
+            tax_included=False,
+            record_in_inventory=record_in_inventory,
+        )
+
+        for source_item, qty_dec in validated_lines:
+            resolved_line_type = _resolve_invoice_line_type(source_item)
+            product = (
+                source_item.product
+                if resolved_line_type == INVOICE_LINE_TYPE_PRODUCT
+                else _resolve_core_return_product(source_item, line_type=resolved_line_type)
+            )
+            base_description = (
+                (source_item.job or '').strip()
+                or ((product.description or '').strip() if product else '')
+                or ((product.name or '').strip() if product else '')
+                or 'Return line'
+            )
+            description_prefix = {
+                'core': 'Core return',
+                'product': 'Product return',
+            }.get(return_type, 'Return')
+            description = (
+                f"{description_prefix} - {base_description}"
+                if base_description
+                else description_prefix
+            )
+
+            CustomerCreditItem.objects.create(
+                customer_credit=credit,
+                source_invoice=source_item.grouped_invoice,
+                source_invoice_item=source_item,
+                product=product,
+                part_no=(product.sku if product and product.sku else ''),
+                description=description,
+                qty=float(qty_dec),
+                price=float(ensure_decimal(source_item.rate)),
+            )
+
+        if credit.record_in_inventory:
+            CustomerCreditInventoryMixin()._apply_inventory_sync(credit)
+
+    total_amount_incl_tax, _, _ = credit.calculate_totals()
+    detail_url = reverse('accounts:customer_credit_detail', args=[credit.pk])
+    success_message = f"{memo_prefix.title()} created: {credit.credit_no}."
+    messages.success(request, success_message)
+    return JsonResponse(
+        {
+            'success': True,
+            'credit_id': credit.pk,
+            'credit_no': credit.credit_no,
+            'detail_url': detail_url,
+            'item_count': len(validated_lines),
+            'total_credit': float(total_amount_incl_tax),
+            'return_type': return_type,
+            'message': success_message,
+        }
+    )
+
+
 @login_required
 def customer_credit_invoices(request):
     customer_id = request.GET.get('customer_id')
@@ -3879,7 +4261,12 @@ def customer_credit_invoices(request):
     customer = get_object_or_404(Customer, pk=customer_id, user__in=customer_user_ids)
     invoices = (
         GroupedInvoice.objects.filter(user__in=store_user_ids, customer=customer)
-        .prefetch_related('income_records', 'income_records__product')
+        .prefetch_related(
+            'income_records',
+            'income_records__product',
+            'income_records__parent_line',
+            'income_records__parent_line__product',
+        )
         .order_by('-date', '-id')
     )
     invoice_items = []
@@ -3910,10 +4297,14 @@ def customer_credit_invoices(request):
                     line_type = INVOICE_LINE_TYPE_PRODUCT
             if line_type not in (INVOICE_LINE_TYPE_PRODUCT, INVOICE_LINE_TYPE_CORE):
                 continue
+            if line_type == INVOICE_LINE_TYPE_CORE and not _is_core_return_eligible(item, line_type=line_type):
+                continue
 
-            product = item.product
-            if line_type in (INVOICE_LINE_TYPE_CORE, INVOICE_LINE_TYPE_ENV):
-                product = None
+            product = (
+                item.product
+                if line_type == INVOICE_LINE_TYPE_PRODUCT
+                else _resolve_core_return_product(item, line_type=line_type)
+            )
             item_qty = ensure_decimal(item.qty)
             returned_qty = returned_totals.get(item.id, Decimal('0.00'))
             available_qty = item_qty - returned_qty
@@ -3930,6 +4321,7 @@ def customer_credit_invoices(request):
                 'price': float(item.rate or 0),
                 'amount': float(item.amount or 0),
                 'product_id': str(product.id) if product else '',
+                'image_url': _safe_product_image_url(product),
                 'invoice_id': invoice.id,
                 'line_type': line_type,
             })
@@ -6142,6 +6534,12 @@ def home(request):
             top_slices.append({'label': 'Other', 'value': float(other_total)})
         category_group_sales = top_slices
     category_group_sales_total = sum(item['value'] for item in category_group_sales)
+    def _product_image_url(product):
+        try:
+            return product.image.url if getattr(product, 'image', None) else ''
+        except Exception:
+            return ''
+
     inventory_products_data = [
         {
             "id": p.id,
@@ -6151,6 +6549,8 @@ def home(request):
             "sale_price": float(p.sale_price) if p.sale_price is not None else None,
             "description": p.description or "",
             "supplier": (p.supplier.name if p.supplier else "") or "",
+            "quantity_in_stock": int(p.quantity_in_stock or 0),
+            "image_url": _product_image_url(p),
         }
         for p in Product.objects.filter(user__in=get_product_user_ids(request.user)).select_related('supplier').order_by('name')
     ]
@@ -7919,28 +8319,43 @@ def update_invoice_sequence(request):
 
 @login_required
 def display_preferences(request):
-    """Allow users to adjust their interface scale preferences."""
-    profile = getattr(request.user, 'profile', None)
-    if profile is None:
+    """Allow users to adjust global display preferences for their business."""
+    user_profile = getattr(request.user, 'profile', None)
+    if user_profile is None:
         messages.error(request, 'No profile is associated with this account.')
         return redirect('accounts:account_settings')
 
+    target_profile = user_profile
+    try:
+        business_user = user_profile.get_business_user()
+    except AttributeError:
+        business_user = None
+
+    if business_user and hasattr(business_user, 'profile'):
+        target_profile = business_user.profile
+
     if request.method == 'POST':
-        form = DisplayPreferencesForm(request.POST, instance=profile)
+        form = DisplayPreferencesForm(request.POST, instance=target_profile)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Interface scale updated successfully.')
+            messages.success(request, 'Display preferences updated successfully.')
             return redirect('accounts:display_preferences')
     else:
-        form = DisplayPreferencesForm(instance=profile)
+        form = DisplayPreferencesForm(instance=target_profile)
 
     return render(
         request,
         'registration/display_preferences.html',
         {
             'form': form,
-            'current_portal_scale': profile.ui_scale_percentage,
-            'current_public_scale': profile.ui_scale_public_percentage,
+            'current_portal_scale': target_profile.ui_scale_percentage,
+            'current_public_scale': target_profile.ui_scale_public_percentage,
+            'current_portal_font_size': target_profile.ui_font_size_percentage,
+            'current_portal_font_family': target_profile.get_ui_font_family_display(),
+            'current_portal_font_weight': target_profile.ui_font_weight,
+            'current_public_font_size': target_profile.ui_font_public_size_percentage,
+            'current_public_font_family': target_profile.get_ui_font_public_family_display(),
+            'current_public_font_weight': target_profile.ui_font_public_weight,
         },
     )
 

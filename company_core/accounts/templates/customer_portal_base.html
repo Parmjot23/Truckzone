@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" href="{{ default_company_logo_url }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Merriweather:wght@400;500;700&family=Poppins:wght@400;500;600;700&family=Sora:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
@@ -18,8 +18,13 @@
     <style>
         :root {
             --ui-scale-factor: 1;
+            --ui-font-size-factor: 1;
             --app-base-scale: 0.7;
             --app-scale-factor: var(--app-base-scale);
+            --font-primary: 'Manrope', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            --font-heading: 'Sora', 'Space Grotesk', 'Manrope', 'Inter', sans-serif;
+            --font-body-weight: 500;
+            --font-heading-weight: 700;
             --sidebar-width-collapsed: 74px;
             --sidebar-width-expanded: 260px;
             --topbar-height: 68px;
@@ -65,6 +70,7 @@
         * { box-sizing: border-box; }
 
         html {
+            font-size: calc(16px * var(--ui-font-size-factor));
             width: 100vw;
             height: 100vh;
             overflow: hidden;
@@ -77,12 +83,23 @@
 
         body {
             margin: 0;
-            font-family: 'Manrope', 'Inter', system-ui, -apple-system, sans-serif;
+            font-family: var(--font-primary);
+            font-weight: var(--font-body-weight);
             background: var(--surface-alt);
             color: var(--primary);
             width: 100vw;
             height: 100vh;
             overflow: hidden;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: var(--font-heading);
+            font-weight: var(--font-heading-weight);
         }
 
         input[type="number"]::-webkit-outer-spin-button,
@@ -832,7 +849,7 @@
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="sidebar-initializing{% if ui_scale_is_active %} ui-scale-active{% endif %}{% block body_class %}{% endblock %}"{% if ui_scale_is_active %} style="--ui-scale-factor: {{ ui_scale_factor }};"{% endif %}>
+<body class="sidebar-initializing{% if ui_scale_is_active %} ui-scale-active{% endif %}{% block body_class %}{% endblock %}" style="--ui-scale-factor: {{ ui_scale_factor }}; --ui-font-size-factor: {{ ui_portal_font_size_factor }}; --font-primary: {{ ui_portal_font_family_css }}; --font-heading: {{ ui_portal_heading_font_family_css }}; --font-body-weight: {{ ui_portal_font_weight }}; --font-heading-weight: {{ ui_portal_heading_font_weight }};">
     <script>
         (function() {
             try {

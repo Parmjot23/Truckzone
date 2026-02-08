@@ -16,6 +16,66 @@ from .utils import (
     resolve_storefront_category_flags,
 )
 
+_FONT_FAMILY_STACKS = {
+    'manrope': (
+        "'Manrope', 'Inter', 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif",
+        "'Sora', 'Space Grotesk', 'Manrope', 'Inter', sans-serif",
+    ),
+    'inter': (
+        "'Inter', 'Manrope', 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif",
+        "'Space Grotesk', 'Sora', 'Inter', sans-serif",
+    ),
+    'poppins': (
+        "'Poppins', 'Manrope', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+        "'Merriweather', 'Poppins', Georgia, serif",
+    ),
+    'system': (
+        "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    ),
+}
+
+
+def _normalize_font_size(value, default=100):
+    allowed = {choice[0] for choice in Profile.UI_FONT_SIZE_CHOICES}
+    try:
+        normalized = int(value)
+    except (TypeError, ValueError):
+        normalized = default
+
+    if normalized not in allowed:
+        normalized = default
+
+    factor = (Decimal(normalized) / Decimal('100')).quantize(
+        Decimal('0.001'),
+        rounding=ROUND_HALF_UP,
+    )
+    factor_display = format(factor, 'f')
+    if '.' in factor_display:
+        factor_display = factor_display.rstrip('0').rstrip('.')
+
+    return normalized, factor_display
+
+
+def _normalize_font_weight(value, default=500):
+    allowed = {choice[0] for choice in Profile.UI_FONT_WEIGHT_CHOICES}
+    try:
+        normalized = int(value)
+    except (TypeError, ValueError):
+        normalized = default
+
+    if normalized not in allowed:
+        normalized = default
+
+    heading_weight = min(800, max(600, normalized + 100))
+    return normalized, heading_weight
+
+
+def _resolve_font_family(value, default='manrope'):
+    selected = value if value in _FONT_FAMILY_STACKS else default
+    body_stack, heading_stack = _FONT_FAMILY_STACKS[selected]
+    return selected, body_stack, heading_stack
+
 
 def _normalize_phone_for_tel(phone):
     if not phone:
@@ -41,7 +101,7 @@ def _normalize_scale(value):
 
 
 def ui_scale_settings(request):
-    """Expose UI scale information so templates can adjust zoom globally."""
+    """Expose global display settings so templates can adjust zoom and typography."""
     business_profile = None
 
     user = getattr(request, 'user', None)
@@ -73,12 +133,36 @@ def ui_scale_settings(request):
     if business_profile is None:
         portal_scale, portal_factor, portal_active = _normalize_scale(100)
         public_scale, public_factor, public_active = _normalize_scale(100)
+        portal_font_size, portal_font_size_factor = _normalize_font_size(100)
+        portal_font_weight, portal_heading_weight = _normalize_font_weight(500)
+        portal_font_family, portal_font_family_css, portal_heading_font_family_css = _resolve_font_family('manrope')
+        public_font_size, public_font_size_factor = _normalize_font_size(100)
+        public_font_weight, public_heading_weight = _normalize_font_weight(500)
+        public_font_family, public_font_family_css, public_heading_font_family_css = _resolve_font_family('manrope')
     else:
         portal_scale, portal_factor, portal_active = _normalize_scale(
             getattr(business_profile, 'ui_scale_percentage', 100)
         )
         public_scale, public_factor, public_active = _normalize_scale(
             getattr(business_profile, 'ui_scale_public_percentage', 100)
+        )
+        portal_font_size, portal_font_size_factor = _normalize_font_size(
+            getattr(business_profile, 'ui_font_size_percentage', 100)
+        )
+        portal_font_weight, portal_heading_weight = _normalize_font_weight(
+            getattr(business_profile, 'ui_font_weight', 500)
+        )
+        portal_font_family, portal_font_family_css, portal_heading_font_family_css = _resolve_font_family(
+            getattr(business_profile, 'ui_font_family', 'manrope')
+        )
+        public_font_size, public_font_size_factor = _normalize_font_size(
+            getattr(business_profile, 'ui_font_public_size_percentage', 100)
+        )
+        public_font_weight, public_heading_weight = _normalize_font_weight(
+            getattr(business_profile, 'ui_font_public_weight', 500)
+        )
+        public_font_family, public_font_family_css, public_heading_font_family_css = _resolve_font_family(
+            getattr(business_profile, 'ui_font_public_family', 'manrope')
         )
 
     return {
@@ -88,6 +172,20 @@ def ui_scale_settings(request):
         'ui_scale_public_percentage': public_scale,
         'ui_scale_public_factor': public_factor,
         'ui_scale_public_is_active': public_active,
+        'ui_portal_font_size_percentage': portal_font_size,
+        'ui_portal_font_size_factor': portal_font_size_factor,
+        'ui_portal_font_family': portal_font_family,
+        'ui_portal_font_family_css': portal_font_family_css,
+        'ui_portal_heading_font_family_css': portal_heading_font_family_css,
+        'ui_portal_font_weight': portal_font_weight,
+        'ui_portal_heading_font_weight': portal_heading_weight,
+        'ui_public_font_size_percentage': public_font_size,
+        'ui_public_font_size_factor': public_font_size_factor,
+        'ui_public_font_family': public_font_family,
+        'ui_public_font_family_css': public_font_family_css,
+        'ui_public_heading_font_family_css': public_heading_font_family_css,
+        'ui_public_font_weight': public_font_weight,
+        'ui_public_heading_font_weight': public_heading_weight,
     }
 
 

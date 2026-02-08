@@ -115,7 +115,8 @@ The application will be available at `http://127.0.0.1:8000`
 
 ### Database
 - **Local Development**: SQLite (configured in `settings.py`)
-- **Production**: MySQL (requires separate configuration)
+- **Production (current Koyeb setup)**: SQLite using the committed `db.sqlite3`
+- **Future option**: Postgres by setting `DATABASE_URL`
 
 ### Email Settings
 - **Host**: smtp.gmail.com
@@ -229,11 +230,12 @@ Environment variables to set on Koyeb:
 - `DEBUG=False`
 - `ALLOWED_HOSTS=.koyeb.app,yourdomain.com`
 - `CSRF_TRUSTED_ORIGINS=https://your-app.koyeb.app,https://yourdomain.com`
-- `DATABASE_URL=postgres://USER:PASS@HOST:PORT/DBNAME` (Postgres in production)
-- `DB_SSL_REQUIRE=True` (recommended for managed Postgres)
+- `FORCE_SQLITE=True` (forces `db.sqlite3` usage even if `DATABASE_URL` exists)
+- Leave `DATABASE_URL` unset while using SQLite
 - Optional: `EMAIL_HOST_PASSWORD`, `STRIPE_*`, `OPENAI_API_KEY`
 
 Koyeb automatically runs the `koyeb.yml` steps on deploy. The service command also runs `python manage.py migrate` on startup to ensure schema is up to date.
+For this SQLite setup, keep `db.sqlite3` committed and pushed to GitHub before deploying.
 
 ## Contributing
 

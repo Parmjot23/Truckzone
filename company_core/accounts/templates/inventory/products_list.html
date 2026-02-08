@@ -16,9 +16,36 @@
             <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#importProductsModal">
                 <i class="fa-solid fa-file-import me-1"></i> Import Excel
             </button>
-            <a href="#addProductCard" class="btn btn-primary btn-sm">
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createProductModal">
                 <i class="fa-solid fa-plus me-1"></i> Add product
-            </a>
+            </button>
+        </div>
+    </div>
+
+    <div class="inventory-insights-grid mb-4">
+        <div class="inventory-insight-card">
+            <p class="inventory-insight-label mb-1">Products in scope</p>
+            <p class="inventory-insight-value mb-0">{{ products_count }}</p>
+        </div>
+        <div class="inventory-insight-card inventory-insight-card--warning">
+            <p class="inventory-insight-label mb-1">Low stock</p>
+            <p class="inventory-insight-value mb-0">{{ low_stock_count }}</p>
+        </div>
+        <div class="inventory-insight-card inventory-insight-card--danger">
+            <p class="inventory-insight-label mb-1">Out of stock</p>
+            <p class="inventory-insight-value mb-0">{{ out_of_stock_count }}</p>
+        </div>
+        <div class="inventory-insight-card">
+            <p class="inventory-insight-label mb-1">No SKU / No supplier</p>
+            <p class="inventory-insight-value mb-0">{{ missing_sku_count }} / {{ missing_supplier_count }}</p>
+        </div>
+        <div class="inventory-insight-card">
+            <p class="inventory-insight-label mb-1">Units on hand</p>
+            <p class="inventory-insight-value mb-0">{{ total_stock_units }}</p>
+        </div>
+        <div class="inventory-insight-card">
+            <p class="inventory-insight-label mb-1">Stock value</p>
+            <p class="inventory-insight-value mb-0">${{ total_stock_value|floatformat:2 }}</p>
         </div>
     </div>
 
@@ -54,136 +81,29 @@
         </button>
     </div>
 
-    <div class="surface-card p-4" id="addProductCard">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+    <div class="surface-card p-4 inventory-products-panel">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
             <div>
-                <h2 class="h5 mb-1">Add a new product</h2>
-                <p class="text-muted mb-0">Create reusable parts for invoices, work orders, and inventory tracking.</p>
+                <h2 class="h5 mb-1">Product Workspace</h2>
+                <p class="text-muted mb-0">Use the streamlined list for daily inventory tasks. Open the modal to add full product details.</p>
             </div>
-        </div>
-        <div class="row g-3">
-            <div class="col-lg-3">
-                <label for="newProductName" class="form-label">Product name</label>
-                <input type="text" class="form-control" id="newProductName" placeholder="e.g. Brake pads">
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductSku" class="form-label">SKU</label>
-                <input type="text" class="form-control" id="newProductSku" placeholder="Optional">
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductCategory" class="form-label">Category</label>
-                <select class="form-select" id="newProductCategory">
-                    <option value="">Uncategorized</option>
-                    {% for category in categories %}
-                    <option value="{{ category.id }}">{{ category.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductSupplier" class="form-label">Supplier</label>
-                <select class="form-select" id="newProductSupplier">
-                    <option value="">No supplier</option>
-                    {% for supplier in suppliers %}
-                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductBrand" class="form-label">Brand</label>
-                <select class="form-select" id="newProductBrand">
-                    <option value="">No brand</option>
-                    {% for brand in brands %}
-                    <option value="{{ brand.id }}">{{ brand.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductModel" class="form-label">Model</label>
-                <select class="form-select" id="newProductModel">
-                    <option value="">No model</option>
-                    {% for model in models %}
-                    <option value="{{ model.id }}">{{ model.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductVin" class="form-label">VIN</label>
-                <select class="form-select" id="newProductVin">
-                    <option value="">No VIN</option>
-                    {% for vin in vins %}
-                    <option value="{{ vin.id }}">{{ vin.vin }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-lg-1">
-                <label for="newProductItemType" class="form-label">Type</label>
-                <select class="form-select" id="newProductItemType">
-                    {% for value, label in item_type_choices %}
-                    <option value="{{ value }}">{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductLocation" class="form-label">Location</label>
-                <select class="form-select" id="newProductLocation">
-                    <option value="">No location</option>
-                    {% for location in locations %}
-                    <option value="{{ location.name }}">{{ location.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-lg-4">
-                <label for="newProductDescription" class="form-label">Description</label>
-                <textarea class="form-control" id="newProductDescription" rows="2" placeholder="Add product details"></textarea>
-            </div>
-            <div class="col-lg-4">
-                <label for="newProductAlternateSkus" class="form-label">Alternate / Interchange SKUs</label>
-                <input type="text" class="form-control" id="newProductAlternateSkus" placeholder="Comma-separated (optional)">
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductCostPrice" class="form-label">Cost price</label>
-                <input type="number" class="form-control" id="newProductCostPrice" placeholder="e.g. 45.00" min="0" step="0.01">
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductSalePrice" class="form-label">Sale price</label>
-                <input type="number" class="form-control" id="newProductSalePrice" placeholder="Optional" min="0" step="0.01">
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductCorePrice" class="form-label">Core charge</label>
-                <input type="number" class="form-control" id="newProductCorePrice" placeholder="Optional" min="0" step="0.01">
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductEnvironmentalFee" class="form-label">Environmental fee</label>
-                <input type="number" class="form-control" id="newProductEnvironmentalFee" placeholder="Optional" min="0" step="0.01">
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductQuantity" class="form-label">On hand</label>
-                <input type="number" class="form-control" id="newProductQuantity" placeholder="e.g. 10" min="0" step="1">
-            </div>
-            <div class="col-lg-2">
-                <label for="newProductReorder" class="form-label">Reorder level</label>
-                <input type="number" class="form-control" id="newProductReorder" placeholder="e.g. 2" min="0" step="1">
-            </div>
-            <div class="col-lg-3">
-                <label for="newProductImage" class="form-label">Image</label>
-                <input type="file" class="form-control" id="newProductImage" accept="image/*">
-            </div>
-        </div>
-        <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mt-3">
-            <button type="button" class="btn btn-primary" id="addProductButton">Add to library</button>
-            <div id="newProductStatus" class="text-muted small">New entries save automatically when you add them.</div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createProductModal">
+                <i class="fa-solid fa-plus me-1"></i> Create product
+            </button>
         </div>
     </div>
 
     <div class="surface-card p-4">
         <form method="get" action="{% url 'accounts:inventory_products' %}" data-live-search-form>
+            <input type="hidden" name="stock" id="filterStockInput" value="{{ selected_stock_filter }}">
             <div class="row align-items-end gy-3 mb-2">
                 <div class="col-md-7 col-lg-6">
                     <label for="productSearchInput" class="form-label fw-semibold">Search products</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="search" class="form-control" id="productSearchInput" name="q" placeholder="Search name, SKU, alternate SKU, supplier, category, brand, model, VIN, or location" value="{{ search_query }}">
+                        <input type="search" class="form-control" id="productSearchInput" name="q" placeholder="Search name, SKU, category, supplier, or location" value="{{ search_query }}">
                     </div>
+                    <p class="small text-muted mb-0 mt-2">Quickly find products and use bulk actions for selected rows.</p>
                 </div>
                 <div class="col-md-5 col-lg-4 ms-lg-auto">
                     <div class="d-flex flex-column align-items-md-end gap-2">
@@ -193,51 +113,78 @@
                         <button type="button" class="btn btn-outline-danger btn-sm" id="bulkDeleteButton" disabled>
                             <i class="fa-regular fa-trash-can me-1"></i> Delete selected
                         </button>
+                        <div id="bulkSelectionCount" class="small text-muted">0 selected</div>
                         <div id="bulkDeleteStatus" class="small text-muted"></div>
                     </div>
                 </div>
                 <div class="col-12">
-                    <div class="row g-3">
-                        <div class="col-lg-4 col-md-6">
-                            <label for="filterGroupSelect" class="form-label fw-semibold">Category groups</label>
-                            <select id="filterGroupSelect" name="group" class="form-select" multiple size="4">
-                                {% for group in category_groups %}
-                                <option value="{{ group.id }}" {% if group.id|stringformat:"s" in selected_group_ids %}selected{% endif %}>{{ group.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-lg-4 col-md-6">
-                            <label for="filterCategorySelect" class="form-label fw-semibold">Categories</label>
-                            <select id="filterCategorySelect" name="category" class="form-select" multiple size="4">
-                                {% for category in categories %}
-                                <option value="{{ category.id }}" {% if category.id|stringformat:"s" in selected_category_ids %}selected{% endif %}>{{ category.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-lg-4 col-md-6">
-                            <label for="filterBrandSelect" class="form-label fw-semibold">Brands</label>
-                            <select id="filterBrandSelect" name="brand" class="form-select" multiple size="4">
-                                {% for brand in brands %}
-                                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" in selected_brand_ids %}selected{% endif %}>{{ brand.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-12 d-flex flex-wrap gap-2 align-items-center">
-                            <button type="submit" class="btn btn-outline-secondary btn-sm">Apply filters</button>
-                            <a href="{% url 'accounts:inventory_products' %}" class="btn btn-link btn-sm">Clear</a>
-                            <span class="text-muted small">Tip: hold Ctrl (Windows) or Cmd (Mac) to select multiple filters.</span>
-                        </div>
+                    <div class="inventory-quick-filters">
+                        <button type="button" class="btn btn-sm inventory-quick-filter{% if not selected_stock_filter %} active{% endif %}" data-stock-filter="">
+                            All products ({{ products_count }})
+                        </button>
+                        <button type="button" class="btn btn-sm inventory-quick-filter{% if selected_stock_filter == 'low' %} active{% endif %}" data-stock-filter="low">
+                            Low stock ({{ low_stock_count }})
+                        </button>
+                        <button type="button" class="btn btn-sm inventory-quick-filter{% if selected_stock_filter == 'out' %} active{% endif %}" data-stock-filter="out">
+                            Out of stock ({{ out_of_stock_count }})
+                        </button>
+                        <button type="button" class="btn btn-sm inventory-quick-filter{% if selected_stock_filter == 'no_sku' %} active{% endif %}" data-stock-filter="no_sku">
+                            Missing SKU ({{ missing_sku_count }})
+                        </button>
+                        <button type="button" class="btn btn-sm inventory-quick-filter{% if selected_stock_filter == 'no_supplier' %} active{% endif %}" data-stock-filter="no_supplier">
+                            Missing supplier ({{ missing_supplier_count }})
+                        </button>
                     </div>
+                </div>
+                <div class="col-12">
+                    <details class="inventory-filter-details"{% if selected_group_ids or selected_category_ids or selected_brand_ids %} open{% endif %}>
+                        <summary>Advanced filters (category group, category, brand)</summary>
+                        <div class="inventory-filter-details__body row g-3 mt-2">
+                            <div class="col-lg-4 col-md-6">
+                                <label for="filterGroupSelect" class="form-label fw-semibold">Category groups</label>
+                                <select id="filterGroupSelect" name="group" class="form-select inventory-filter-select" multiple size="3">
+                                    {% for group in category_groups %}
+                                    <option value="{{ group.id }}" {% if group.id|stringformat:"s" in selected_group_ids %}selected{% endif %}>{{ group.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <label for="filterCategorySelect" class="form-label fw-semibold">Categories</label>
+                                <select id="filterCategorySelect" name="category" class="form-select inventory-filter-select" multiple size="3">
+                                    {% for category in categories %}
+                                    <option value="{{ category.id }}" {% if category.id|stringformat:"s" in selected_category_ids %}selected{% endif %}>{{ category.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <label for="filterBrandSelect" class="form-label fw-semibold">Brands</label>
+                                <select id="filterBrandSelect" name="brand" class="form-select inventory-filter-select" multiple size="3">
+                                    {% for brand in brands %}
+                                    <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" in selected_brand_ids %}selected{% endif %}>{{ brand.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 d-flex flex-wrap gap-2 align-items-center">
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Apply advanced filters</button>
+                                <a href="{% url 'accounts:inventory_products' %}" class="btn btn-link btn-sm">Clear all</a>
+                                <span class="text-muted small">Use Ctrl (Windows) or Cmd (Mac) for multi-select.</span>
+                            </div>
+                        </div>
+                    </details>
                 </div>
             </div>
         </form>
+        <div class="inventory-list-meta mt-2 mb-2">
+            <span class="text-muted small">Visible products:</span>
+            <span class="inventory-list-meta__value" id="productsVisibleCount">{{ products_count }}</span>
+        </div>
 
-        <div id="productsEmptyState" class="alert alert-info mt-4{% if products_count or search_query or selected_group_ids or selected_category_ids or selected_brand_ids %} d-none{% endif %}">
+        <div id="productsEmptyState" class="alert alert-info mt-4{% if products_count or search_query or selected_group_ids or selected_category_ids or selected_brand_ids or selected_stock_filter %} d-none{% endif %}">
             No products yet. Add items to start tracking stock and pricing.
         </div>
 
         <div class="table-responsive mt-3{% if not products_count %} d-none{% endif %}" id="productsTableWrapper">
-            <table class="table table-striped align-middle" id="productsTable"
+            <table class="table table-hover align-middle" id="productsTable"
                    data-save-url="{% url 'accounts:inventory_product_inline_save' %}"
                    data-delete-url-template="{% url 'accounts:inventory_product_delete' 0 %}"
                    data-bulk-update-url="{% url 'accounts:inventory_products_bulk_update' %}">
@@ -248,14 +195,12 @@
                                 <input class="form-check-input" type="checkbox" id="selectAllProducts" aria-label="Select all products">
                             </div>
                         </th>
-                        <th scope="col" style="width: 8%;">Image</th>
-                        <th scope="col" style="width: 16%;">Product</th>
-                        <th scope="col" style="width: 18%;">Description</th>
-                        <th scope="col" style="width: 13%;">Category / Supplier</th>
-                        <th scope="col" style="width: 11%;">Pricing</th>
-                        <th scope="col" style="width: 11%;">Stock</th>
-                        <th scope="col" style="width: 11%;">Type / Location</th>
-                        <th scope="col" class="text-end" style="width: 8%;">Actions</th>
+                        <th scope="col" style="width: 32%;">Product</th>
+                        <th scope="col" style="width: 18%;">Catalog</th>
+                        <th scope="col" style="width: 15%;">Pricing</th>
+                        <th scope="col" style="width: 13%;">Stock</th>
+                        <th scope="col" style="width: 12%;">Type / Location</th>
+                        <th scope="col" class="text-end" style="width: 16%;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="productsTableBody">
@@ -298,31 +243,18 @@
                             </div>
                         </td>
                         <td>
-                            <div class="product-display product-image-display">
-                                <div class="product-image-placeholder text-muted small">No image</div>
-                                <img class="product-image-thumb d-none" alt="" loading="lazy">
+                            <div class="product-display d-flex gap-3">
+                                <div class="product-image-display flex-shrink-0">
+                                    <div class="product-image-placeholder text-muted small">No image</div>
+                                    <img class="product-image-thumb d-none" alt="" loading="lazy">
+                                </div>
+                                <div>
+                                    <div class="product-name-display fw-semibold"></div>
+                                    <div class="product-sku-display text-muted small"></div>
+                                    <div class="product-alt-sku-display text-muted small"></div>
+                                </div>
                             </div>
-                            <div class="product-edit d-none">
-                                <input type="file" class="form-control form-control-sm product-image-input" accept="image/*">
-                            </div>
-                        </td>
-                        <td>
-                            <div class="product-display">
-                                <div class="product-name-display fw-semibold"></div>
-                                <div class="product-sku-display text-muted small"></div>
-                                <div class="product-alt-sku-display text-muted small"></div>
-                            </div>
-                            <div class="product-edit d-none">
-                                <input type="text" class="form-control form-control-sm product-name-input" placeholder="Product name">
-                                <input type="text" class="form-control form-control-sm mt-2 product-sku-input" placeholder="SKU (optional)">
-                                <input type="text" class="form-control form-control-sm mt-2 product-alternate-skus-input" placeholder="Alternate SKUs (comma separated)">
-                            </div>
-                        </td>
-                        <td>
                             <div class="product-display product-description-display text-muted small"></div>
-                            <div class="product-edit d-none">
-                                <textarea class="form-control form-control-sm product-description-input" rows="2" placeholder="Description"></textarea>
-                            </div>
                         </td>
                         <td>
                             <div class="product-display">
@@ -332,38 +264,6 @@
                                 <div class="product-model-display text-muted small"></div>
                                 <div class="product-vin-display text-muted small"></div>
                             </div>
-                            <div class="product-edit d-none">
-                                <select class="form-select form-select-sm product-category-input">
-                                    <option value="">Uncategorized</option>
-                                    {% for category in categories %}
-                                    <option value="{{ category.id }}">{{ category.name }}</option>
-                                    {% endfor %}
-                                </select>
-                                <select class="form-select form-select-sm mt-2 product-supplier-input">
-                                    <option value="">No supplier</option>
-                                    {% for supplier in suppliers %}
-                                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
-                                    {% endfor %}
-                                </select>
-                                <select class="form-select form-select-sm mt-2 product-brand-input">
-                                    <option value="">No brand</option>
-                                    {% for brand in brands %}
-                                    <option value="{{ brand.id }}">{{ brand.name }}</option>
-                                    {% endfor %}
-                                </select>
-                                <select class="form-select form-select-sm mt-2 product-model-input">
-                                    <option value="">No model</option>
-                                    {% for model in models %}
-                                    <option value="{{ model.id }}">{{ model.name }}</option>
-                                    {% endfor %}
-                                </select>
-                                <select class="form-select form-select-sm mt-2 product-vin-input">
-                                    <option value="">No VIN</option>
-                                    {% for vin in vins %}
-                                    <option value="{{ vin.id }}">{{ vin.vin }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
                         </td>
                         <td>
                             <div class="product-display">
@@ -371,22 +271,14 @@
                                 <div class="product-sale-price-display text-muted small"></div>
                                 <div class="product-core-price-display text-muted small"></div>
                                 <div class="product-env-fee-display text-muted small"></div>
-                            </div>
-                            <div class="product-edit d-none">
-                                <input type="number" class="form-control form-control-sm product-cost-price-input" min="0" step="0.01" placeholder="Cost">
-                                <input type="number" class="form-control form-control-sm mt-2 product-sale-price-input" min="0" step="0.01" placeholder="Sale (optional)">
-                                <input type="number" class="form-control form-control-sm mt-2 product-core-price-input" min="0" step="0.01" placeholder="Core (optional)">
-                                <input type="number" class="form-control form-control-sm mt-2 product-env-fee-input" min="0" step="0.01" placeholder="Env fee (optional)">
+                                <div class="product-margin-display text-muted small"></div>
                             </div>
                         </td>
                         <td>
                             <div class="product-display">
                                 <div class="product-quantity-display fw-semibold"></div>
                                 <div class="product-reorder-display text-muted small"></div>
-                            </div>
-                            <div class="product-edit d-none">
-                                <input type="number" class="form-control form-control-sm product-quantity-input" min="0" step="1" placeholder="On hand">
-                                <input type="number" class="form-control form-control-sm mt-2 product-reorder-input" min="0" step="1" placeholder="Reorder">
+                                <span class="badge product-stock-status mt-1"></span>
                             </div>
                         </td>
                         <td>
@@ -394,29 +286,12 @@
                                 <div class="product-item-type-display fw-semibold"></div>
                                 <div class="product-location-display text-muted small"></div>
                             </div>
-                            <div class="product-edit d-none">
-                                <select class="form-select form-select-sm product-item-type-input">
-                                    {% for value, label in item_type_choices %}
-                                    <option value="{{ value }}">{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                                <select class="form-select form-select-sm mt-2 product-location-input">
-                                    <option value="">No location</option>
-                                    {% for location in locations %}
-                                    <option value="{{ location.name }}">{{ location.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
                         </td>
                         <td class="text-end align-top">
                             <div class="btn-group btn-group-sm product-view-actions" role="group" aria-label="Product actions">
-                                <button type="button" class="btn btn-outline-secondary product-edit-btn">Edit</button>
-                                <button type="button" class="btn btn-outline-secondary product-attributes-btn" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product-id="{{ product.id }}">Attributes</button>
+                                <button type="button" class="btn btn-outline-secondary product-duplicate-btn">Duplicate</button>
+                                <button type="button" class="btn btn-outline-secondary product-attributes-btn" data-bs-toggle="modal" data-bs-target="#editProductModal" data-product-id="{{ product.id }}">Edit</button>
                                 <button type="button" class="btn btn-outline-danger product-delete-btn">Delete</button>
-                            </div>
-                            <div class="btn-group btn-group-sm product-edit-actions d-none" role="group" aria-label="Edit actions">
-                                <button type="button" class="btn btn-primary product-save-btn">Save</button>
-                                <button type="button" class="btn btn-outline-secondary product-cancel-btn">Cancel</button>
                             </div>
                             <div class="row-status text-muted small mt-2" aria-live="polite"></div>
                         </td>
@@ -426,7 +301,7 @@
             </table>
         </div>
 
-        <div id="productsNoResults" class="alert alert-secondary mt-4 mb-0{% if products_count %} d-none{% elif not search_query and not selected_group_ids and not selected_category_ids and not selected_brand_ids %} d-none{% endif %}">
+        <div id="productsNoResults" class="alert alert-secondary mt-4 mb-0{% if products_count %} d-none{% elif not search_query and not selected_group_ids and not selected_category_ids and not selected_brand_ids and not selected_stock_filter %} d-none{% endif %}">
             No products match your filters. Try a different selection.
         </div>
 
@@ -460,6 +335,291 @@
 </div>
 
 <input type="hidden" id="inlineCsrfToken" value="{{ csrf_token }}">
+
+<div class="modal fade inventory-modal" id="createProductModal" tabindex="-1" aria-labelledby="createProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="createProductModalLabel">Create product</h5>
+                    <p class="modal-subtitle mb-0">Add details step-by-step using tabs.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-pills product-editor-tabs" id="createProductTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="create-tab-basic" data-bs-toggle="pill" data-bs-target="#create-pane-basic" type="button" role="tab" aria-controls="create-pane-basic" aria-selected="true">Basic</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="create-tab-catalog" data-bs-toggle="pill" data-bs-target="#create-pane-catalog" type="button" role="tab" aria-controls="create-pane-catalog" aria-selected="false">Catalog</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="create-tab-pricing" data-bs-toggle="pill" data-bs-target="#create-pane-pricing" type="button" role="tab" aria-controls="create-pane-pricing" aria-selected="false">Pricing</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="create-tab-stock" data-bs-toggle="pill" data-bs-target="#create-pane-stock" type="button" role="tab" aria-controls="create-pane-stock" aria-selected="false">Stock</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="create-tab-media" data-bs-toggle="pill" data-bs-target="#create-pane-media" type="button" role="tab" aria-controls="create-pane-media" aria-selected="false">Media</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content pt-3">
+                    <div class="tab-pane fade show active" id="create-pane-basic" role="tabpanel" aria-labelledby="create-tab-basic">
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label for="newProductName" class="form-label">Product name</label>
+                                <input type="text" class="form-control" id="newProductName" placeholder="e.g. Brake pads">
+                            </div>
+                            <div class="col-lg-3">
+                                <label for="newProductSku" class="form-label">SKU</label>
+                                <input type="text" class="form-control" id="newProductSku" placeholder="Optional">
+                            </div>
+                            <div class="col-lg-3">
+                                <label for="newProductAlternateSkus" class="form-label">Alternate SKUs</label>
+                                <input type="text" class="form-control" id="newProductAlternateSkus" placeholder="Comma-separated">
+                            </div>
+                            <div class="col-12">
+                                <label for="newProductDescription" class="form-label">Description</label>
+                                <textarea class="form-control" id="newProductDescription" rows="3" placeholder="Short product details"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="create-pane-catalog" role="tabpanel" aria-labelledby="create-tab-catalog" data-attribute-context="create-product">
+                        <div class="row g-3">
+                            <div class="col-lg-4">
+                                <label for="newProductCategory" class="form-label">Category</label>
+                                <div class="input-group catalog-input-group">
+                                    <select class="form-select" id="newProductCategory" data-attribute-source="true">
+                                        <option value="">Uncategorized</option>
+                                        {% for category in categories %}
+                                        <option value="{{ category.id }}">{{ category.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary catalog-quick-add-btn" data-bs-toggle="modal" data-bs-target="#quickAddCategoryModal" data-keep-parent-open="true" aria-label="Add category">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label for="newProductSupplier" class="form-label">Supplier</label>
+                                <div class="input-group catalog-input-group">
+                                    <select class="form-select" id="newProductSupplier">
+                                        <option value="">No supplier</option>
+                                        {% for supplier in suppliers %}
+                                        <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary catalog-quick-add-btn" data-bs-toggle="modal" data-bs-target="#quickAddSupplierModal" data-keep-parent-open="true" aria-label="Add supplier">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label for="newProductBrand" class="form-label">Brand</label>
+                                <div class="input-group catalog-input-group">
+                                    <select class="form-select" id="newProductBrand">
+                                        <option value="">No brand</option>
+                                        {% for brand in brands %}
+                                        <option value="{{ brand.id }}">{{ brand.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary catalog-quick-add-btn" data-bs-toggle="modal" data-bs-target="#quickAddBrandModal" data-keep-parent-open="true" aria-label="Add brand">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label for="newProductModel" class="form-label">Model</label>
+                                <div class="input-group catalog-input-group">
+                                    <select class="form-select" id="newProductModel">
+                                        <option value="">No model</option>
+                                        {% for model in models %}
+                                        <option value="{{ model.id }}">{{ model.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary catalog-quick-add-btn" data-bs-toggle="modal" data-bs-target="#quickAddModelModal" data-keep-parent-open="true" aria-label="Add model">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <label for="newProductVin" class="form-label">VIN</label>
+                                <div class="input-group catalog-input-group">
+                                    <select class="form-select" id="newProductVin">
+                                        <option value="">No VIN</option>
+                                        {% for vin in vins %}
+                                        <option value="{{ vin.id }}">{{ vin.vin }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary catalog-quick-add-btn" data-bs-toggle="modal" data-bs-target="#quickAddVinModal" data-keep-parent-open="true" aria-label="Add VIN">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-lg-2">
+                                <label for="newProductItemType" class="form-label">Type</label>
+                                <select class="form-select" id="newProductItemType">
+                                    {% for value, label in item_type_choices %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-lg-6">
+                                <label for="newProductLocation" class="form-label">Location</label>
+                                <div class="input-group catalog-input-group">
+                                    <select class="form-select" id="newProductLocation">
+                                        <option value="">No location</option>
+                                        {% for location in locations %}
+                                        <option value="{{ location.name }}">{{ location.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary catalog-quick-add-btn" data-bs-toggle="modal" data-bs-target="#quickAddLocationModal" data-keep-parent-open="true" aria-label="Add location">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="catalog-attribute-shell">
+                                    <div class="attribute-create-actions">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" data-attribute-create-toggle>
+                                            <i class="fas fa-plus me-1"></i> Create custom attribute
+                                        </button>
+                                        <span class="form-text text-muted">Attributes are loaded from the selected category.</span>
+                                    </div>
+                                    <div class="form-group mt-3" data-attribute-fields="true" data-attribute-url="{% url 'accounts:get_attribute_fields' %}" data-product-id="" data-empty-message="Select a category above to load custom attributes.">
+                                        <div class="text-muted small">Select a category above to load custom attributes.</div>
+                                    </div>
+                                    <div class="attribute-create-wrapper">
+                                        <div class="attribute-create-panel d-none" data-attribute-create-panel data-save-url="{% url 'accounts:inventory_attribute_inline_save' %}">
+                                            <div class="attribute-create-header">
+                                                <div>
+                                                    <div class="fw-semibold" data-attribute-panel-title>New attribute</div>
+                                                    <div class="attribute-create-category">Category: <span data-attribute-category-label>Choose a category above</span></div>
+                                                </div>
+                                                <button type="button" class="btn btn-link btn-sm" data-attribute-create-cancel>Cancel</button>
+                                            </div>
+                                            <div class="attribute-create-grid mt-3">
+                                                <div>
+                                                    <label class="form-label" for="attributeCreateName-create">Attribute name</label>
+                                                    <input type="text" class="form-control" id="attributeCreateName-create" data-attribute-create-name placeholder="e.g. Dial color">
+                                                </div>
+                                                <div>
+                                                    <label class="form-label" for="attributeCreateType-create">Type</label>
+                                                    <select class="form-select" id="attributeCreateType-create" data-attribute-create-type>
+                                                        {% if attribute_types %}
+                                                        {% for value, label in attribute_types %}
+                                                        <option value="{{ value }}">{{ label }}</option>
+                                                        {% endfor %}
+                                                        {% else %}
+                                                        <option value="select">Select</option>
+                                                        <option value="text">Text</option>
+                                                        <option value="number">Number</option>
+                                                        <option value="boolean">Yes/No</option>
+                                                        {% endif %}
+                                                    </select>
+                                                </div>
+                                                <div class="attribute-create-span-2" data-attribute-create-options-group>
+                                                    <label class="form-label" for="attributeCreateOptions-create">Options</label>
+                                                    <textarea class="form-control" id="attributeCreateOptions-create" data-attribute-create-options rows="2" placeholder="Option 1, Option 2"></textarea>
+                                                    <div class="form-text text-muted">Use commas or new lines to separate values.</div>
+                                                </div>
+                                                <div>
+                                                    <label class="form-label" for="attributeCreateUnit-create">Value unit (optional)</label>
+                                                    <input type="text" class="form-control" id="attributeCreateUnit-create" data-attribute-create-unit placeholder="e.g. inch, psi">
+                                                </div>
+                                                <div>
+                                                    <label class="form-label" for="attributeCreateOrder-create">Sort order (optional)</label>
+                                                    <input type="number" class="form-control" id="attributeCreateOrder-create" data-attribute-create-order min="0" placeholder="0">
+                                                </div>
+                                                <div class="attribute-create-span-2">
+                                                    <label class="form-label" for="attributeCreateDescription-create">Description (optional)</label>
+                                                    <textarea class="form-control" id="attributeCreateDescription-create" data-attribute-create-description rows="2" placeholder="Add helper text for staff"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="attribute-create-flags">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="attributeCreateFilterable-create" data-attribute-create-filterable checked>
+                                                    <label class="form-check-label" for="attributeCreateFilterable-create">Filterable</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="attributeCreateComparable-create" data-attribute-create-comparable>
+                                                    <label class="form-check-label" for="attributeCreateComparable-create">Comparable</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="attributeCreateActive-create" data-attribute-create-active checked>
+                                                    <label class="form-check-label" for="attributeCreateActive-create">Active</label>
+                                                </div>
+                                            </div>
+                                            <div class="attribute-create-footer">
+                                                <button type="button" class="btn btn-primary btn-sm" data-attribute-create-submit data-default-label="Save attribute">Save attribute</button>
+                                                <div class="attribute-create-status text-muted" data-attribute-create-status>New attributes save instantly.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="create-pane-pricing" role="tabpanel" aria-labelledby="create-tab-pricing">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="newProductCostPrice" class="form-label">Cost price</label>
+                                <input type="number" class="form-control" id="newProductCostPrice" placeholder="e.g. 45.00" min="0" step="0.01">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="newProductSalePrice" class="form-label">Sale price</label>
+                                <input type="number" class="form-control" id="newProductSalePrice" placeholder="Optional" min="0" step="0.01">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="newProductCorePrice" class="form-label">Core charge</label>
+                                <input type="number" class="form-control" id="newProductCorePrice" placeholder="Optional" min="0" step="0.01">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="newProductEnvironmentalFee" class="form-label">Environmental fee</label>
+                                <input type="number" class="form-control" id="newProductEnvironmentalFee" placeholder="Optional" min="0" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="create-pane-stock" role="tabpanel" aria-labelledby="create-tab-stock">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="newProductQuantity" class="form-label">On hand</label>
+                                <input type="number" class="form-control" id="newProductQuantity" placeholder="e.g. 10" min="0" step="1">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="newProductReorder" class="form-label">Reorder level</label>
+                                <input type="number" class="form-control" id="newProductReorder" placeholder="e.g. 2" min="0" step="1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="create-pane-media" role="tabpanel" aria-labelledby="create-tab-media">
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label for="newProductImage" class="form-label">Image</label>
+                                <input type="file" class="form-control" id="newProductImage" accept="image/*">
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="small text-muted pt-4">
+                                    Required fields: <strong>Product name</strong> and <strong>Cost price</strong>.
+                                </div>
+                                <div class="small text-muted">Tip: use <strong>Duplicate</strong> from the list to prefill this modal.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="newProductStatus" class="small text-muted pt-3" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="addProductButton">
+                    <i class="fa-solid fa-plus me-1"></i> Add to library
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="modal fade" id="bulkEditModal" tabindex="-1" aria-labelledby="bulkEditModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -611,31 +771,18 @@
             </div>
         </td>
         <td>
-            <div class="product-display product-image-display">
-                <div class="product-image-placeholder text-muted small">No image</div>
-                <img class="product-image-thumb d-none" alt="" loading="lazy">
+            <div class="product-display d-flex gap-3">
+                <div class="product-image-display flex-shrink-0">
+                    <div class="product-image-placeholder text-muted small">No image</div>
+                    <img class="product-image-thumb d-none" alt="" loading="lazy">
+                </div>
+                <div>
+                    <div class="product-name-display fw-semibold"></div>
+                    <div class="product-sku-display text-muted small"></div>
+                    <div class="product-alt-sku-display text-muted small"></div>
+                </div>
             </div>
-            <div class="product-edit d-none">
-                <input type="file" class="form-control form-control-sm product-image-input" accept="image/*">
-            </div>
-        </td>
-        <td>
-            <div class="product-display">
-                <div class="product-name-display fw-semibold"></div>
-                <div class="product-sku-display text-muted small"></div>
-                <div class="product-alt-sku-display text-muted small"></div>
-            </div>
-            <div class="product-edit d-none">
-                <input type="text" class="form-control form-control-sm product-name-input" placeholder="Product name">
-                <input type="text" class="form-control form-control-sm mt-2 product-sku-input" placeholder="SKU (optional)">
-                <input type="text" class="form-control form-control-sm mt-2 product-alternate-skus-input" placeholder="Alternate SKUs (comma separated)">
-            </div>
-        </td>
-        <td>
             <div class="product-display product-description-display text-muted small"></div>
-            <div class="product-edit d-none">
-                <textarea class="form-control form-control-sm product-description-input" rows="2" placeholder="Description"></textarea>
-            </div>
         </td>
         <td>
             <div class="product-display">
@@ -645,38 +792,6 @@
                 <div class="product-model-display text-muted small"></div>
                 <div class="product-vin-display text-muted small"></div>
             </div>
-            <div class="product-edit d-none">
-                <select class="form-select form-select-sm product-category-input">
-                    <option value="">Uncategorized</option>
-                    {% for category in categories %}
-                    <option value="{{ category.id }}">{{ category.name }}</option>
-                    {% endfor %}
-                </select>
-                <select class="form-select form-select-sm mt-2 product-supplier-input">
-                    <option value="">No supplier</option>
-                    {% for supplier in suppliers %}
-                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
-                    {% endfor %}
-                </select>
-                <select class="form-select form-select-sm mt-2 product-brand-input">
-                    <option value="">No brand</option>
-                    {% for brand in brands %}
-                    <option value="{{ brand.id }}">{{ brand.name }}</option>
-                    {% endfor %}
-                </select>
-                <select class="form-select form-select-sm mt-2 product-model-input">
-                    <option value="">No model</option>
-                    {% for model in models %}
-                    <option value="{{ model.id }}">{{ model.name }}</option>
-                    {% endfor %}
-                </select>
-                <select class="form-select form-select-sm mt-2 product-vin-input">
-                    <option value="">No VIN</option>
-                    {% for vin in vins %}
-                    <option value="{{ vin.id }}">{{ vin.vin }}</option>
-                    {% endfor %}
-                </select>
-            </div>
         </td>
         <td>
             <div class="product-display">
@@ -684,22 +799,14 @@
                 <div class="product-sale-price-display text-muted small"></div>
                 <div class="product-core-price-display text-muted small"></div>
                 <div class="product-env-fee-display text-muted small"></div>
-            </div>
-            <div class="product-edit d-none">
-                <input type="number" class="form-control form-control-sm product-cost-price-input" min="0" step="0.01" placeholder="Cost">
-                <input type="number" class="form-control form-control-sm mt-2 product-sale-price-input" min="0" step="0.01" placeholder="Sale (optional)">
-                <input type="number" class="form-control form-control-sm mt-2 product-core-price-input" min="0" step="0.01" placeholder="Core (optional)">
-                <input type="number" class="form-control form-control-sm mt-2 product-env-fee-input" min="0" step="0.01" placeholder="Env fee (optional)">
+                <div class="product-margin-display text-muted small"></div>
             </div>
         </td>
         <td>
             <div class="product-display">
                 <div class="product-quantity-display fw-semibold"></div>
                 <div class="product-reorder-display text-muted small"></div>
-            </div>
-            <div class="product-edit d-none">
-                <input type="number" class="form-control form-control-sm product-quantity-input" min="0" step="1" placeholder="On hand">
-                <input type="number" class="form-control form-control-sm mt-2 product-reorder-input" min="0" step="1" placeholder="Reorder">
+                <span class="badge product-stock-status mt-1"></span>
             </div>
         </td>
         <td>
@@ -707,29 +814,12 @@
                 <div class="product-item-type-display fw-semibold"></div>
                 <div class="product-location-display text-muted small"></div>
             </div>
-            <div class="product-edit d-none">
-                <select class="form-select form-select-sm product-item-type-input">
-                    {% for value, label in item_type_choices %}
-                    <option value="{{ value }}">{{ label }}</option>
-                    {% endfor %}
-                </select>
-                <select class="form-select form-select-sm mt-2 product-location-input">
-                    <option value="">No location</option>
-                    {% for location in locations %}
-                    <option value="{{ location.name }}">{{ location.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
         </td>
         <td class="text-end align-top">
             <div class="btn-group btn-group-sm product-view-actions" role="group" aria-label="Product actions">
-                <button type="button" class="btn btn-outline-secondary product-edit-btn">Edit</button>
-                <button type="button" class="btn btn-outline-secondary product-attributes-btn" data-bs-toggle="modal" data-bs-target="#editProductModal">Attributes</button>
+                <button type="button" class="btn btn-outline-secondary product-duplicate-btn">Duplicate</button>
+                <button type="button" class="btn btn-outline-secondary product-attributes-btn" data-bs-toggle="modal" data-bs-target="#editProductModal">Edit</button>
                 <button type="button" class="btn btn-outline-danger product-delete-btn">Delete</button>
-            </div>
-            <div class="btn-group btn-group-sm product-edit-actions d-none" role="group" aria-label="Edit actions">
-                <button type="button" class="btn btn-primary product-save-btn">Save</button>
-                <button type="button" class="btn btn-outline-secondary product-cancel-btn">Cancel</button>
             </div>
             <div class="row-status text-muted small mt-2" aria-live="polite"></div>
         </td>
@@ -1137,14 +1227,14 @@
 </div>
 
 <div class="modal fade inventory-modal" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
-            <form method="post" action="{% url 'accounts:inventory_product_attributes_update' %}">
+            <form method="post" action="{% url 'accounts:edit_product' %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-header">
                     <div>
-                        <h5 class="modal-title" id="editProductModalLabel">Edit product attributes</h5>
-                        <p class="modal-subtitle mb-0">Update category-specific details without leaving this screen.</p>
+                        <h5 class="modal-title" id="editProductModalLabel">Edit product</h5>
+                        <p class="modal-subtitle mb-0">Update details in organized tabs.</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -1153,7 +1243,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update product</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
                 </div>
             </form>
         </div>
@@ -1162,15 +1252,17 @@
 
 <style>
     #productsTable {
-        min-width: 980px;
+        min-width: 860px;
     }
 
     #productsTable td {
         vertical-align: top;
+        padding: 0.62rem 0.6rem;
+        border-color: #e7edf5;
     }
 
     #productsTable .product-display {
-        white-space: pre-wrap;
+        white-space: normal;
         word-break: break-word;
     }
 
@@ -1202,10 +1294,115 @@
         text-align: center;
     }
 
+    #productsTable .product-name-display {
+        font-size: 0.95rem;
+        line-height: 1.2;
+    }
+
+    #productsTable .product-sku-display,
+    #productsTable .product-alt-sku-display,
+    #productsTable .product-description-display,
+    #productsTable .product-supplier-display,
+    #productsTable .product-brand-display,
+    #productsTable .product-location-display,
+    #productsTable .product-core-price-display,
+    #productsTable .product-env-fee-display,
+    #productsTable .product-reorder-display {
+        font-size: 0.79rem;
+    }
+
+    #productsTable .product-alt-sku-display,
+    #productsTable .product-description-display {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    #productsTable .product-alt-sku-display {
+        -webkit-line-clamp: 1;
+    }
+
+    #productsTable .product-description-display {
+        margin-top: 0.2rem;
+        max-width: 380px;
+        -webkit-line-clamp: 2;
+        color: #5f6f85 !important;
+    }
+
+    #productsTable .product-model-display,
+    #productsTable .product-vin-display,
+    #productsTable .product-margin-display {
+        display: none;
+    }
+
+    #productsTable .product-core-price-display,
+    #productsTable .product-env-fee-display {
+        color: #64748b !important;
+    }
+
+    #productsTable thead th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #334155;
+        border-bottom: 1px solid #dbe5f1;
+        border-top: 1px solid #dbe5f1;
+        background: #f8fbff;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    #productsTable tbody tr:hover > td {
+        background: #f8fbff;
+    }
+
     #productsTable .product-edit textarea,
     #productsTable .product-edit input,
     #productsTable .product-edit select {
         font-size: 0.95rem;
+    }
+
+    #productsTable .product-view-actions {
+        display: inline-flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.2rem;
+    }
+
+    #productsTable .product-view-actions .btn {
+        border-radius: 0.45rem !important;
+        font-size: 0.74rem;
+        line-height: 1.15;
+        padding: 0.2rem 0.45rem;
+    }
+
+    .inventory-products-panel {
+        border: 1px solid #dde6f1;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #ffffff, #fbfdff);
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+    }
+
+    .product-editor-tabs {
+        gap: 0.4rem;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 0.75rem;
+    }
+
+    .product-editor-tabs .nav-link {
+        border-radius: 999px;
+        border: 1px solid #d9e2ec;
+        background: #fff;
+        color: #334155;
+        font-weight: 600;
+        padding: 0.35rem 0.85rem;
+    }
+
+    .product-editor-tabs .nav-link.active {
+        background: #0f172a;
+        border-color: #0f172a;
+        color: #fff;
     }
 
     .status-saving {
@@ -1224,60 +1421,233 @@
         cursor: pointer;
     }
 
-    .inventory-action-rail {
-        position: fixed;
-        right: 0.35rem;
-        top: 50%;
-        transform: translateY(-50%);
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-        padding: 0.5rem 0.45rem;
-        border-radius: 999px;
-        background: rgba(15, 23, 42, 0.65);
-        border: 1px solid rgba(148, 163, 184, 0.15);
-        box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
-        max-height: calc(100vh - 2rem);
-        overflow-y: auto;
-        z-index: 1035;
+    .inventory-insights-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.75rem;
     }
 
-    .inventory-action-rail__header {
+    .inventory-insight-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.9rem;
+        padding: 0.75rem 0.9rem;
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .inventory-insight-card--warning {
+        border-color: #fcd34d;
+        background: linear-gradient(180deg, #fffbeb, #fef3c7);
+    }
+
+    .inventory-insight-card--danger {
+        border-color: #fecaca;
+        background: linear-gradient(180deg, #fff1f2, #ffe4e6);
+    }
+
+    .inventory-insight-label {
+        font-size: 0.76rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .inventory-insight-value {
+        font-size: 1.2rem;
+        line-height: 1.2;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .inventory-quick-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .inventory-quick-filter {
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #334155;
+        border-radius: 999px;
+        padding-inline: 0.7rem;
+    }
+
+    .inventory-quick-filter:hover {
+        border-color: #94a3b8;
+        background: #f8fafc;
+    }
+
+    .inventory-quick-filter.active {
+        background: #0f172a;
+        border-color: #0f172a;
+        color: #fff;
+    }
+
+    .inventory-filter-details {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.85rem;
+        background: #f8fafc;
+        padding: 0.75rem 0.9rem;
+    }
+
+    .inventory-filter-details > summary {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .inventory-filter-details > summary::-webkit-details-marker {
         display: none;
     }
 
-    .inventory-action-rail__button {
-        display: flex;
+    .inventory-filter-details > summary::after {
+        content: "Show";
+        margin-left: 0.5rem;
+        font-size: 0.72rem;
+        color: #475569;
+    }
+
+    .inventory-filter-details[open] > summary::after {
+        content: "Hide";
+    }
+
+    .inventory-filter-details__body {
+        border-top: 1px solid #e2e8f0;
+        margin-top: 0.7rem;
+        padding-top: 0.7rem;
+    }
+
+    .inventory-filter-select {
+        font-size: 0.88rem;
+    }
+
+    .inventory-list-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .inventory-list-meta__value {
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        border: none;
-        background: rgba(255, 255, 255, 0.08);
-        color: #fff;
-        width: 38px;
-        height: 38px;
+        min-width: 2rem;
+        padding: 0.12rem 0.52rem;
         border-radius: 999px;
-        font-size: 0.85rem;
+        background: #e2e8f0;
+        color: #0f172a;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .product-margin-positive {
+        color: #15803d !important;
+    }
+
+    .product-margin-negative {
+        color: #b91c1c !important;
+    }
+
+    .product-stock-status {
+        font-size: 0.72rem;
+        font-weight: 600;
+        border: 1px solid transparent;
+    }
+
+    .product-stock-status--ok {
+        background: #dcfce7;
+        color: #166534;
+        border-color: #bbf7d0;
+    }
+
+    .product-stock-status--low {
+        background: #fef3c7;
+        color: #92400e;
+        border-color: #fde68a;
+    }
+
+    .product-stock-status--out {
+        background: #fee2e2;
+        color: #991b1b;
+        border-color: #fecaca;
+    }
+
+    .product-stock-status--hidden {
+        background: #f1f5f9;
+        color: #475569;
+        border-color: #e2e8f0;
+    }
+
+    #productsTable .product-row-stock-warning > td {
+        background: rgba(251, 191, 36, 0.11) !important;
+    }
+
+    #productsTable .product-row-stock-out > td {
+        background: rgba(248, 113, 113, 0.12) !important;
+    }
+
+    .inventory-action-rail {
+        position: static;
+        transform: none;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.7rem 0.8rem;
+        border-radius: 0.9rem;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+        margin-bottom: 1rem;
+    }
+
+    .inventory-action-rail__header {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 0.2rem;
+        padding-right: 0.55rem;
+        border-right: 1px solid #e2e8f0;
+        color: #334155;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 700;
+    }
+
+    .inventory-action-rail__button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border: 1px solid #d4dde8;
+        background: #f8fafc;
+        color: #1e293b;
+        height: 34px;
+        border-radius: 999px;
+        font-size: 0.8rem;
         font-weight: 600;
         text-align: center;
-        transition: background 0.2s ease, box-shadow 0.2s ease;
+        padding: 0 0.72rem;
+        transition: border-color 0.2s ease, background 0.2s ease;
     }
 
     .inventory-action-rail__button i {
-        font-size: 0.9rem;
+        font-size: 0.83rem;
     }
 
     .inventory-action-rail__button:hover {
-        background: rgba(255, 255, 255, 0.16);
-        box-shadow: 0 6px 12px rgba(15, 23, 42, 0.18);
+        border-color: #94a3b8;
+        background: #eef2f7;
     }
 
     .inventory-action-rail__button:focus {
         outline: none;
-        box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.35);
+        box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15);
     }
 
     .inventory-action-rail__label {
-        display: none;
+        display: inline;
     }
 
     .inventory-quick-modal .modal-content {
@@ -1360,24 +1730,181 @@
         min-height: 1.2rem;
     }
 
+    #createProductModal .modal-content {
+        border-radius: 18px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 24px 50px rgba(15, 23, 42, 0.2);
+        overflow: hidden;
+    }
+
+    #createProductModal .modal-header {
+        padding: 1rem 1.25rem;
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        color: #fff;
+        border-bottom: none;
+    }
+
+    #createProductModal .modal-title {
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        color: inherit;
+    }
+
+    #createProductModal .modal-subtitle {
+        margin: 0.15rem 0 0 0;
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    #createProductModal .btn-close {
+        filter: invert(1);
+        opacity: 0.85;
+    }
+
+    #createProductModal .modal-body {
+        background: #f8fafc;
+        padding: 1.1rem 1.25rem 0.9rem;
+    }
+
+    #createProductModal .modal-footer {
+        background: #f1f5f9;
+        border-top: none;
+        padding: 0.85rem 1.25rem;
+    }
+
+    #createProductModal .catalog-input-group .form-select {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    #createProductModal .catalog-quick-add-btn {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border-color: #d6dde6;
+        min-width: 2.6rem;
+    }
+
+    #createProductModal .catalog-quick-add-btn:hover {
+        border-color: #93c5fd;
+        background: #eff6ff;
+    }
+
+    #createProductModal .catalog-quick-add-btn:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.2);
+    }
+
+    #createProductModal .catalog-attribute-shell {
+        margin-top: 0.25rem;
+        padding: 1rem;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+    }
+
+    #createProductModal .attribute-create-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    #createProductModal .attribute-create-wrapper {
+        margin-top: 0.5rem;
+    }
+
+    #createProductModal .attribute-create-panel {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    #createProductModal .attribute-create-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    #createProductModal .attribute-create-category {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
+    #createProductModal .attribute-create-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.75rem 1rem;
+    }
+
+    #createProductModal .attribute-create-span-2 {
+        grid-column: 1 / -1;
+    }
+
+    #createProductModal .attribute-create-flags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem 1.5rem;
+        margin-top: 0.75rem;
+    }
+
+    #createProductModal .attribute-create-footer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-top: 0.9rem;
+    }
+
+    #createProductModal .attribute-create-status {
+        font-size: 0.85rem;
+    }
+
+    #createProductModal .attribute-field-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    #createProductModal .attribute-field-header label {
+        margin-bottom: 0;
+    }
+
+    #createProductModal .attribute-edit-link {
+        padding: 0;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #2563eb;
+        text-decoration: none;
+    }
+
+    #createProductModal .attribute-edit-link:hover {
+        text-decoration: underline;
+    }
+
     @media (max-width: 991.98px) {
         .inventory-action-rail {
-            right: 1rem;
-            left: 1rem;
-            top: auto;
-            bottom: 0.75rem;
-            transform: none;
-            flex-direction: row;
-            justify-content: flex-start;
             overflow-x: auto;
-            padding: 0.6rem 0.75rem;
-            gap: 0.4rem;
-            border-radius: 999px;
+            padding: 0.6rem 0.7rem;
+            gap: 0.38rem;
         }
 
         .inventory-action-rail__button {
-            width: 38px;
-            height: 38px;
+            height: 32px;
+            font-size: 0.76rem;
+        }
+
+        .inventory-quick-filter {
+            flex: 1 1 auto;
+        }
+
+        .inventory-insight-value {
+            font-size: 1.05rem;
         }
     }
 
@@ -1657,9 +2184,11 @@
     let bulkDeleteButton = null;
     let bulkDeleteStatus = null;
     let bulkEditButton = null;
+    let bulkSelectionCount = null;
     let bulkEditStatus = null;
     let bulkEditApplyButton = null;
     let bulkEditSelectedCount = null;
+    let productsVisibleCount = null;
     let currentSearchQuery = '';
 
     const itemTypeLabels = {
@@ -1727,6 +2256,14 @@
         return numeric.toFixed(2);
     }
 
+    function parseNumber(value, fallback) {
+        const numeric = Number(value);
+        if (!isFinite(numeric)) {
+            return fallback === undefined ? null : fallback;
+        }
+        return numeric;
+    }
+
     function showStatus(target, message, state) {
         if (!target) {
             return;
@@ -1770,6 +2307,21 @@
         }
     }
 
+    function stackModal(modalEl) {
+        if (!modalEl) {
+            return;
+        }
+        const openModalCount = document.querySelectorAll('.modal.show').length;
+        const modalZIndex = 1055 + (openModalCount * 20);
+        modalEl.style.zIndex = String(modalZIndex);
+        const backdrops = document.querySelectorAll('.modal-backdrop:not(.modal-stack)');
+        const latestBackdrop = backdrops[backdrops.length - 1];
+        if (latestBackdrop) {
+            latestBackdrop.style.zIndex = String(modalZIndex - 10);
+            latestBackdrop.classList.add('modal-stack');
+        }
+    }
+
     function closeModal(modalEl) {
         if (!modalEl) {
             return;
@@ -1798,6 +2350,9 @@
         });
         if (!matches) {
             return false;
+        }
+        if (options.forceSelect) {
+            return true;
         }
         if (options.selectIfEmpty) {
             return !select.value;
@@ -1872,6 +2427,11 @@
         return element ? element.checked : false;
     }
 
+    function isModalReturningTo(modalId, parentModalId) {
+        const modal = document.getElementById(modalId);
+        return !!(modal && modal.dataset.returnModalId === parentModalId);
+    }
+
     function normalizeSortOrder(value) {
         const normalized = String(value === null || value === undefined ? '' : value).trim();
         if (!normalized) {
@@ -1891,8 +2451,37 @@
 
         if (modalEl && statusTarget && !modalEl.dataset.quickStatusBound) {
             modalEl.dataset.quickStatusBound = 'true';
-            modalEl.addEventListener('show.bs.modal', function () {
+            modalEl.addEventListener('show.bs.modal', function (event) {
+                stackModal(modalEl);
                 showStatus(statusTarget, '', null);
+                const trigger = event && event.relatedTarget && event.relatedTarget.closest
+                    ? event.relatedTarget
+                    : null;
+                if (trigger && trigger.getAttribute('data-keep-parent-open') === 'true') {
+                    const parentModal = trigger.closest('.modal');
+                    if (parentModal && parentModal.id && parentModal !== modalEl) {
+                        modalEl.dataset.returnModalId = parentModal.id;
+                    }
+                } else {
+                    delete modalEl.dataset.returnModalId;
+                }
+            });
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                const parentModalId = modalEl.dataset.returnModalId;
+                delete modalEl.dataset.returnModalId;
+                modalEl.style.removeProperty('z-index');
+                if (!parentModalId) {
+                    return;
+                }
+                const parentModal = document.getElementById(parentModalId);
+                if (!parentModal || parentModal.classList.contains('show')) {
+                    return;
+                }
+                if (window.bootstrap && window.bootstrap.Modal) {
+                    parentModal.dataset.reopenFromQuick = 'true';
+                    const parentModalInstance = window.bootstrap.Modal.getOrCreateInstance(parentModal);
+                    parentModalInstance.show();
+                }
             });
         }
 
@@ -1948,12 +2537,22 @@
         });
     }
 
+    function getAttributeContext(element) {
+        if (!element) {
+            return null;
+        }
+        if (element.matches && element.matches('[data-attribute-context]')) {
+            return element;
+        }
+        return element.closest('[data-attribute-context]') || element.closest('form');
+    }
+
     function fetchAttributeFields(selectEl) {
-        const form = selectEl.closest('form');
-        if (!form) {
+        const context = getAttributeContext(selectEl);
+        if (!context) {
             return;
         }
-        const container = form.querySelector('[data-attribute-fields]');
+        const container = context.querySelector('[data-attribute-fields]');
         if (!container) {
             return;
         }
@@ -1962,6 +2561,13 @@
             return;
         }
         const categoryId = selectEl.value || '';
+        const emptyMessage = container.getAttribute('data-empty-message');
+        if (!categoryId) {
+            container.innerHTML = emptyMessage
+                ? '<div class="text-muted small">' + emptyMessage + '</div>'
+                : '';
+            return;
+        }
         const productId = container.getAttribute('data-product-id') || '';
         const params = new URLSearchParams();
         params.set('category_id', categoryId);
@@ -1988,19 +2594,19 @@
     }
 
     function getAttributeCreatePanel(element) {
-        const form = element ? element.closest('form') : null;
-        if (!form) {
+        const context = getAttributeContext(element);
+        if (!context) {
             return null;
         }
-        return form.querySelector('[data-attribute-create-panel]');
+        return context.querySelector('[data-attribute-create-panel]');
     }
 
     function getAttributeCategorySelect(element) {
-        const form = element ? element.closest('form') : null;
-        if (!form) {
+        const context = getAttributeContext(element);
+        if (!context) {
             return null;
         }
-        return form.querySelector('[data-attribute-source]');
+        return context.querySelector('[data-attribute-source]');
     }
 
     function normalizeAttributeFlag(value) {
@@ -2415,8 +3021,10 @@
         const saleDisplay = row.querySelector('.product-sale-price-display');
         const coreDisplay = row.querySelector('.product-core-price-display');
         const envDisplay = row.querySelector('.product-env-fee-display');
+        const marginDisplay = row.querySelector('.product-margin-display');
         const quantityDisplay = row.querySelector('.product-quantity-display');
         const reorderDisplay = row.querySelector('.product-reorder-display');
+        const stockStatusBadge = row.querySelector('.product-stock-status');
         const itemTypeDisplay = row.querySelector('.product-item-type-display');
         const locationDisplay = row.querySelector('.product-location-display');
         const imagePlaceholder = row.querySelector('.product-image-placeholder');
@@ -2426,7 +3034,7 @@
             nameDisplay.textContent = product.name || 'Untitled product';
         }
         if (skuDisplay) {
-            skuDisplay.textContent = product.sku ? 'SKU: ' + product.sku : 'No SKU';
+            skuDisplay.textContent = product.sku ? 'SKU: ' + product.sku : '';
         }
         if (altSkuDisplay) {
             altSkuDisplay.textContent = product.alternate_skus
@@ -2443,29 +3051,42 @@
             supplierDisplay.textContent = product.supplier_name || 'No supplier';
         }
         if (brandDisplay) {
-            brandDisplay.textContent = product.brand_name ? 'Brand: ' + product.brand_name : 'No brand';
+            const detailBits = [];
+            if (product.brand_name) {
+                detailBits.push(product.brand_name);
+            }
+            if (product.model_name) {
+                detailBits.push(product.model_name);
+            }
+            if (product.vin_value) {
+                detailBits.push('VIN ' + product.vin_value);
+            }
+            brandDisplay.textContent = detailBits.join(' • ');
         }
         if (modelDisplay) {
-            modelDisplay.textContent = product.model_name ? 'Model: ' + product.model_name : 'No model';
+            modelDisplay.textContent = '';
         }
         if (vinDisplay) {
-            vinDisplay.textContent = product.vin_value ? 'VIN: ' + product.vin_value : 'No VIN';
+            vinDisplay.textContent = '';
         }
         if (costDisplay) {
             const costValue = formatMoney(product.cost_price);
-            costDisplay.textContent = costValue ? 'Cost: ' + costValue : 'Cost: -';
+            costDisplay.textContent = costValue ? 'Cost: ' + costValue : 'Cost: --';
         }
         if (saleDisplay) {
             const saleValue = formatMoney(product.sale_price);
-            saleDisplay.textContent = saleValue ? 'Sale: ' + saleValue : 'Sale: -';
+            saleDisplay.textContent = saleValue ? 'Sale: ' + saleValue : 'Sale: --';
         }
         if (coreDisplay) {
             const coreValue = formatMoney(product.core_price);
-            coreDisplay.textContent = coreValue ? 'Core: ' + coreValue : 'Core: -';
+            coreDisplay.textContent = coreValue ? 'Core: ' + coreValue : '';
         }
         if (envDisplay) {
             const envValue = formatMoney(product.environmental_fee);
-            envDisplay.textContent = envValue ? 'Env: ' + envValue : 'Env: -';
+            envDisplay.textContent = envValue ? 'Env: ' + envValue : '';
+        }
+        if (marginDisplay) {
+            marginDisplay.textContent = '';
         }
         if (quantityDisplay) {
             quantityDisplay.textContent = stockVisible
@@ -2477,11 +3098,39 @@
                 ? 'Reorder: ' + (product.reorder_level || '0')
                 : 'Reorder: --';
         }
+        row.classList.remove('product-row-stock-warning', 'product-row-stock-out');
+        if (stockStatusBadge) {
+            stockStatusBadge.classList.remove(
+                'product-stock-status--ok',
+                'product-stock-status--low',
+                'product-stock-status--out',
+                'product-stock-status--hidden',
+            );
+            if (!stockVisible) {
+                stockStatusBadge.textContent = 'Stock hidden';
+                stockStatusBadge.classList.add('product-stock-status--hidden');
+            } else {
+                const quantityValue = parseNumber(product.quantity_in_stock, 0);
+                const reorderValue = parseNumber(product.reorder_level, 0);
+                if (quantityValue <= 0) {
+                    stockStatusBadge.textContent = 'Out of stock';
+                    stockStatusBadge.classList.add('product-stock-status--out');
+                    row.classList.add('product-row-stock-out');
+                } else if (reorderValue > 0 && quantityValue <= reorderValue) {
+                    stockStatusBadge.textContent = 'Low stock';
+                    stockStatusBadge.classList.add('product-stock-status--low');
+                    row.classList.add('product-row-stock-warning');
+                } else {
+                    stockStatusBadge.textContent = 'Healthy';
+                    stockStatusBadge.classList.add('product-stock-status--ok');
+                }
+            }
+        }
         if (itemTypeDisplay) {
             itemTypeDisplay.textContent = getItemTypeLabel(product.item_type);
         }
         if (locationDisplay) {
-            locationDisplay.textContent = product.location ? 'Location: ' + product.location : 'No location';
+            locationDisplay.textContent = product.location || 'No location';
         }
         if (imageThumb) {
             if (product.image_url) {
@@ -2639,10 +3288,12 @@
         const groupSelect = document.getElementById('filterGroupSelect');
         const categorySelect = document.getElementById('filterCategorySelect');
         const brandSelect = document.getElementById('filterBrandSelect');
+        const stockFilterInput = document.getElementById('filterStockInput');
         const hasGroup = groupSelect && groupSelect.selectedOptions && groupSelect.selectedOptions.length > 0;
         const hasCategory = categorySelect && categorySelect.selectedOptions && categorySelect.selectedOptions.length > 0;
         const hasBrand = brandSelect && brandSelect.selectedOptions && brandSelect.selectedOptions.length > 0;
-        return hasGroup || hasCategory || hasBrand;
+        const hasStock = stockFilterInput && stockFilterInput.value;
+        return hasGroup || hasCategory || hasBrand || hasStock;
     }
 
     function updateBulkSelectionUi() {
@@ -2672,6 +3323,10 @@
         if (bulkEditButton) {
             bulkEditButton.disabled = selectedRows.length === 0;
         }
+        if (bulkSelectionCount) {
+            const count = selectedRows.length;
+            bulkSelectionCount.textContent = count + ' selected';
+        }
         if (bulkEditSelectedCount) {
             const count = selectedRows.length;
             bulkEditSelectedCount.textContent = count === 1
@@ -2692,7 +3347,7 @@
         if (tableWrapper) {
             tableWrapper.classList.toggle('d-none', !hasRows);
         }
-        if (!hasRows && !currentSearchQuery) {
+        if (!hasRows && !currentSearchQuery && !hasActiveFilters()) {
             const noResults = document.getElementById('productsNoResults');
             if (noResults) {
                 noResults.classList.add('d-none');
@@ -2714,6 +3369,9 @@
                 row.classList.add('d-none');
             }
         });
+        if (productsVisibleCount) {
+            productsVisibleCount.textContent = String(visibleCount);
+        }
         const noResults = document.getElementById('productsNoResults');
         const filtersActive = hasActiveFilters();
         if (noResults) {
@@ -3051,12 +3709,12 @@
                         exitEditMode(row, false);
                     }
                 });
+                resetBulkEditForm();
                 showStatus(
                     bulkEditStatus,
                     'Updated ' + updated.length + ' product' + (updated.length === 1 ? '' : 's') + '.',
                     'success'
                 );
-                resetBulkEditForm();
                 updateBulkSelectionUi();
             })
             .catch(function (errorData) {
@@ -3226,16 +3884,83 @@
             });
     }
 
+    function duplicateProductToForm(row) {
+        if (!row) {
+            return;
+        }
+        const product = getProductFromRow(row);
+        const nameInput = document.getElementById('newProductName');
+        if (!nameInput) {
+            return;
+        }
+        const copyName = (product.name || 'Copied product').trim();
+        nameInput.value = copyName ? copyName + ' (Copy)' : 'Copied product';
+        const fieldMap = {
+            newProductSku: product.sku || '',
+            newProductDescription: product.description || '',
+            newProductAlternateSkus: product.alternate_skus || '',
+            newProductCategory: product.category_id || '',
+            newProductSupplier: product.supplier_id || '',
+            newProductBrand: product.brand_id || '',
+            newProductModel: product.model_id || '',
+            newProductVin: product.vin_id || '',
+            newProductCostPrice: product.cost_price || '',
+            newProductSalePrice: product.sale_price || '',
+            newProductCorePrice: product.core_price || '',
+            newProductEnvironmentalFee: product.environmental_fee || '',
+            newProductQuantity: product.quantity_in_stock || '',
+            newProductReorder: product.reorder_level || '',
+            newProductItemType: product.item_type || 'inventory',
+            newProductLocation: product.location || '',
+        };
+        Object.keys(fieldMap).forEach(function (fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.value = fieldMap[fieldId];
+            }
+        });
+        const categoryInput = document.getElementById('newProductCategory');
+        if (categoryInput) {
+            categoryInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const imageInput = document.getElementById('newProductImage');
+        if (imageInput) {
+            imageInput.value = '';
+        }
+        const statusTarget = document.getElementById('newProductStatus');
+        showStatus(statusTarget, 'Copied product values. Update any fields and add to library.', 'success');
+        const createModalEl = document.getElementById('createProductModal');
+        if (createModalEl && window.bootstrap && window.bootstrap.Modal) {
+            const modalInstance = window.bootstrap.Modal.getOrCreateInstance(createModalEl);
+            modalInstance.show();
+        }
+        const basicTabButton = document.getElementById('create-tab-basic');
+        if (basicTabButton && window.bootstrap && window.bootstrap.Tab) {
+            const tabInstance = window.bootstrap.Tab.getOrCreateInstance(basicTabButton);
+            tabInstance.show();
+        }
+        setTimeout(function () {
+            nameInput.focus();
+            nameInput.select();
+        }, 120);
+    }
+
     function attachRowEvents(row) {
         if (!row || row.dataset.initialized === 'true') {
             return;
         }
         row.dataset.initialized = 'true';
+        const duplicateButton = row.querySelector('.product-duplicate-btn');
         const editButton = row.querySelector('.product-edit-btn');
         const cancelButton = row.querySelector('.product-cancel-btn');
         const saveButton = row.querySelector('.product-save-btn');
         const deleteButton = row.querySelector('.product-delete-btn');
         const selectCheckbox = row.querySelector('.product-select-checkbox');
+        if (duplicateButton) {
+            duplicateButton.addEventListener('click', function () {
+                duplicateProductToForm(row);
+            });
+        }
         if (editButton) {
             editButton.addEventListener('click', function () {
                 enterEditMode(row);
@@ -3307,6 +4032,19 @@
             item_type: itemTypeInput?.value || 'inventory',
             location: locationInput?.value || '',
         };
+        const attributeFieldsContainer = document.querySelector('#create-pane-catalog [data-attribute-fields]');
+        if (attributeFieldsContainer) {
+            const attributeInputs = attributeFieldsContainer.querySelectorAll('[name^="attr_"]');
+            attributeInputs.forEach(function (input) {
+                if (!input || !input.name) {
+                    return;
+                }
+                if (input instanceof HTMLInputElement && input.type === 'radio' && !input.checked) {
+                    return;
+                }
+                payload[input.name] = input.value || '';
+            });
+        }
         if (!validatePayload(payload, statusTarget)) {
             return;
         }
@@ -3342,6 +4080,7 @@
                 }
                 if (categoryInput) {
                     categoryInput.value = '';
+                    categoryInput.dispatchEvent(new Event('change', { bubbles: true }));
                 }
                 if (supplierInput) {
                     supplierInput.value = '';
@@ -3398,9 +4137,11 @@
         bulkDeleteButton = document.getElementById('bulkDeleteButton');
         bulkDeleteStatus = document.getElementById('bulkDeleteStatus');
         bulkEditButton = document.getElementById('bulkEditButton');
+        bulkSelectionCount = document.getElementById('bulkSelectionCount');
         bulkEditStatus = document.getElementById('bulkEditStatus');
         bulkEditApplyButton = document.getElementById('bulkEditApplyButton');
         bulkEditSelectedCount = document.getElementById('bulkEditSelectedCount');
+        productsVisibleCount = document.getElementById('productsVisibleCount');
 
         const rows = document.querySelectorAll('.product-row');
         rows.forEach(function (row) {
@@ -3427,6 +4168,24 @@
                 });
             }
         }
+
+        const stockFilterInput = document.getElementById('filterStockInput');
+        const quickFilterButtons = document.querySelectorAll('[data-stock-filter]');
+        quickFilterButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (!searchForm) {
+                    return;
+                }
+                if (stockFilterInput) {
+                    stockFilterInput.value = button.getAttribute('data-stock-filter') || '';
+                }
+                if (searchForm.requestSubmit) {
+                    searchForm.requestSubmit();
+                } else {
+                    searchForm.submit();
+                }
+            });
+        });
         toggleEmptyState();
 
         if (selectAllCheckbox) {
@@ -3486,6 +4245,7 @@
                 if (!supplier || !supplier.id) {
                     return;
                 }
+                const forceCreateSelect = isModalReturningTo('quickAddSupplierModal', 'createProductModal');
                 addOptionToSelectors(
                     [
                         '#newProductSupplier',
@@ -3497,7 +4257,8 @@
                     supplier.name,
                     {
                         selectedSelectors: ['#newProductSupplier'],
-                        selectIfEmpty: true,
+                        forceSelect: forceCreateSelect,
+                        selectIfEmpty: !forceCreateSelect,
                     },
                 );
             },
@@ -3528,6 +4289,7 @@
                 if (!locationName) {
                     return;
                 }
+                const forceCreateSelect = isModalReturningTo('quickAddLocationModal', 'createProductModal');
                 addOptionToSelectors(
                     [
                         '#newProductLocation',
@@ -3539,7 +4301,8 @@
                     locationName,
                     {
                         selectedSelectors: ['#newProductLocation'],
-                        selectIfEmpty: true,
+                        forceSelect: forceCreateSelect,
+                        selectIfEmpty: !forceCreateSelect,
                     },
                 );
             },
@@ -3614,6 +4377,7 @@
                 if (!category || !category.id) {
                     return;
                 }
+                const forceCreateSelect = isModalReturningTo('quickAddCategoryModal', 'createProductModal');
                 addOptionToSelectors(
                     [
                         '#newProductCategory',
@@ -3626,9 +4390,17 @@
                     category.name,
                     {
                         selectedSelectors: ['#newProductCategory'],
-                        selectIfEmpty: true,
+                        forceSelect: forceCreateSelect,
+                        selectIfEmpty: !forceCreateSelect,
                     },
                 );
+                if (forceCreateSelect) {
+                    const createCategorySelect = document.getElementById('newProductCategory');
+                    if (createCategorySelect) {
+                        createCategorySelect.value = String(category.id);
+                        createCategorySelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
             },
             successMessage: 'Category saved.',
             errorMessage: 'Could not save category.',
@@ -3660,6 +4432,7 @@
                 if (!brand || !brand.id) {
                     return;
                 }
+                const forceCreateSelect = isModalReturningTo('quickAddBrandModal', 'createProductModal');
                 addOptionToSelectors(
                     [
                         '#newProductBrand',
@@ -3673,7 +4446,8 @@
                     brand.name,
                     {
                         selectedSelectors: ['#newProductBrand', '#quickModelBrand'],
-                        selectIfEmpty: true,
+                        forceSelect: forceCreateSelect,
+                        selectIfEmpty: !forceCreateSelect,
                     },
                 );
             },
@@ -3710,6 +4484,7 @@
                 if (!model || !model.id) {
                     return;
                 }
+                const forceCreateSelect = isModalReturningTo('quickAddModelModal', 'createProductModal');
                 addOptionToSelectors(
                     [
                         '#newProductModel',
@@ -3721,7 +4496,8 @@
                     model.name,
                     {
                         selectedSelectors: ['#newProductModel'],
-                        selectIfEmpty: true,
+                        forceSelect: forceCreateSelect,
+                        selectIfEmpty: !forceCreateSelect,
                     },
                 );
             },
@@ -3755,6 +4531,7 @@
                 if (!vin || !vin.id) {
                     return;
                 }
+                const forceCreateSelect = isModalReturningTo('quickAddVinModal', 'createProductModal');
                 addOptionToSelectors(
                     [
                         '#newProductVin',
@@ -3766,7 +4543,8 @@
                     vin.vin,
                     {
                         selectedSelectors: ['#newProductVin'],
-                        selectIfEmpty: true,
+                        forceSelect: forceCreateSelect,
+                        selectIfEmpty: !forceCreateSelect,
                     },
                 );
             },
@@ -3879,7 +4657,7 @@
                     return;
                 }
                 editProductFormContent.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-                fetch("{% url 'accounts:get_product_form' %}?product_id=" + encodeURIComponent(productId) + "&attributes_only=1", {
+                fetch("{% url 'accounts:get_product_form' %}?product_id=" + encodeURIComponent(productId), {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                     },
@@ -3907,6 +4685,24 @@
         if (addButton) {
             addButton.addEventListener('click', function () {
                 handleNewProduct();
+            });
+        }
+
+        const createProductModal = document.getElementById('createProductModal');
+        if (createProductModal) {
+            createProductModal.addEventListener('show.bs.modal', function () {
+                const reopeningFromQuick = createProductModal.dataset.reopenFromQuick === 'true';
+                delete createProductModal.dataset.reopenFromQuick;
+                if (!reopeningFromQuick) {
+                    const statusTarget = document.getElementById('newProductStatus');
+                    showStatus(statusTarget, '', null);
+                    const basicTabButton = document.getElementById('create-tab-basic');
+                    if (basicTabButton && window.bootstrap && window.bootstrap.Tab) {
+                        const tabInstance = window.bootstrap.Tab.getOrCreateInstance(basicTabButton);
+                        tabInstance.show();
+                    }
+                }
+                initializeAttributeCreatePanel(createProductModal);
             });
         }
 

@@ -9,12 +9,8 @@ services:
         value: blank_template.settings
       - key: DEBUG
         value: "False"
-      # Set DATABASE_URL in Koyeb dashboard to your managed Postgres URL
-      # Example format:
-      # - key: DATABASE_URL
-      #   value: postgres://USER:PASSWORD@HOST:PORT/DBNAME
-      # Optional: enforce SSL for Postgres
-      - key: DB_SSL_REQUIRE
+      # Use committed SQLite database for now (do not set DATABASE_URL).
+      - key: FORCE_SQLITE
         value: "True"
     ports:
       - port: 8000

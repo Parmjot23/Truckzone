@@ -720,19 +720,40 @@ class ProfileForm(forms.ModelForm):
 class DisplayPreferencesForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ['ui_scale_percentage', 'ui_scale_public_percentage']
+        fields = [
+            'ui_scale_percentage',
+            'ui_font_size_percentage',
+            'ui_font_family',
+            'ui_font_weight',
+            'ui_scale_public_percentage',
+            'ui_font_public_size_percentage',
+            'ui_font_public_family',
+            'ui_font_public_weight',
+        ]
         labels = {
             'ui_scale_percentage': 'Portal & dashboard pages',
+            'ui_font_size_percentage': 'Portal text size',
+            'ui_font_family': 'Portal font family',
+            'ui_font_weight': 'Portal font weight',
             'ui_scale_public_percentage': 'Public pages',
+            'ui_font_public_size_percentage': 'Public text size',
+            'ui_font_public_family': 'Public font family',
+            'ui_font_public_weight': 'Public font weight',
         }
         help_texts = {
             'ui_scale_percentage': 'Choose how compact the back-office and customer portal pages should appear.',
+            'ui_font_size_percentage': 'Increase or decrease base text sizing for portal and dashboard pages.',
+            'ui_font_family': 'Pick the default typeface style for portal and dashboard pages.',
+            'ui_font_weight': 'Make portal and dashboard text lighter or heavier by default.',
             'ui_scale_public_percentage': 'Adjust how compact the public marketing pages should appear.',
+            'ui_font_public_size_percentage': 'Increase or decrease base text sizing for public website pages.',
+            'ui_font_public_family': 'Pick the default typeface style for public website pages.',
+            'ui_font_public_weight': 'Make public website text lighter or heavier by default.',
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field_name in ('ui_scale_percentage', 'ui_scale_public_percentage'):
+        for field_name in self.fields:
             self.fields[field_name].widget.attrs.update({'class': 'form-select'})
 
 

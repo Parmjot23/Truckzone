@@ -55,8 +55,11 @@
     /* Headings Main */
 
     /* --- TYPOGRAPHY --- */
+    --ui-font-size-factor: 1;
     --font-sans: 'Manrope', 'Sora', sans-serif;
     --font-heading: 'Sora', 'Manrope', sans-serif;
+    --font-body-weight: 500;
+    --font-heading-weight: 700;
 
     /* --- SHADOWS --- */
     --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.05);
@@ -105,11 +108,12 @@
 }
 
 html {
-    font-size: 15px;
+    font-size: calc(15px * var(--ui-font-size-factor));
 }
 
 body {
     font-family: var(--font-sans);
+    font-weight: var(--font-body-weight);
     color: var(--neutral-600);
     background-color: var(--brand-surface);
     line-height: 1.55;
@@ -131,7 +135,7 @@ h5,
 h6 {
     font-family: var(--font-heading);
     color: var(--brand-navy);
-    font-weight: 700;
+    font-weight: var(--font-heading-weight);
     line-height: 1.2;
     margin-bottom: 1rem;
 }

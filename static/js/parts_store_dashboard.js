@@ -99,6 +99,86 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
 
+    const dashboardModeButtons = Array.from(document.querySelectorAll('[data-dashboard-mode]'));
+    const dashboardViews = Array.from(document.querySelectorAll('[data-dashboard-view]'));
+    const DASHBOARD_MODE_STORAGE_KEY = 'parts-dashboard-mode';
+    const DASHBOARD_MODE_HASHES = {
+        pos: '#in-store-pos',
+        online: '#online-store',
+        returns: '#returns',
+    };
+
+    const normalizeDashboardMode = (value) => {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === 'online') return 'online';
+        if (normalized === 'returns' || normalized === 'return') return 'returns';
+        return 'pos';
+    };
+
+    const dashboardModeFromHash = (hashValue) => {
+        const hash = String(hashValue || '').trim().toLowerCase();
+        if (!hash) return '';
+        if (hash === '#online-store') return 'online';
+        if (hash === '#returns' || hash === '#return-center' || hash === '#returns-center') return 'returns';
+        if (hash === '#in-store-pos' || hash === '#pos') return 'pos';
+        return '';
+    };
+
+    const syncDashboardModeHash = (mode) => {
+        const hash = DASHBOARD_MODE_HASHES[normalizeDashboardMode(mode)] || DASHBOARD_MODE_HASHES.pos;
+        const nextUrl = `${window.location.pathname}${window.location.search}${hash}`;
+        window.history.replaceState(null, '', nextUrl);
+    };
+
+    const setDashboardMode = (mode, options = {}) => {
+        const nextMode = normalizeDashboardMode(mode);
+        const shouldPersist = options.persist !== false;
+        const shouldSyncHash = options.syncHash !== false;
+        dashboardModeButtons.forEach((btn) => {
+            const active = btn.dataset.dashboardMode === nextMode;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        dashboardViews.forEach((view) => {
+            const active = view.dataset.dashboardView === nextMode;
+            view.classList.toggle('d-none', !active);
+        });
+        if (shouldPersist) {
+            try {
+                window.localStorage.setItem(DASHBOARD_MODE_STORAGE_KEY, nextMode);
+            } catch (e) {
+                // ignore storage errors
+            }
+        }
+        if (shouldSyncHash) {
+            syncDashboardModeHash(nextMode);
+        }
+        return nextMode;
+    };
+
+    if (dashboardModeButtons.length && dashboardViews.length) {
+        dashboardModeButtons.forEach((btn) => {
+            btn.addEventListener('click', () => setDashboardMode(btn.dataset.dashboardMode || 'pos'));
+        });
+
+        const modeFromUrl = new URLSearchParams(window.location.search).get('mode');
+        const modeFromHash = dashboardModeFromHash(window.location.hash);
+        let modeFromStorage = '';
+        try {
+            modeFromStorage = window.localStorage.getItem(DASHBOARD_MODE_STORAGE_KEY) || '';
+        } catch (e) {
+            modeFromStorage = '';
+        }
+        const defaultMode = dashboardViews.find(view => !view.classList.contains('d-none'))?.dataset.dashboardView || 'pos';
+        setDashboardMode(modeFromUrl || modeFromHash || modeFromStorage || defaultMode, { syncHash: false });
+
+        window.addEventListener('hashchange', () => {
+            const nextMode = dashboardModeFromHash(window.location.hash);
+            if (!nextMode) return;
+            setDashboardMode(nextMode, { syncHash: false });
+        });
+    }
+
     // POS terminal (in-store sales)
     const posPanel = document.getElementById('pos-terminal');
     if (posPanel) {
@@ -121,8 +201,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const posTaxRate = Number(posPanel.dataset.taxRate || 0);
         const posPaymentUrlTemplate = posPanel.dataset.paymentUrlTemplate || '';
+        const posSendEmailUrlTemplate = posPanel.dataset.sendEmailUrlTemplate || '';
+        const posSendPaidEmailUrlTemplate = posPanel.dataset.sendPaidEmailUrlTemplate || '';
+        const posPrintUrlTemplate = posPanel.dataset.printUrlTemplate || '';
+        const posPaidPrintUrlTemplate = posPanel.dataset.paidPrintUrlTemplate || '';
         const posAddCustomerUrl = posPanel.dataset.addCustomerUrl || '';
         const posAddVehicleUrl = posPanel.dataset.addVehicleUrl || '';
+        const posReturnLookupUrl = posPanel.dataset.returnLookupUrl || '';
+        const posReturnCreateUrl = posPanel.dataset.returnCreateUrl || '';
+        const posCreditDetailUrlTemplate = posPanel.dataset.creditDetailUrlTemplate || '';
 
         const posSearchInput = document.getElementById('pos-search-input');
         const posSearchClear = document.getElementById('pos-search-clear');
@@ -137,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const posSaleDate = document.getElementById('pos-sale-date');
         const posEmail = document.getElementById('pos-email');
-        const posOpenInvoice = document.getElementById('pos-open-invoice');
 
         const posCustomerIdInput = document.getElementById('pos-customer');
         const posCustomerPickerBtn = document.getElementById('pos-customer-picker');
@@ -163,11 +249,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const posPaymentAmount = document.getElementById('pos-payment-amount');
         const posPayFull = document.getElementById('pos-pay-full');
         const posChangeDue = document.getElementById('pos-change-due');
+        const posMethodsContainer = document.getElementById('pos-methods');
         const posMethodButtons = Array.from(document.querySelectorAll('#pos-methods .pos-method-btn'));
+        const posPaymentIconBase = posMethodsContainer?.dataset.iconBase || '';
 
         const posClearCart = document.getElementById('pos-clear-cart');
         const posSaveSale = document.getElementById('pos-save-sale');
-        const posCheckoutBtn = document.getElementById('pos-checkout-btn');
+        const posCheckoutEmailBtn = document.getElementById('pos-checkout-email-btn');
+        const posCheckoutPrintBtn = document.getElementById('pos-checkout-print-btn');
+        const posCheckoutEmailPrintBtn = document.getElementById('pos-checkout-email-print-btn');
+        const posCheckoutActionButtons = Array.from(document.querySelectorAll('.pos-btn-checkout'));
+        const posCheckoutLabels = Array.from(document.querySelectorAll('.pos-checkout-label'));
+
+        const posReturnModeButtons = Array.from(document.querySelectorAll('[data-pos-return-mode]'));
+        const posReturnCustomer = document.getElementById('pos-return-customer');
+        const posReturnInvoice = document.getElementById('pos-return-invoice');
+        const posReturnDate = document.getElementById('pos-return-date');
+        const posReturnMemo = document.getElementById('pos-return-memo');
+        const posReturnReload = document.getElementById('pos-return-reload');
+        const posReturnSubmit = document.getElementById('pos-return-submit');
+        const posReturnLines = document.getElementById('pos-return-lines');
+        const posReturnSummary = document.getElementById('pos-return-summary');
+        const posReturnOpenCredit = document.getElementById('pos-return-open-credit');
 
         if (posTaxRateLabel) {
             const pct = Math.round(posTaxRate * 100);
@@ -178,6 +281,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let posActiveTab = 'products';
         let posActiveMethod = posMethodButtons[0]?.dataset.method || 'Cash';
         let posPaymentAuto = true;
+        let posReturnMode = 'core';
+        let posReturnRows = [];
 
         const customerDisplay = (c) => {
             if (!c) return 'Select customer';
@@ -269,6 +374,320 @@ document.addEventListener('DOMContentLoaded', () => {
             posVehicleList.innerHTML = html;
         };
 
+        const posReturnTypeLabel = () => (posReturnMode === 'core' ? 'core' : 'product');
+        const posReturnLineTypeLabel = (lineType) => {
+            const normalized = String(lineType || '').toLowerCase();
+            if (normalized === 'core_charge') return 'Core charge';
+            if (normalized === 'product') return 'Product';
+            return 'Return line';
+        };
+        const posReturnFormatQty = (value) => {
+            const num = Number(value);
+            if (!Number.isFinite(num)) return '0';
+            const rounded = Math.round(num * 100) / 100;
+            return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+        };
+
+        const setPosReturnSummary = (message, isError = false) => {
+            if (!posReturnSummary) return;
+            posReturnSummary.textContent = message || '';
+            posReturnSummary.style.color = isError ? '#b91c1c' : '';
+        };
+
+        const buildPosCreditDetailUrl = (creditId) => {
+            if (!creditId || !posCreditDetailUrlTemplate) return '';
+            if (posCreditDetailUrlTemplate.includes('/0/')) {
+                return posCreditDetailUrlTemplate.replace('/0/', `/${creditId}/`);
+            }
+            return posCreditDetailUrlTemplate;
+        };
+
+        const renderPosReturnCustomerSelect = () => {
+            if (!posReturnCustomer) return;
+            const currentId = posReturnCustomer.value || '';
+            const options = [
+                '<option value="">Select customer</option>',
+                ...(quickCustomers || [])
+                    .slice()
+                    .sort((a, b) => (a.name || a.email || '').localeCompare((b.name || b.email || ''), undefined, { sensitivity: 'base' }))
+                    .map((customer) => `<option value="${escapeHtml(customer.id)}">${escapeHtml(customerDisplay(customer))}</option>`),
+            ];
+            posReturnCustomer.innerHTML = options.join('');
+            if (currentId && (quickCustomers || []).some(c => String(c.id) === String(currentId))) {
+                posReturnCustomer.value = currentId;
+            }
+        };
+
+        const renderPosReturnInvoiceSelect = (preferredInvoiceId = '') => {
+            if (!posReturnInvoice) return;
+            const existingValue = preferredInvoiceId || posReturnInvoice.value || '';
+            const invoiceMap = new Map();
+            (posReturnRows || []).forEach((row) => {
+                const invoiceId = String(row.invoice_id || '');
+                if (!invoiceId || invoiceMap.has(invoiceId)) return;
+                invoiceMap.set(invoiceId, {
+                    id: invoiceId,
+                    invoice_number: row.invoice_number || `Invoice ${invoiceId}`,
+                    invoice_date: row.invoice_date || '',
+                });
+            });
+            const options = [
+                '<option value="">All invoices</option>',
+                ...Array.from(invoiceMap.values()).map((invoice) => {
+                    const dateText = invoice.invoice_date ? ` - ${formatShortDate(invoice.invoice_date)}` : '';
+                    return `<option value="${escapeHtml(invoice.id)}">${escapeHtml(invoice.invoice_number)}${escapeHtml(dateText)}</option>`;
+                }),
+            ];
+            posReturnInvoice.innerHTML = options.join('');
+            posReturnInvoice.disabled = invoiceMap.size === 0;
+            if (existingValue && invoiceMap.has(String(existingValue))) {
+                posReturnInvoice.value = String(existingValue);
+            } else {
+                posReturnInvoice.value = '';
+            }
+        };
+
+        const getVisiblePosReturnRows = () => {
+            const selectedInvoiceId = posReturnInvoice?.value || '';
+            if (!selectedInvoiceId) return posReturnRows || [];
+            return (posReturnRows || []).filter(
+                (row) => String(row.invoice_id || '') === String(selectedInvoiceId),
+            );
+        };
+
+        const renderPosReturnRows = () => {
+            if (!posReturnLines) return;
+
+            if (!posReturnCustomer?.value) {
+                posReturnLines.innerHTML = '<tr><td colspan="8" class="text-muted text-center py-3">Select a customer to load returnable lines.</td></tr>';
+                setPosReturnSummary('Select a customer to load returnable lines.');
+                return;
+            }
+
+            if (!posReturnRows.length) {
+                posReturnLines.innerHTML = `<tr><td colspan="8" class="text-muted text-center py-3">No ${escapeHtml(posReturnTypeLabel())} return lines available.</td></tr>`;
+                setPosReturnSummary(`No ${posReturnTypeLabel()} return lines available for this customer.`);
+                return;
+            }
+
+            const visibleRows = getVisiblePosReturnRows();
+            if (!visibleRows.length) {
+                posReturnLines.innerHTML = '<tr><td colspan="8" class="text-muted text-center py-3">No lines match this invoice filter.</td></tr>';
+                setPosReturnSummary('No lines match this invoice filter.');
+                return;
+            }
+
+            posReturnLines.innerHTML = visibleRows.map((row) => {
+                const soldQty = Number(row.sold_qty || 0);
+                const returnedQty = Number(row.returned_qty || 0);
+                const availableQty = Number(row.available_qty || 0);
+                const safeAvailable = Number.isFinite(availableQty) && availableQty > 0 ? availableQty : 0;
+                const description = row.description || 'Return line';
+                const partNo = row.part_no || '-';
+                const lineTypeLabel = posReturnLineTypeLabel(row.line_type);
+                const imageUrl = typeof row.image_url === 'string' ? row.image_url.trim() : '';
+                const imageHtml = imageUrl
+                    ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(description)}" loading="lazy">`
+                    : '<div class="pos-return-thumb-fallback"><i class="fa-solid fa-box-open"></i></div>';
+                return `
+                    <tr data-return-line-id="${row.source_invoice_item_id}">
+                        <td>
+                            <div class="fw-semibold">${escapeHtml(row.invoice_number || '')}</div>
+                            <div class="text-muted">${escapeHtml(formatShortDate(row.invoice_date || ''))}</div>
+                        </td>
+                        <td>${escapeHtml(partNo)}</td>
+                        <td>
+                            <div class="pos-return-item">
+                                <div class="pos-return-thumb">${imageHtml}</div>
+                                <div>
+                                    <div class="pos-return-item-title">${escapeHtml(description)}</div>
+                                    <div class="pos-return-item-meta">${escapeHtml(lineTypeLabel)}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-end">${escapeHtml(posReturnFormatQty(soldQty))}</td>
+                        <td class="text-end">${escapeHtml(posReturnFormatQty(returnedQty))}</td>
+                        <td class="text-end">${escapeHtml(posReturnFormatQty(safeAvailable))}</td>
+                        <td class="text-end">${escapeHtml(currencyFmt(row.price || 0))}</td>
+                        <td class="text-end">
+                            <div class="pos-return-qty-wrap">
+                                <input
+                                    type="number"
+                                    class="pos-return-qty-input"
+                                    min="0"
+                                    step="0.01"
+                                    max="${safeAvailable}"
+                                    value=""
+                                    data-return-source-id="${row.source_invoice_item_id}"
+                                    data-return-available="${safeAvailable}"
+                                >
+                                <button
+                                    type="button"
+                                    class="pos-return-fill"
+                                    data-return-fill-max="1"
+                                    data-return-source-id="${row.source_invoice_item_id}">
+                                    Max
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            setPosReturnSummary(`${visibleRows.length} line(s) ready for ${posReturnTypeLabel()} returns.`);
+        };
+
+        const loadPosReturnLines = async ({ keepInvoiceSelection = true } = {}) => {
+            if (!posReturnLookupUrl || !posReturnLines) return;
+            const customerId = (posReturnCustomer?.value || '').trim();
+            if (!customerId) {
+                posReturnRows = [];
+                renderPosReturnInvoiceSelect('');
+                renderPosReturnRows();
+                return;
+            }
+
+            const previousInvoice = keepInvoiceSelection ? (posReturnInvoice?.value || '') : '';
+            posReturnLines.innerHTML = '<tr><td colspan="8" class="text-muted text-center py-3">Loading returnable lines...</td></tr>';
+            setPosReturnSummary(`Loading ${posReturnTypeLabel()} return lines...`);
+
+            const params = new URLSearchParams({
+                customer_id: customerId,
+                return_type: posReturnMode,
+            });
+
+            try {
+                const resp = await fetch(`${posReturnLookupUrl}?${params.toString()}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok || !data.success) {
+                    throw new Error(data.error || 'Unable to load return lines.');
+                }
+
+                const rows = [];
+                normalizeToArray(data.invoices).forEach((invoice) => {
+                    normalizeToArray(invoice.items).forEach((item) => {
+                        rows.push({
+                            ...item,
+                            invoice_id: invoice.id,
+                            invoice_number: invoice.invoice_number,
+                            invoice_date: invoice.date,
+                        });
+                    });
+                });
+                posReturnRows = rows;
+                renderPosReturnInvoiceSelect(previousInvoice);
+                renderPosReturnRows();
+            } catch (err) {
+                posReturnRows = [];
+                renderPosReturnInvoiceSelect('');
+                posReturnLines.innerHTML = '<tr><td colspan="8" class="text-danger text-center py-3">Unable to load return lines.</td></tr>';
+                setPosReturnSummary(err.message || 'Unable to load return lines.', true);
+            }
+        };
+
+        const setPosReturnMode = (mode) => {
+            const normalized = String(mode || '').toLowerCase() === 'product' ? 'product' : 'core';
+            posReturnMode = normalized;
+            posReturnModeButtons.forEach((btn) => {
+                const active = (btn.dataset.posReturnMode || '') === normalized;
+                btn.classList.toggle('active', active);
+                btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+            if (posReturnSubmit) {
+                posReturnSubmit.innerHTML = normalized === 'core'
+                    ? '<i class="fa-solid fa-rotate-left me-1"></i>Create Core Return'
+                    : '<i class="fa-solid fa-rotate-left me-1"></i>Create Product Return';
+            }
+        };
+
+        const collectPosReturnSelections = () => {
+            if (!posReturnLines) return [];
+            const selected = [];
+            const seen = new Set();
+            const qtyInputs = Array.from(posReturnLines.querySelectorAll('.pos-return-qty-input'));
+            for (const input of qtyInputs) {
+                const sourceId = Number(input.dataset.returnSourceId || 0);
+                if (!Number.isFinite(sourceId) || sourceId <= 0) continue;
+                const available = Number(input.dataset.returnAvailable || 0);
+                const qty = Number(input.value || 0);
+                if (!Number.isFinite(qty) || qty < 0) {
+                    throw new Error('Return quantity must be a valid number.');
+                }
+                if (qty <= 0) continue;
+                if (qty > available + 0.000001) {
+                    throw new Error('Return quantity cannot exceed available quantity.');
+                }
+                if (seen.has(sourceId)) continue;
+                seen.add(sourceId);
+                selected.push({
+                    source_invoice_item_id: sourceId,
+                    qty: Number((Math.round(qty * 100) / 100).toFixed(2)),
+                });
+            }
+            return selected;
+        };
+
+        const submitPosReturn = async () => {
+            if (!posReturnCreateUrl) {
+                showStatus('danger', 'Return endpoint is not configured.');
+                return;
+            }
+            const customerId = (posReturnCustomer?.value || '').trim();
+            if (!customerId) {
+                showStatus('danger', 'Select a customer to process a return.');
+                return;
+            }
+
+            let selections = [];
+            try {
+                selections = collectPosReturnSelections();
+            } catch (err) {
+                showStatus('danger', err.message || 'Please review return quantities.');
+                return;
+            }
+            if (!selections.length) {
+                showStatus('danger', 'Enter return quantity for at least one line.');
+                return;
+            }
+
+            if (posReturnSubmit) posReturnSubmit.disabled = true;
+            try {
+                const payload = new FormData();
+                payload.append('csrfmiddlewaretoken', getCsrfToken());
+                payload.append('customer_id', customerId);
+                payload.append('return_type', posReturnMode);
+                if (posReturnDate?.value) payload.append('date', posReturnDate.value);
+                if ((posReturnMemo?.value || '').trim()) payload.append('memo', posReturnMemo.value.trim());
+                payload.append('line_items', JSON.stringify(selections));
+
+                const resp = await fetch(posReturnCreateUrl, {
+                    method: 'POST',
+                    body: payload,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok || !data.success) {
+                    throw new Error(data.error || 'Unable to create return credit.');
+                }
+
+                const creditNo = data.credit_no || data.credit_id || '';
+                showStatus('success', `Return credit ${creditNo} created successfully.`);
+                if (posReturnOpenCredit?.checked) {
+                    const detailUrl = data.detail_url || buildPosCreditDetailUrl(data.credit_id);
+                    if (detailUrl) {
+                        window.open(detailUrl, '_blank', 'noopener');
+                    }
+                }
+                if (posReturnMemo) posReturnMemo.value = '';
+                await loadPosReturnLines({ keepInvoiceSelection: true });
+            } catch (err) {
+                showStatus('danger', err.message || 'Unable to process return.');
+            } finally {
+                if (posReturnSubmit) posReturnSubmit.disabled = false;
+            }
+        };
+
         const selectPosCustomer = (customerId) => {
             const id = (customerId || '').toString();
             if (posCustomerIdInput) posCustomerIdInput.value = id;
@@ -284,6 +703,12 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePosVehicleAddVisibility();
             renderPosCustomerList();
             renderPosVehicleList();
+
+            if (posReturnCustomer) {
+                renderPosReturnCustomerSelect();
+                posReturnCustomer.value = id;
+                loadPosReturnLines({ keepInvoiceSelection: false });
+            }
         };
 
         const selectPosVehicle = (vehicleId) => {
@@ -308,9 +733,63 @@ document.addEventListener('DOMContentLoaded', () => {
             selectPosVehicle(btn.dataset.posVehicleId || '');
         });
 
+        posReturnModeButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.posReturnMode || 'core';
+                setPosReturnMode(mode);
+                if (posReturnCustomer?.value) {
+                    loadPosReturnLines({ keepInvoiceSelection: false });
+                } else {
+                    renderPosReturnRows();
+                }
+            });
+        });
+
+        posReturnCustomer?.addEventListener('change', () => {
+            const selectedCustomerId = (posReturnCustomer.value || '').trim();
+            if (selectedCustomerId && String(posCustomerIdInput?.value || '') !== selectedCustomerId) {
+                selectPosCustomer(selectedCustomerId);
+                return;
+            }
+            loadPosReturnLines({ keepInvoiceSelection: false });
+        });
+
+        posReturnInvoice?.addEventListener('change', renderPosReturnRows);
+        posReturnReload?.addEventListener('click', () => loadPosReturnLines({ keepInvoiceSelection: true }));
+        posReturnSubmit?.addEventListener('click', submitPosReturn);
+
+        posReturnLines?.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-return-fill-max]');
+            if (!btn) return;
+            const sourceId = btn.dataset.returnSourceId || '';
+            const input = posReturnLines.querySelector(`.pos-return-qty-input[data-return-source-id="${sourceId}"]`);
+            if (!input) return;
+            const maxValue = Number(input.dataset.returnAvailable || 0);
+            if (!Number.isFinite(maxValue) || maxValue <= 0) return;
+            input.value = String(maxValue);
+        });
+
+        posReturnLines?.addEventListener('input', (e) => {
+            const input = e.target.closest('.pos-return-qty-input');
+            if (!input) return;
+            const value = Number(input.value || 0);
+            const maxValue = Number(input.dataset.returnAvailable || 0);
+            if (!Number.isFinite(value) || value < 0) {
+                input.value = '';
+                return;
+            }
+            if (Number.isFinite(maxValue) && value > maxValue) {
+                input.value = String(maxValue);
+            }
+        });
+
         renderPosCustomerList();
         renderPosVehicleList();
         updatePosVehicleAddVisibility();
+        renderPosReturnCustomerSelect();
+        setPosReturnMode(posReturnMode);
+        renderPosReturnInvoiceSelect('');
+        renderPosReturnRows();
 
         const setPosTab = (tab) => {
             posActiveTab = tab;
@@ -331,6 +810,140 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? Number(p.sale_price)
                 : Number(p.cost_price || 0);
             return Number.isFinite(candidate) ? candidate : 0;
+        };
+
+        const posFormatQty = (value) => {
+            const num = Number(value);
+            if (!Number.isFinite(num)) return '0';
+            const rounded = Math.round(num * 100) / 100;
+            if (Number.isInteger(rounded)) return String(rounded);
+            return String(rounded);
+        };
+
+        const normalizePaymentMethodKey = (value) => String(value || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '');
+
+        const paymentMethodLogoCdnBase = 'https://cdn.simpleicons.org';
+
+        const paymentMethodIconMap = {
+            cash: 'cash.svg',
+            creditcard: 'credit-card.svg',
+            debit: 'debit.svg',
+            etransfer: 'e-transfer.svg',
+            ach: 'ach.svg',
+            cheque: 'cheque.svg',
+            check: 'cheque.svg',
+            manual: 'manual.svg',
+            other: 'other.svg',
+        };
+
+        const paymentMethodLogoMap = {
+            creditcard: ['visa'],
+            debit: ['mastercard'],
+            etransfer: ['zelle'],
+            ach: ['swift'],
+            other: ['paypal'],
+        };
+
+        const paymentMethodFaFallbackMap = {
+            cash: 'fa-solid fa-money-bill-wave',
+            creditcard: 'fa-regular fa-credit-card',
+            debit: 'fa-regular fa-credit-card',
+            etransfer: 'fa-solid fa-money-bill-transfer',
+            ach: 'fa-solid fa-building-columns',
+            cheque: 'fa-solid fa-money-check-dollar',
+            check: 'fa-solid fa-money-check-dollar',
+            manual: 'fa-solid fa-file-pen',
+            other: 'fa-solid fa-ellipsis',
+        };
+
+        const resolvePaymentMethodIcon = (methodName) => {
+            const key = normalizePaymentMethodKey(methodName);
+            if (paymentMethodIconMap[key]) return paymentMethodIconMap[key];
+            if (key.includes('credit')) return paymentMethodIconMap.creditcard;
+            if (key.includes('debit')) return paymentMethodIconMap.debit;
+            if (key.includes('transfer') || key.includes('etransfer')) return paymentMethodIconMap.etransfer;
+            if (key.includes('check') || key.includes('cheque')) return paymentMethodIconMap.cheque;
+            if (key.includes('ach') || key.includes('bank')) return paymentMethodIconMap.ach;
+            return paymentMethodIconMap.other;
+        };
+
+        const resolvePaymentMethodLogos = (methodName) => {
+            const key = normalizePaymentMethodKey(methodName);
+            if (paymentMethodLogoMap[key]) return paymentMethodLogoMap[key];
+            if (key.includes('credit')) return paymentMethodLogoMap.creditcard;
+            if (key.includes('debit')) return paymentMethodLogoMap.debit;
+            if (key.includes('transfer') || key.includes('etransfer')) return paymentMethodLogoMap.etransfer;
+            if (key.includes('ach') || key.includes('bank')) return paymentMethodLogoMap.ach;
+            if (key.includes('other')) return paymentMethodLogoMap.other;
+            return [];
+        };
+
+        const resolvePaymentMethodFaFallback = (methodName) => {
+            const key = normalizePaymentMethodKey(methodName);
+            if (paymentMethodFaFallbackMap[key]) return paymentMethodFaFallbackMap[key];
+            if (key.includes('credit')) return paymentMethodFaFallbackMap.creditcard;
+            if (key.includes('debit')) return paymentMethodFaFallbackMap.debit;
+            if (key.includes('transfer') || key.includes('etransfer')) return paymentMethodFaFallbackMap.etransfer;
+            if (key.includes('check') || key.includes('cheque')) return paymentMethodFaFallbackMap.cheque;
+            if (key.includes('ach') || key.includes('bank')) return paymentMethodFaFallbackMap.ach;
+            return paymentMethodFaFallbackMap.other;
+        };
+
+        const buildPosMethodLogoMarkup = (methodName) => {
+            const logos = resolvePaymentMethodLogos(methodName);
+            if (logos.length) {
+                const fallbackFile = resolvePaymentMethodIcon(methodName);
+                return logos.map((slug) => {
+                    const src = `${paymentMethodLogoCdnBase}/${encodeURIComponent(slug)}`;
+                    return `<span class="pos-method-logo-chip"><img class="pos-method-icon pos-method-icon--brand" src="${escapeHtml(src)}" data-fallback-file="${escapeHtml(fallbackFile)}" alt="" aria-hidden="true" loading="lazy"></span>`;
+                }).join('');
+            }
+            const faClass = resolvePaymentMethodFaFallback(methodName);
+            return `<span class="pos-method-logo-chip"><i class="${faClass} pos-method-fa-icon" aria-hidden="true"></i></span>`;
+        };
+
+        const hydratePosMethodLogoFallbacks = (btn, methodName) => {
+            if (!btn) return;
+            const faClass = resolvePaymentMethodFaFallback(methodName);
+            btn.querySelectorAll('img.pos-method-icon').forEach((img) => {
+                img.addEventListener('error', () => {
+                    const fallbackFile = (img.dataset.fallbackFile || '').trim();
+                    const usedLocalFallback = img.dataset.usedLocalFallback === '1';
+                    if (fallbackFile && posPaymentIconBase && !usedLocalFallback) {
+                        img.dataset.usedLocalFallback = '1';
+                        img.src = `${posPaymentIconBase}${fallbackFile}`;
+                        img.classList.add('pos-method-icon--fallback');
+                        return;
+                    }
+                    const fallbackIcon = document.createElement('i');
+                    fallbackIcon.className = `${faClass} pos-method-fa-icon`;
+                    fallbackIcon.setAttribute('aria-hidden', 'true');
+                    const chip = img.closest('.pos-method-logo-chip');
+                    if (chip) {
+                        chip.replaceChildren(fallbackIcon);
+                    } else {
+                        img.replaceWith(fallbackIcon);
+                    }
+                });
+            });
+        };
+
+        const posProductImageUrl = (p) => {
+            const candidates = [p?.image_url, p?.image, p?.imageUrl, p?.thumbnail, p?.photo_url];
+            for (const value of candidates) {
+                if (typeof value === 'string' && value.trim()) return value.trim();
+            }
+            return '';
+        };
+
+        const posStockMeta = (p) => {
+            const qty = Number(p?.quantity_in_stock);
+            if (!Number.isFinite(qty)) return { label: 'Stock n/a', className: '' };
+            if (qty <= 0) return { label: 'Out of stock', className: 'is-out' };
+            if (qty < 5) return { label: `${qty} left`, className: '' };
+            return { label: `${qty} in stock`, className: '' };
         };
 
         const posServiceItems = (() => {
@@ -354,7 +967,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!posProductGrid) return;
             const q = (posSearchInput?.value || '').trim().toLowerCase();
             const list = (allProducts || []).filter(p => {
-                const hay = `${p.name || ''} ${p.sku || ''} ${p.supplier || ''}`.toLowerCase();
+                const hay = `${p.name || ''} ${p.sku || ''} ${p.supplier || ''} ${p.description || ''}`.toLowerCase();
                 return !q || hay.includes(q);
             }).slice(0, 60);
             if (!list.length) {
@@ -364,12 +977,34 @@ document.addEventListener('DOMContentLoaded', () => {
             posProductGrid.innerHTML = list.map(p => {
                 const price = posPriceForProduct(p);
                 const sku = p.sku ? `SKU ${escapeHtml(p.sku)}` : 'No SKU';
+                const supplier = p.supplier ? escapeHtml(p.supplier) : 'Store stock';
+                const title = escapeHtml(p.name || 'Product');
+                const imageUrl = posProductImageUrl(p);
+                const stock = posStockMeta(p);
+                const cartItem = posCart.find(row => row.line_source === 'product' && String(row.product_id) === String(p.id));
+                const inCart = !!cartItem;
+                const cardClass = inCart ? 'pos-product-card is-in-cart' : 'pos-product-card';
+                const badgeClass = inCart ? 'pos-add-badge is-added' : 'pos-add-badge';
+                const badgeIcon = inCart ? 'fa-solid fa-check' : 'fa-solid fa-plus';
+                const badgeLabel = inCart ? `Added (${posFormatQty(cartItem.qty)})` : 'Tap to add';
+                const media = imageUrl
+                    ? `<img src="${escapeHtml(imageUrl)}" alt="${title}" loading="lazy">`
+                    : '<div class="pos-card-media-fallback"><i class="fa-solid fa-box-open"></i></div>';
                 return `
-                    <button type="button" class="pos-product-card" data-product-id="${p.id}">
-                        <div class="pos-product-title">${escapeHtml(p.name)}</div>
-                        <div class="pos-product-meta">${sku}</div>
-                        <div class="pos-product-price">${currencyFmt(price)}</div>
-                        <div class="pos-add-badge"><i class="fa-solid fa-plus"></i>Tap to add</div>
+                    <button type="button" class="${cardClass}" data-product-id="${p.id}" aria-pressed="${inCart ? 'true' : 'false'}">
+                        <div class="pos-card-media">
+                            ${media}
+                            <span class="pos-stock-pill ${stock.className}">${escapeHtml(stock.label)}</span>
+                        </div>
+                        <div class="pos-card-body">
+                            <div class="pos-product-title">${title}</div>
+                            <div class="pos-product-meta">${sku}</div>
+                            <div class="pos-product-meta">${supplier}</div>
+                            <div class="pos-product-foot">
+                                <div class="pos-product-price">${currencyFmt(price)}</div>
+                                <div class="${badgeClass}"><i class="${badgeIcon}"></i>${badgeLabel}</div>
+                            </div>
+                        </div>
                     </button>
                 `;
             }).join('');
@@ -391,10 +1026,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rateLabel = s.fixed_rate !== '' ? currencyFmt(s.fixed_rate) : 'Set rate';
                 return `
                     <button type="button" class="pos-service-card" data-service-id="${s.id}">
-                        <div class="pos-product-title">${escapeHtml(label)}</div>
-                        <div class="pos-product-meta">Service</div>
-                        <div class="pos-product-price">${rateLabel}</div>
-                        <div class="pos-add-badge"><i class="fa-solid fa-plus"></i>Tap to add</div>
+                        <div class="pos-card-media">
+                            <div class="pos-card-media-fallback"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                        </div>
+                        <div class="pos-card-body">
+                            <div class="pos-product-title">${escapeHtml(label)}</div>
+                            <div class="pos-product-meta">Service</div>
+                            <div class="pos-product-foot">
+                                <div class="pos-product-price">${rateLabel}</div>
+                                <div class="pos-add-badge"><i class="fa-solid fa-plus"></i>Tap to add</div>
+                            </div>
+                        </div>
                     </button>
                 `;
             }).join('');
@@ -410,11 +1052,28 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPosCart();
         };
 
+        const focusPosCartLine = (key) => {
+            if (!posCartLines || !key) return;
+            const rows = Array.from(posCartLines.querySelectorAll('.pos-cart-line'));
+            const row = rows.find((el) => String(el.dataset.key || '') === String(key));
+            if (!row) return;
+            row.classList.remove('pos-cart-line--focus');
+            // restart animation for repeat clicks
+            void row.offsetWidth;
+            row.classList.add('pos-cart-line--focus');
+            try {
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } catch (e) {
+                // ignore browser scroll support differences
+            }
+        };
+
         const renderPosCart = () => {
             if (!posCartLines) return;
             if (!posCart.length) {
                 posCartLines.innerHTML = '<div class="pos-empty">No items yet. Start by tapping a product.</div>';
                 updatePosTotals();
+                if (posActiveTab === 'products') renderPosProducts();
                 return;
             }
             posCartLines.innerHTML = posCart.map(item => `
@@ -436,6 +1095,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `).join('');
             updatePosTotals();
+            if (posActiveTab === 'products') renderPosProducts();
         };
 
         const updatePosTotals = () => {
@@ -479,6 +1139,36 @@ document.addEventListener('DOMContentLoaded', () => {
             if (posPayFull) posPayFull.disabled = !enabled;
         };
 
+        const syncPosCheckoutButtons = () => {
+            const paidFlow = !!posRecordPayment?.checked;
+            posCheckoutActionButtons.forEach((btn) => {
+                btn.classList.toggle('is-paid-flow', paidFlow);
+            });
+            posCheckoutLabels.forEach((label) => {
+                const next = paidFlow
+                    ? (label.dataset.paidLabel || label.textContent || '')
+                    : (label.dataset.defaultLabel || label.textContent || '');
+                label.innerHTML = next;
+            });
+        };
+
+        const iconizePosMethodButtons = () => {
+            if (!posMethodsContainer || !posMethodButtons.length) return;
+            posMethodsContainer.classList.add('is-iconized', 'is-logoized');
+            posMethodButtons.forEach((btn) => {
+                const methodName = (btn.dataset.method || btn.textContent || '').trim();
+                const logosMarkup = buildPosMethodLogoMarkup(methodName);
+                btn.innerHTML = `<span class="pos-method-logo-group">${logosMarkup}</span><span class="pos-method-label">${escapeHtml(methodName)}</span>`;
+                btn.setAttribute('title', methodName);
+                btn.setAttribute('aria-label', methodName);
+                hydratePosMethodLogoFallbacks(btn, methodName);
+                const logoCount = btn.querySelectorAll('.pos-method-logo-chip').length;
+                btn.classList.toggle('has-multi-logo', logoCount > 1);
+            });
+        };
+
+        iconizePosMethodButtons();
+
         posMethodButtons.forEach(btn => {
             btn.addEventListener('click', () => setPosMethod(btn.dataset.method));
         });
@@ -504,6 +1194,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const productId = card.dataset.productId;
             const p = (allProducts || []).find(row => String(row.id) === String(productId));
             if (!p) return;
+            const existing = posCart.find(row => row.line_source === 'product' && String(row.product_id) === String(p.id));
+            if (existing) {
+                focusPosCartLine(existing.key);
+                showStatus('info', `${p.name || 'Product'} is already in cart. Update quantity in Current sale.`);
+                return;
+            }
             const price = posPriceForProduct(p);
             addPosItem({
                 key: `product-${p.id}`,
@@ -608,6 +1304,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalEl = row.querySelector('.pos-line-total');
             if (totalEl) totalEl.textContent = formatLineTotal(item.qty, item.rate);
             updatePosTotals();
+            if (posActiveTab === 'products') renderPosProducts();
         });
 
         posTaxExempt?.addEventListener('change', updatePosTotals);
@@ -621,6 +1318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         posRecordPayment?.addEventListener('change', () => {
             setPosPaymentEnabled(!!posRecordPayment?.checked);
+            syncPosCheckoutButtons();
             updatePosTotals();
         });
 
@@ -629,9 +1327,14 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPosCart();
         });
 
+        const buildPosInvoiceUrl = (template, invoiceId) => {
+            if (!template) return '';
+            return template.replace('/0/', `/${invoiceId}/`);
+        };
+
         const recordPosPayment = async (invoiceId, amount) => {
             if (!posPaymentUrlTemplate) return;
-            const url = posPaymentUrlTemplate.replace('/0/', `/${invoiceId}/`);
+            const url = buildPosInvoiceUrl(posPaymentUrlTemplate, invoiceId);
             const payload = new FormData();
             payload.append('csrfmiddlewaretoken', getCsrfToken());
             payload.append('grouped_invoice_id', String(invoiceId));
@@ -649,9 +1352,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 const msg = data.message || 'Unable to record payment.';
                 throw new Error(msg);
             }
+            const parsedBalance = Number(String(data.balance_due || '').replace(/[^0-9.-]+/g, ''));
+            return {
+                balanceDue: Number.isFinite(parsedBalance) ? parsedBalance : null,
+            };
         };
 
-        const submitPos = async ({ recordPayment = true } = {}) => {
+        const sendPosInvoiceEmail = async (invoiceId, { usePaidReceipt = false } = {}) => {
+            const template = usePaidReceipt
+                ? (posSendPaidEmailUrlTemplate || posSendEmailUrlTemplate)
+                : posSendEmailUrlTemplate;
+            if (!template) {
+                throw new Error('Invoice email endpoint is not configured.');
+            }
+            const url = buildPosInvoiceUrl(template, invoiceId);
+            const payload = new FormData();
+            payload.append('csrfmiddlewaretoken', getCsrfToken());
+            payload.append('async', '1');
+            const resp = await fetch(url, {
+                method: 'POST',
+                body: payload,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || data.error) {
+                const msg = data.error || data.message || (usePaidReceipt ? 'Unable to send receipt email.' : 'Unable to send invoice email.');
+                throw new Error(msg);
+            }
+        };
+
+        const openPosInvoicePrint = (invoiceId, { usePaidReceipt = false } = {}) => {
+            const template = usePaidReceipt
+                ? (posPaidPrintUrlTemplate || posPrintUrlTemplate)
+                : posPrintUrlTemplate;
+            if (!template) {
+                throw new Error('Invoice print endpoint is not configured.');
+            }
+            const printUrl = buildPosInvoiceUrl(template, invoiceId);
+            window.open(printUrl, '_blank', 'noopener');
+        };
+
+        const submitPos = async ({ recordPayment = true, checkoutAction = 'none' } = {}) => {
             if (!posCustomerIdInput?.value) {
                 showStatus('danger', 'Select a customer before checkout.');
                 return;
@@ -660,6 +1401,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 showStatus('danger', 'Add at least one item to the cart.');
                 return;
             }
+            const emailAction = checkoutAction === 'email' || checkoutAction === 'email_print';
+            if (emailAction) {
+                const selectedCustomer = (quickCustomers || []).find((c) => String(c.id) === String(posCustomerIdInput?.value || ''));
+                const enteredEmail = (posEmail?.value || '').trim();
+                const customerEmail = (selectedCustomer?.email || '').trim();
+                if (selectedCustomer && !enteredEmail && !customerEmail) {
+                    showStatus('danger', 'Enter an email to send the receipt/invoice.');
+                    return;
+                }
+            }
             const fd = new FormData();
             fd.append('csrfmiddlewaretoken', getCsrfToken());
             fd.append('customer', posCustomerIdInput.value);
@@ -667,7 +1418,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (posSaleDate?.value) fd.append('date', posSaleDate.value);
             if (posEmail?.value) fd.append('bill_to_email', posEmail.value);
             if (posTaxExempt?.checked) fd.append('tax_exempt', 'on');
-            fd.append('post_action', 'view');
+            fd.append('post_action', 'continue');
 
             posCart.forEach(item => {
                 fd.append('line_source', item.line_source || 'custom');
@@ -678,6 +1429,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fd.append('rate', String(item.rate || 0));
             });
 
+            let savedInvoiceId = null;
             try {
                 const resp = await fetch(posForm.action, {
                     method: 'POST',
@@ -690,32 +1442,61 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(msg || 'Unable to create invoice.');
                 }
                 const invoiceId = data.invoice_id;
+                savedInvoiceId = invoiceId;
                 const subtotal = posCart.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.rate) || 0), 0);
                 const tax = (posTaxExempt?.checked) ? 0 : subtotal * posTaxRate;
                 const grandTotal = subtotal + tax;
+                let paymentCaptured = false;
+                let paidInFull = false;
 
                 if (recordPayment && posRecordPayment?.checked && grandTotal > 0) {
                     let paid = Number(posPaymentAmount?.value || 0);
                     if (!Number.isFinite(paid) || paid <= 0) paid = grandTotal;
                     if (paid > grandTotal) paid = grandTotal;
-                    await recordPosPayment(invoiceId, paid);
+                    const paymentResult = await recordPosPayment(invoiceId, paid);
+                    paymentCaptured = paid > 0;
+                    if (paymentResult && paymentResult.balanceDue != null) {
+                        paidInFull = paymentResult.balanceDue <= 0.009;
+                    } else {
+                        paidInFull = (paid + 0.01) >= grandTotal;
+                    }
+                }
+                const usePaidReceipt = paymentCaptured && paidInFull;
+
+                if (checkoutAction === 'email') {
+                    await sendPosInvoiceEmail(invoiceId, { usePaidReceipt });
+                } else if (checkoutAction === 'print') {
+                    openPosInvoicePrint(invoiceId, { usePaidReceipt });
+                } else if (checkoutAction === 'email_print') {
+                    await sendPosInvoiceEmail(invoiceId, { usePaidReceipt });
+                    openPosInvoicePrint(invoiceId, { usePaidReceipt });
                 }
 
-                showStatus('success', 'POS sale saved.');
-                if (posOpenInvoice?.checked && data.redirect_url) {
-                    window.open(data.redirect_url, '_blank', 'noopener');
-                }
+                const successMessage = checkoutAction === 'email'
+                    ? (usePaidReceipt ? 'Payment recorded. Receipt email queued.' : 'POS sale saved and invoice email queued.')
+                    : checkoutAction === 'print'
+                        ? (usePaidReceipt ? 'Payment recorded. Receipt print view opened.' : 'POS sale saved and invoice print view opened.')
+                        : checkoutAction === 'email_print'
+                            ? (usePaidReceipt ? 'Payment recorded. Receipt email queued and print view opened.' : 'POS sale saved. Invoice email queued and print view opened.')
+                            : 'POS sale saved.';
+                showStatus('success', successMessage);
                 posCart = [];
                 renderPosCart();
                 if (posPaymentAmount) posPaymentAmount.value = '';
                 posPaymentAuto = true;
             } catch (err) {
-                showStatus('danger', err.message || 'Unable to complete POS checkout.');
+                if (savedInvoiceId) {
+                    showStatus('warning', `Invoice #${savedInvoiceId} was saved, but ${err.message || 'a follow-up step failed.'}`);
+                } else {
+                    showStatus('danger', err.message || 'Unable to complete POS checkout.');
+                }
             }
         };
 
         posSaveSale?.addEventListener('click', () => submitPos({ recordPayment: false }));
-        posCheckoutBtn?.addEventListener('click', () => submitPos({ recordPayment: true }));
+        posCheckoutEmailBtn?.addEventListener('click', () => submitPos({ recordPayment: true, checkoutAction: 'email' }));
+        posCheckoutPrintBtn?.addEventListener('click', () => submitPos({ recordPayment: true, checkoutAction: 'print' }));
+        posCheckoutEmailPrintBtn?.addEventListener('click', () => submitPos({ recordPayment: true, checkoutAction: 'email_print' }));
 
         // Quick add customer / vehicle
         const addCustomerModalEl = document.getElementById('quickInvoiceAddCustomerModal');
@@ -862,6 +1643,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPosServices();
         renderPosCart();
         setPosPaymentEnabled(!!posRecordPayment?.checked);
+        syncPosCheckoutButtons();
     }
 
     const overduePanel = document.getElementById('overdue-customers-panel');
@@ -1364,6 +2146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const onlineOrdersTbody = document.getElementById('online-orders-tbody');
     const onlineOrdersEmpty = document.getElementById('online-orders-empty');
     const onlineOrdersCount = document.getElementById('online-orders-count');
+    const onlineOrdersModeCount = document.getElementById('online-orders-count-mode');
     const approvalsList = document.getElementById('customer-approvals-list');
     const approvalsEmpty = document.getElementById('customer-approvals-empty');
     const approvalsCount = document.getElementById('customer-approvals-count');
@@ -1509,7 +2292,9 @@ document.addEventListener('DOMContentLoaded', () => {
             onlineOrdersTable?.classList.remove('d-none');
             onlineOrdersEmpty?.classList.add('d-none');
         }
-        if (onlineOrdersCount) onlineOrdersCount.textContent = Number.isFinite(onlineOrdersTotal) ? onlineOrdersTotal : items.length;
+        const countValue = Number.isFinite(onlineOrdersTotal) ? onlineOrdersTotal : items.length;
+        if (onlineOrdersCount) onlineOrdersCount.textContent = countValue;
+        if (onlineOrdersModeCount) onlineOrdersModeCount.textContent = countValue;
     };
 
     const renderApprovals = (approvals, highlightIds = new Set()) => {

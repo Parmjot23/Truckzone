@@ -3,35 +3,246 @@
 
 {% block extra_css %}
 <style>
+  .store-admin-shell {
+    --store-bg: #f4f7fb;
+    --store-border: #dbe5f0;
+    --store-text: #0f172a;
+    --store-muted: #5b6b80;
+    --store-accent: #0f4c81;
+    --store-accent-soft: #e9f2ff;
+  }
+
+  .store-admin-header {
+    background: linear-gradient(135deg, #0f172a, #0f4c81);
+    color: #fff;
+    border-radius: 16px;
+    padding: 1.25rem 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+  }
+
+  .store-admin-header .text-muted {
+    color: rgba(226, 232, 240, 0.92) !important;
+  }
+
+  .store-admin-header .btn {
+    border-radius: 10px;
+  }
+
+  .store-kpi-card {
+    background: #fff;
+    border: 1px solid var(--store-border);
+    border-radius: 14px;
+    height: 100%;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  .store-kpi-card .card-body {
+    padding: 1rem 1.05rem;
+  }
+
+  .store-kpi-title {
+    color: var(--store-muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+
+  .store-kpi-value {
+    color: var(--store-text);
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .store-kpi-sub {
+    color: var(--store-muted);
+    font-size: 0.84rem;
+  }
+
+  .store-admin-surface {
+    background: #fff;
+    border: 1px solid var(--store-border);
+    border-radius: 16px;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+  }
+
+  .store-admin-surface-head {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--store-border);
+    background: linear-gradient(180deg, #f8fbff, #ffffff);
+  }
+
   .storefront-filters {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: var(--store-bg);
+    border: 1px solid var(--store-border);
     border-radius: 12px;
     padding: 1rem;
+    margin: 1rem 1.25rem;
+  }
+
+  .storefront-filters .form-label {
+    color: #1e293b;
+    font-size: 0.82rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+
+  .storefront-filters .form-control,
+  .storefront-filters .form-select {
+    border-radius: 10px;
+    border-color: #cdd9e7;
+  }
+
+  .storefront-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.85rem;
+    align-items: center;
+  }
+
+  .storefront-actions .btn {
+    border-radius: 999px;
+  }
+
+  .storefront-table-wrap {
+    padding: 0 1.25rem 1.25rem;
+  }
+
+  .storefront-table {
+    min-width: 930px;
+  }
+
+  .storefront-table thead th {
+    background: #f8fbff;
+    border-top: 1px solid var(--store-border);
+    border-bottom: 1px solid var(--store-border);
+    color: #334155;
+    font-size: 0.76rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .storefront-table td {
+    vertical-align: top;
+    border-color: #e8eef6;
+  }
+
+  .storefront-product-name {
+    color: var(--store-text);
+    font-weight: 700;
+  }
+
+  .storefront-meta {
+    color: var(--store-muted);
+    font-size: 0.84rem;
+  }
+
+  .storefront-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+  }
+
+  .storefront-tag {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #d6e3f3;
+    background: #f7fbff;
+    color: #284b70;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.16rem 0.55rem;
+  }
+
+  .storefront-flag {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.16rem 0.58rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-right: 0.3rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .storefront-flag--live {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .storefront-flag--draft {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .storefront-flag--featured {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .storefront-flag--promo {
+    background: #e0f2fe;
+    color: #075985;
+  }
+
+  .storefront-toggle-group .form-check {
+    margin-bottom: 0.4rem;
   }
 
   .floating-save {
     position: fixed;
-    right: 1.5rem;
-    bottom: 1.5rem;
+    right: 1.25rem;
+    bottom: 1.25rem;
     z-index: 1030;
   }
 
   .floating-save .btn {
-    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.25);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.26);
     border-radius: 999px;
-    padding: 0.75rem 1.5rem;
-  }
-
-  .storefront-count {
-    font-weight: 600;
+    padding: 0.78rem 1.45rem;
   }
 
   .storefront-form {
     padding-bottom: 5rem;
   }
 
+  .storefront-count {
+    font-weight: 700;
+    color: #1e293b;
+  }
+
   @media (max-width: 767px) {
+    .store-admin-header {
+      padding: 1rem;
+    }
+
+    .store-admin-header .d-flex.gap-2 {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .store-admin-header .d-flex.gap-2 .btn {
+      flex: 1 1 48%;
+    }
+
+    .storefront-table-wrap,
+    .storefront-filters,
+    .store-admin-surface-head {
+      margin-left: 0.85rem;
+      margin-right: 0.85rem;
+      padding-left: 0;
+      padding-right: 0;
+    }
+
     .floating-save {
       left: 1rem;
       right: 1rem;
@@ -47,237 +258,250 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 store-admin-shell">
   {% include 'store/partials/_manage_store_nav.html' %}
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-    <div>
-      <h1 class="h3 mb-1">Manage Online Store</h1>
-      <p class="text-muted mb-0">Choose which inventory items are visible to customers on your public storefront.</p>
+
+  <section class="store-admin-header">
+    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
+      <div>
+        <h1 class="h3 mb-1">Manage Online Store</h1>
+        <p class="text-muted mb-0">Control visibility, featured placement, and promotions without opening each product record.</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'accounts:inventory_category_groups' %}" class="btn btn-outline-light btn-sm">
+          <i class="fas fa-layer-group me-1"></i>
+          Category Groups
+        </a>
+        <a href="{% url 'accounts:inventory_categories' %}" class="btn btn-outline-light btn-sm">
+          <i class="fas fa-tags me-1"></i>
+          Categories
+        </a>
+        <a href="{% url 'accounts:inventory_products' %}" class="btn btn-outline-light btn-sm">
+          <i class="fas fa-boxes me-1"></i>
+          Inventory
+        </a>
+        <a href="{{ public_store_url }}" class="btn btn-light btn-sm" target="_blank" rel="noopener">
+          <i class="fas fa-external-link-alt me-1"></i>
+          Public Store
+        </a>
+      </div>
     </div>
-    <div class="d-flex gap-2">
-      <a href="{% url 'accounts:inventory_category_groups' %}" class="btn btn-outline-secondary">
-        <i class="fas fa-layer-group me-1"></i>
-        Category Groups
-      </a>
-      <a href="{% url 'accounts:inventory_categories' %}" class="btn btn-outline-secondary">
-        <i class="fas fa-tags me-1"></i>
-        Categories
-      </a>
-      <a href="{% url 'accounts:inventory_products' %}" class="btn btn-outline-secondary">
-        <i class="fas fa-boxes me-1"></i>
-        Go to Inventory
-      </a>
-      <a href="{{ public_store_url }}" class="btn btn-outline-primary" target="_blank" rel="noopener">
-        <i class="fas fa-external-link-alt me-1"></i>
-        View Public Store
-      </a>
-    </div>
-  </div>
+  </section>
 
   <div class="row g-3 mb-4">
-    <div class="col-md-4 col-lg-3">
-      <div class="card shadow-sm h-100">
+    <div class="col-sm-6 col-lg-3">
+      <div class="store-kpi-card card">
         <div class="card-body">
-          <div class="text-muted small">Category Groups</div>
-          <div class="h4 mb-1">{{ active_group_count }} active</div>
-          <div class="text-muted small">{{ group_count }} total</div>
+          <div class="store-kpi-title">Category Groups</div>
+          <div class="store-kpi-value">{{ active_group_count }}</div>
+          <div class="store-kpi-sub">{{ group_count }} total</div>
         </div>
       </div>
     </div>
-    <div class="col-md-4 col-lg-3">
-      <div class="card shadow-sm h-100">
+    <div class="col-sm-6 col-lg-3">
+      <div class="store-kpi-card card">
         <div class="card-body">
-          <div class="text-muted small">Categories</div>
-          <div class="h4 mb-1">{{ active_category_count }} active</div>
-          <div class="text-muted small">{{ category_count }} total</div>
+          <div class="store-kpi-title">Categories</div>
+          <div class="store-kpi-value">{{ active_category_count }}</div>
+          <div class="store-kpi-sub">{{ category_count }} total</div>
         </div>
       </div>
     </div>
-    <div class="col-md-4 col-lg-3">
-      <div class="card shadow-sm h-100">
+    <div class="col-sm-6 col-lg-3">
+      <div class="store-kpi-card card">
         <div class="card-body">
-          <div class="text-muted small">Published Products</div>
-          <div class="h4 mb-1">{{ published_product_count }}</div>
-          <div class="text-muted small">{{ product_count }} total</div>
+          <div class="store-kpi-title">Published Products</div>
+          <div class="store-kpi-value">{{ published_product_count }}</div>
+          <div class="store-kpi-sub">{{ product_count }} in catalog</div>
         </div>
       </div>
     </div>
-    <div class="col-md-4 col-lg-3">
-      <div class="card shadow-sm h-100">
+    <div class="col-sm-6 col-lg-3">
+      <div class="store-kpi-card card">
         <div class="card-body">
-          <div class="text-muted small">Promotions</div>
-          <div class="h4 mb-1">{{ promotion_product_count }}</div>
-          <div class="text-muted small">Featured: {{ featured_product_count }}</div>
+          <div class="store-kpi-title">Promotions / Featured</div>
+          <div class="store-kpi-value">{{ promotion_product_count }}</div>
+          <div class="store-kpi-sub">Featured: {{ featured_product_count }}</div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="card shadow-sm">
-    <div class="card-body">
-      {% if product_count %}
-      <p class="text-muted small mb-3">
-        Update base pricing and inventory details in the Inventory > Products page. Promo price and featured settings apply to the storefront.
-      </p>
-      <div class="storefront-filters mb-4">
-        <div class="row g-3 align-items-end">
-          <div class="col-md-4">
-            <label class="form-label fw-semibold" for="storefrontSearch">Search products</label>
-            <input type="search" class="form-control" id="storefrontSearch" placeholder="Search name, SKU, or category">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label fw-semibold" for="storefrontGroupFilter">Category Group</label>
-            <select class="form-select" id="storefrontGroupFilter">
-              <option value="">All groups</option>
-              {% for group in group_options %}
-              <option value="{{ group.id }}">{{ group.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label fw-semibold" for="storefrontCategoryFilter">Category</label>
-            <select class="form-select" id="storefrontCategoryFilter">
-              <option value="">All categories</option>
-              {% for category in category_options %}
-              <option value="{{ category.id }}" data-group-id="{{ category.group_id|default:'' }}">{{ category.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label fw-semibold" for="storefrontStatusFilter">Status</label>
-            <select class="form-select" id="storefrontStatusFilter">
-              <option value="">All</option>
-              <option value="published">Published</option>
-              <option value="unpublished">Unpublished</option>
-              <option value="featured">Featured</option>
-              <option value="promo">Promotion</option>
-            </select>
-          </div>
+  <div class="store-admin-surface">
+    {% if product_count %}
+    <div class="store-admin-surface-head">
+      <p class="text-muted small mb-0">Keep list operations here lightweight. Product cost, suppliers, and stock adjustments stay in Inventory.</p>
+    </div>
+
+    <div class="storefront-filters">
+      <div class="row g-3 align-items-end">
+        <div class="col-lg-4 col-md-6">
+          <label for="storefrontSearch" class="form-label">Search products</label>
+          <input type="search" class="form-control" id="storefrontSearch" placeholder="Search name, SKU, or category">
         </div>
-        <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-          <span class="text-muted small">Bulk actions for filtered results:</span>
-          <button type="button" class="btn btn-outline-primary btn-sm" data-bulk-action="publish">
-            Show filtered
-          </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-bulk-action="unpublish">
-            Hide filtered
-          </button>
-          <button type="button" class="btn btn-outline-primary btn-sm" data-bulk-action="feature">
-            Feature filtered
-          </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-bulk-action="unfeature">
-            Unfeature filtered
-          </button>
-          <button type="button" class="btn btn-outline-dark btn-sm" id="storefrontResetFilters">
-            Reset filters
-          </button>
-          <span class="ms-auto text-muted small">Showing <span class="storefront-count" id="storefrontResultCount">0</span></span>
+        <div class="col-lg-3 col-md-6">
+          <label for="storefrontGroupFilter" class="form-label">Category group</label>
+          <select class="form-select" id="storefrontGroupFilter">
+            <option value="">All groups</option>
+            {% for group in group_options %}
+            <option value="{{ group.id }}">{{ group.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <label for="storefrontCategoryFilter" class="form-label">Category</label>
+          <select class="form-select" id="storefrontCategoryFilter">
+            <option value="">All categories</option>
+            {% for category in category_options %}
+            <option value="{{ category.id }}" data-group-id="{{ category.group_id|default:'' }}">{{ category.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-2 col-md-6">
+          <label for="storefrontStatusFilter" class="form-label">Status</label>
+          <select class="form-select" id="storefrontStatusFilter">
+            <option value="">All</option>
+            <option value="published">Published</option>
+            <option value="unpublished">Unpublished</option>
+            <option value="featured">Featured</option>
+            <option value="promo">Promotion</option>
+          </select>
         </div>
       </div>
-      <form method="post" novalidate class="storefront-form">
-        {% csrf_token %}
-        {{ formset.management_form }}
-        {% if formset.non_form_errors %}
-        <div class="alert alert-danger" role="alert">
-          {{ formset.non_form_errors }}
-        </div>
-        {% endif %}
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th scope="col">Product</th>
-                <th scope="col" class="text-nowrap">SKU</th>
-                <th scope="col" class="text-nowrap">Sale Price</th>
-                <th scope="col" class="text-nowrap">Promo Price</th>
-                <th scope="col" class="text-nowrap">Featured</th>
-                <th scope="col" class="text-nowrap">In Stock</th>
-                <th scope="col" class="text-nowrap">Visible in Store</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for form in formset %}
-              {{ form.id }}
-              {% if form.non_field_errors %}
-              <tr>
-                <td colspan="7" class="text-danger small">{{ form.non_field_errors }}</td>
-              </tr>
-              {% endif %}
-              <tr
-                class="storefront-row"
-                data-product-name="{{ form.instance.name|default_if_none:''|escape }}"
-                data-product-sku="{{ form.instance.sku|default_if_none:''|escape }}"
-                data-product-description="{{ form.instance.description|default_if_none:''|escape }}"
-                data-category-id="{{ form.instance.category_id|default_if_none:'' }}"
-                data-category-name="{{ form.instance.category.name|default_if_none:''|escape }}"
-                data-group-id="{{ form.instance.category.group_id|default_if_none:'' }}"
-                data-group-name="{{ form.instance.category.group.name|default_if_none:''|escape }}"
-              >
-                <td>
-                  <div class="fw-semibold">{{ form.instance.name }}</div>
-                  {% if form.instance.description %}
-                  <div class="text-muted small text-truncate" style="max-width: 420px;">
-                    {{ form.instance.description }}
-                  </div>
+      <div class="storefront-actions">
+        <span class="text-muted small">Bulk actions on filtered rows:</span>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-bulk-action="publish">Publish</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bulk-action="unpublish">Unpublish</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-bulk-action="feature">Feature</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bulk-action="unfeature">Unfeature</button>
+        <button type="button" class="btn btn-outline-dark btn-sm" id="storefrontResetFilters">Reset</button>
+        <span class="ms-auto text-muted small">Showing <span class="storefront-count" id="storefrontResultCount">0</span></span>
+      </div>
+    </div>
+
+    <form method="post" novalidate class="storefront-form">
+      {% csrf_token %}
+      {{ formset.management_form }}
+      {% if formset.non_form_errors %}
+      <div class="px-4 pt-1">
+        <div class="alert alert-danger mb-0" role="alert">{{ formset.non_form_errors }}</div>
+      </div>
+      {% endif %}
+
+      <div class="table-responsive storefront-table-wrap">
+        <table class="table table-hover align-middle mb-0 storefront-table">
+          <thead>
+            <tr>
+              <th scope="col">Product</th>
+              <th scope="col" class="text-nowrap">Pricing</th>
+              <th scope="col" class="text-nowrap">Stock</th>
+              <th scope="col" class="text-nowrap">Status</th>
+              <th scope="col" class="text-nowrap">Publish Controls</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in formset %}
+            {{ form.id }}
+            {% if form.non_field_errors %}
+            <tr>
+              <td colspan="5" class="text-danger small">{{ form.non_field_errors }}</td>
+            </tr>
+            {% endif %}
+            <tr
+              class="storefront-row"
+              data-product-name="{{ form.instance.name|default_if_none:''|escape }}"
+              data-product-sku="{{ form.instance.sku|default_if_none:''|escape }}"
+              data-product-description="{{ form.instance.description|default_if_none:''|escape }}"
+              data-category-id="{{ form.instance.category_id|default_if_none:'' }}"
+              data-category-name="{{ form.instance.category.name|default_if_none:''|escape }}"
+              data-group-id="{{ form.instance.category.group_id|default_if_none:'' }}"
+              data-group-name="{{ form.instance.category.group.name|default_if_none:''|escape }}"
+            >
+              <td>
+                <div class="storefront-product-name">{{ form.instance.name }}</div>
+                <div class="storefront-meta">
+                  {% if form.instance.sku %}SKU: {{ form.instance.sku }}{% else %}No SKU{% endif %}
+                </div>
+                <div class="storefront-tags">
+                  <span class="storefront-tag">{{ form.instance.category.name|default:'Uncategorized' }}</span>
+                  {% if form.instance.category.group %}
+                  <span class="storefront-tag">{{ form.instance.category.group.name }}</span>
                   {% endif %}
-                </td>
-                <td class="text-muted">{{ form.instance.sku }}</td>
-                <td>${{ form.instance.sale_price|floatformat:2 }}</td>
-                <td>
+                </div>
+              </td>
+              <td>
+                <div class="storefront-meta">Sale: ${{ form.instance.sale_price|default_if_none:0|floatformat:2 }}</div>
+                <div class="mt-2">
                   {{ form.promotion_price }}
-                  {% if form.promotion_price.errors %}
-                  <div class="text-danger small">{{ form.promotion_price.errors|join:', ' }}</div>
+                </div>
+                {% if form.promotion_price.errors %}
+                <div class="text-danger small mt-1">{{ form.promotion_price.errors|join:', ' }}</div>
+                {% endif %}
+              </td>
+              <td>
+                <div class="storefront-meta fw-semibold">{{ form.instance.quantity_in_stock|intcomma }} on hand</div>
+                <div class="storefront-meta">Type: {{ form.instance.get_item_type_display|default:'Inventory' }}</div>
+              </td>
+              <td>
+                {% if form.instance.is_published_to_store %}
+                <span class="storefront-flag storefront-flag--live">Published</span>
+                {% else %}
+                <span class="storefront-flag storefront-flag--draft">Draft</span>
+                {% endif %}
+
+                {% if form.instance.is_featured %}
+                <span class="storefront-flag storefront-flag--featured">Featured</span>
+                {% endif %}
+
+                {% if form.instance.promotion_price %}
+                <span class="storefront-flag storefront-flag--promo">Promo</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="storefront-toggle-group">
+                  <div class="form-check">
+                    {{ form.is_published_to_store }}
+                    <label class="form-check-label" for="{{ form.is_published_to_store.id_for_label }}">Show on store</label>
+                  </div>
+                  {% if form.is_published_to_store.errors %}
+                  <div class="text-danger small mb-2">{{ form.is_published_to_store.errors|join:', ' }}</div>
                   {% endif %}
-                </td>
-                <td>
+
                   <div class="form-check">
                     {{ form.is_featured }}
-                    <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
-                      Feature
-                    </label>
+                    <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">Feature product</label>
                   </div>
                   {% if form.is_featured.errors %}
                   <div class="text-danger small">{{ form.is_featured.errors|join:', ' }}</div>
                   {% endif %}
-                </td>
-                <td>{{ form.instance.quantity_in_stock|intcomma }}</td>
-                <td>
-                  <div class="form-check">
-                    {{ form.is_published_to_store }}
-                    <label class="form-check-label" for="{{ form.is_published_to_store.id_for_label }}">
-                      Show on store
-                    </label>
-                  </div>
-                  {% if form.is_published_to_store.errors %}
-                  <div class="text-danger small">{{ form.is_published_to_store.errors|join:', ' }}</div>
-                  {% endif %}
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="7" class="py-4 text-center text-muted">No products available. Add inventory first.</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        <div class="floating-save">
-          <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2">
-            <i class="fas fa-save"></i>
-            Save changes
-          </button>
-        </div>
-      </form>
-      {% else %}
-      <div class="py-5 text-center">
-        <p class="lead mb-3">You don't have any products in inventory yet.</p>
-        <a href="{% url 'accounts:inventory_products' %}" class="btn btn-primary">
-          <i class="fas fa-plus me-1"></i>
-          Add inventory products
-        </a>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="py-4 text-center text-muted">No products available. Add inventory first.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
-      {% endif %}
+
+      <div class="floating-save">
+        <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2">
+          <i class="fas fa-save"></i>
+          Save changes
+        </button>
+      </div>
+    </form>
+    {% else %}
+    <div class="py-5 text-center">
+      <p class="lead mb-3">You don't have any products in inventory yet.</p>
+      <a href="{% url 'accounts:inventory_products' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i>
+        Add inventory products
+      </a>
     </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

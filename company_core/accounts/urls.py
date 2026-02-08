@@ -260,6 +260,8 @@ urlpatterns = [
     path('store/core-policy/', store_views.storefront_core_policy_download, name='store_core_policy_download'),
     path('dashboard/', views.home, name='home'),  # Authenticated home page URL
     path('dashboard/parts-store/feed/', views.parts_store_dashboard_feed, name='parts_store_dashboard_feed'),
+    path('dashboard/parts-store/returns/lookup/', views.parts_store_return_lookup, name='parts_store_return_lookup'),
+    path('dashboard/parts-store/returns/create/', views.parts_store_return_create, name='parts_store_return_create'),
     path('dashboard/parts-store/orders/<int:invoice_id>/status/', views.update_online_order_status, name='parts_store_order_status'),
     path('dashboard/parts-store/orders/<int:invoice_id>/cancel/', views.cancel_online_order, name='parts_store_order_cancel'),
     # Analytics lives at /analytics. Keep /dashboard/analytics as a backwards-compatible redirect.

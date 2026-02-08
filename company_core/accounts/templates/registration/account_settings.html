@@ -224,11 +224,11 @@
         <div class="card-grid">
             <div class="settings-card">
                 <div class="d-flex flex-wrap gap-2 mb-2">
-                    <a href="{% url 'accounts:display_preferences' %}" class="pill-secondary btn-sm">Interface scale</a>
+                    <a href="{% url 'accounts:display_preferences' %}" class="pill-secondary btn-sm">Display preferences</a>
                 </div>
                 <h5>Display & Scale</h5>
                 <p class="text-muted small mb-1">Control how compact the portal appears for your team.</p>
-                <div class="text-muted small">Current scale: {{ profile.ui_scale_percentage|default:"100" }}%</div>
+                <div class="text-muted small">Current portal scale: {{ profile.ui_scale_percentage|default:"100" }}%</div>
             </div>
             <div class="settings-card">
                 <h5>Theme</h5>

@@ -2,136 +2,183 @@
 {% load static %}
 <input type="hidden" name="product_id" value="{{ form.instance.id }}">
 {{ form.non_field_errors }}
-<div class="product-modal-grid">
-  <div class="form-group">
-    {{ form.sku.label_tag }}
-    {{ form.sku }}
-  </div>
-  <div class="form-group">
-    {{ form.name.label_tag }}
-    {{ form.name }}
-  </div>
-  <div class="form-group span-2">
-    {{ form.description.label_tag }}
-    {{ form.description }}
-  </div>
-  <div class="form-group span-2">
-    {{ form.alternate_skus.label_tag }}
-    {{ form.alternate_skus }}
-    {% if form.alternate_skus.help_text %}
-    <small class="form-text text-muted">{{ form.alternate_skus.help_text }}</small>
-    {% endif %}
-    {{ form.alternate_skus.errors }}
-  </div>
-  <div class="form-group">
-    {{ form.category.label_tag }}
-    <div class="input-group">
-      {{ form.category }}
-      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addCategoryModal" data-keep-parent-open="true" aria-label="Add category">+</button>
+<div class="product-attributes-shell">
+  <ul class="nav nav-pills product-editor-tabs mb-3" id="editProductTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="edit-tab-basic" data-bs-toggle="pill" data-bs-target="#edit-pane-basic" type="button" role="tab" aria-controls="edit-pane-basic" aria-selected="true">Basic</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="edit-tab-catalog" data-bs-toggle="pill" data-bs-target="#edit-pane-catalog" type="button" role="tab" aria-controls="edit-pane-catalog" aria-selected="false">Catalog</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="edit-tab-pricing" data-bs-toggle="pill" data-bs-target="#edit-pane-pricing" type="button" role="tab" aria-controls="edit-pane-pricing" aria-selected="false">Pricing</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="edit-tab-stock" data-bs-toggle="pill" data-bs-target="#edit-pane-stock" type="button" role="tab" aria-controls="edit-pane-stock" aria-selected="false">Stock</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="edit-tab-attributes" data-bs-toggle="pill" data-bs-target="#edit-pane-attributes" type="button" role="tab" aria-controls="edit-pane-attributes" aria-selected="false">Attributes</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="edit-tab-storefront" data-bs-toggle="pill" data-bs-target="#edit-pane-storefront" type="button" role="tab" aria-controls="edit-pane-storefront" aria-selected="false">Storefront</button>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="edit-pane-basic" role="tabpanel" aria-labelledby="edit-tab-basic">
+      <div class="product-modal-grid">
+        <div class="form-group">
+          {{ form.name.label_tag }}
+          {{ form.name }}
+        </div>
+        <div class="form-group">
+          {{ form.sku.label_tag }}
+          {{ form.sku }}
+        </div>
+        <div class="form-group span-2">
+          {{ form.alternate_skus.label_tag }}
+          {{ form.alternate_skus }}
+          {% if form.alternate_skus.help_text %}
+          <small class="form-text text-muted">{{ form.alternate_skus.help_text }}</small>
+          {% endif %}
+          {{ form.alternate_skus.errors }}
+        </div>
+        <div class="form-group span-2">
+          {{ form.description.label_tag }}
+          {{ form.description }}
+        </div>
+        <div class="form-group span-2">
+          {{ form.image.label_tag }}
+          {{ form.image }}
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="form-group">
-    {{ form.supplier.label_tag }}
-    <div class="input-group">
-      {{ form.supplier }}
-      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addSupplierModal" data-keep-parent-open="true" aria-label="Add supplier">+</button>
+
+    <div class="tab-pane fade" id="edit-pane-catalog" role="tabpanel" aria-labelledby="edit-tab-catalog">
+      <div class="product-modal-grid">
+        <div class="form-group">
+          {{ form.category.label_tag }}
+          {{ form.category }}
+        </div>
+        <div class="form-group">
+          {{ form.supplier.label_tag }}
+          {{ form.supplier }}
+        </div>
+        <div class="form-group">
+          {{ form.brand.label_tag }}
+          {{ form.brand }}
+        </div>
+        <div class="form-group">
+          {{ form.vehicle_model.label_tag }}
+          {{ form.vehicle_model }}
+        </div>
+        <div class="form-group">
+          {{ form.vin_number.label_tag }}
+          {{ form.vin_number }}
+        </div>
+        <div class="form-group">
+          {{ form.item_type.label_tag }}
+          {{ form.item_type }}
+        </div>
+        <div class="form-group">
+          {{ form.location.label_tag }}
+          {{ form.location }}
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="form-group">
-    {{ form.brand.label_tag }}
-    {{ form.brand }}
-  </div>
-  <div class="form-group">
-    {{ form.vehicle_model.label_tag }}
-    {{ form.vehicle_model }}
-  </div>
-  <div class="form-group">
-    {{ form.vin_number.label_tag }}
-    {{ form.vin_number }}
-  </div>
-  <div class="form-group">
-    {{ form.cost_price.label_tag }}
-    {{ form.cost_price }}
-  </div>
-  <div class="form-group">
-    {{ form.sale_price.label_tag }}
-    {{ form.sale_price }}
-  </div>
-  <div class="form-group">
-    {{ form.promotion_price.label_tag }}
-    {{ form.promotion_price }}
-  </div>
-  <div class="form-group">
-    {{ form.core_price.label_tag }}
-    {{ form.core_price }}
-  </div>
-  <div class="form-group">
-    {{ form.environmental_fee.label_tag }}
-    {{ form.environmental_fee }}
-  </div>
-  <div class="form-group">
-    {{ form.margin.label_tag }}
-    {{ form.margin }}
-  </div>
-  {% if stock_visible|default:true %}
-  <div class="form-group">
-    {{ form.quantity_in_stock.label_tag }}
-    {{ form.quantity_in_stock }}
-  </div>
-  <div class="form-group">
-    {{ form.reorder_level.label_tag }}
-    {{ form.reorder_level }}
-  </div>
-  {% else %}
-  <div class="form-group span-2">
-    <div class="text-muted small">Stock on hand is managed per store.</div>
-  </div>
-  {% endif %}
-  <div class="form-group">
-    {{ form.location.label_tag }}
-    <div class="input-group">
-      {{ form.location }}
-      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addLocationModal" data-keep-parent-open="true" aria-label="Add location">+</button>
+
+    <div class="tab-pane fade" id="edit-pane-pricing" role="tabpanel" aria-labelledby="edit-tab-pricing">
+      <div class="product-modal-grid">
+        <div class="form-group">
+          {{ form.cost_price.label_tag }}
+          {{ form.cost_price }}
+        </div>
+        <div class="form-group">
+          {{ form.sale_price.label_tag }}
+          {{ form.sale_price }}
+        </div>
+        <div class="form-group">
+          {{ form.promotion_price.label_tag }}
+          {{ form.promotion_price }}
+        </div>
+        <div class="form-group">
+          {{ form.core_price.label_tag }}
+          {{ form.core_price }}
+        </div>
+        <div class="form-group">
+          {{ form.environmental_fee.label_tag }}
+          {{ form.environmental_fee }}
+        </div>
+        <div class="form-group">
+          {{ form.margin.label_tag }}
+          {{ form.margin }}
+        </div>
+        <div class="form-group">
+          {{ form.warranty_expiry_date.label_tag }}
+          {{ form.warranty_expiry_date }}
+        </div>
+        <div class="form-group">
+          {{ form.warranty_length.label_tag }}
+          {{ form.warranty_length }}
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="form-group">
-    {{ form.warranty_expiry_date.label_tag }}
-    {{ form.warranty_expiry_date }}
-  </div>
-  <div class="form-group">
-    {{ form.warranty_length.label_tag }}
-    {{ form.warranty_length }}
-  </div>
-  <div class="form-group span-2">
-    {{ form.image.label_tag }}
-    {{ form.image }}
-  </div>
-  <div class="form-group span-2" data-attribute-fields="true" data-attribute-url="{% url 'accounts:get_attribute_fields' %}" data-product-id="{{ form.instance.id|default_if_none:'' }}">
-    {% include 'inventory/partials/_attribute_fields.html' with form=form %}
-  </div>
-  <div class="form-group span-2">
-    <div class="form-check storefront-toggle">
-      {{ form.is_published_to_store }}
-      <label class="form-check-label" for="{{ form.is_published_to_store.id_for_label }}">
-        {{ form.is_published_to_store.label }}
-      </label>
+
+    <div class="tab-pane fade" id="edit-pane-stock" role="tabpanel" aria-labelledby="edit-tab-stock">
+      <div class="product-modal-grid">
+        {% if stock_visible|default:true %}
+        <div class="form-group">
+          {{ form.quantity_in_stock.label_tag }}
+          {{ form.quantity_in_stock }}
+        </div>
+        <div class="form-group">
+          {{ form.reorder_level.label_tag }}
+          {{ form.reorder_level }}
+        </div>
+        {% else %}
+        <div class="form-group span-2">
+          <div class="text-muted small">Stock on hand is managed per store.</div>
+        </div>
+        {% endif %}
+      </div>
     </div>
-    {% if form.is_published_to_store.help_text %}
-    <small class="form-text text-muted">{{ form.is_published_to_store.help_text }}</small>
-    {% endif %}
-    {{ form.is_published_to_store.errors }}
-  </div>
-  <div class="form-group span-2">
-    <div class="form-check storefront-toggle">
-      {{ form.is_featured }}
-      <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
-        {{ form.is_featured.label }}
-      </label>
+
+    <div class="tab-pane fade" id="edit-pane-attributes" role="tabpanel" aria-labelledby="edit-tab-attributes">
+      <div class="product-modal-grid">
+        <div class="form-group span-2" data-attribute-fields="true" data-attribute-url="{% url 'accounts:get_attribute_fields' %}" data-product-id="{{ form.instance.id|default_if_none:'' }}">
+          {% include 'inventory/partials/_attribute_fields.html' with form=form %}
+        </div>
+      </div>
     </div>
-    {% if form.is_featured.help_text %}
-    <small class="form-text text-muted">{{ form.is_featured.help_text }}</small>
-    {% endif %}
-    {{ form.is_featured.errors }}
+
+    <div class="tab-pane fade" id="edit-pane-storefront" role="tabpanel" aria-labelledby="edit-tab-storefront">
+      <div class="product-modal-grid">
+        <div class="form-group span-2">
+          <div class="form-check storefront-toggle">
+            {{ form.is_published_to_store }}
+            <label class="form-check-label" for="{{ form.is_published_to_store.id_for_label }}">
+              {{ form.is_published_to_store.label }}
+            </label>
+          </div>
+          {% if form.is_published_to_store.help_text %}
+          <small class="form-text text-muted">{{ form.is_published_to_store.help_text }}</small>
+          {% endif %}
+          {{ form.is_published_to_store.errors }}
+        </div>
+        <div class="form-group span-2">
+          <div class="form-check storefront-toggle">
+            {{ form.is_featured }}
+            <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
+              {{ form.is_featured.label }}
+            </label>
+          </div>
+          {% if form.is_featured.help_text %}
+          <small class="form-text text-muted">{{ form.is_featured.help_text }}</small>
+          {% endif %}
+          {{ form.is_featured.errors }}
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
