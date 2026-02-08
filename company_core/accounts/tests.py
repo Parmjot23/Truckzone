@@ -551,3 +551,74 @@ class MaintenanceReminderCommandTests(TestCase):
         call_command("send_maintenance_reminders", days=7)
 
         self.assertEqual(len(mail.outbox), 0)
+
+
+class InventoryLookupAndReorderTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="parts-user", password="pass1234")
+        self.client.force_login(self.user)
+        self.supplier = Supplier.objects.create(user=self.user, name="Fleet Parts Supply")
+
+    def test_product_rejects_max_stock_below_reorder(self):
+        product = Product(
+            user=self.user,
+            name="Air Dryer Cartridge",
+            sku="ADC-100",
+            cost_price=Decimal("20.00"),
+            sale_price=Decimal("35.00"),
+            reorder_level=5,
+            max_stock_level=3,
+        )
+        with self.assertRaises(ValidationError) as exc:
+            product.full_clean()
+
+        self.assertIn(
+            "Max stock level must be greater than or equal to reorder level.",
+            exc.exception.messages,
+        )
+
+    def test_inventory_search_matches_barcode_and_oem(self):
+        product = Product.objects.create(
+            user=self.user,
+            name="Brake Drum",
+            sku="BD-200",
+            oem_part_number="OEM-7788",
+            barcode_value="0123456789012",
+            cost_price=Decimal("70.00"),
+            sale_price=Decimal("95.00"),
+        )
+
+        response = self.client.get(reverse("accounts:inventory_search"), {"q": "0123456789012"})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        ids = [item["id"] for item in payload.get("results", [])]
+        self.assertIn(product.id, ids)
+
+        response = self.client.get(reverse("accounts:inventory_search"), {"q": "OEM-7788"})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        ids = [item["id"] for item in payload.get("results", [])]
+        self.assertIn(product.id, ids)
+
+    def test_stock_orders_recommend_qty_to_max_stock(self):
+        Product.objects.create(
+            user=self.user,
+            name="Drive Belt",
+            sku="DB-500",
+            supplier=self.supplier,
+            cost_price=Decimal("12.00"),
+            sale_price=Decimal("20.00"),
+            quantity_in_stock=2,
+            reorder_level=5,
+            max_stock_level=12,
+        )
+
+        response = self.client.get(reverse("accounts:inventory_stock_orders"))
+        self.assertEqual(response.status_code, 200)
+        supplier_groups = response.context["supplier_groups"]
+        self.assertEqual(len(supplier_groups), 1)
+
+        first_item = supplier_groups[0]["products"][0]
+        self.assertEqual(first_item["order_qty"], 10)
+        self.assertEqual(first_item["max_stock_level"], 12)
+        self.assertIn("Max: 12", supplier_groups[0]["email_body"])

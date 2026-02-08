@@ -249,6 +249,7 @@ def annotate_products_with_stock(queryset, user):
         return queryset.annotate(
             stock_quantity=Value(0, output_field=IntegerField()),
             stock_reorder=Value(0, output_field=IntegerField()),
+            stock_max=Value(0, output_field=IntegerField()),
         )
 
     stock_qs = ProductStock.objects.filter(product_id=OuterRef("pk"), user_id=stock_user.id)
@@ -263,6 +264,11 @@ def annotate_products_with_stock(queryset, user):
             Value(0),
             output_field=IntegerField(),
         ),
+        stock_max=Coalesce(
+            Subquery(stock_qs.values("max_stock_level")[:1]),
+            Value(0),
+            output_field=IntegerField(),
+        ),
     )
 
 
@@ -273,10 +279,19 @@ def apply_stock_fields(products):
             product.quantity_in_stock = product.stock_quantity
         if hasattr(product, "stock_reorder"):
             product.reorder_level = product.stock_reorder
+        if hasattr(product, "stock_max"):
+            product.max_stock_level = product.stock_max
     return products
 
 
-def upsert_product_stock(product, user, *, quantity_in_stock=None, reorder_level=None):
+def upsert_product_stock(
+    product,
+    user,
+    *,
+    quantity_in_stock=None,
+    reorder_level=None,
+    max_stock_level=None,
+):
     """Create/update per-store stock values for a product."""
     stock_user = get_stock_owner(user)
     if not stock_user or not product:
@@ -287,6 +302,8 @@ def upsert_product_stock(product, user, *, quantity_in_stock=None, reorder_level
         defaults["quantity_in_stock"] = int(quantity_in_stock)
     if reorder_level is not None:
         defaults["reorder_level"] = int(reorder_level)
+    if max_stock_level is not None:
+        defaults["max_stock_level"] = int(max_stock_level)
 
     if not defaults:
         return None

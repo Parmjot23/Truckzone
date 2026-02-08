@@ -3367,6 +3367,10 @@ class ProductForm(forms.ModelForm):
             self.fields['is_featured'].widget.attrs.update({'class': 'form-check-input'})
         if 'sku' in self.fields:
             self.fields['sku'].required = False
+        if 'oem_part_number' in self.fields:
+            self.fields['oem_part_number'].required = False
+        if 'barcode_value' in self.fields:
+            self.fields['barcode_value'].required = False
         if 'margin' in self.fields:
             self.fields['margin'].required = False
         if 'sale_price' in self.fields:
@@ -3377,6 +3381,8 @@ class ProductForm(forms.ModelForm):
             self.fields['core_price'].required = False
         if 'environmental_fee' in self.fields:
             self.fields['environmental_fee'].required = False
+        if 'max_stock_level' in self.fields:
+            self.fields['max_stock_level'].required = False
         if 'alternate_skus' in self.fields:
             self.fields['alternate_skus'].required = False
             if self.instance and self.instance.pk:
@@ -3504,6 +3510,10 @@ class ProductForm(forms.ModelForm):
             main_key = main_sku.casefold()
             if any(alt.casefold() == main_key for alt in alternate_skus):
                 self.add_error('alternate_skus', 'Alternate SKUs cannot include the primary SKU.')
+        reorder_level = cleaned_data.get('reorder_level') or 0
+        max_stock_level = cleaned_data.get('max_stock_level') or 0
+        if max_stock_level and max_stock_level < reorder_level:
+            self.add_error('max_stock_level', 'Max stock level must be greater than or equal to reorder level.')
         return cleaned_data
 
     class Meta:
@@ -3512,8 +3522,11 @@ class ProductForm(forms.ModelForm):
         labels = {
             'item_type': 'Item Type',
             'sku': 'Product SKU (optional)',
+            'oem_part_number': 'OEM Part Number',
+            'barcode_value': 'Barcode',
             'name': 'Product Name',
             'description': 'Product Description',
+            'fitment_notes': 'Fitment Notes',
             'category': 'Category',
             'supplier': 'Supplier',
             'brand': 'Brand',
@@ -3527,6 +3540,7 @@ class ProductForm(forms.ModelForm):
             'environmental_fee': 'Environmental Fee',
             'quantity_in_stock': 'Quantity in Stock',
             'reorder_level': 'Reorder Level',
+            'max_stock_level': 'Max Stock Level',
             'image': 'Product Image',
             'is_published_to_store': 'Show on public storefront',
             'is_featured': 'Feature on storefront',
@@ -3542,8 +3556,11 @@ class ProductForm(forms.ModelForm):
         widgets = {
             'item_type': forms.Select(),
             'sku': forms.TextInput(attrs={'placeholder': 'Unique SKU identifier'}),
+            'oem_part_number': forms.TextInput(attrs={'placeholder': 'OEM number (optional)'}),
+            'barcode_value': forms.TextInput(attrs={'placeholder': 'UPC/EAN/Code128 (optional)'}),
             'name': forms.TextInput(attrs={'placeholder': 'Name of the product'}),
             'description': forms.Textarea(attrs={'placeholder': 'Brief description of the product'}),
+            'fitment_notes': forms.Textarea(attrs={'placeholder': 'Vehicle/axle/year fitment notes', 'rows': 2}),
             'cost_price': forms.NumberInput(attrs={'placeholder': 'Cost price of the product'}),
             'sale_price': forms.NumberInput(attrs={'placeholder': 'Selling price of the product'}),
             'margin': forms.NumberInput(attrs={'placeholder': 'Margin (sale price minus cost price)', 'step': 'any'}),
@@ -3552,6 +3569,7 @@ class ProductForm(forms.ModelForm):
             'environmental_fee': forms.NumberInput(attrs={'placeholder': 'Environmental fee (optional)', 'step': 'any'}),
             'quantity_in_stock': forms.NumberInput(attrs={'placeholder': 'Current stock quantity'}),
             'reorder_level': forms.NumberInput(attrs={'placeholder': 'Level at which to reorder stock'}),
+            'max_stock_level': forms.NumberInput(attrs={'placeholder': 'Target stock level after reorder'}),
             'warranty_expiry_date': forms.DateInput(attrs={'type': 'date'}),
             'warranty_length': forms.NumberInput(attrs={'placeholder': 'Warranty length in days'}),
         }
@@ -3575,6 +3593,20 @@ class ProductForm(forms.ModelForm):
             if qs.exists():
                 raise forms.ValidationError('You already have a product with this SKU.')
         return normalized
+
+    def clean_oem_part_number(self):
+        oem_value = self.cleaned_data.get('oem_part_number')
+        if oem_value is None:
+            return None
+        normalized = oem_value.strip()
+        return normalized or None
+
+    def clean_barcode_value(self):
+        barcode_value = self.cleaned_data.get('barcode_value')
+        if barcode_value is None:
+            return None
+        normalized = barcode_value.strip()
+        return normalized or None
 
     def clean_alternate_skus(self):
         alternate_skus = _normalize_alternate_skus(self.cleaned_data.get('alternate_skus'))
@@ -3694,12 +3726,18 @@ class ProductInlineForm(forms.ModelForm):
                 self.fields['location'].initial = self.instance.location
         if 'sku' in self.fields:
             self.fields['sku'].required = False
+        if 'oem_part_number' in self.fields:
+            self.fields['oem_part_number'].required = False
+        if 'barcode_value' in self.fields:
+            self.fields['barcode_value'].required = False
         if 'sale_price' in self.fields:
             self.fields['sale_price'].required = False
         if 'core_price' in self.fields:
             self.fields['core_price'].required = False
         if 'environmental_fee' in self.fields:
             self.fields['environmental_fee'].required = False
+        if 'max_stock_level' in self.fields:
+            self.fields['max_stock_level'].required = False
         if 'alternate_skus' in self.fields:
             self.fields['alternate_skus'].required = False
             if self.instance and self.instance.pk:
@@ -3720,7 +3758,10 @@ class ProductInlineForm(forms.ModelForm):
         fields = [
             'name',
             'sku',
+            'oem_part_number',
             'description',
+            'fitment_notes',
+            'barcode_value',
             'image',
             'category',
             'supplier',
@@ -3733,13 +3774,17 @@ class ProductInlineForm(forms.ModelForm):
             'environmental_fee',
             'quantity_in_stock',
             'reorder_level',
+            'max_stock_level',
             'item_type',
             'location',
         ]
         labels = {
             'name': 'Product Name',
             'sku': 'Product SKU',
+            'oem_part_number': 'OEM Part Number',
             'description': 'Product Description',
+            'fitment_notes': 'Fitment Notes',
+            'barcode_value': 'Barcode',
             'image': 'Product Image',
             'category': 'Category',
             'supplier': 'Supplier',
@@ -3752,6 +3797,7 @@ class ProductInlineForm(forms.ModelForm):
             'environmental_fee': 'Environmental Fee',
             'quantity_in_stock': 'Quantity in Stock',
             'reorder_level': 'Reorder Level',
+            'max_stock_level': 'Max Stock Level',
             'item_type': 'Item Type',
             'location': 'Location',
         }
@@ -3776,6 +3822,20 @@ class ProductInlineForm(forms.ModelForm):
                 raise forms.ValidationError('You already have a product with this SKU.')
         return normalized
 
+    def clean_oem_part_number(self):
+        oem_value = self.cleaned_data.get('oem_part_number')
+        if oem_value is None:
+            return None
+        normalized = oem_value.strip()
+        return normalized or None
+
+    def clean_barcode_value(self):
+        barcode_value = self.cleaned_data.get('barcode_value')
+        if barcode_value is None:
+            return None
+        normalized = barcode_value.strip()
+        return normalized or None
+
     def clean_alternate_skus(self):
         alternate_skus = _normalize_alternate_skus(self.cleaned_data.get('alternate_skus'))
         for sku in alternate_skus:
@@ -3795,6 +3855,10 @@ class ProductInlineForm(forms.ModelForm):
             main_key = main_sku.casefold()
             if any(alt.casefold() == main_key for alt in alternate_skus):
                 self.add_error('alternate_skus', 'Alternate SKUs cannot include the primary SKU.')
+        reorder_level = cleaned_data.get('reorder_level') or 0
+        max_stock_level = cleaned_data.get('max_stock_level') or 0
+        if max_stock_level and max_stock_level < reorder_level:
+            self.add_error('max_stock_level', 'Max stock level must be greater than or equal to reorder level.')
         return cleaned_data
 
 class QuickProductCreateForm(forms.ModelForm):

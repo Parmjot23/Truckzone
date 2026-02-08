@@ -35,6 +35,14 @@
           {{ form.sku.label_tag }}
           {{ form.sku }}
         </div>
+        <div class="form-group">
+          {{ form.oem_part_number.label_tag }}
+          {{ form.oem_part_number }}
+        </div>
+        <div class="form-group">
+          {{ form.barcode_value.label_tag }}
+          {{ form.barcode_value }}
+        </div>
         <div class="form-group span-2">
           {{ form.alternate_skus.label_tag }}
           {{ form.alternate_skus }}
@@ -46,6 +54,10 @@
         <div class="form-group span-2">
           {{ form.description.label_tag }}
           {{ form.description }}
+        </div>
+        <div class="form-group span-2">
+          {{ form.fitment_notes.label_tag }}
+          {{ form.fitment_notes }}
         </div>
         <div class="form-group span-2">
           {{ form.image.label_tag }}
@@ -134,6 +146,10 @@
         <div class="form-group">
           {{ form.reorder_level.label_tag }}
           {{ form.reorder_level }}
+        </div>
+        <div class="form-group">
+          {{ form.max_stock_level.label_tag }}
+          {{ form.max_stock_level }}
         </div>
         {% else %}
         <div class="form-group span-2">

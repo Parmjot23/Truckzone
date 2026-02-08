@@ -101,7 +101,7 @@
                     <label for="productSearchInput" class="form-label fw-semibold">Search products</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="search" class="form-control" id="productSearchInput" name="q" placeholder="Search name, SKU, category, supplier, or location" value="{{ search_query }}">
+                        <input type="search" class="form-control" id="productSearchInput" name="q" placeholder="Search name, SKU, OEM, barcode, fitment, category, supplier, or location" value="{{ search_query }}">
                     </div>
                     <p class="small text-muted mb-0 mt-2">Quickly find products and use bulk actions for selected rows.</p>
                 </div>
@@ -209,8 +209,11 @@
                         data-product-id="{{ product.id }}"
                         data-product-name="{{ product.name|default_if_none:''|escape }}"
                         data-product-sku="{{ product.sku|default_if_none:''|escape }}"
+                        data-product-oem="{{ product.oem_part_number|default_if_none:''|escape }}"
+                        data-product-barcode="{{ product.barcode_value|default_if_none:''|escape }}"
                         data-product-alternate-skus="{% for alt in product.alternate_skus.all %}{{ alt.sku|escape }}{% if not forloop.last %}, {% endif %}{% endfor %}"
                         data-product-description="{{ product.description|default_if_none:''|escape }}"
+                        data-product-fitment="{{ product.fitment_notes|default_if_none:''|escape }}"
                         data-product-category-id="{{ product.category_id|default_if_none:'' }}"
                         data-product-category-name="{{ product.category.name|default_if_none:''|escape }}"
                         data-product-supplier-id="{{ product.supplier_id|default_if_none:'' }}"
@@ -228,10 +231,12 @@
                         {% if product.user_id in stock_user_ids %}
                         data-product-quantity="{{ product.quantity_in_stock|default_if_none:'' }}"
                         data-product-reorder="{{ product.reorder_level|default_if_none:'' }}"
+                        data-product-max-stock="{{ product.max_stock_level|default_if_none:'' }}"
                         data-stock-visible="true"
                         {% else %}
                         data-product-quantity=""
                         data-product-reorder=""
+                        data-product-max-stock=""
                         data-stock-visible="false"
                         {% endif %}
                         data-product-item-type="{{ product.item_type|default_if_none:'inventory' }}"
@@ -251,10 +256,13 @@
                                 <div>
                                     <div class="product-name-display fw-semibold"></div>
                                     <div class="product-sku-display text-muted small"></div>
+                                    <div class="product-oem-display text-muted small"></div>
+                                    <div class="product-barcode-display text-muted small"></div>
                                     <div class="product-alt-sku-display text-muted small"></div>
                                 </div>
                             </div>
                             <div class="product-display product-description-display text-muted small"></div>
+                            <div class="product-display product-fitment-display text-muted small"></div>
                         </td>
                         <td>
                             <div class="product-display">
@@ -278,6 +286,7 @@
                             <div class="product-display">
                                 <div class="product-quantity-display fw-semibold"></div>
                                 <div class="product-reorder-display text-muted small"></div>
+                                <div class="product-max-stock-display text-muted small"></div>
                                 <span class="badge product-stock-status mt-1"></span>
                             </div>
                         </td>
@@ -380,9 +389,21 @@
                                 <label for="newProductAlternateSkus" class="form-label">Alternate SKUs</label>
                                 <input type="text" class="form-control" id="newProductAlternateSkus" placeholder="Comma-separated">
                             </div>
+                            <div class="col-lg-4">
+                                <label for="newProductOemPartNumber" class="form-label">OEM part number</label>
+                                <input type="text" class="form-control" id="newProductOemPartNumber" placeholder="Optional">
+                            </div>
+                            <div class="col-lg-4">
+                                <label for="newProductBarcode" class="form-label">Barcode</label>
+                                <input type="text" class="form-control" id="newProductBarcode" placeholder="UPC/EAN/Code128">
+                            </div>
                             <div class="col-12">
                                 <label for="newProductDescription" class="form-label">Description</label>
                                 <textarea class="form-control" id="newProductDescription" rows="3" placeholder="Short product details"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="newProductFitmentNotes" class="form-label">Fitment notes</label>
+                                <textarea class="form-control" id="newProductFitmentNotes" rows="2" placeholder="Year range, axle position, trim compatibility"></textarea>
                             </div>
                         </div>
                     </div>
@@ -592,6 +613,10 @@
                                 <label for="newProductReorder" class="form-label">Reorder level</label>
                                 <input type="number" class="form-control" id="newProductReorder" placeholder="e.g. 2" min="0" step="1">
                             </div>
+                            <div class="col-md-4">
+                                <label for="newProductMaxStock" class="form-label">Max stock level</label>
+                                <input type="number" class="form-control" id="newProductMaxStock" placeholder="e.g. 20" min="0" step="1">
+                            </div>
                         </div>
                     </div>
                     <div class="tab-pane fade" id="create-pane-media" role="tabpanel" aria-labelledby="create-tab-media">
@@ -703,6 +728,14 @@
                             </select>
                         </div>
                         <div class="col-md-4">
+                            <label for="bulkEditOemPartNumber" class="form-label">OEM part number</label>
+                            <input type="text" class="form-control form-control-sm" id="bulkEditOemPartNumber" placeholder="Leave blank to keep">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="bulkEditBarcode" class="form-label">Barcode</label>
+                            <input type="text" class="form-control form-control-sm" id="bulkEditBarcode" placeholder="Leave blank to keep">
+                        </div>
+                        <div class="col-md-4">
                             <label for="bulkEditCostPrice" class="form-label">Cost price</label>
                             <input type="number" class="form-control form-control-sm" id="bulkEditCostPrice" min="0" step="0.01" placeholder="Leave blank to keep">
                         </div>
@@ -718,6 +751,10 @@
                             <label for="bulkEditReorder" class="form-label">Reorder level</label>
                             <input type="number" class="form-control form-control-sm" id="bulkEditReorder" min="0" step="1" placeholder="Leave blank to keep">
                         </div>
+                        <div class="col-md-4">
+                            <label for="bulkEditMaxStock" class="form-label">Max stock level</label>
+                            <input type="number" class="form-control form-control-sm" id="bulkEditMaxStock" min="0" step="1" placeholder="Leave blank to keep">
+                        </div>
                         <div class="col-md-8">
                             <label for="bulkEditImage" class="form-label">Image</label>
                             <input type="file" class="form-control form-control-sm" id="bulkEditImage" accept="image/*">
@@ -725,6 +762,10 @@
                         <div class="col-12">
                             <label for="bulkEditDescription" class="form-label">Description</label>
                             <textarea class="form-control form-control-sm" id="bulkEditDescription" rows="3" placeholder="Leave blank to keep"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label for="bulkEditFitmentNotes" class="form-label">Fitment notes</label>
+                            <textarea class="form-control form-control-sm" id="bulkEditFitmentNotes" rows="2" placeholder="Leave blank to keep"></textarea>
                         </div>
                     </div>
                 </form>
@@ -743,8 +784,11 @@
         data-product-id=""
         data-product-name=""
         data-product-sku=""
+        data-product-oem=""
+        data-product-barcode=""
         data-product-alternate-skus=""
         data-product-description=""
+        data-product-fitment=""
         data-product-category-id=""
         data-product-category-name=""
         data-product-supplier-id=""
@@ -761,6 +805,7 @@
         data-product-environmental-fee=""
         data-product-quantity=""
         data-product-reorder=""
+        data-product-max-stock=""
         data-stock-visible="true"
         data-product-item-type="inventory"
         data-product-location=""
@@ -779,10 +824,13 @@
                 <div>
                     <div class="product-name-display fw-semibold"></div>
                     <div class="product-sku-display text-muted small"></div>
+                    <div class="product-oem-display text-muted small"></div>
+                    <div class="product-barcode-display text-muted small"></div>
                     <div class="product-alt-sku-display text-muted small"></div>
                 </div>
             </div>
             <div class="product-display product-description-display text-muted small"></div>
+            <div class="product-display product-fitment-display text-muted small"></div>
         </td>
         <td>
             <div class="product-display">
@@ -806,6 +854,7 @@
             <div class="product-display">
                 <div class="product-quantity-display fw-semibold"></div>
                 <div class="product-reorder-display text-muted small"></div>
+                <div class="product-max-stock-display text-muted small"></div>
                 <span class="badge product-stock-status mt-1"></span>
             </div>
         </td>
@@ -2921,8 +2970,11 @@
             id: valueOrEmpty(raw.id),
             name: valueOrEmpty(raw.name),
             sku: valueOrEmpty(raw.sku),
+            oem_part_number: valueOrEmpty(raw.oem_part_number || raw.oem_part || raw.oem),
+            barcode_value: valueOrEmpty(raw.barcode_value || raw.barcode),
             alternate_skus: alternateText,
             description: valueOrEmpty(raw.description),
+            fitment_notes: valueOrEmpty(raw.fitment_notes || raw.fitment),
             category_id: valueOrEmpty(raw.category_id || category.id),
             category_name: valueOrEmpty(raw.category_name || category.name),
             supplier_id: valueOrEmpty(raw.supplier_id || supplier.id),
@@ -2939,6 +2991,7 @@
             environmental_fee: valueOrEmpty(raw.environmental_fee),
             quantity_in_stock: valueOrEmpty(raw.quantity_in_stock),
             reorder_level: valueOrEmpty(raw.reorder_level),
+            max_stock_level: valueOrEmpty(raw.max_stock_level || raw.max_stock),
             stock_visible: normalizeStockVisibility(raw.stock_visible, true),
             item_type: valueOrEmpty(raw.item_type) || 'inventory',
             image_url: valueOrEmpty(raw.image_url || raw.imageUrl),
@@ -2951,8 +3004,11 @@
             id: row.dataset.productId,
             name: row.dataset.productName,
             sku: row.dataset.productSku,
+            oem_part_number: row.dataset.productOem,
+            barcode_value: row.dataset.productBarcode,
             alternate_skus: row.dataset.productAlternateSkus,
             description: row.dataset.productDescription,
+            fitment_notes: row.dataset.productFitment,
             category_id: row.dataset.productCategoryId,
             category_name: row.dataset.productCategoryName,
             supplier_id: row.dataset.productSupplierId,
@@ -2969,6 +3025,7 @@
             environmental_fee: row.dataset.productEnvironmentalFee,
             quantity_in_stock: row.dataset.productQuantity,
             reorder_level: row.dataset.productReorder,
+            max_stock_level: row.dataset.productMaxStock,
             stock_visible: row.dataset.stockVisible,
             item_type: row.dataset.productItemType,
             image_url: row.dataset.productImageUrl,
@@ -2984,8 +3041,11 @@
         row.dataset.productId = product.id || '';
         row.dataset.productName = product.name || '';
         row.dataset.productSku = product.sku || '';
+        row.dataset.productOem = product.oem_part_number || '';
+        row.dataset.productBarcode = product.barcode_value || '';
         row.dataset.productAlternateSkus = product.alternate_skus || '';
         row.dataset.productDescription = product.description || '';
+        row.dataset.productFitment = product.fitment_notes || '';
         row.dataset.productCategoryId = product.category_id || '';
         row.dataset.productCategoryName = product.category_name || '';
         row.dataset.productSupplierId = product.supplier_id || '';
@@ -3003,6 +3063,7 @@
         row.dataset.productEnvironmentalFee = product.environmental_fee || '';
         row.dataset.productQuantity = stockVisible ? (product.quantity_in_stock || '0') : '';
         row.dataset.productReorder = stockVisible ? (product.reorder_level || '0') : '';
+        row.dataset.productMaxStock = stockVisible ? (product.max_stock_level || '0') : '';
         row.dataset.stockVisible = stockVisible ? 'true' : 'false';
         row.dataset.productItemType = product.item_type || 'inventory';
         row.dataset.productImageUrl = product.image_url || '';
@@ -3010,8 +3071,11 @@
 
         const nameDisplay = row.querySelector('.product-name-display');
         const skuDisplay = row.querySelector('.product-sku-display');
+        const oemDisplay = row.querySelector('.product-oem-display');
+        const barcodeDisplay = row.querySelector('.product-barcode-display');
         const altSkuDisplay = row.querySelector('.product-alt-sku-display');
         const descriptionDisplay = row.querySelector('.product-description-display');
+        const fitmentDisplay = row.querySelector('.product-fitment-display');
         const categoryDisplay = row.querySelector('.product-category-display');
         const supplierDisplay = row.querySelector('.product-supplier-display');
         const brandDisplay = row.querySelector('.product-brand-display');
@@ -3024,6 +3088,7 @@
         const marginDisplay = row.querySelector('.product-margin-display');
         const quantityDisplay = row.querySelector('.product-quantity-display');
         const reorderDisplay = row.querySelector('.product-reorder-display');
+        const maxStockDisplay = row.querySelector('.product-max-stock-display');
         const stockStatusBadge = row.querySelector('.product-stock-status');
         const itemTypeDisplay = row.querySelector('.product-item-type-display');
         const locationDisplay = row.querySelector('.product-location-display');
@@ -3036,6 +3101,12 @@
         if (skuDisplay) {
             skuDisplay.textContent = product.sku ? 'SKU: ' + product.sku : '';
         }
+        if (oemDisplay) {
+            oemDisplay.textContent = product.oem_part_number ? 'OEM: ' + product.oem_part_number : '';
+        }
+        if (barcodeDisplay) {
+            barcodeDisplay.textContent = product.barcode_value ? 'Barcode: ' + product.barcode_value : '';
+        }
         if (altSkuDisplay) {
             altSkuDisplay.textContent = product.alternate_skus
                 ? 'Alt: ' + product.alternate_skus
@@ -3043,6 +3114,9 @@
         }
         if (descriptionDisplay) {
             descriptionDisplay.textContent = product.description || 'No description';
+        }
+        if (fitmentDisplay) {
+            fitmentDisplay.textContent = product.fitment_notes ? 'Fitment: ' + product.fitment_notes : '';
         }
         if (categoryDisplay) {
             categoryDisplay.textContent = product.category_name || 'Uncategorized';
@@ -3095,8 +3169,13 @@
         }
         if (reorderDisplay) {
             reorderDisplay.textContent = stockVisible
-                ? 'Reorder: ' + (product.reorder_level || '0')
-                : 'Reorder: --';
+                ? 'Min: ' + (product.reorder_level || '0')
+                : 'Min: --';
+        }
+        if (maxStockDisplay) {
+            maxStockDisplay.textContent = stockVisible
+                ? 'Max: ' + (product.max_stock_level || '0')
+                : 'Max: --';
         }
         row.classList.remove('product-row-stock-warning', 'product-row-stock-out');
         if (stockStatusBadge) {
@@ -3149,8 +3228,11 @@
 
         const nameInput = row.querySelector('.product-name-input');
         const skuInput = row.querySelector('.product-sku-input');
+        const oemInput = row.querySelector('.product-oem-input');
+        const barcodeInput = row.querySelector('.product-barcode-input');
         const alternateSkuInput = row.querySelector('.product-alternate-skus-input');
         const descriptionInput = row.querySelector('.product-description-input');
+        const fitmentInput = row.querySelector('.product-fitment-input');
         const categoryInput = row.querySelector('.product-category-input');
         const supplierInput = row.querySelector('.product-supplier-input');
         const brandInput = row.querySelector('.product-brand-input');
@@ -3162,6 +3244,7 @@
         const envInput = row.querySelector('.product-env-fee-input');
         const quantityInput = row.querySelector('.product-quantity-input');
         const reorderInput = row.querySelector('.product-reorder-input');
+        const maxStockInput = row.querySelector('.product-max-stock-input');
         const itemTypeInput = row.querySelector('.product-item-type-input');
         const locationInput = row.querySelector('.product-location-input');
         const imageInput = row.querySelector('.product-image-input');
@@ -3173,11 +3256,20 @@
         if (skuInput) {
             skuInput.value = product.sku || '';
         }
+        if (oemInput) {
+            oemInput.value = product.oem_part_number || '';
+        }
+        if (barcodeInput) {
+            barcodeInput.value = product.barcode_value || '';
+        }
         if (alternateSkuInput) {
             alternateSkuInput.value = product.alternate_skus || '';
         }
         if (descriptionInput) {
             descriptionInput.value = product.description || '';
+        }
+        if (fitmentInput) {
+            fitmentInput.value = product.fitment_notes || '';
         }
         if (categoryInput) {
             categoryInput.value = product.category_id || '';
@@ -3214,6 +3306,10 @@
             reorderInput.value = stockVisible ? (product.reorder_level || '0') : '';
             reorderInput.disabled = !stockVisible;
         }
+        if (maxStockInput) {
+            maxStockInput.value = stockVisible ? (product.max_stock_level || '0') : '';
+            maxStockInput.disabled = !stockVisible;
+        }
         if (itemTypeInput) {
             itemTypeInput.value = product.item_type || 'inventory';
         }
@@ -3236,8 +3332,11 @@
         const searchText = [
             product.name,
             product.sku,
+            product.oem_part_number,
+            product.barcode_value,
             product.alternate_skus,
             product.description,
+            product.fitment_notes,
             product.category_name,
             product.supplier_name,
             product.brand_name,
@@ -3565,11 +3664,26 @@
         if (locationSelect && locationSelect.value !== '__keep__') {
             hasUpdates = appendFormValue(formData, 'location', locationSelect.value) || hasUpdates;
         }
+        const oemInput = document.getElementById('bulkEditOemPartNumber');
+        const oemValue = oemInput ? oemInput.value.trim() : '';
+        if (oemValue !== '') {
+            hasUpdates = appendFormValue(formData, 'oem_part_number', oemValue) || hasUpdates;
+        }
+        const barcodeInput = document.getElementById('bulkEditBarcode');
+        const barcodeValue = barcodeInput ? barcodeInput.value.trim() : '';
+        if (barcodeValue !== '') {
+            hasUpdates = appendFormValue(formData, 'barcode_value', barcodeValue) || hasUpdates;
+        }
 
         const descriptionInput = document.getElementById('bulkEditDescription');
         const descriptionValue = descriptionInput ? descriptionInput.value.trim() : '';
         if (descriptionValue !== '') {
             hasUpdates = appendFormValue(formData, 'description', descriptionValue) || hasUpdates;
+        }
+        const fitmentInput = document.getElementById('bulkEditFitmentNotes');
+        const fitmentValue = fitmentInput ? fitmentInput.value.trim() : '';
+        if (fitmentValue !== '') {
+            hasUpdates = appendFormValue(formData, 'fitment_notes', fitmentValue) || hasUpdates;
         }
 
         const costInput = document.getElementById('bulkEditCostPrice');
@@ -3594,6 +3708,11 @@
         const reorderValue = reorderInput ? reorderInput.value.trim() : '';
         if (reorderValue !== '') {
             hasUpdates = appendFormValue(formData, 'reorder_level', reorderValue) || hasUpdates;
+        }
+        const maxStockInput = document.getElementById('bulkEditMaxStock');
+        const maxStockValue = maxStockInput ? maxStockInput.value.trim() : '';
+        if (maxStockValue !== '') {
+            hasUpdates = appendFormValue(formData, 'max_stock_level', maxStockValue) || hasUpdates;
         }
 
         const imageInput = document.getElementById('bulkEditImage');
@@ -3735,8 +3854,11 @@
             id: row.dataset.productId || null,
             name: (row.querySelector('.product-name-input')?.value || '').trim(),
             sku: (row.querySelector('.product-sku-input')?.value || '').trim(),
+            oem_part_number: (row.querySelector('.product-oem-input')?.value || row.dataset.productOem || '').trim(),
+            barcode_value: (row.querySelector('.product-barcode-input')?.value || row.dataset.productBarcode || '').trim(),
             alternate_skus: (row.querySelector('.product-alternate-skus-input')?.value || '').trim(),
             description: (row.querySelector('.product-description-input')?.value || '').trim(),
+            fitment_notes: (row.querySelector('.product-fitment-input')?.value || row.dataset.productFitment || '').trim(),
             category_id: row.querySelector('.product-category-input')?.value || '',
             supplier_id: row.querySelector('.product-supplier-input')?.value || '',
             brand_id: row.querySelector('.product-brand-input')?.value || '',
@@ -3748,12 +3870,14 @@
             environmental_fee: (row.querySelector('.product-env-fee-input')?.value || '').trim(),
             quantity_in_stock: (row.querySelector('.product-quantity-input')?.value || '').trim(),
             reorder_level: (row.querySelector('.product-reorder-input')?.value || '').trim(),
+            max_stock_level: (row.querySelector('.product-max-stock-input')?.value || '').trim(),
             item_type: row.querySelector('.product-item-type-input')?.value || 'inventory',
             location: row.querySelector('.product-location-input')?.value || '',
         };
         if (!stockVisible) {
             payload.quantity_in_stock = null;
             payload.reorder_level = null;
+            payload.max_stock_level = null;
         }
         return payload;
     }
@@ -3789,6 +3913,7 @@
     }
 
     function validatePayload(payload, statusTarget, stockVisible) {
+        const stockChecksEnabled = stockVisible !== false;
         if (!payload.name) {
             showStatus(statusTarget, 'Product name is required.', 'error');
             return false;
@@ -3823,17 +3948,29 @@
                 return false;
             }
         }
-        if (stockVisible && payload.quantity_in_stock) {
+        if (stockChecksEnabled && payload.quantity_in_stock) {
             const quantityValue = Number(payload.quantity_in_stock);
             if (!Number.isInteger(quantityValue) || quantityValue < 0) {
                 showStatus(statusTarget, 'On hand must be a non-negative whole number.', 'error');
                 return false;
             }
         }
-        if (stockVisible && payload.reorder_level) {
+        if (stockChecksEnabled && payload.reorder_level) {
             const reorderValue = Number(payload.reorder_level);
             if (!Number.isInteger(reorderValue) || reorderValue < 0) {
                 showStatus(statusTarget, 'Reorder level must be a non-negative whole number.', 'error');
+                return false;
+            }
+        }
+        if (stockChecksEnabled && payload.max_stock_level) {
+            const maxStockValue = Number(payload.max_stock_level);
+            if (!Number.isInteger(maxStockValue) || maxStockValue < 0) {
+                showStatus(statusTarget, 'Max stock level must be a non-negative whole number.', 'error');
+                return false;
+            }
+            const reorderValue = Number(payload.reorder_level || 0);
+            if (maxStockValue > 0 && reorderValue > maxStockValue) {
+                showStatus(statusTarget, 'Max stock level must be greater than or equal to reorder level.', 'error');
                 return false;
             }
         }
@@ -3897,7 +4034,10 @@
         nameInput.value = copyName ? copyName + ' (Copy)' : 'Copied product';
         const fieldMap = {
             newProductSku: product.sku || '',
+            newProductOemPartNumber: product.oem_part_number || '',
+            newProductBarcode: product.barcode_value || '',
             newProductDescription: product.description || '',
+            newProductFitmentNotes: product.fitment_notes || '',
             newProductAlternateSkus: product.alternate_skus || '',
             newProductCategory: product.category_id || '',
             newProductSupplier: product.supplier_id || '',
@@ -3910,6 +4050,7 @@
             newProductEnvironmentalFee: product.environmental_fee || '',
             newProductQuantity: product.quantity_in_stock || '',
             newProductReorder: product.reorder_level || '',
+            newProductMaxStock: product.max_stock_level || '',
             newProductItemType: product.item_type || 'inventory',
             newProductLocation: product.location || '',
         };
@@ -3992,7 +4133,10 @@
     function handleNewProduct() {
         const nameInput = document.getElementById('newProductName');
         const skuInput = document.getElementById('newProductSku');
+        const oemInput = document.getElementById('newProductOemPartNumber');
+        const barcodeInput = document.getElementById('newProductBarcode');
         const descriptionInput = document.getElementById('newProductDescription');
+        const fitmentInput = document.getElementById('newProductFitmentNotes');
         const alternateSkusInput = document.getElementById('newProductAlternateSkus');
         const categoryInput = document.getElementById('newProductCategory');
         const supplierInput = document.getElementById('newProductSupplier');
@@ -4005,6 +4149,7 @@
         const envInput = document.getElementById('newProductEnvironmentalFee');
         const quantityInput = document.getElementById('newProductQuantity');
         const reorderInput = document.getElementById('newProductReorder');
+        const maxStockInput = document.getElementById('newProductMaxStock');
         const itemTypeInput = document.getElementById('newProductItemType');
         const locationInput = document.getElementById('newProductLocation');
         const imageInput = document.getElementById('newProductImage');
@@ -4016,8 +4161,11 @@
         const payload = {
             name: (nameInput.value || '').trim(),
             sku: (skuInput?.value || '').trim(),
+            oem_part_number: (oemInput?.value || '').trim(),
+            barcode_value: (barcodeInput?.value || '').trim(),
             alternate_skus: (alternateSkusInput?.value || '').trim(),
             description: (descriptionInput?.value || '').trim(),
+            fitment_notes: (fitmentInput?.value || '').trim(),
             category_id: categoryInput?.value || '',
             supplier_id: supplierInput?.value || '',
             brand_id: brandInput?.value || '',
@@ -4029,6 +4177,7 @@
             environmental_fee: (envInput?.value || '').trim(),
             quantity_in_stock: (quantityInput?.value || '').trim(),
             reorder_level: (reorderInput?.value || '').trim(),
+            max_stock_level: (maxStockInput?.value || '').trim(),
             item_type: itemTypeInput?.value || 'inventory',
             location: locationInput?.value || '',
         };
@@ -4072,8 +4221,17 @@
                 if (skuInput) {
                     skuInput.value = '';
                 }
+                if (oemInput) {
+                    oemInput.value = '';
+                }
+                if (barcodeInput) {
+                    barcodeInput.value = '';
+                }
                 if (descriptionInput) {
                     descriptionInput.value = '';
+                }
+                if (fitmentInput) {
+                    fitmentInput.value = '';
                 }
                 if (alternateSkusInput) {
                     alternateSkusInput.value = '';
@@ -4111,6 +4269,9 @@
                 }
                 if (reorderInput) {
                     reorderInput.value = '';
+                }
+                if (maxStockInput) {
+                    maxStockInput.value = '';
                 }
                 if (itemTypeInput) {
                     itemTypeInput.value = 'inventory';
@@ -4709,7 +4870,10 @@
         [
             'newProductName',
             'newProductSku',
+            'newProductOemPartNumber',
+            'newProductBarcode',
             'newProductDescription',
+            'newProductFitmentNotes',
             'newProductAlternateSkus',
             'newProductCategory',
             'newProductSupplier',
@@ -4722,6 +4886,7 @@
             'newProductEnvironmentalFee',
             'newProductQuantity',
             'newProductReorder',
+            'newProductMaxStock',
             'newProductItemType',
             'newProductLocation',
         ].forEach(function (id) {

@@ -70,8 +70,12 @@ from .excel_formatting import apply_template_styling
 
 PRODUCT_TEMPLATE_HEADERS = [
     "SKU",
+    "OEM Part Number",
+    "Barcode",
+    "Alternate SKUs",
     "Name",
     "Description",
+    "Fitment Notes",
     "Category",
     "Supplier",
     "Brand",
@@ -84,12 +88,21 @@ PRODUCT_TEMPLATE_HEADERS = [
     "Margin",
     "Quantity",
     "Reorder Level",
+    "Max Stock Level",
     "Location",
     "Warranty Expiry Date",
     "Warranty Length (Days)",
     "Show on Storefront",
     "Featured",
 ]
+
+OPTIONAL_PRODUCT_TEMPLATE_HEADERS = {
+    "OEM Part Number",
+    "Barcode",
+    "Alternate SKUs",
+    "Fitment Notes",
+    "Max Stock Level",
+}
 
 
 SUPPLIER_TEMPLATE_HEADERS = [
@@ -238,6 +251,28 @@ def _sync_alternate_skus(product, sku_list):
             product=product,
             sku=sku,
         )
+
+
+def _parse_alternate_sku_input(value):
+    if value in (None, ""):
+        return []
+    if isinstance(value, (list, tuple)):
+        raw_values = value
+    else:
+        raw_values = re.split(r"[\n,;]+", str(value))
+
+    parsed = []
+    seen = set()
+    for raw in raw_values:
+        normalized = (str(raw) if raw is not None else "").strip()
+        if not normalized:
+            continue
+        key = normalized.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        parsed.append(normalized)
+    return parsed
 
 
 def _sync_product_attributes_from_payload(product, user, payload):
@@ -588,7 +623,10 @@ def inventory_transactions_view(request):
         transactions = transactions.filter(
             Q(product__name__icontains=query)
             | Q(product__sku__icontains=query)
+            | Q(product__oem_part_number__icontains=query)
+            | Q(product__barcode_value__icontains=query)
             | Q(product__alternate_skus__sku__icontains=query)
+            | Q(product__fitment_notes__icontains=query)
             | Q(remarks__icontains=query)
             | Q(product__category__name__icontains=query)
             | Q(product__supplier__name__icontains=query)
@@ -623,8 +661,11 @@ def inventory_products_view(request):
         products_qs = products_qs.filter(
             Q(name__icontains=search_query)
             | Q(sku__icontains=search_query)
+            | Q(oem_part_number__icontains=search_query)
+            | Q(barcode_value__icontains=search_query)
             | Q(alternate_skus__sku__icontains=search_query)
             | Q(description__icontains=search_query)
+            | Q(fitment_notes__icontains=search_query)
             | Q(category__name__icontains=search_query)
             | Q(supplier__name__icontains=search_query)
             | Q(brand__name__icontains=search_query)
@@ -982,6 +1023,7 @@ def get_product_form(request):
             stock_record = ProductStock.objects.filter(product=product, user=stock_owner).first()
             form.initial["quantity_in_stock"] = stock_record.quantity_in_stock if stock_record else 0
             form.initial["reorder_level"] = stock_record.reorder_level if stock_record else 0
+            form.initial["max_stock_level"] = stock_record.max_stock_level if stock_record else 0
         template_name = "inventory/partials/_product_form.html"
     context["form"] = form
     html = render_to_string(template_name, context, request=request)
@@ -1863,23 +1905,29 @@ def _serialize_product(product, *, stock_user_ids=None, stock_owner=None):
     stock_visible = True
     quantity_in_stock = product.quantity_in_stock
     reorder_level = product.reorder_level
+    max_stock_level = product.max_stock_level
     if stock_owner:
         stock_record = ProductStock.objects.filter(product=product, user=stock_owner).first()
         quantity_in_stock = stock_record.quantity_in_stock if stock_record else 0
         reorder_level = stock_record.reorder_level if stock_record else 0
+        max_stock_level = stock_record.max_stock_level if stock_record else 0
     elif stock_user_ids is not None:
         stock_visible = product.user_id in stock_user_ids
         if not stock_visible:
             quantity_in_stock = ""
             reorder_level = ""
+            max_stock_level = ""
     return {
         "id": product.pk,
         "name": product.name,
         "sku": product.sku or "",
+        "oem_part_number": product.oem_part_number or "",
+        "barcode_value": product.barcode_value or "",
         "alternate_skus": list(
             product.alternate_skus.order_by("kind", "sku").values_list("sku", flat=True)
         ),
         "description": product.description or "",
+        "fitment_notes": product.fitment_notes or "",
         "category": {
             "id": product.category_id,
             "name": product.category.name if product.category else "",
@@ -1908,6 +1956,7 @@ def _serialize_product(product, *, stock_user_ids=None, stock_owner=None):
         ),
         "quantity_in_stock": quantity_in_stock,
         "reorder_level": reorder_level,
+        "max_stock_level": max_stock_level,
         "stock_visible": stock_visible,
         "item_type": product.item_type,
         "location": product.location or "",
@@ -1959,6 +2008,7 @@ def save_product_inline(request):
     stock_owner = get_stock_owner(request.user)
     original_quantity = product_instance.quantity_in_stock if product_instance else None
     original_reorder = product_instance.reorder_level if product_instance else None
+    original_max_stock = product_instance.max_stock_level if product_instance else None
 
     item_type = (payload.get("item_type") or "inventory").strip()
     item_type_choices = dict(Product._meta.get_field("item_type").choices)
@@ -1967,11 +2017,15 @@ def save_product_inline(request):
 
     quantity_raw = payload.get("quantity_in_stock")
     reorder_raw = payload.get("reorder_level")
+    max_stock_raw = payload.get("max_stock_level")
     form_data = {
         "name": _normalize(payload.get("name")),
         "sku": _normalize(payload.get("sku")),
+        "oem_part_number": _normalize(payload.get("oem_part_number")),
+        "barcode_value": _normalize(payload.get("barcode_value")),
         "alternate_skus": payload.get("alternate_skus", ""),
         "description": _normalize(payload.get("description")),
+        "fitment_notes": _normalize(payload.get("fitment_notes")),
         "category": _normalize(payload.get("category_id")),
         "supplier": _normalize(payload.get("supplier_id")),
         "brand": _normalize(payload.get("brand_id", payload.get("brand"))),
@@ -1983,6 +2037,7 @@ def save_product_inline(request):
         "environmental_fee": _normalize(payload.get("environmental_fee")),
         "quantity_in_stock": _normalize_quantity(quantity_raw),
         "reorder_level": _normalize_quantity(reorder_raw),
+        "max_stock_level": _normalize_quantity(max_stock_raw),
         "item_type": item_type,
         "location": _normalize(payload.get("location")),
     }
@@ -2002,19 +2057,23 @@ def save_product_inline(request):
     if product_instance and stock_owner and product_instance.user_id != stock_owner.id:
         product.quantity_in_stock = original_quantity or 0
         product.reorder_level = original_reorder or 0
+        product.max_stock_level = original_max_stock or 0
     product.save()
     _sync_alternate_skus(product, form.cleaned_data.get("alternate_skus"))
 
     stock_quantity = form.cleaned_data.get("quantity_in_stock") or 0
     stock_reorder = form.cleaned_data.get("reorder_level") or 0
+    stock_max = form.cleaned_data.get("max_stock_level") or 0
     if form.cleaned_data.get("item_type") != "inventory":
         stock_quantity = 0
         stock_reorder = 0
+        stock_max = 0
     upsert_product_stock(
         product,
         request.user,
         quantity_in_stock=stock_quantity,
         reorder_level=stock_reorder,
+        max_stock_level=stock_max,
     )
     _sync_product_attributes_from_payload(product, request.user, payload)
 
@@ -2065,13 +2124,17 @@ def bulk_update_products(request):
         "vin_number_id": "vin_number",
         "item_type": "item_type",
         "location": "location",
+        "oem_part_number": "oem_part_number",
+        "barcode_value": "barcode_value",
         "description": "description",
+        "fitment_notes": "fitment_notes",
         "cost_price": "cost_price",
         "sale_price": "sale_price",
         "core_price": "core_price",
         "environmental_fee": "environmental_fee",
         "quantity_in_stock": "quantity_in_stock",
         "reorder_level": "reorder_level",
+        "max_stock_level": "max_stock_level",
     }
 
     updates = {}
@@ -2097,7 +2160,10 @@ def bulk_update_products(request):
         return {
             "name": product.name or "",
             "sku": product.sku or "",
+            "oem_part_number": product.oem_part_number or "",
             "description": product.description or "",
+            "fitment_notes": product.fitment_notes or "",
+            "barcode_value": product.barcode_value or "",
             "category": product.category_id or "",
             "supplier": product.supplier_id or "",
             "brand": product.brand_id or "",
@@ -2113,6 +2179,9 @@ def bulk_update_products(request):
                 str(product.quantity_in_stock) if product.quantity_in_stock is not None else "0"
             ),
             "reorder_level": str(product.reorder_level) if product.reorder_level is not None else "0",
+            "max_stock_level": (
+                str(product.max_stock_level) if product.max_stock_level is not None else "0"
+            ),
             "item_type": product.item_type or "inventory",
             "location": product.location or "",
         }
@@ -2144,6 +2213,7 @@ def bulk_update_products(request):
                 if stock_owner and product.user_id != stock_owner.id:
                     updated_product.quantity_in_stock = product.quantity_in_stock or 0
                     updated_product.reorder_level = product.reorder_level or 0
+                    updated_product.max_stock_level = product.max_stock_level or 0
                 updated_product.save()
                 updated_products.append(updated_product)
                 stock_quantity = (
@@ -2156,16 +2226,24 @@ def bulk_update_products(request):
                     if "reorder_level" in updates
                     else None
                 )
+                stock_max = (
+                    form.cleaned_data.get("max_stock_level")
+                    if "max_stock_level" in updates
+                    else None
+                )
                 if form.cleaned_data.get("item_type") != "inventory":
                     if "quantity_in_stock" in updates:
                         stock_quantity = 0
                     if "reorder_level" in updates:
                         stock_reorder = 0
+                    if "max_stock_level" in updates:
+                        stock_max = 0
                 upsert_product_stock(
                     updated_product,
                     request.user,
                     quantity_in_stock=stock_quantity,
                     reorder_level=stock_reorder,
+                    max_stock_level=stock_max,
                 )
     except ValidationError:
         error_payload = errors or {"__all__": ["Could not update selected products."]}
@@ -2198,14 +2276,17 @@ def add_product(request):
             _sync_alternate_skus(product, form.cleaned_data.get("alternate_skus"))
             stock_quantity = form.cleaned_data.get("quantity_in_stock") or 0
             stock_reorder = form.cleaned_data.get("reorder_level") or 0
+            stock_max = form.cleaned_data.get("max_stock_level") or 0
             if form.cleaned_data.get("item_type") != "inventory":
                 stock_quantity = 0
                 stock_reorder = 0
+                stock_max = 0
             upsert_product_stock(
                 product,
                 request.user,
                 quantity_in_stock=stock_quantity,
                 reorder_level=stock_reorder,
+                max_stock_level=stock_max,
             )
             messages.success(request, "Product added successfully.")
         else:
@@ -2288,25 +2369,30 @@ def edit_product(request):
         stock_owner = get_stock_owner(request.user)
         original_quantity = product.quantity_in_stock
         original_reorder = product.reorder_level
+        original_max_stock = product.max_stock_level
         form = ProductForm(user=request.user, data=request.POST, files=request.FILES, instance=product)
         if form.is_valid():
             product = form.save(commit=False)
             if stock_owner and product.user_id != stock_owner.id:
                 product.quantity_in_stock = original_quantity or 0
                 product.reorder_level = original_reorder or 0
+                product.max_stock_level = original_max_stock or 0
             product.save()
             form.save_attribute_values(product)
             _sync_alternate_skus(product, form.cleaned_data.get("alternate_skus"))
             stock_quantity = form.cleaned_data.get("quantity_in_stock") or 0
             stock_reorder = form.cleaned_data.get("reorder_level") or 0
+            stock_max = form.cleaned_data.get("max_stock_level") or 0
             if form.cleaned_data.get("item_type") != "inventory":
                 stock_quantity = 0
                 stock_reorder = 0
+                stock_max = 0
             upsert_product_stock(
                 product,
                 request.user,
                 quantity_in_stock=stock_quantity,
                 reorder_level=stock_reorder,
+                max_stock_level=stock_max,
             )
             messages.success(request, "Product updated successfully.")
         else:
@@ -2441,7 +2527,7 @@ def export_products_template(request):
         "warranty days automatically. Provide both cost and sale prices or include "
         "the margin with one of the prices so missing values can be derived. Use "
         "Item Type values of Inventory or Non-inventory. Use Yes/No for Show on "
-        "Storefront and Featured."
+        "Storefront and Featured. Use commas to separate Alternate SKUs."
     )
     instruction_row = [instruction_text] + [""] * (len(PRODUCT_TEMPLATE_HEADERS) - 1)
     worksheet.append(instruction_row)
@@ -2460,22 +2546,31 @@ def export_products_template(request):
             Product.objects.filter(user__in=product_user_ids).order_by("name"),
             request.user,
         )
+        .prefetch_related("alternate_skus")
     )
     for product in products:
         quantity_value = product.stock_quantity
         reorder_value = product.stock_reorder
+        max_value = product.stock_max
         if product.margin is not None:
             margin_value = str(product.margin)
         elif product.cost_price is not None and product.sale_price is not None:
             margin_value = str(product.sale_price - product.cost_price)
         else:
             margin_value = ""
+        alternate_skus_value = ", ".join(
+            product.alternate_skus.order_by("kind", "sku").values_list("sku", flat=True)
+        )
         item_type_label = item_type_labels.get(product.item_type, product.item_type)
         worksheet.append(
             [
                 product.sku or "",
+                product.oem_part_number or "",
+                product.barcode_value or "",
+                alternate_skus_value,
                 product.name or "",
                 product.description or "",
+                product.fitment_notes or "",
                 product.category.name if product.category else "",
                 product.supplier.name if product.supplier else "",
                 product.brand.name if product.brand else "",
@@ -2488,6 +2583,7 @@ def export_products_template(request):
                 margin_value,
                 quantity_value,
                 reorder_value,
+                max_value,
                 product.location or "",
                 product.warranty_expiry_date.isoformat()
                 if product.warranty_expiry_date
@@ -2594,8 +2690,12 @@ def export_products_template(request):
         instruction_row_index=1,
         column_width_overrides={
             "SKU": 18,
+            "OEM Part Number": 20,
+            "Barcode": 22,
+            "Alternate SKUs": 26,
             "Name": 30,
             "Description": 48,
+            "Fitment Notes": 38,
             "Category": 24,
             "Supplier": 24,
             "Brand": 20,
@@ -2608,6 +2708,7 @@ def export_products_template(request):
             "Margin": 14,
             "Quantity": 14,
             "Reorder Level": 18,
+            "Max Stock Level": 18,
             "Location": 22,
             "Warranty Expiry Date": 24,
             "Warranty Length (Days)": 26,
@@ -2847,7 +2948,7 @@ def inventory_stock_orders_view(request):
         for item in items:
             sku = item["sku"] or "N/A"
             lines.append(
-                f"- {item['name']} (SKU: {sku}) | On hand: {item['quantity_in_stock']} | Reorder level: {item['reorder_level']} | Order qty: {item['order_qty']}"
+                f"- {item['name']} (SKU: {sku}) | On hand: {item['quantity_in_stock']} | Min: {item['reorder_level']} | Max: {item['max_stock_level']} | Order qty: {item['order_qty']}"
             )
         lines.extend(
             [
@@ -2883,14 +2984,19 @@ def inventory_stock_orders_view(request):
             supplier_lookup[supplier_key] = group
             supplier_groups.append(group)
 
-        order_qty = max((product.reorder_level or 0) - (product.quantity_in_stock or 0), 0)
+        reorder_level = product.reorder_level or 0
+        max_stock_level = product.max_stock_level or 0
+        target_stock = max_stock_level if max_stock_level > reorder_level else reorder_level
+        order_qty = max(target_stock - (product.quantity_in_stock or 0), 0)
         group["products"].append(
             {
                 "id": product.id,
                 "sku": product.sku,
                 "name": product.name,
                 "quantity_in_stock": product.quantity_in_stock or 0,
-                "reorder_level": product.reorder_level or 0,
+                "reorder_level": reorder_level,
+                "max_stock_level": max_stock_level,
+                "target_stock": target_stock,
                 "order_qty": order_qty,
                 "location": product.location or "",
             }
@@ -3292,7 +3398,11 @@ def import_products_from_excel(request):
             value = value.strip()
         headers.append(value or "")
 
-    missing_headers = [h for h in PRODUCT_TEMPLATE_HEADERS if h not in headers]
+    missing_headers = [
+        h
+        for h in PRODUCT_TEMPLATE_HEADERS
+        if h not in headers and h not in OPTIONAL_PRODUCT_TEMPLATE_HEADERS
+    ]
     if missing_headers:
         messages.error(
             request,
@@ -3301,7 +3411,7 @@ def import_products_from_excel(request):
         )
         return redirect(next_url)
 
-    header_indexes = {header: headers.index(header) for header in PRODUCT_TEMPLATE_HEADERS}
+    header_indexes = {header: idx for idx, header in enumerate(headers)}
 
     item_type_choices = Product._meta.get_field("item_type").choices
     item_type_map = {}
@@ -3327,6 +3437,12 @@ def import_products_from_excel(request):
 
         try:
             sku = _normalize_text(get_value("SKU"))
+            oem_part_number = _normalize_text(get_value("OEM Part Number"))
+            barcode_value = _normalize_text(get_value("Barcode"))
+            fitment_notes = _normalize_text(get_value("Fitment Notes"))
+            alternate_skus = None
+            if "Alternate SKUs" in header_indexes:
+                alternate_skus = _parse_alternate_sku_input(get_value("Alternate SKUs"))
 
             raw_name = get_value("Name")
             name = _normalize_text(raw_name)
@@ -3451,6 +3567,13 @@ def import_products_from_excel(request):
             )
             if reorder_level < 0:
                 raise ValueError("Reorder Level cannot be negative.")
+            max_stock_level = _parse_integer(
+                get_value("Max Stock Level"), "Max Stock Level"
+            )
+            if max_stock_level < 0:
+                raise ValueError("Max Stock Level cannot be negative.")
+            if max_stock_level and max_stock_level < reorder_level:
+                raise ValueError("Max Stock Level must be greater than or equal to Reorder Level.")
 
             location = _normalize_text(get_value("Location"))
 
@@ -3499,8 +3622,11 @@ def import_products_from_excel(request):
             stock_owner = get_stock_owner(request.user)
             product.user = stock_owner or request.user
             product.sku = sku or None
+            product.oem_part_number = oem_part_number or None
+            product.barcode_value = barcode_value or None
             product.name = name
             product.description = description or ""
+            product.fitment_notes = fitment_notes or ""
             product.category = category
             product.supplier = supplier
             product.brand = brand
@@ -3512,6 +3638,7 @@ def import_products_from_excel(request):
             product.margin = margin
             product.quantity_in_stock = quantity
             product.reorder_level = reorder_level
+            product.max_stock_level = max_stock_level
             product.location = location or ""
             product.warranty_expiry_date = warranty_expiry
             product.warranty_length = warranty_length_value
@@ -3524,13 +3651,16 @@ def import_products_from_excel(request):
 
             product.clean()
             product.save()
+            _sync_alternate_skus(product, alternate_skus)
             stock_quantity = quantity if product.item_type == "inventory" else 0
             stock_reorder = reorder_level if product.item_type == "inventory" else 0
+            stock_max = max_stock_level if product.item_type == "inventory" else 0
             upsert_product_stock(
                 product,
                 request.user,
                 quantity_in_stock=stock_quantity,
                 reorder_level=stock_reorder,
+                max_stock_level=stock_max,
             )
 
             if is_new:
@@ -4853,8 +4983,11 @@ def search_inventory(request):
             .filter(
                 Q(name__icontains=query)
                 | Q(sku__icontains=query)
+                | Q(oem_part_number__icontains=query)
+                | Q(barcode_value__icontains=query)
                 | Q(alternate_skus__sku__icontains=query)
                 | Q(description__icontains=query)
+                | Q(fitment_notes__icontains=query)
                 | Q(category__name__icontains=query)
                 | Q(supplier__name__icontains=query)
             )
@@ -4863,10 +4996,11 @@ def search_inventory(request):
         )
 
         for p in products:
+            primary_code = p.sku or p.oem_part_number or p.barcode_value or "No code"
             results.append(
                 {
                     "id": p.id,
-                    "label": f"{p.name} ({p.sku})",
+                    "label": f"{p.name} ({primary_code})",
                     "type": "product",
                 }
             )

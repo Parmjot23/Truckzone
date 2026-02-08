@@ -106,7 +106,8 @@
               <th>Product</th>
               <th>SKU</th>
               <th class="text-center">On hand</th>
-              <th class="text-center">Reorder level</th>
+              <th class="text-center">Min</th>
+              <th class="text-center">Max</th>
               <th class="text-center">Order qty</th>
               <th>Location</th>
             </tr>
@@ -118,6 +119,7 @@
                 <td class="text-muted">{{ product.sku|default:"-" }}</td>
                 <td class="text-center">{{ product.quantity_in_stock|intcomma }}</td>
                 <td class="text-center">{{ product.reorder_level|intcomma }}</td>
+                <td class="text-center">{{ product.max_stock_level|intcomma }}</td>
                 <td class="text-center order-qty">{{ product.order_qty|intcomma }}</td>
                 <td class="text-muted">{{ product.location|default:"-" }}</td>
               </tr>

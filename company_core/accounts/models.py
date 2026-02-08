@@ -1859,7 +1859,11 @@ class GroupedInvoice(models.Model):
                 stock_record, _ = ProductStock.objects.get_or_create(
                     product=product_obj,
                     user=stock_owner,
-                    defaults={"quantity_in_stock": 0, "reorder_level": 0},
+                    defaults={
+                        "quantity_in_stock": 0,
+                        "reorder_level": 0,
+                        "max_stock_level": product_obj.max_stock_level or 0,
+                    },
                 )
                 current_stock = stock_record.quantity_in_stock or 0
                 if current_stock < missing_qty:
@@ -2939,8 +2943,27 @@ ALTERNATE_SKU_KIND_CHOICES = (
 class Product(models.Model):
     user = models.ForeignKey(User, related_name='products', on_delete=models.CASCADE)
     sku = models.CharField(max_length=100, blank=True, null=True)
+    oem_part_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Primary OEM part number used for cross-reference lookups.",
+    )
+    barcode_value = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Scannable barcode value (UPC/EAN/Code128) for this part.",
+    )
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True, null=True)
+    fitment_notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Fitment notes such as axle position, year range, or trim compatibility.",
+    )
     item_type = models.CharField(
         max_length=20,
         choices=PRODUCT_TYPE_CHOICES,
@@ -3020,6 +3043,7 @@ class Product(models.Model):
     margin = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     quantity_in_stock = models.PositiveIntegerField(default=0)
     reorder_level = models.PositiveIntegerField(default=0)
+    max_stock_level = models.PositiveIntegerField(default=0)
     image = models.ImageField(upload_to="product_images/", blank=True, null=True)
     is_published_to_store = models.BooleanField(
         default=False,
@@ -3209,6 +3233,12 @@ class Product(models.Model):
         if self.environmental_fee is not None and self.environmental_fee < Decimal("0"):
             raise ValidationError("Environmental fee cannot be negative.")
 
+    def _validate_stock_levels(self):
+        reorder_value = self.reorder_level or 0
+        max_value = self.max_stock_level or 0
+        if max_value and max_value < reorder_value:
+            raise ValidationError("Max stock level must be greater than or equal to reorder level.")
+
     def clean(self):
         super().clean()
         self._apply_default_margin()
@@ -3216,11 +3246,13 @@ class Product(models.Model):
 
         allow_missing_sale = not bool(self.user_id)
         self._validate_pricing(allow_missing_sale=allow_missing_sale)
+        self._validate_stock_levels()
 
     def save(self, *args, **kwargs):
         self._apply_default_margin()
         self._ensure_pricing_consistency()
         self._validate_pricing(allow_missing_sale=False)
+        self._validate_stock_levels()
         super().save(*args, **kwargs)
 
     class Meta:
@@ -3251,6 +3283,7 @@ class ProductStock(models.Model):
     )
     quantity_in_stock = models.PositiveIntegerField(default=0)
     reorder_level = models.PositiveIntegerField(default=0)
+    max_stock_level = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -3718,7 +3751,11 @@ class InventoryTransaction(models.Model):
         stock_record, _ = ProductStock.objects.get_or_create(
             product=self.product,
             user=stock_owner,
-            defaults={"quantity_in_stock": 0, "reorder_level": 0},
+            defaults={
+                "quantity_in_stock": 0,
+                "reorder_level": 0,
+                "max_stock_level": self.product.max_stock_level or 0,
+            },
         )
         current_stock = stock_record.quantity_in_stock or 0
 

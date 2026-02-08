@@ -455,6 +455,7 @@ def ensure_product_stock(sender, instance: Product, created: bool, **kwargs):
         defaults={
             "quantity_in_stock": instance.quantity_in_stock or 0,
             "reorder_level": instance.reorder_level or 0,
+            "max_stock_level": instance.max_stock_level or 0,
         },
     )
 
