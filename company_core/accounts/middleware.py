@@ -1,11 +1,79 @@
+import os
+from urllib.parse import quote, unquote
+
 from django.conf import settings
 from django.contrib.auth import logout
-from django.http import Http404
+from django.http import Http404, HttpResponseRedirect
 from django.urls import NoReverseMatch, reverse
 from django.utils.deprecation import MiddlewareMixin
 
 from .activity import set_current_actor, clear_current_actor
 from .utils import get_business_user
+
+
+_IMAGE_MEDIA_PREFIXES = (
+    "product_images/",
+    "category_images/",
+    "brand_logos/",
+    "company_logos/",
+    "category_group_images/",
+)
+_IMAGE_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".bmp",
+    ".avif",
+}
+
+
+def _is_image_media_path(relative_path):
+    lowered = (relative_path or "").lower()
+    if any(lowered.startswith(prefix) for prefix in _IMAGE_MEDIA_PREFIXES):
+        return True
+    _, ext = os.path.splitext(lowered)
+    return ext in _IMAGE_EXTENSIONS
+
+
+class MissingMediaCloudinaryRedirectMiddleware(MiddlewareMixin):
+    """Redirect missing local media image requests to Cloudinary."""
+
+    def process_request(self, request):
+        media_url = getattr(settings, "MEDIA_URL", "/media/") or "/media/"
+        if not media_url.endswith("/"):
+            media_url += "/"
+
+        path = request.path_info or "/"
+        if not path.startswith(media_url):
+            return None
+
+        relative_path = unquote(path[len(media_url):]).lstrip("/")
+        if not relative_path:
+            return None
+
+        # Safety guard against path traversal.
+        if ".." in relative_path.split("/"):
+            return None
+
+        media_root = getattr(settings, "MEDIA_ROOT", "") or ""
+        if media_root:
+            local_path = os.path.join(media_root, relative_path)
+            if os.path.exists(local_path):
+                return None
+
+        if not _is_image_media_path(relative_path):
+            return None
+
+        cloud_name = (getattr(settings, "CLOUDINARY_CLOUD_NAME", "") or "").strip()
+        if not cloud_name:
+            return None
+
+        cloudinary_path = quote(f"media/{relative_path}", safe="/")
+        target_url = f"https://res.cloudinary.com/{cloud_name}/image/upload/v1/{cloudinary_path}"
+        return HttpResponseRedirect(target_url)
 
 
 class TrialPeriodMiddleware(MiddlewareMixin):

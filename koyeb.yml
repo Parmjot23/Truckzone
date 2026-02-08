@@ -12,6 +12,9 @@ services:
       # Use committed SQLite database for now (do not set DATABASE_URL).
       - key: FORCE_SQLITE
         value: "True"
+      # Public Cloudinary cloud name used for media delivery fallback.
+      - key: CLOUDINARY_CLOUD_NAME
+        value: "dukgxdnbw"
     ports:
       - port: 8000
         http_options:
