@@ -21,11 +21,70 @@ from django.contrib.auth import logout
 from django.shortcuts import redirect
 from decimal import Decimal
 from django.db import transaction
+from django.db import models as django_models
 from .activity import get_current_actor
 from .utils import get_business_user, get_stock_owner
 
 
 logger = logging.getLogger(__name__)
+
+
+# Normalize accidentally prefixed media file names (e.g. "media/product_images/x")
+# so generated URLs stay "/media/<path>" instead of "/media/media/<path>".
+_MEDIA_NAME_PREFIXES = (
+    "/workspace/media/",
+    "workspace/media/",
+    "/media/",
+    "media/",
+)
+
+
+def _normalize_media_field_name(value):
+    if not value:
+        return value
+
+    normalized = str(value).strip().replace("\\", "/")
+    if "://" in normalized:
+        return str(value).strip()
+
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+
+    while True:
+        lower_value = normalized.lower()
+        removed_prefix = False
+        for prefix in _MEDIA_NAME_PREFIXES:
+            if lower_value.startswith(prefix):
+                normalized = normalized[len(prefix):].lstrip("/")
+                removed_prefix = True
+                break
+        if not removed_prefix:
+            break
+
+    return normalized
+
+
+@receiver(pre_save)
+def normalize_filefield_paths(sender, instance, **kwargs):
+    if kwargs.get("raw"):
+        return
+
+    meta = getattr(instance, "_meta", None)
+    if not meta or meta.app_label != "accounts":
+        return
+
+    for field in meta.fields:
+        if not isinstance(field, django_models.FileField):
+            continue
+
+        field_value = getattr(instance, field.name, None)
+        current_name = getattr(field_value, "name", field_value)
+        if not current_name:
+            continue
+
+        normalized_name = _normalize_media_field_name(current_name)
+        if normalized_name != current_name:
+            setattr(instance, field.attname, normalized_name)
 
 
 @receiver(post_save, sender=User)
