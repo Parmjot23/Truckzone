@@ -6,6 +6,7 @@
 no-scroll-animations{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.min.css">
 <link rel="stylesheet" href="{% static 'css/storefront_public.css' %}">
 {% block portal_extra_css %}{% endblock %}
 {% endblock %}
@@ -23,10 +24,10 @@ no-scroll-animations{% endblock %}
         </div>
         <div class="store-account-actions">
           <a href="{% url 'accounts:store_product_list' %}" class="btn btn-light btn-sm">
-            <i class="fas fa-store me-1"></i> Continue shopping
+            <i class="ri-store-2-line me-1"></i> Continue shopping
           </a>
           <a href="{% url 'accounts:store_cart' %}" class="btn btn-outline-light btn-sm">
-            <i class="fas fa-shopping-cart me-1"></i> View cart
+            <i class="ri-shopping-cart-2-line me-1"></i> View cart
           </a>
         </div>
       </div>
@@ -42,7 +43,7 @@ no-scroll-animations{% endblock %}
         <div class="dropdown store-account-dropdown">
           <button class="store-account-link store-account-location dropdown-toggle" type="button"
             data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="fas fa-store"></i>
+            <i class="ri-store-2-line"></i>
             <span class="store-label">My Store:</span>
             <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
           </button>
@@ -63,7 +64,7 @@ no-scroll-animations{% endblock %}
         {% else %}
         <div class="store-account-dropdown">
           <div class="store-account-link store-account-location store-account-static">
-            <i class="fas fa-store"></i>
+            <i class="ri-store-2-line"></i>
             <span class="store-label">My Store:</span>
             <span class="store-value">{{ storefront_selected_profile.storefront_label }}</span>
           </div>
@@ -73,7 +74,33 @@ no-scroll-animations{% endblock %}
         {% for item in portal_nav_items %}
         <a class="store-account-link{% if item.active %} active{% endif %}{% if item.slug == 'logout' %} store-account-link-logout{% endif %}"
           href="{{ item.url }}">
+          {% if item.slug == 'overview' %}
+          <i class="ri-home-5-line"></i>
+          {% elif item.slug == 'orders' %}
+          <i class="ri-inbox-archive-line"></i>
+          {% elif item.slug == 'favorites' %}
+          <i class="ri-heart-3-line"></i>
+          {% elif item.slug == 'invoices' %}
+          <i class="ri-file-list-3-line"></i>
+          {% elif item.slug == 'returns' %}
+          <i class="ri-arrow-go-back-line"></i>
+          {% elif item.slug == 'workorders' %}
+          <i class="ri-file-check-line"></i>
+          {% elif item.slug == 'vehicles' %}
+          <i class="ri-truck-line"></i>
+          {% elif item.slug == 'maintenance' %}
+          <i class="ri-calendar-check-line"></i>
+          {% elif item.slug == 'settlements' %}
+          <i class="ri-wallet-3-line"></i>
+          {% elif item.slug == 'statements' %}
+          <i class="ri-file-text-line"></i>
+          {% elif item.slug == 'profile' %}
+          <i class="ri-settings-4-line"></i>
+          {% elif item.slug == 'logout' %}
+          <i class="ri-logout-box-r-line"></i>
+          {% else %}
           <i class="fas {{ item.icon }}"></i>
+          {% endif %}
           <span>{{ item.label }}</span>
         </a>
         {% endfor %}

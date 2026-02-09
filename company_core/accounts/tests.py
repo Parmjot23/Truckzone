@@ -11,15 +11,23 @@ from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .forms import CustomerForm, VehicleQuickWorkOrderForm
+from .forms import CustomerForm, ProductForm, VehicleQuickWorkOrderForm
 from .models import (
+    CycleCountEntry,
+    CycleCountSession,
     Customer,
     GroupedInvoice,
     IncomeRecord2,
+    InventoryRoleAssignment,
     InventoryTransaction,
+    MarginGuardrailSetting,
     Mechanic,
     Product,
+    ProductStock,
     Profile,
+    PurchaseOrder,
+    PurchaseOrderItem,
+    ReplenishmentRule,
     Supplier,
     Vehicle,
     VehicleMaintenanceTask,
@@ -622,3 +630,128 @@ class InventoryLookupAndReorderTests(TestCase):
         self.assertEqual(first_item["order_qty"], 10)
         self.assertEqual(first_item["max_stock_level"], 12)
         self.assertIn("Max: 12", supplier_groups[0]["email_body"])
+
+
+class InventoryOperationsFeatureTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="ops-owner", password="pass1234")
+        self.client.force_login(self.owner)
+        self.supplier = Supplier.objects.create(user=self.owner, name="Northline Supply")
+        self.product = Product.objects.create(
+            user=self.owner,
+            name="Hub Seal Kit",
+            sku="HSK-10",
+            supplier=self.supplier,
+            cost_price=Decimal("50.00"),
+            sale_price=Decimal("75.00"),
+            quantity_in_stock=2,
+            reorder_level=5,
+            max_stock_level=12,
+        )
+        ProductStock.objects.update_or_create(
+            product=self.product,
+            user=self.owner,
+            defaults={
+                "quantity_in_stock": 2,
+                "reorder_level": 5,
+                "max_stock_level": 12,
+            },
+        )
+
+    def test_operations_view_loads(self):
+        response = self.client.get(reverse("accounts:inventory_operations"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Inventory Operations")
+
+    def test_create_low_stock_purchase_orders(self):
+        response = self.client.post(
+            reverse("accounts:inventory_operations"),
+            {"action": "create_low_stock_pos"},
+        )
+        self.assertEqual(response.status_code, 302)
+        po = PurchaseOrder.objects.get(user=self.owner)
+        item = PurchaseOrderItem.objects.get(purchase_order=po, product=self.product)
+        self.assertEqual(item.quantity_ordered, 10)
+
+    def test_viewer_role_cannot_create_purchase_order(self):
+        member = User.objects.create_user(username="ops-viewer", password="pass1234")
+        member_profile = member.profile
+        member_profile.business_owner = self.owner
+        member_profile.is_business_admin = False
+        member_profile.admin_approved = False
+        member_profile.save(update_fields=["business_owner", "is_business_admin", "admin_approved"])
+
+        self.client.force_login(member)
+        response = self.client.post(
+            reverse("accounts:inventory_operations"),
+            {"action": "create_low_stock_pos"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(PurchaseOrder.objects.filter(user=self.owner).exists())
+        self.assertEqual(
+            InventoryRoleAssignment.resolve_role(self.owner, member),
+            InventoryRoleAssignment.ROLE_VIEWER,
+        )
+
+    def test_cycle_count_close_creates_adjustment(self):
+        start = self.client.post(
+            reverse("accounts:inventory_operations"),
+            {"action": "start_cycle_count", "cycle_title": "Weekly Count"},
+        )
+        self.assertEqual(start.status_code, 302)
+
+        session = CycleCountSession.objects.get(user=self.owner, status="open")
+        entry = CycleCountEntry.objects.get(session=session, product=self.product)
+
+        save_counts = self.client.post(
+            reverse("accounts:inventory_operations"),
+            {
+                "action": "save_cycle_counts",
+                "session_id": session.id,
+                f"counted_{entry.id}": "5",
+            },
+        )
+        self.assertEqual(save_counts.status_code, 302)
+
+        close = self.client.post(
+            reverse("accounts:inventory_operations"),
+            {"action": "close_cycle_count", "session_id": session.id},
+        )
+        self.assertEqual(close.status_code, 302)
+
+        session.refresh_from_db()
+        self.assertEqual(session.status, "closed")
+
+        adjustment = InventoryTransaction.objects.filter(
+            product=self.product,
+            transaction_type="ADJUSTMENT",
+            remarks__icontains="Cycle count",
+        ).first()
+        self.assertIsNotNone(adjustment)
+        self.assertEqual(adjustment.quantity, 5)
+
+    def test_margin_guardrail_blocks_low_margin_product_form(self):
+        MarginGuardrailSetting.objects.create(
+            user=self.owner,
+            min_margin_percent=Decimal("30.00"),
+            warning_margin_percent=Decimal("40.00"),
+            enforce_min_margin=True,
+        )
+
+        form = ProductForm(
+            user=self.owner,
+            data={
+                "name": "Low Margin Part",
+                "sku": "LOW-1",
+                "item_type": "inventory",
+                "cost_price": "100.00",
+                "sale_price": "110.00",
+                "quantity_in_stock": "1",
+                "reorder_level": "1",
+                "max_stock_level": "1",
+            },
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("sale_price", form.errors)
+        self.assertIn("minimum guardrail", form.errors["sale_price"][0].lower())

@@ -14,6 +14,7 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.min.css">
 
     <script>
         (() => {
@@ -796,9 +797,10 @@
             .app-loading-ring { animation: none; }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/portal_redesign.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body class="sidebar-initializing{% if ui_scale_is_active %} ui-scale-active{% endif %}{% block body_class %}{% endblock %}" style="--ui-scale-factor: {{ ui_scale_factor }}; --ui-font-size-factor: {{ ui_portal_font_size_factor }}; --font-primary: {{ ui_portal_font_family_css }}; --font-heading: {{ ui_portal_heading_font_family_css }}; --font-body-weight: {{ ui_portal_font_weight }}; --font-heading-weight: {{ ui_portal_heading_font_weight }};">
+<body class="customer-portal-app sidebar-initializing{% if ui_scale_is_active %} ui-scale-active{% endif %}{% block body_class %}{% endblock %}" style="--ui-scale-factor: {{ ui_scale_factor }}; --ui-font-size-factor: {{ ui_portal_font_size_factor }}; --font-primary: {{ ui_portal_font_family_css }}; --font-heading: {{ ui_portal_heading_font_family_css }}; --font-body-weight: {{ ui_portal_font_weight }}; --font-heading-weight: {{ ui_portal_heading_font_weight }};">
     <div id="appLoadingIndicator" class="app-loading-indicator" aria-live="polite" aria-busy="true">
         <div class="app-loading-pill" role="status" aria-label="Loading">
             <span class="app-loading-ring" aria-hidden="true"></span>
@@ -819,7 +821,33 @@
                     {% for item in portal_nav_items %}
                         {% if item.slug != 'shop' %}
                             <a href="{{ item.url }}" class="sidebar-link{% if item.active %} active{% endif %}" title="{{ item.label }}">
-                                <i class="fa-solid {{ item.icon }}"></i>
+                                {% if item.slug == 'overview' %}
+                                    <i class="ri-home-5-line"></i>
+                                {% elif item.slug == 'orders' %}
+                                    <i class="ri-inbox-archive-line"></i>
+                                {% elif item.slug == 'favorites' %}
+                                    <i class="ri-heart-3-line"></i>
+                                {% elif item.slug == 'invoices' %}
+                                    <i class="ri-file-list-3-line"></i>
+                                {% elif item.slug == 'returns' %}
+                                    <i class="ri-arrow-go-back-line"></i>
+                                {% elif item.slug == 'workorders' %}
+                                    <i class="ri-file-check-line"></i>
+                                {% elif item.slug == 'vehicles' %}
+                                    <i class="ri-truck-line"></i>
+                                {% elif item.slug == 'maintenance' %}
+                                    <i class="ri-calendar-check-line"></i>
+                                {% elif item.slug == 'settlements' %}
+                                    <i class="ri-wallet-3-line"></i>
+                                {% elif item.slug == 'statements' %}
+                                    <i class="ri-file-text-line"></i>
+                                {% elif item.slug == 'profile' %}
+                                    <i class="ri-settings-4-line"></i>
+                                {% elif item.slug == 'logout' %}
+                                    <i class="ri-logout-box-r-line"></i>
+                                {% else %}
+                                    <i class="fa-solid {{ item.icon }}"></i>
+                                {% endif %}
                                 <span class="sidebar-label">{{ item.label }}</span>
                             </a>
                         {% endif %}
@@ -828,16 +856,16 @@
             </nav>
             <div class="sidebar-footer">
                 <a href="{% url 'accounts:store_product_list' %}" class="sidebar-footer-link" aria-label="Store" title="Store">
-                    <i class="fa-solid fa-store"></i>
+                    <i class="ri-store-2-line"></i>
                 </a>
                 <a href="{% url 'accounts:store_product_list' %}?source=customer_portal" class="sidebar-footer-link" aria-label="Shop" title="Shop">
-                    <i class="fa-solid fa-cart-shopping"></i>
+                    <i class="ri-shopping-cart-2-line"></i>
                 </a>
                 <a href="{% url 'accounts:customer_profile' %}" class="sidebar-footer-link" aria-label="Settings" title="Settings">
-                    <i class="fa-solid fa-gear"></i>
+                    <i class="ri-settings-4-line"></i>
                 </a>
                 <a href="{% url 'accounts:logout' %}?next={% url 'accounts:customer_dashboard' %}" class="sidebar-footer-link" aria-label="Sign out" title="Sign out">
-                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <i class="ri-logout-box-r-line"></i>
                 </a>
             </div>
 
@@ -853,10 +881,16 @@
 
         <div class="app-main">
             <header class="app-topbar">
-                <div class="topbar-title">Customer Portal</div>
+                <div class="topbar-title">
+                    <span class="topbar-eyebrow">{{ business_name|default:default_business_name }}</span>
+                    <span class="topbar-heading">Customer Portal</span>
+                </div>
                 <div class="topbar-actions">
+                    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle color theme">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
                     <a class="ghost-btn" href="{% url 'accounts:contact_support' %}?source=customer_portal">
-                        <i class="fa-solid fa-headset"></i>
+                        <i class="ri-customer-service-2-line"></i>
                         Support
                     </a>
                 </div>
@@ -896,17 +930,17 @@
 
     <div class="portal-ai-shell" id="portalAiShell" aria-live="polite">
         <button class="portal-ai-toggle" id="portalAiToggle" type="button">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <i class="ri-magic-line"></i>
             Ask {{ business_name|default:default_business_name }} AI
         </button>
         <div class="portal-ai-panel" id="portalAiPanel" aria-hidden="true">
             <div class="portal-ai-header">
                 <div class="portal-ai-title">
-                    <i class="fa-solid fa-message"></i>
+                    <i class="ri-chat-3-line"></i>
                     Customer Assistant
                 </div>
                 <button class="portal-ai-close" id="portalAiClose" aria-label="Close assistant" type="button">
-                    <i class="fa-solid fa-xmark"></i>
+                    <i class="ri-close-line"></i>
                 </button>
             </div>
             <div class="portal-ai-body" id="portalAiMessages"></div>
@@ -920,7 +954,7 @@
                         autocomplete="off"
                     >
                     <button type="submit" id="portalAiSend">
-                        <i class="fa-solid fa-paper-plane"></i>
+                        <i class="ri-send-plane-line"></i>
                         Send
                     </button>
                 </form>

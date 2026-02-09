@@ -3297,6 +3297,761 @@ class ProductStock(models.Model):
         return f"{self.product.name} - {owner}"
 
 
+INVENTORY_ROLE_CHOICES = (
+    ("owner", "Owner"),
+    ("manager", "Manager"),
+    ("buyer", "Buyer"),
+    ("warehouse", "Warehouse"),
+    ("sales", "Sales"),
+    ("viewer", "Viewer"),
+)
+
+
+class InventoryRoleAssignment(models.Model):
+    """Inventory role mapping per business user."""
+
+    ROLE_OWNER = "owner"
+    ROLE_MANAGER = "manager"
+    ROLE_BUYER = "buyer"
+    ROLE_WAREHOUSE = "warehouse"
+    ROLE_SALES = "sales"
+    ROLE_VIEWER = "viewer"
+
+    CAP_PURCHASE_ORDERS = "purchase_orders"
+    CAP_CYCLE_COUNTS = "cycle_counts"
+    CAP_REPLENISHMENT = "replenishment_rules"
+    CAP_RMA = "rma_workflow"
+    CAP_FLEET_LISTS = "fleet_lists"
+    CAP_MARGIN_GUARDRAILS = "margin_guardrails"
+    CAP_DISPATCH = "dispatch_tracking"
+    CAP_SUPPLIER_SCORECARDS = "supplier_scorecards"
+    CAP_ROLE_ADMIN = "role_admin"
+
+    ROLE_CAPABILITIES = {
+        ROLE_OWNER: {
+            CAP_PURCHASE_ORDERS,
+            CAP_CYCLE_COUNTS,
+            CAP_REPLENISHMENT,
+            CAP_RMA,
+            CAP_FLEET_LISTS,
+            CAP_MARGIN_GUARDRAILS,
+            CAP_DISPATCH,
+            CAP_SUPPLIER_SCORECARDS,
+            CAP_ROLE_ADMIN,
+        },
+        ROLE_MANAGER: {
+            CAP_PURCHASE_ORDERS,
+            CAP_CYCLE_COUNTS,
+            CAP_REPLENISHMENT,
+            CAP_RMA,
+            CAP_FLEET_LISTS,
+            CAP_MARGIN_GUARDRAILS,
+            CAP_DISPATCH,
+            CAP_SUPPLIER_SCORECARDS,
+            CAP_ROLE_ADMIN,
+        },
+        ROLE_BUYER: {
+            CAP_PURCHASE_ORDERS,
+            CAP_REPLENISHMENT,
+            CAP_RMA,
+            CAP_SUPPLIER_SCORECARDS,
+        },
+        ROLE_WAREHOUSE: {
+            CAP_PURCHASE_ORDERS,
+            CAP_CYCLE_COUNTS,
+            CAP_DISPATCH,
+        },
+        ROLE_SALES: {
+            CAP_FLEET_LISTS,
+            CAP_DISPATCH,
+        },
+        ROLE_VIEWER: set(),
+    }
+
+    business = models.ForeignKey(
+        User,
+        related_name="inventory_role_assignments",
+        on_delete=models.CASCADE,
+    )
+    member = models.ForeignKey(
+        User,
+        related_name="inventory_assigned_roles",
+        on_delete=models.CASCADE,
+    )
+    role = models.CharField(max_length=20, choices=INVENTORY_ROLE_CHOICES, default=ROLE_VIEWER)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["business", "member"],
+                name="unique_inventory_role_assignment_per_member",
+            ),
+        ]
+        ordering = ["member__username"]
+
+    def __str__(self):
+        return f"{self.business.username} -> {self.member.username} ({self.role})"
+
+    @classmethod
+    def resolve_role(cls, business_user, member):
+        if not business_user or not member:
+            return cls.ROLE_VIEWER
+        if business_user.id == member.id:
+            return cls.ROLE_OWNER
+
+        assignment = cls.objects.filter(
+            business=business_user,
+            member=member,
+            is_active=True,
+        ).first()
+        if assignment:
+            return assignment.role
+
+        member_profile = getattr(member, "profile", None)
+        if member_profile and member_profile.is_business_admin and member_profile.admin_approved:
+            return cls.ROLE_MANAGER
+
+        return cls.ROLE_VIEWER
+
+    @classmethod
+    def role_allows(cls, role, capability):
+        return capability in cls.ROLE_CAPABILITIES.get(role or cls.ROLE_VIEWER, set())
+
+
+class MarginGuardrailSetting(models.Model):
+    """Inventory margin policy for each business."""
+
+    user = models.OneToOneField(
+        User,
+        related_name="margin_guardrail_setting",
+        on_delete=models.CASCADE,
+    )
+    min_margin_percent = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal("15.00"),
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+    )
+    warning_margin_percent = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal("25.00"),
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+    )
+    enforce_min_margin = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Margin guardrail"
+        verbose_name_plural = "Margin guardrails"
+
+    def clean(self):
+        super().clean()
+        if self.warning_margin_percent < self.min_margin_percent:
+            raise ValidationError("Warning margin must be greater than or equal to minimum margin.")
+
+    def __str__(self):
+        return f"{self.user.username} margin policy"
+
+
+class ReplenishmentRule(models.Model):
+    """Per-product replenishment policy used for purchase planning."""
+
+    user = models.ForeignKey(
+        User,
+        related_name="replenishment_rules",
+        on_delete=models.CASCADE,
+    )
+    product = models.ForeignKey(
+        Product,
+        related_name="replenishment_rules",
+        on_delete=models.CASCADE,
+    )
+    lead_time_days = models.PositiveIntegerField(default=7)
+    coverage_days = models.PositiveIntegerField(default=30)
+    buffer_percent = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("10.00"))
+    min_order_qty = models.PositiveIntegerField(default=0)
+    order_multiple = models.PositiveIntegerField(default=1)
+    seasonality_factor = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("1.00"))
+    auto_generate_po = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "product"],
+                name="unique_replenishment_rule_per_product",
+            ),
+        ]
+        ordering = ["product__name"]
+
+    def __str__(self):
+        return f"Rule for {self.product.name}"
+
+    def calculate_recommended_quantity(
+        self,
+        *,
+        current_stock,
+        avg_daily_usage,
+        reorder_level=0,
+        max_stock_level=0,
+    ):
+        lead_days = int(self.lead_time_days or 0)
+        cover_days = int(self.coverage_days or 0)
+        total_days = max(lead_days + cover_days, 0)
+
+        daily_usage = ensure_decimal(avg_daily_usage, default="0.00")
+        buffer_multiplier = Decimal("1.00") + (ensure_decimal(self.buffer_percent, default="0.00") / Decimal("100"))
+        seasonal_multiplier = ensure_decimal(self.seasonality_factor, default="1.00")
+        if seasonal_multiplier <= Decimal("0.00"):
+            seasonal_multiplier = Decimal("1.00")
+
+        projected_demand = daily_usage * Decimal(total_days) * buffer_multiplier * seasonal_multiplier
+        projected_target = int(projected_demand)
+        if projected_demand > Decimal(projected_target):
+            projected_target += 1
+
+        base_target = max(projected_target, int(reorder_level or 0), int(max_stock_level or 0))
+        qty_needed = max(base_target - int(current_stock or 0), 0)
+
+        min_qty = int(self.min_order_qty or 0)
+        if qty_needed and min_qty and qty_needed < min_qty:
+            qty_needed = min_qty
+
+        multiple = max(int(self.order_multiple or 1), 1)
+        if qty_needed and multiple > 1:
+            qty_needed = ((qty_needed + multiple - 1) // multiple) * multiple
+
+        return {
+            "recommended_qty": qty_needed,
+            "target_stock": base_target,
+            "projected_demand": projected_demand.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            "days_covered": total_days,
+        }
+
+
+PURCHASE_ORDER_STATUS_CHOICES = (
+    ("draft", "Draft"),
+    ("ordered", "Ordered"),
+    ("partially_received", "Partially received"),
+    ("received", "Received"),
+    ("cancelled", "Cancelled"),
+)
+
+
+class PurchaseOrder(models.Model):
+    """Supplier purchase order for replenishment."""
+
+    user = models.ForeignKey(
+        User,
+        related_name="purchase_orders",
+        on_delete=models.CASCADE,
+    )
+    supplier = models.ForeignKey(
+        Supplier,
+        related_name="purchase_orders",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    po_number = models.CharField(max_length=40, blank=True, null=True, db_index=True)
+    status = models.CharField(max_length=24, choices=PURCHASE_ORDER_STATUS_CHOICES, default="draft")
+    expected_delivery_date = models.DateField(blank=True, null=True)
+    ordered_date = models.DateField(blank=True, null=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        User,
+        related_name="created_purchase_orders",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("po_number"),
+                F("user"),
+                name="unique_purchase_order_number_per_user",
+                condition=Q(po_number__isnull=False) & ~Q(po_number=""),
+            ),
+        ]
+
+    def __str__(self):
+        return self.po_number or f"PO#{self.pk}"
+
+    def save(self, *args, **kwargs):
+        if not self.po_number and self.user_id:
+            today_str = timezone.localdate().strftime("%Y%m%d")
+            prefix = f"PO-{self.user_id}-{today_str}-"
+            next_number = PurchaseOrder.objects.filter(
+                user_id=self.user_id,
+                po_number__startswith=prefix,
+            ).count() + 1
+            self.po_number = f"{prefix}{next_number:03d}"
+        super().save(*args, **kwargs)
+
+    @property
+    def total_ordered_qty(self):
+        return self.items.aggregate(total=Sum("quantity_ordered")).get("total") or 0
+
+    @property
+    def total_received_qty(self):
+        return self.items.aggregate(total=Sum("quantity_received")).get("total") or 0
+
+
+class PurchaseOrderItem(models.Model):
+    purchase_order = models.ForeignKey(
+        PurchaseOrder,
+        related_name="items",
+        on_delete=models.CASCADE,
+    )
+    product = models.ForeignKey(
+        Product,
+        related_name="purchase_order_items",
+        on_delete=models.CASCADE,
+    )
+    quantity_ordered = models.PositiveIntegerField(default=0)
+    quantity_received = models.PositiveIntegerField(default=0)
+    recommended_quantity = models.PositiveIntegerField(default=0)
+    unit_cost = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["purchase_order", "product"],
+                name="unique_purchase_order_item_per_product",
+            ),
+        ]
+        ordering = ["product__name"]
+
+    def __str__(self):
+        return f"{self.purchase_order} - {self.product}"
+
+    @property
+    def remaining_qty(self):
+        return max((self.quantity_ordered or 0) - (self.quantity_received or 0), 0)
+
+    @property
+    def line_total(self):
+        return ensure_decimal(self.unit_cost) * Decimal(self.quantity_ordered or 0)
+
+    def receive_stock(self, quantity, *, actor=None):
+        received_qty = max(int(quantity or 0), 0)
+        if not received_qty or self.remaining_qty <= 0:
+            return 0
+
+        posted_qty = min(received_qty, self.remaining_qty)
+        InventoryTransaction.objects.create(
+            product=self.product,
+            transaction_type="IN",
+            quantity=posted_qty,
+            transaction_date=timezone.now(),
+            remarks=f"Received from {self.purchase_order.po_number or f'PO#{self.purchase_order_id}'}",
+            user=actor or self.purchase_order.user,
+        )
+        self.quantity_received = (self.quantity_received or 0) + posted_qty
+        self.save(update_fields=["quantity_received"])
+        return posted_qty
+
+
+CYCLE_COUNT_STATUS_CHOICES = (
+    ("open", "Open"),
+    ("closed", "Closed"),
+)
+
+
+class CycleCountSession(models.Model):
+    """Periodic stock count session."""
+
+    user = models.ForeignKey(
+        User,
+        related_name="cycle_count_sessions",
+        on_delete=models.CASCADE,
+    )
+    title = models.CharField(max_length=120, default="Cycle Count")
+    status = models.CharField(max_length=20, choices=CYCLE_COUNT_STATUS_CHOICES, default="open")
+    started_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(blank=True, null=True)
+    created_by = models.ForeignKey(
+        User,
+        related_name="created_cycle_counts",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"{self.title} ({self.get_status_display()})"
+
+    def close(self, *, actor=None):
+        if self.status == "closed":
+            return
+
+        entries = self.entries.select_related("product")
+        for entry in entries:
+            if entry.counted_quantity is None:
+                continue
+            if entry.variance == 0:
+                continue
+
+            InventoryTransaction.objects.create(
+                product=entry.product,
+                transaction_type="ADJUSTMENT",
+                quantity=max(int(entry.counted_quantity), 0),
+                transaction_date=timezone.now(),
+                remarks=f"Cycle count {self.pk} adjustment",
+                user=actor or self.user,
+            )
+
+        self.status = "closed"
+        self.closed_at = timezone.now()
+        self.save(update_fields=["status", "closed_at"])
+
+
+class CycleCountEntry(models.Model):
+    session = models.ForeignKey(
+        CycleCountSession,
+        related_name="entries",
+        on_delete=models.CASCADE,
+    )
+    product = models.ForeignKey(
+        Product,
+        related_name="cycle_count_entries",
+        on_delete=models.CASCADE,
+    )
+    expected_quantity = models.PositiveIntegerField(default=0)
+    counted_quantity = models.PositiveIntegerField(null=True, blank=True)
+    variance = models.IntegerField(default=0)
+    notes = models.CharField(max_length=255, blank=True)
+    counted_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "product"],
+                name="unique_cycle_count_entry_per_product",
+            ),
+        ]
+        ordering = ["product__name"]
+
+    def __str__(self):
+        return f"{self.session_id} - {self.product.name}"
+
+    def apply_count(self, counted_qty, notes=""):
+        normalized = max(int(counted_qty or 0), 0)
+        self.counted_quantity = normalized
+        self.variance = normalized - int(self.expected_quantity or 0)
+        self.notes = notes or self.notes or ""
+        self.counted_at = timezone.now()
+        self.save(update_fields=["counted_quantity", "variance", "notes", "counted_at"])
+
+
+RMA_TYPE_CHOICES = (
+    ("core", "Core return"),
+    ("warranty", "Warranty"),
+    ("return", "Return"),
+)
+
+RMA_STATUS_CHOICES = (
+    ("open", "Open"),
+    ("submitted", "Submitted"),
+    ("approved", "Approved"),
+    ("rejected", "Rejected"),
+    ("received", "Received"),
+    ("credited", "Credited"),
+    ("closed", "Closed"),
+)
+
+
+class ProductRMA(models.Model):
+    """Core/warranty return workflow tracking."""
+
+    user = models.ForeignKey(
+        User,
+        related_name="product_rmas",
+        on_delete=models.CASCADE,
+    )
+    product = models.ForeignKey(
+        Product,
+        related_name="rma_entries",
+        on_delete=models.CASCADE,
+    )
+    supplier = models.ForeignKey(
+        Supplier,
+        related_name="rma_entries",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    customer = models.ForeignKey(
+        Customer,
+        related_name="product_rmas",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    rma_number = models.CharField(max_length=40, blank=True, null=True, db_index=True)
+    rma_type = models.CharField(max_length=20, choices=RMA_TYPE_CHOICES, default="core")
+    status = models.CharField(max_length=20, choices=RMA_STATUS_CHOICES, default="open")
+    quantity = models.PositiveIntegerField(default=1)
+    reason = models.TextField(blank=True)
+    supplier_reference = models.CharField(max_length=120, blank=True)
+    due_date = models.DateField(blank=True, null=True)
+    expected_credit = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    actual_credit = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    stock_adjusted = models.BooleanField(default=False)
+    opened_by = models.ForeignKey(
+        User,
+        related_name="opened_rmas",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    opened_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-opened_at"]
+
+    def __str__(self):
+        return self.rma_number or f"RMA#{self.pk}"
+
+    def save(self, *args, **kwargs):
+        if not self.rma_number and self.user_id:
+            today_str = timezone.localdate().strftime("%Y%m%d")
+            prefix = f"RMA-{self.user_id}-{today_str}-"
+            next_number = ProductRMA.objects.filter(
+                user_id=self.user_id,
+                rma_number__startswith=prefix,
+            ).count() + 1
+            self.rma_number = f"{prefix}{next_number:03d}"
+        super().save(*args, **kwargs)
+
+    def apply_stock_adjustment(self, *, actor=None):
+        if self.stock_adjusted:
+            return False
+        if self.rma_type != "core":
+            return False
+        if getattr(self.product, "item_type", "inventory") != "inventory":
+            return False
+
+        qty = max(int(self.quantity or 0), 0)
+        if not qty:
+            return False
+
+        InventoryTransaction.objects.create(
+            product=self.product,
+            transaction_type="IN",
+            quantity=qty,
+            transaction_date=timezone.now(),
+            remarks=f"RMA received {self.rma_number or self.pk}",
+            user=actor or self.user,
+        )
+        self.stock_adjusted = True
+        self.save(update_fields=["stock_adjusted"])
+        return True
+
+
+class FleetPartList(models.Model):
+    """Saved recommended parts lists for fleet vehicles."""
+
+    user = models.ForeignKey(
+        User,
+        related_name="fleet_part_lists",
+        on_delete=models.CASCADE,
+    )
+    fleet_vehicle = models.ForeignKey(
+        "FleetVehicle",
+        related_name="saved_part_lists",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    name = models.CharField(max_length=140)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        User,
+        related_name="created_fleet_part_lists",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("name"),
+                F("user"),
+                name="unique_fleet_part_list_name_per_user",
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class FleetPartListItem(models.Model):
+    part_list = models.ForeignKey(
+        FleetPartList,
+        related_name="items",
+        on_delete=models.CASCADE,
+    )
+    product = models.ForeignKey(
+        Product,
+        related_name="fleet_part_list_items",
+        on_delete=models.CASCADE,
+    )
+    quantity = models.PositiveIntegerField(default=1)
+    install_interval_days = models.PositiveIntegerField(blank=True, null=True)
+    install_interval_km = models.PositiveIntegerField(blank=True, null=True)
+    is_required = models.BooleanField(default=True)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["part_list", "product"],
+                name="unique_fleet_list_item_per_product",
+            ),
+        ]
+        ordering = ["product__name"]
+
+    def __str__(self):
+        return f"{self.part_list.name} - {self.product.name}"
+
+
+DISPATCH_STATUS_CHOICES = (
+    ("planned", "Planned"),
+    ("dispatched", "Dispatched"),
+    ("in_transit", "In transit"),
+    ("delivered", "Delivered"),
+    ("delayed", "Delayed"),
+    ("cancelled", "Cancelled"),
+)
+
+
+class DispatchTicket(models.Model):
+    """Dispatch tracking for inbound/outbound parts movement."""
+
+    user = models.ForeignKey(
+        User,
+        related_name="dispatch_tickets",
+        on_delete=models.CASCADE,
+    )
+    purchase_order = models.ForeignKey(
+        PurchaseOrder,
+        related_name="dispatch_tickets",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    customer = models.ForeignKey(
+        Customer,
+        related_name="dispatch_tickets",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    supplier = models.ForeignKey(
+        Supplier,
+        related_name="dispatch_tickets",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    reference_number = models.CharField(max_length=40, blank=True, null=True, db_index=True)
+    destination_name = models.CharField(max_length=180)
+    destination_address = models.TextField(blank=True)
+    scheduled_at = models.DateTimeField(blank=True, null=True)
+    driver_name = models.CharField(max_length=120, blank=True)
+    vehicle_reference = models.CharField(max_length=80, blank=True)
+    status = models.CharField(max_length=20, choices=DISPATCH_STATUS_CHOICES, default="planned")
+    tracking_notes = models.TextField(blank=True)
+    delivered_at = models.DateTimeField(blank=True, null=True)
+    created_by = models.ForeignKey(
+        User,
+        related_name="created_dispatch_tickets",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.reference_number or f"Dispatch#{self.pk}"
+
+    def save(self, *args, **kwargs):
+        if not self.reference_number and self.user_id:
+            date_key = timezone.localdate().strftime("%Y%m%d")
+            prefix = f"DSP-{self.user_id}-{date_key}-"
+            seq = DispatchTicket.objects.filter(
+                user_id=self.user_id,
+                reference_number__startswith=prefix,
+            ).count() + 1
+            self.reference_number = f"{prefix}{seq:03d}"
+
+        if self.status == "delivered" and self.delivered_at is None:
+            self.delivered_at = timezone.now()
+        if self.status != "delivered" and self.delivered_at is not None:
+            self.delivered_at = None
+        super().save(*args, **kwargs)
+
+
+class SupplierScorecardSnapshot(models.Model):
+    """Historical supplier performance snapshots."""
+
+    user = models.ForeignKey(
+        User,
+        related_name="supplier_scorecard_snapshots",
+        on_delete=models.CASCADE,
+    )
+    supplier = models.ForeignKey(
+        Supplier,
+        related_name="scorecard_snapshots",
+        on_delete=models.CASCADE,
+    )
+    snapshot_date = models.DateField(default=timezone.localdate)
+    period_days = models.PositiveIntegerField(default=90)
+    po_count = models.PositiveIntegerField(default=0)
+    on_time_rate = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
+    fill_rate = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
+    avg_lead_time_days = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0.00"))
+    rma_rate = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
+    weighted_score = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-snapshot_date", "supplier__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "supplier", "snapshot_date", "period_days"],
+                name="unique_supplier_scorecard_snapshot",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.supplier.name} ({self.snapshot_date})"
+
+
 def _resolve_stock_owner(user, product=None):
     if user:
         profile = getattr(user, "profile", None)

@@ -98,6 +98,7 @@ from .views_inventory import (
     search_inventory,
     filter_options,
     inventory_analytics,
+    inventory_operations_view,
     add_location,
     edit_location,
     delete_location,
@@ -614,6 +615,7 @@ urlpatterns = [
     path('inventory/product/<int:product_id>/qr/', product_qr_pdf, name='product_qr_pdf'),
     path('inventory/stock_in/<int:product_id>/', qr_stock_in, name='qr_stock_in'),
     path('inventory/analytics/', inventory_analytics, name='inventory_analytics'),
+    path('inventory/operations/', inventory_operations_view, name='inventory_operations'),
 
     # Category CRUD + "get" form
     path('inventory/add_category/', add_category, name='add_category'),

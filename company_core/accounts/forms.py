@@ -55,6 +55,7 @@ from .models import (
     ProductBrand,
     ProductModel,
     ProductVin,
+    MarginGuardrailSetting,
     StorefrontHeroShowcase,
     StorefrontHeroShowcaseItem,
     StorefrontHeroPackage,
@@ -169,6 +170,28 @@ def _normalize_alternate_skus(value):
         seen.add(key)
         normalized.append(sku)
     return normalized
+
+
+def _calculate_margin_percent(cost_value, sale_value):
+    if cost_value in (None, '') or sale_value in (None, ''):
+        return None
+    try:
+        cost_decimal = Decimal(str(cost_value))
+        sale_decimal = Decimal(str(sale_value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    if cost_decimal <= Decimal('0'):
+        return None
+    return ((sale_decimal - cost_decimal) / cost_decimal) * Decimal('100')
+
+
+def _margin_guardrail_for_user(user):
+    if not user:
+        return None
+    business_user = get_business_user(user) or user
+    if not business_user:
+        return None
+    return MarginGuardrailSetting.objects.filter(user=business_user).first()
 
 class CustomAuthenticationForm(AuthenticationForm):
     username = forms.CharField(label="Username or Email")
@@ -3514,6 +3537,21 @@ class ProductForm(forms.ModelForm):
         max_stock_level = cleaned_data.get('max_stock_level') or 0
         if max_stock_level and max_stock_level < reorder_level:
             self.add_error('max_stock_level', 'Max stock level must be greater than or equal to reorder level.')
+
+        guardrail = _margin_guardrail_for_user(self.user)
+        margin_percent = _calculate_margin_percent(
+            cleaned_data.get('cost_price'),
+            cleaned_data.get('sale_price'),
+        )
+        if guardrail and margin_percent is not None and guardrail.enforce_min_margin:
+            if margin_percent < guardrail.min_margin_percent:
+                self.add_error(
+                    'sale_price',
+                    (
+                        f"Margin {margin_percent:.2f}% is below the minimum guardrail "
+                        f"of {guardrail.min_margin_percent:.2f}%."
+                    ),
+                )
         return cleaned_data
 
     class Meta:
@@ -3859,6 +3897,21 @@ class ProductInlineForm(forms.ModelForm):
         max_stock_level = cleaned_data.get('max_stock_level') or 0
         if max_stock_level and max_stock_level < reorder_level:
             self.add_error('max_stock_level', 'Max stock level must be greater than or equal to reorder level.')
+
+        guardrail = _margin_guardrail_for_user(self.user)
+        margin_percent = _calculate_margin_percent(
+            cleaned_data.get('cost_price'),
+            cleaned_data.get('sale_price'),
+        )
+        if guardrail and margin_percent is not None and guardrail.enforce_min_margin:
+            if margin_percent < guardrail.min_margin_percent:
+                self.add_error(
+                    'sale_price',
+                    (
+                        f"Margin {margin_percent:.2f}% is below the minimum guardrail "
+                        f"of {guardrail.min_margin_percent:.2f}%."
+                    ),
+                )
         return cleaned_data
 
 class QuickProductCreateForm(forms.ModelForm):

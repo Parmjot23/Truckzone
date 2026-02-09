@@ -1,0 +1,381 @@
+{% extends 'customer_portal_base.html' %}
+{% load humanize %}
+
+{% block title %}Inventory Operations{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+  {% include 'inventory/partials/_inventory_nav.html' %}
+  <div class="page-header mb-3">
+    <div>
+      <h2 class="mb-1">Inventory Operations</h2>
+      <p class="text-muted mb-0">POs, cycle counts, replenishment, RMAs, fleet lists, guardrails, dispatch, scorecards, roles, and audit trail.</p>
+    </div>
+    <span class="badge bg-primary-subtle text-primary text-uppercase">Role: {{ inventory_role }}</span>
+  </div>
+
+  <div class="alert alert-light border small mb-4">
+    PO: {% if capabilities.purchase_orders %}Yes{% else %}No{% endif %} |
+    Count: {% if capabilities.cycle_counts %}Yes{% else %}No{% endif %} |
+    RMA: {% if capabilities.rma_workflow %}Yes{% else %}No{% endif %} |
+    Dispatch: {% if capabilities.dispatch_tracking %}Yes{% else %}No{% endif %} |
+    Role Admin: {% if capabilities.role_admin %}Yes{% else %}No{% endif %}
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">1) Purchase Orders + 2) Replenishment Rules</h5>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_low_stock_pos">
+            <button class="btn btn-sm btn-primary" {% if not capabilities.purchase_orders %}disabled{% endif %}>Generate Low-Stock Draft POs</button>
+          </form>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle">
+              <thead><tr><th>PO</th><th>Supplier</th><th>Status</th><th>Qty</th><th></th></tr></thead>
+              <tbody>
+                {% for po in purchase_orders %}
+                  <tr>
+                    <td>{{ po.po_number }}</td>
+                    <td>{{ po.supplier.name|default:'Unassigned' }}</td>
+                    <td>{{ po.get_status_display }}</td>
+                    <td>{{ po.total_ordered_qty|intcomma }} / {{ po.total_received_qty|intcomma }}</td>
+                    <td>
+                      <form method="post" class="d-flex gap-2 justify-content-end">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_po_status">
+                        <input type="hidden" name="po_id" value="{{ po.id }}">
+                        <select name="status" class="form-select form-select-sm" style="max-width: 160px;">
+                          {% for value, label in po_status_choices %}
+                            <option value="{{ value }}" {% if po.status == value %}selected{% endif %}>{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                        <button class="btn btn-sm btn-outline-primary" {% if not capabilities.purchase_orders %}disabled{% endif %}>Save</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="5" class="text-muted">No purchase orders yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <h6 class="mb-2">Receive Open PO Items</h6>
+          <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle">
+              <thead><tr><th>PO</th><th>Item</th><th>Remaining</th><th>Receive</th><th></th></tr></thead>
+              <tbody>
+                {% for po in open_purchase_orders %}
+                  {% for item in po.items.all %}
+                    {% if item.remaining_qty > 0 %}
+                      <tr>
+                        <td>{{ po.po_number }}</td>
+                        <td>{{ item.product.name }}</td>
+                        <td>{{ item.remaining_qty }}</td>
+                        <td>
+                          <form method="post" class="d-flex gap-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="receive_po_item">
+                            <input type="hidden" name="item_id" value="{{ item.id }}">
+                            <input type="number" name="receive_qty" min="1" max="{{ item.remaining_qty }}" value="{{ item.remaining_qty }}" class="form-control form-control-sm" style="max-width: 110px;">
+                            <button class="btn btn-sm btn-outline-success" {% if not capabilities.purchase_orders %}disabled{% endif %}>Receive</button>
+                          </form>
+                        </td>
+                        <td></td>
+                      </tr>
+                    {% endif %}
+                  {% endfor %}
+                {% empty %}
+                  <tr><td colspan="5" class="text-muted">No open PO items.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <h6 class="mb-2">Replenishment Rules (Low Stock)</h6>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead><tr><th>Product</th><th>Suggested</th><th>Lead</th><th>Coverage</th><th>Buffer%</th><th>MOQ</th><th>Multiple</th><th>Season</th><th></th></tr></thead>
+              <tbody>
+                {% for row in replenishment_rows %}
+                  <tr>
+                    <td>{{ row.product.name }}</td>
+                    <td class="fw-semibold text-danger">{{ row.recommendation.recommended_qty }}</td>
+                    <td><input form="rule-{{ row.product.id }}" type="number" name="lead_time_days" min="0" value="{{ row.rule.lead_time_days|default:7 }}" class="form-control form-control-sm"></td>
+                    <td><input form="rule-{{ row.product.id }}" type="number" name="coverage_days" min="1" value="{{ row.rule.coverage_days|default:30 }}" class="form-control form-control-sm"></td>
+                    <td><input form="rule-{{ row.product.id }}" type="number" name="buffer_percent" min="0" step="0.01" value="{{ row.rule.buffer_percent|default:'10.00' }}" class="form-control form-control-sm"></td>
+                    <td><input form="rule-{{ row.product.id }}" type="number" name="min_order_qty" min="0" value="{{ row.rule.min_order_qty|default:0 }}" class="form-control form-control-sm"></td>
+                    <td><input form="rule-{{ row.product.id }}" type="number" name="order_multiple" min="1" value="{{ row.rule.order_multiple|default:1 }}" class="form-control form-control-sm"></td>
+                    <td><input form="rule-{{ row.product.id }}" type="number" name="seasonality_factor" min="0.10" step="0.01" value="{{ row.rule.seasonality_factor|default:'1.00' }}" class="form-control form-control-sm"></td>
+                    <td>
+                      <form id="rule-{{ row.product.id }}" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="save_replenishment_rule">
+                        <input type="hidden" name="product_id" value="{{ row.product.id }}">
+                        <button class="btn btn-sm btn-outline-primary" {% if not capabilities.replenishment_rules %}disabled{% endif %}>Save</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="9" class="text-muted">No low stock rows.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header"><h5 class="mb-0">3) Cycle Count + 4) RMA + 5) Fleet Lists</h5></div>
+        <div class="card-body">
+          {% if open_cycle_session %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div><strong>{{ open_cycle_session.title }}</strong> <span class="text-muted small">{{ open_cycle_session.started_at|date:'Y-m-d H:i' }}</span></div>
+              <form method="post">{% csrf_token %}<input type="hidden" name="action" value="close_cycle_count"><input type="hidden" name="session_id" value="{{ open_cycle_session.id }}"><button class="btn btn-sm btn-danger" {% if not capabilities.cycle_counts %}disabled{% endif %}>Close Session</button></form>
+            </div>
+            <form method="post" class="mb-3">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="save_cycle_counts">
+              <input type="hidden" name="session_id" value="{{ open_cycle_session.id }}">
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead><tr><th>Item</th><th>Expected</th><th>Counted</th><th>Variance</th></tr></thead>
+                  <tbody>
+                    {% for entry in open_cycle_session.entries.all %}
+                      <tr>
+                        <td>{{ entry.product.name }}</td>
+                        <td>{{ entry.expected_quantity }}</td>
+                        <td><input type="number" min="0" name="counted_{{ entry.id }}" value="{{ entry.counted_quantity|default_if_none:'' }}" class="form-control form-control-sm"></td>
+                        <td>{{ entry.variance }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              <button class="btn btn-sm btn-outline-primary" {% if not capabilities.cycle_counts %}disabled{% endif %}>Save Counts</button>
+            </form>
+          {% else %}
+            <form method="post" class="d-flex gap-2 mb-3">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="start_cycle_count">
+              <input type="text" name="cycle_title" class="form-control" placeholder="Cycle Count Title">
+              <button class="btn btn-sm btn-primary" {% if not capabilities.cycle_counts %}disabled{% endif %}>Start Cycle Count</button>
+            </form>
+          {% endif %}
+
+          <form method="post" class="row g-2 mb-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_rma">
+            <div class="col-md-3"><select name="product_id" class="form-select" required><option value="">RMA Product</option>{% for product in products_for_forms %}<option value="{{ product.id }}">{{ product.name }}</option>{% endfor %}</select></div>
+            <div class="col-md-2"><select name="rma_type" class="form-select">{% for value, label in rma_type_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+            <div class="col-md-2"><input type="number" name="quantity" min="1" value="1" class="form-control" placeholder="Qty"></div>
+            <div class="col-md-2"><input type="number" name="expected_credit" min="0" step="0.01" class="form-control" placeholder="Expected Credit"></div>
+            <div class="col-md-3"><button class="btn btn-primary w-100" {% if not capabilities.rma_workflow %}disabled{% endif %}>Create RMA</button></div>
+          </form>
+
+          <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle">
+              <thead><tr><th>RMA</th><th>Product</th><th>Status</th><th>Qty</th><th></th></tr></thead>
+              <tbody>
+                {% for rma in rma_entries %}
+                  <tr>
+                    <td>{{ rma.rma_number }}</td>
+                    <td>{{ rma.product.name }}</td>
+                    <td>{{ rma.get_status_display }}</td>
+                    <td>{{ rma.quantity }}</td>
+                    <td>
+                      <form method="post" class="d-flex gap-2 justify-content-end">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_rma_status">
+                        <input type="hidden" name="rma_id" value="{{ rma.id }}">
+                        <select name="status" class="form-select form-select-sm" style="max-width: 150px;">
+                          {% for value, label in rma_status_choices %}
+                            <option value="{{ value }}" {% if rma.status == value %}selected{% endif %}>{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                        <input type="number" step="0.01" min="0" name="actual_credit" class="form-control form-control-sm" placeholder="Credit" style="max-width: 110px;">
+                        <button class="btn btn-sm btn-outline-primary" {% if not capabilities.rma_workflow %}disabled{% endif %}>Update</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="5" class="text-muted">No RMA records yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <form method="post" class="row g-2 mb-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_fleet_list">
+            <div class="col-md-4"><input type="text" name="name" class="form-control" placeholder="Fleet list name"></div>
+            <div class="col-md-4"><select name="fleet_vehicle_id" class="form-select"><option value="">Vehicle (optional)</option>{% for vehicle in fleet_vehicles_for_forms %}<option value="{{ vehicle.id }}">{{ vehicle }}</option>{% endfor %}</select></div>
+            <div class="col-md-4"><button class="btn btn-outline-primary w-100" {% if not capabilities.fleet_lists %}disabled{% endif %}>Create Fleet List</button></div>
+          </form>
+
+          <form method="post" class="row g-2 mb-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_fleet_list_item">
+            <div class="col-md-3"><select name="fleet_list_id" class="form-select" required><option value="">Fleet list</option>{% for fleet_list in fleet_lists_for_forms %}<option value="{{ fleet_list.id }}">{{ fleet_list.name }}</option>{% endfor %}</select></div>
+            <div class="col-md-4"><select name="product_id" class="form-select" required><option value="">Part</option>{% for product in products_for_forms %}<option value="{{ product.id }}">{{ product.name }}</option>{% endfor %}</select></div>
+            <div class="col-md-2"><input type="number" min="1" name="quantity" value="1" class="form-control" placeholder="Qty"></div>
+            <div class="col-md-3"><button class="btn btn-outline-secondary w-100" {% if not capabilities.fleet_lists %}disabled{% endif %}>Add/Update Fleet Item</button></div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header"><h5 class="mb-0">6) Margin Guardrails + 7) Dead Stock</h5></div>
+        <div class="card-body">
+          <form method="post" class="row g-2 mb-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_margin_guardrails">
+            <div class="col-md-3"><input type="number" step="0.01" min="0" name="min_margin_percent" class="form-control" value="{{ guardrail.min_margin_percent }}" placeholder="Min Margin %"></div>
+            <div class="col-md-3"><input type="number" step="0.01" min="0" name="warning_margin_percent" class="form-control" value="{{ guardrail.warning_margin_percent }}" placeholder="Warning Margin %"></div>
+            <div class="col-md-3 d-flex align-items-center"><div class="form-check"><input type="checkbox" class="form-check-input" name="enforce_min_margin" {% if guardrail.enforce_min_margin %}checked{% endif %}><label class="form-check-label">Enforce Floor</label></div></div>
+            <div class="col-md-3"><button class="btn btn-primary w-100" {% if not capabilities.margin_guardrails %}disabled{% endif %}>Save Guardrails</button></div>
+          </form>
+          <div class="small mb-2">Aging: 60-89 days {{ dead_stock_buckets.bucket_60_89|intcomma }}, 90-179 days {{ dead_stock_buckets.bucket_90_179|intcomma }}, 180+ days {{ dead_stock_buckets.bucket_180_plus|intcomma }}</div>
+          <div class="small text-muted">Margin alerts: {{ margin_alerts|length }} | Dead stock candidates: {{ dead_stock_candidates|length }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header"><h5 class="mb-0">8) Dispatch + 9) Supplier Scorecards + 10) Role Permissions & Audit Trail</h5></div>
+        <div class="card-body">
+          <form method="post" class="row g-2 mb-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_dispatch">
+            <div class="col-md-3"><input type="text" name="destination_name" class="form-control" placeholder="Dispatch destination"></div>
+            <div class="col-md-3"><input type="datetime-local" name="scheduled_at" class="form-control"></div>
+            <div class="col-md-3"><input type="text" name="driver_name" class="form-control" placeholder="Driver"></div>
+            <div class="col-md-3"><button class="btn btn-primary w-100" {% if not capabilities.dispatch_tracking %}disabled{% endif %}>Create Dispatch</button></div>
+          </form>
+
+          <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle">
+              <thead><tr><th>Ref</th><th>Destination</th><th>Status</th><th>Schedule</th><th></th></tr></thead>
+              <tbody>
+                {% for dispatch in dispatch_tickets %}
+                  <tr>
+                    <td>{{ dispatch.reference_number }}</td>
+                    <td>{{ dispatch.destination_name }}</td>
+                    <td>{{ dispatch.get_status_display }}</td>
+                    <td>{{ dispatch.scheduled_at|date:'Y-m-d H:i'|default:'-' }}</td>
+                    <td>
+                      <form method="post" class="d-flex gap-2 justify-content-end">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_dispatch_status">
+                        <input type="hidden" name="dispatch_id" value="{{ dispatch.id }}">
+                        <select name="status" class="form-select form-select-sm" style="max-width: 140px;">
+                          {% for value, label in dispatch_status_choices %}
+                            <option value="{{ value }}" {% if dispatch.status == value %}selected{% endif %}>{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                        <input type="text" name="tracking_note" class="form-control form-control-sm" placeholder="Note" style="max-width: 130px;">
+                        <button class="btn btn-sm btn-outline-primary" {% if not capabilities.dispatch_tracking %}disabled{% endif %}>Update</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="5" class="text-muted">No dispatch tickets yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <form method="post" class="d-flex gap-2 mb-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="refresh_supplier_scorecards">
+            <input type="number" min="30" name="period_days" value="90" class="form-control" style="max-width: 120px;">
+            <button class="btn btn-outline-primary" {% if not capabilities.supplier_scorecards %}disabled{% endif %}>Refresh Scorecards</button>
+          </form>
+
+          <div class="table-responsive mb-3">
+            <table class="table table-sm">
+              <thead><tr><th>Supplier</th><th>POs</th><th>On-Time%</th><th>Fill%</th><th>Lead Days</th><th>RMA%</th><th>Score</th></tr></thead>
+              <tbody>
+                {% for row in scorecards %}
+                  <tr>
+                    <td>{{ row.supplier.name }}</td>
+                    <td>{{ row.po_count }}</td>
+                    <td>{{ row.on_time_rate }}</td>
+                    <td>{{ row.fill_rate }}</td>
+                    <td>{{ row.avg_lead_time_days }}</td>
+                    <td>{{ row.rma_rate }}</td>
+                    <td class="fw-semibold">{{ row.weighted_score }}</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="7" class="text-muted">No supplier scorecard data yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <form method="post" class="row g-2 mb-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_role_assignment">
+            <div class="col-md-4"><select name="member_id" class="form-select" required><option value="">Team member</option>{% for user_item in team_users %}<option value="{{ user_item.id }}">{{ user_item.username }}</option>{% endfor %}</select></div>
+            <div class="col-md-4"><select name="role" class="form-select">{% for value, label in role_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+            <div class="col-md-2 d-flex align-items-center"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_active" checked><label class="form-check-label">Active</label></div></div>
+            <div class="col-md-2"><button class="btn btn-outline-primary w-100" {% if not capabilities.role_admin %}disabled{% endif %}>Save Role</button></div>
+          </form>
+
+          <div class="table-responsive mb-3">
+            <table class="table table-sm">
+              <thead><tr><th>User</th><th>Role</th><th>Status</th></tr></thead>
+              <tbody>
+                {% for row in role_rows %}
+                  <tr>
+                    <td>{{ row.member.username }}</td>
+                    <td>{{ row.resolved_role }}</td>
+                    <td>{% if row.assignment %}{% if row.assignment.is_active %}Active{% else %}Inactive{% endif %}{% else %}Inherited{% endif %}</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="3" class="text-muted">No team members found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Description</th></tr></thead>
+              <tbody>
+                {% for log in inventory_audit_logs %}
+                  <tr>
+                    <td>{{ log.created_at|date:'Y-m-d H:i' }}</td>
+                    <td>{{ log.actor.username|default:'system' }}</td>
+                    <td>{{ log.action }}</td>
+                    <td>{{ log.description }}</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="4" class="text-muted">No inventory audit log entries yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="small text-muted">
+            Dispatch tickets: {{ dispatch_tickets|length }} |
+            Current scorecards: {{ scorecards|length }} |
+            Role rows: {{ role_rows|length }} |
+            Audit logs: {{ inventory_audit_logs|length }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

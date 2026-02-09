@@ -52,5 +52,9 @@
     <i class="fa-solid fa-chart-column me-1"></i>
     Analytics
   </a>
+  <a href="{% url 'accounts:inventory_operations' %}" class="btn btn-sm {% if current == 'inventory_operations' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    <i class="fa-solid fa-diagram-project me-1"></i>
+    Operations
+  </a>
 </nav>
 {% endwith %}

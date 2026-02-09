@@ -68,33 +68,44 @@
 
     <div class="tab-pane fade" id="edit-pane-catalog" role="tabpanel" aria-labelledby="edit-tab-catalog">
       <div class="product-modal-grid">
+        <div class="form-group span-2 catalog-pane-intro">
+          <div class="catalog-pane-title">Catalog details</div>
+          <div class="catalog-pane-copy">Assign category, supplier, brand, and location. Category attributes appear below.</div>
+        </div>
         <div class="form-group">
-          {{ form.category.label_tag }}
+          <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
           {{ form.category }}
         </div>
         <div class="form-group">
-          {{ form.supplier.label_tag }}
+          <label for="{{ form.supplier.id_for_label }}" class="form-label">Supplier</label>
           {{ form.supplier }}
         </div>
         <div class="form-group">
-          {{ form.brand.label_tag }}
+          <label for="{{ form.brand.id_for_label }}" class="form-label">Brand</label>
           {{ form.brand }}
         </div>
         <div class="form-group">
-          {{ form.vehicle_model.label_tag }}
+          <label for="{{ form.vehicle_model.id_for_label }}" class="form-label">Model</label>
           {{ form.vehicle_model }}
         </div>
         <div class="form-group">
-          {{ form.vin_number.label_tag }}
+          <label for="{{ form.vin_number.id_for_label }}" class="form-label">VIN number</label>
           {{ form.vin_number }}
         </div>
         <div class="form-group">
-          {{ form.item_type.label_tag }}
+          <label for="{{ form.item_type.id_for_label }}" class="form-label">Item type</label>
           {{ form.item_type }}
         </div>
         <div class="form-group">
-          {{ form.location.label_tag }}
+          <label for="{{ form.location.id_for_label }}" class="form-label">Location</label>
           {{ form.location }}
+        </div>
+        <div class="form-group span-2 catalog-attributes-card">
+          <div class="catalog-attributes-header">Category attributes</div>
+          <div class="catalog-attributes-copy">Attributes change automatically based on the selected category.</div>
+          <div class="catalog-attributes-fields mt-2" data-attribute-fields="true" data-attribute-url="{% url 'accounts:get_attribute_fields' %}" data-product-id="{{ form.instance.id|default_if_none:'' }}" data-empty-message="Select a category to load category attributes.">
+            {% include 'inventory/partials/_attribute_fields.html' with form=form %}
+          </div>
         </div>
       </div>
     </div>
@@ -161,8 +172,8 @@
 
     <div class="tab-pane fade" id="edit-pane-attributes" role="tabpanel" aria-labelledby="edit-tab-attributes">
       <div class="product-modal-grid">
-        <div class="form-group span-2" data-attribute-fields="true" data-attribute-url="{% url 'accounts:get_attribute_fields' %}" data-product-id="{{ form.instance.id|default_if_none:'' }}">
-          {% include 'inventory/partials/_attribute_fields.html' with form=form %}
+        <div class="form-group span-2 catalog-tab-note">
+          Category attributes now appear in the <strong>Catalog</strong> tab for faster editing.
         </div>
       </div>
     </div>

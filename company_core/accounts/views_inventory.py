@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.template.loader import render_to_string
@@ -26,10 +27,12 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 from .models import (
+    ActivityLog,
     Category,
     CategoryGroup,
     CategoryAttribute,
     CategoryAttributeOption,
+    Customer,
     Supplier,
     Product,
     ProductAlternateSku,
@@ -41,10 +44,24 @@ from .models import (
     ProductBrand,
     ProductModel,
     ProductVin,
+    InventoryRoleAssignment,
+    MarginGuardrailSetting,
+    ReplenishmentRule,
+    PurchaseOrder,
+    PurchaseOrderItem,
+    CycleCountSession,
+    CycleCountEntry,
+    ProductRMA,
+    FleetVehicle,
+    FleetPartList,
+    FleetPartListItem,
+    DispatchTicket,
+    SupplierScorecardSnapshot,
 )
 from .utils import (
     apply_stock_fields,
     annotate_products_with_stock,
+    get_business_user,
     get_product_user_ids,
     get_product_stock_user_ids,
     get_stock_owner,
@@ -210,6 +227,208 @@ def _product_transaction_scope_filter(user_ids):
         transactions__user__isnull=True,
         transactions__product__user__in=user_ids,
     )
+
+
+def _safe_int(value, default=0, *, minimum=None):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    if minimum is not None and parsed < minimum:
+        return minimum
+    return parsed
+
+
+def _safe_decimal(value, default=Decimal("0.00"), *, minimum=None):
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        parsed = default
+    if minimum is not None and parsed < minimum:
+        return minimum
+    return parsed
+
+
+def _get_inventory_business_user(request):
+    if not hasattr(request, "_inventory_business_user"):
+        request._inventory_business_user = get_business_user(request.user) or request.user
+    return request._inventory_business_user
+
+
+def _get_inventory_role(request):
+    if not hasattr(request, "_inventory_role"):
+        business_user = _get_inventory_business_user(request)
+        request._inventory_role = InventoryRoleAssignment.resolve_role(business_user, request.user)
+    return request._inventory_role
+
+
+def _can_inventory(request, capability):
+    role = _get_inventory_role(request)
+    return InventoryRoleAssignment.role_allows(role, capability)
+
+
+def _log_inventory_activity(request, *, action, object_type, description, object_id="", metadata=None):
+    business_user = _get_inventory_business_user(request)
+    ActivityLog.objects.create(
+        business=business_user,
+        actor=request.user,
+        action=action,
+        object_type=object_type,
+        object_id=str(object_id or ""),
+        description=description,
+        metadata=metadata or {},
+    )
+
+
+def _calculate_margin_percent(cost_price, sale_price):
+    if cost_price in (None, "") or sale_price in (None, ""):
+        return None
+    cost = _safe_decimal(cost_price, default=Decimal("0.00"))
+    sale = _safe_decimal(sale_price, default=Decimal("0.00"))
+    if cost <= Decimal("0.00"):
+        return None
+    return ((sale - cost) / cost * Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def _average_daily_usage(product, transaction_scope, *, lookback_days=60):
+    lookback_days = max(int(lookback_days or 60), 1)
+    start_date = timezone.now() - timedelta(days=lookback_days)
+    sold_qty = (
+        product.transactions.filter(
+            transaction_scope,
+            transaction_type="OUT",
+            transaction_date__gte=start_date,
+        ).aggregate(total=Sum("quantity")).get("total")
+        or 0
+    )
+    avg_usage = Decimal(sold_qty) / Decimal(lookback_days)
+    return sold_qty, avg_usage
+
+
+def _recommended_reorder_for_product(product, *, transaction_scope, rule=None, lookback_days=60):
+    stock_qty = int(getattr(product, "quantity_in_stock", 0) or 0)
+    reorder_level = int(getattr(product, "reorder_level", 0) or 0)
+    max_stock_level = int(getattr(product, "max_stock_level", 0) or 0)
+    sold_qty, avg_usage = _average_daily_usage(product, transaction_scope, lookback_days=lookback_days)
+
+    if rule:
+        recommendation = rule.calculate_recommended_quantity(
+            current_stock=stock_qty,
+            avg_daily_usage=avg_usage,
+            reorder_level=reorder_level,
+            max_stock_level=max_stock_level,
+        )
+    else:
+        target_stock = max(max_stock_level, reorder_level)
+        recommendation = {
+            "recommended_qty": max(target_stock - stock_qty, 0),
+            "target_stock": target_stock,
+            "projected_demand": Decimal("0.00"),
+            "days_covered": 0,
+        }
+
+    recommendation["sold_qty"] = sold_qty
+    recommendation["avg_daily_usage"] = avg_usage.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    recommendation["rule_applied"] = bool(rule)
+    return recommendation
+
+
+def _build_supplier_scorecards(*, business_user, since_date=None, period_days=90):
+    if since_date is None:
+        since_date = timezone.now() - timedelta(days=period_days)
+
+    purchase_orders = (
+        PurchaseOrder.objects.filter(user=business_user, created_at__gte=since_date, supplier__isnull=False)
+        .select_related("supplier")
+        .prefetch_related("items")
+    )
+
+    supplier_rows = {}
+    for po in purchase_orders:
+        supplier_id = po.supplier_id
+        if supplier_id not in supplier_rows:
+            supplier_rows[supplier_id] = {
+                "supplier": po.supplier,
+                "po_count": 0,
+                "on_time_hits": 0,
+                "on_time_checks": 0,
+                "qty_ordered": 0,
+                "qty_received": 0,
+                "lead_time_total": Decimal("0.00"),
+                "lead_time_count": 0,
+            }
+        row = supplier_rows[supplier_id]
+        row["po_count"] += 1
+
+        qty_ordered = sum((item.quantity_ordered or 0) for item in po.items.all())
+        qty_received = sum((item.quantity_received or 0) for item in po.items.all())
+        row["qty_ordered"] += qty_ordered
+        row["qty_received"] += qty_received
+
+        if po.expected_delivery_date and po.status in {"partially_received", "received"}:
+            row["on_time_checks"] += 1
+            received_date = po.updated_at.date()
+            if received_date <= po.expected_delivery_date:
+                row["on_time_hits"] += 1
+
+        if po.status in {"partially_received", "received"}:
+            lead_days = max((po.updated_at.date() - po.created_at.date()).days, 0)
+            row["lead_time_total"] += Decimal(lead_days)
+            row["lead_time_count"] += 1
+
+    rma_counts = (
+        ProductRMA.objects.filter(
+            user=business_user,
+            supplier__isnull=False,
+            opened_at__gte=since_date,
+        )
+        .values("supplier_id")
+        .annotate(total=Sum("quantity"))
+    )
+    rma_map = {row["supplier_id"]: row["total"] or 0 for row in rma_counts}
+
+    scorecards = []
+    for supplier_id, row in supplier_rows.items():
+        qty_ordered = row["qty_ordered"] or 0
+        qty_received = row["qty_received"] or 0
+
+        on_time_rate = Decimal("100.00")
+        if row["on_time_checks"]:
+            on_time_rate = (Decimal(row["on_time_hits"]) / Decimal(row["on_time_checks"])) * Decimal("100")
+
+        fill_rate = Decimal("0.00")
+        if qty_ordered:
+            fill_rate = (Decimal(qty_received) / Decimal(qty_ordered)) * Decimal("100")
+
+        avg_lead_time = Decimal("0.00")
+        if row["lead_time_count"]:
+            avg_lead_time = row["lead_time_total"] / Decimal(row["lead_time_count"])
+
+        rma_rate = Decimal("0.00")
+        supplier_rma_qty = Decimal(rma_map.get(supplier_id, 0))
+        if qty_ordered:
+            rma_rate = (supplier_rma_qty / Decimal(qty_ordered)) * Decimal("100")
+
+        weighted_score = (
+            (on_time_rate * Decimal("0.40"))
+            + (fill_rate * Decimal("0.40"))
+            + (max(Decimal("0.00"), Decimal("100.00") - (rma_rate * Decimal("2.00"))) * Decimal("0.20"))
+        )
+
+        scorecards.append(
+            {
+                "supplier": row["supplier"],
+                "po_count": row["po_count"],
+                "on_time_rate": on_time_rate.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+                "fill_rate": fill_rate.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+                "avg_lead_time_days": avg_lead_time.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+                "rma_rate": rma_rate.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+                "weighted_score": weighted_score.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            }
+        )
+
+    scorecards.sort(key=lambda entry: (-entry["weighted_score"], entry["supplier"].name if entry["supplier"] else ""))
+    return scorecards
 
 
 def _sync_alternate_skus(product, sku_list):
@@ -431,6 +650,8 @@ def inventory_view(request):
         return redirect("accounts:inventory_categories")
     if tab == "locations":
         return redirect("accounts:inventory_locations")
+    if tab == "operations":
+        return redirect("accounts:inventory_operations")
     return redirect("accounts:inventory_hub")
 
 @login_required
@@ -2924,6 +3145,8 @@ def export_category_groups_template(request):
 @login_required
 def inventory_stock_orders_view(request):
     product_user_ids = _get_inventory_user_ids(request)
+    transaction_scope = _transaction_scope_filter(_get_inventory_transaction_user_ids(request))
+    business_user = _get_inventory_business_user(request)
     products = (
         Product.objects.filter(user__in=product_user_ids, item_type="inventory")
         .select_related("supplier")
@@ -2932,6 +3155,13 @@ def inventory_stock_orders_view(request):
     products = annotate_products_with_stock(products, request.user)
     low_stock_products = products.filter(stock_quantity__lt=F("stock_reorder"))
     low_stock_products = apply_stock_fields(list(low_stock_products))
+    rule_map = {
+        rule.product_id: rule
+        for rule in ReplenishmentRule.objects.filter(
+            user=business_user,
+            product_id__in=[product.id for product in low_stock_products],
+        )
+    }
 
     business_name = getattr(getattr(request.user, "profile", None), "company_name", None)
     if not business_name:
@@ -2986,8 +3216,14 @@ def inventory_stock_orders_view(request):
 
         reorder_level = product.reorder_level or 0
         max_stock_level = product.max_stock_level or 0
-        target_stock = max_stock_level if max_stock_level > reorder_level else reorder_level
-        order_qty = max(target_stock - (product.quantity_in_stock or 0), 0)
+        rule = rule_map.get(product.id)
+        recommendation = _recommended_reorder_for_product(
+            product,
+            transaction_scope=transaction_scope,
+            rule=rule,
+        )
+        target_stock = recommendation["target_stock"]
+        order_qty = recommendation["recommended_qty"]
         group["products"].append(
             {
                 "id": product.id,
@@ -2999,6 +3235,8 @@ def inventory_stock_orders_view(request):
                 "target_stock": target_stock,
                 "order_qty": order_qty,
                 "location": product.location or "",
+                "rule_applied": recommendation["rule_applied"],
+                "avg_daily_usage": recommendation["avg_daily_usage"],
             }
         )
         group["total_order_qty"] += order_qty
@@ -5123,3 +5361,832 @@ def inventory_analytics(request):
     }
 
     return render(request, 'inventory/analytics_dashboard.html', context)
+
+
+def _parse_date_input(raw_value):
+    if not raw_value:
+        return None
+    try:
+        return datetime.strptime(str(raw_value), "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_datetime_input(raw_value):
+    if not raw_value:
+        return None
+    try:
+        return datetime.strptime(str(raw_value), "%Y-%m-%dT%H:%M")
+    except (TypeError, ValueError):
+        return None
+
+
+OPERATIONS_ACTION_CAPABILITY = {
+    "create_low_stock_pos": InventoryRoleAssignment.CAP_PURCHASE_ORDERS,
+    "update_po_status": InventoryRoleAssignment.CAP_PURCHASE_ORDERS,
+    "receive_po_item": InventoryRoleAssignment.CAP_PURCHASE_ORDERS,
+    "start_cycle_count": InventoryRoleAssignment.CAP_CYCLE_COUNTS,
+    "save_cycle_counts": InventoryRoleAssignment.CAP_CYCLE_COUNTS,
+    "close_cycle_count": InventoryRoleAssignment.CAP_CYCLE_COUNTS,
+    "save_replenishment_rule": InventoryRoleAssignment.CAP_REPLENISHMENT,
+    "create_rma": InventoryRoleAssignment.CAP_RMA,
+    "update_rma_status": InventoryRoleAssignment.CAP_RMA,
+    "create_fleet_list": InventoryRoleAssignment.CAP_FLEET_LISTS,
+    "add_fleet_list_item": InventoryRoleAssignment.CAP_FLEET_LISTS,
+    "update_margin_guardrails": InventoryRoleAssignment.CAP_MARGIN_GUARDRAILS,
+    "create_dispatch": InventoryRoleAssignment.CAP_DISPATCH,
+    "update_dispatch_status": InventoryRoleAssignment.CAP_DISPATCH,
+    "refresh_supplier_scorecards": InventoryRoleAssignment.CAP_SUPPLIER_SCORECARDS,
+    "save_role_assignment": InventoryRoleAssignment.CAP_ROLE_ADMIN,
+}
+
+
+@login_required
+def inventory_operations_view(request):
+    business_user = _get_inventory_business_user(request)
+    product_user_ids = _get_inventory_user_ids(request)
+    transaction_scope = _transaction_scope_filter(_get_inventory_transaction_user_ids(request))
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+        capability = OPERATIONS_ACTION_CAPABILITY.get(action)
+        if capability and not _can_inventory(request, capability):
+            messages.error(request, "Your inventory role does not allow this operation.")
+            return redirect("accounts:inventory_operations")
+
+        if action == "save_role_assignment":
+            member_id = _safe_int(request.POST.get("member_id"), minimum=1)
+            role_value = (request.POST.get("role") or "").strip()
+            active = request.POST.get("is_active") in {"on", "true", "1"}
+            valid_roles = {choice[0] for choice in InventoryRoleAssignment._meta.get_field("role").choices}
+            if role_value not in valid_roles:
+                role_value = InventoryRoleAssignment.ROLE_VIEWER
+
+            team_ids = set(get_product_user_ids(request.user))
+            team_ids.add(business_user.id)
+            member = User.objects.filter(id=member_id, id__in=team_ids).first()
+            if not member:
+                messages.error(request, "Selected team member was not found.")
+                return redirect("accounts:inventory_operations")
+
+            assignment, created = InventoryRoleAssignment.objects.update_or_create(
+                business=business_user,
+                member=member,
+                defaults={
+                    "role": role_value,
+                    "is_active": active,
+                },
+            )
+            messages.success(request, f"Role {'created' if created else 'updated'} for {member.username}.")
+            _log_inventory_activity(
+                request,
+                action="inventory_role_assignment_saved",
+                object_type="inventory_role_assignment",
+                object_id=assignment.pk,
+                description=f"{member.username} assigned role {role_value}",
+                metadata={"active": active},
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "create_low_stock_pos":
+            products = annotate_products_with_stock(
+                Product.objects.filter(user__in=product_user_ids, item_type="inventory").select_related("supplier"),
+                request.user,
+            )
+            low_stock_products = apply_stock_fields(list(products.filter(stock_quantity__lt=F("stock_reorder"))))
+            rule_map = {
+                rule.product_id: rule
+                for rule in ReplenishmentRule.objects.filter(
+                    user=business_user,
+                    product_id__in=[product.id for product in low_stock_products],
+                )
+            }
+
+            grouped = {}
+            for product in low_stock_products:
+                recommendation = _recommended_reorder_for_product(
+                    product,
+                    transaction_scope=transaction_scope,
+                    rule=rule_map.get(product.id),
+                )
+                order_qty = recommendation["recommended_qty"]
+                if order_qty <= 0:
+                    continue
+
+                supplier_key = product.supplier_id or 0
+                if supplier_key not in grouped:
+                    grouped[supplier_key] = {
+                        "supplier": product.supplier,
+                        "items": [],
+                        "lead_days": [],
+                    }
+                grouped[supplier_key]["items"].append((product, recommendation))
+                if rule_map.get(product.id):
+                    grouped[supplier_key]["lead_days"].append(rule_map[product.id].lead_time_days or 0)
+
+            po_created = 0
+            item_created = 0
+            with transaction.atomic():
+                for _, payload in grouped.items():
+                    lead_days = max(payload["lead_days"]) if payload["lead_days"] else 7
+                    po = PurchaseOrder.objects.create(
+                        user=business_user,
+                        supplier=payload["supplier"],
+                        status="draft",
+                        expected_delivery_date=timezone.localdate() + timedelta(days=max(lead_days, 1)),
+                        created_by=request.user,
+                    )
+                    created_any_item = False
+                    for product, recommendation in payload["items"]:
+                        qty = recommendation["recommended_qty"]
+                        if qty <= 0:
+                            continue
+                        PurchaseOrderItem.objects.create(
+                            purchase_order=po,
+                            product=product,
+                            quantity_ordered=qty,
+                            recommended_quantity=qty,
+                            unit_cost=product.cost_price or Decimal("0.00"),
+                            notes=f"Target stock: {recommendation['target_stock']}",
+                        )
+                        created_any_item = True
+                        item_created += 1
+                    if created_any_item:
+                        po_created += 1
+                    else:
+                        po.delete()
+
+            if po_created:
+                messages.success(request, f"Created {po_created} draft purchase order(s) with {item_created} line item(s).")
+                _log_inventory_activity(
+                    request,
+                    action="inventory_purchase_orders_generated",
+                    object_type="inventory_purchase_order",
+                    description=f"Generated {po_created} draft purchase orders",
+                    metadata={"po_count": po_created, "item_count": item_created},
+                )
+            else:
+                messages.info(request, "No purchase orders were created. Review stock levels and replenishment rules.")
+            return redirect("accounts:inventory_operations")
+
+        if action == "update_po_status":
+            po_id = _safe_int(request.POST.get("po_id"), minimum=1)
+            status_value = (request.POST.get("status") or "").strip()
+            valid_statuses = {choice[0] for choice in PurchaseOrder._meta.get_field("status").choices}
+            po = PurchaseOrder.objects.filter(user=business_user, pk=po_id).first()
+            if not po:
+                messages.error(request, "Purchase order not found.")
+                return redirect("accounts:inventory_operations")
+            if status_value not in valid_statuses:
+                messages.error(request, "Invalid purchase order status.")
+                return redirect("accounts:inventory_operations")
+
+            po.status = status_value
+            if status_value == "ordered" and not po.ordered_date:
+                po.ordered_date = timezone.localdate()
+            po.save(update_fields=["status", "ordered_date", "updated_at"])
+            messages.success(request, f"Purchase order {po.po_number} updated.")
+            _log_inventory_activity(
+                request,
+                action="inventory_purchase_order_status_updated",
+                object_type="inventory_purchase_order",
+                object_id=po.pk,
+                description=f"{po.po_number} set to {po.status}",
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "receive_po_item":
+            item_id = _safe_int(request.POST.get("item_id"), minimum=1)
+            receive_qty = _safe_int(request.POST.get("receive_qty"), minimum=0)
+            item = PurchaseOrderItem.objects.filter(
+                pk=item_id,
+                purchase_order__user=business_user,
+            ).select_related("purchase_order").first()
+            if not item:
+                messages.error(request, "Purchase order item not found.")
+                return redirect("accounts:inventory_operations")
+            if receive_qty <= 0:
+                messages.error(request, "Enter a positive quantity to receive.")
+                return redirect("accounts:inventory_operations")
+
+            posted_qty = item.receive_stock(receive_qty, actor=request.user)
+            po = item.purchase_order
+            if po.total_received_qty >= po.total_ordered_qty and po.total_ordered_qty > 0:
+                po.status = "received"
+                po.save(update_fields=["status", "updated_at"])
+            elif po.total_received_qty > 0:
+                po.status = "partially_received"
+                po.save(update_fields=["status", "updated_at"])
+
+            messages.success(request, f"Received {posted_qty} unit(s) for {item.product.name}.")
+            _log_inventory_activity(
+                request,
+                action="inventory_purchase_order_item_received",
+                object_type="inventory_purchase_order_item",
+                object_id=item.pk,
+                description=f"Received {posted_qty} units for {item.product.name}",
+                metadata={"purchase_order": po.po_number},
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "save_replenishment_rule":
+            product_id = _safe_int(request.POST.get("product_id"), minimum=1)
+            product = Product.objects.filter(pk=product_id, user__in=product_user_ids).first()
+            if not product:
+                messages.error(request, "Product not found for replenishment rule.")
+                return redirect("accounts:inventory_operations")
+
+            defaults = {
+                "lead_time_days": _safe_int(request.POST.get("lead_time_days"), default=7, minimum=0),
+                "coverage_days": _safe_int(request.POST.get("coverage_days"), default=30, minimum=1),
+                "buffer_percent": _safe_decimal(request.POST.get("buffer_percent"), default=Decimal("10.00"), minimum=Decimal("0.00")),
+                "min_order_qty": _safe_int(request.POST.get("min_order_qty"), default=0, minimum=0),
+                "order_multiple": _safe_int(request.POST.get("order_multiple"), default=1, minimum=1),
+                "seasonality_factor": _safe_decimal(request.POST.get("seasonality_factor"), default=Decimal("1.00"), minimum=Decimal("0.10")),
+                "auto_generate_po": request.POST.get("auto_generate_po") in {"on", "true", "1"},
+            }
+            rule, created = ReplenishmentRule.objects.update_or_create(
+                user=business_user,
+                product=product,
+                defaults=defaults,
+            )
+            messages.success(request, f"Replenishment rule {'created' if created else 'updated'} for {product.name}.")
+            _log_inventory_activity(
+                request,
+                action="inventory_replenishment_rule_saved",
+                object_type="inventory_replenishment_rule",
+                object_id=rule.pk,
+                description=f"Rule saved for {product.name}",
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "start_cycle_count":
+            existing_open = CycleCountSession.objects.filter(user=business_user, status="open").first()
+            if existing_open:
+                messages.info(request, "An open cycle count session already exists.")
+                return redirect("accounts:inventory_operations")
+
+            title = (request.POST.get("cycle_title") or "").strip() or f"Cycle Count - {timezone.localdate()}"
+            products = annotate_products_with_stock(
+                Product.objects.filter(user__in=product_user_ids, item_type="inventory").select_related("supplier"),
+                request.user,
+            )
+            candidates = list(products.filter(stock_reorder__gt=0).order_by("stock_quantity", "name")[:40])
+            if not candidates:
+                candidates = list(products.order_by("name")[:40])
+            candidates = apply_stock_fields(candidates)
+
+            with transaction.atomic():
+                session = CycleCountSession.objects.create(
+                    user=business_user,
+                    title=title,
+                    created_by=request.user,
+                )
+                for product in candidates:
+                    CycleCountEntry.objects.create(
+                        session=session,
+                        product=product,
+                        expected_quantity=max(int(product.quantity_in_stock or 0), 0),
+                    )
+
+            messages.success(request, f"Cycle count session started with {len(candidates)} item(s).")
+            _log_inventory_activity(
+                request,
+                action="inventory_cycle_count_started",
+                object_type="inventory_cycle_count",
+                object_id=session.pk,
+                description=f"Started cycle count {session.title}",
+                metadata={"entry_count": len(candidates)},
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "save_cycle_counts":
+            session_id = _safe_int(request.POST.get("session_id"), minimum=1)
+            session = CycleCountSession.objects.filter(
+                user=business_user,
+                status="open",
+                pk=session_id,
+            ).prefetch_related("entries").first()
+            if not session:
+                messages.error(request, "Cycle count session not found.")
+                return redirect("accounts:inventory_operations")
+
+            updated = 0
+            for entry in session.entries.all():
+                count_key = f"counted_{entry.id}"
+                if count_key not in request.POST:
+                    continue
+                raw_count = (request.POST.get(count_key) or "").strip()
+                if raw_count == "":
+                    continue
+                counted_qty = _safe_int(raw_count, minimum=0)
+                note_value = (request.POST.get(f"notes_{entry.id}") or "").strip()
+                entry.apply_count(counted_qty, notes=note_value)
+                updated += 1
+
+            messages.success(request, f"Updated {updated} cycle count entry/entries.")
+            _log_inventory_activity(
+                request,
+                action="inventory_cycle_count_saved",
+                object_type="inventory_cycle_count",
+                object_id=session.pk,
+                description=f"Saved counts for session {session.pk}",
+                metadata={"updated_entries": updated},
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "close_cycle_count":
+            session_id = _safe_int(request.POST.get("session_id"), minimum=1)
+            session = CycleCountSession.objects.filter(
+                user=business_user,
+                status="open",
+                pk=session_id,
+            ).first()
+            if not session:
+                messages.error(request, "Cycle count session not found.")
+                return redirect("accounts:inventory_operations")
+
+            session.close(actor=request.user)
+            messages.success(request, "Cycle count session closed and adjustments posted.")
+            _log_inventory_activity(
+                request,
+                action="inventory_cycle_count_closed",
+                object_type="inventory_cycle_count",
+                object_id=session.pk,
+                description=f"Closed cycle count session {session.pk}",
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "create_rma":
+            product_id = _safe_int(request.POST.get("product_id"), minimum=1)
+            product = Product.objects.filter(pk=product_id, user__in=product_user_ids).first()
+            if not product:
+                messages.error(request, "Selected product was not found.")
+                return redirect("accounts:inventory_operations")
+
+            rma_type = (request.POST.get("rma_type") or "core").strip()
+            if rma_type not in {choice[0] for choice in ProductRMA._meta.get_field("rma_type").choices}:
+                rma_type = "core"
+            status_value = (request.POST.get("status") or "open").strip()
+            if status_value not in {choice[0] for choice in ProductRMA._meta.get_field("status").choices}:
+                status_value = "open"
+
+            supplier_id = _safe_int(request.POST.get("supplier_id"), minimum=1)
+            customer_id = _safe_int(request.POST.get("customer_id"), minimum=1)
+            supplier = Supplier.objects.filter(id=supplier_id, user__in=product_user_ids).first()
+            customer = Customer.objects.filter(id=customer_id, user=business_user).first()
+
+            expected_credit = None
+            if request.POST.get("expected_credit"):
+                expected_credit = _safe_decimal(
+                    request.POST.get("expected_credit"),
+                    default=Decimal("0.00"),
+                    minimum=Decimal("0.00"),
+                )
+
+            rma = ProductRMA.objects.create(
+                user=business_user,
+                product=product,
+                supplier=supplier or product.supplier,
+                customer=customer,
+                rma_type=rma_type,
+                status=status_value,
+                quantity=_safe_int(request.POST.get("quantity"), default=1, minimum=1),
+                reason=(request.POST.get("reason") or "").strip(),
+                supplier_reference=(request.POST.get("supplier_reference") or "").strip(),
+                due_date=_parse_date_input(request.POST.get("due_date")),
+                expected_credit=expected_credit,
+                opened_by=request.user,
+            )
+
+            if rma.status in {"received", "credited", "closed"}:
+                rma.apply_stock_adjustment(actor=request.user)
+
+            messages.success(request, f"Created RMA {rma.rma_number}.")
+            _log_inventory_activity(
+                request,
+                action="inventory_rma_created",
+                object_type="inventory_rma",
+                object_id=rma.pk,
+                description=f"Created RMA {rma.rma_number} for {product.name}",
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "update_rma_status":
+            rma_id = _safe_int(request.POST.get("rma_id"), minimum=1)
+            rma = ProductRMA.objects.filter(user=business_user, pk=rma_id).first()
+            if not rma:
+                messages.error(request, "RMA not found.")
+                return redirect("accounts:inventory_operations")
+
+            status_value = (request.POST.get("status") or "").strip()
+            if status_value not in {choice[0] for choice in ProductRMA._meta.get_field("status").choices}:
+                messages.error(request, "Invalid RMA status.")
+                return redirect("accounts:inventory_operations")
+
+            rma.status = status_value
+            if request.POST.get("actual_credit"):
+                rma.actual_credit = _safe_decimal(
+                    request.POST.get("actual_credit"),
+                    default=Decimal("0.00"),
+                    minimum=Decimal("0.00"),
+                )
+            rma.save(update_fields=["status", "actual_credit", "updated_at"])
+            stock_adjusted = False
+            if status_value in {"received", "credited", "closed"}:
+                stock_adjusted = rma.apply_stock_adjustment(actor=request.user)
+
+            messages.success(request, f"RMA {rma.rma_number} updated.")
+            _log_inventory_activity(
+                request,
+                action="inventory_rma_updated",
+                object_type="inventory_rma",
+                object_id=rma.pk,
+                description=f"RMA {rma.rma_number} set to {status_value}",
+                metadata={"stock_adjusted": stock_adjusted},
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "create_fleet_list":
+            list_name = (request.POST.get("name") or "").strip()
+            if not list_name:
+                messages.error(request, "Fleet list name is required.")
+                return redirect("accounts:inventory_operations")
+            vehicle_id = _safe_int(request.POST.get("fleet_vehicle_id"), minimum=1)
+            vehicle = FleetVehicle.objects.filter(user=business_user, pk=vehicle_id).first()
+            fleet_list = FleetPartList.objects.create(
+                user=business_user,
+                fleet_vehicle=vehicle,
+                name=list_name,
+                notes=(request.POST.get("notes") or "").strip(),
+                created_by=request.user,
+            )
+            messages.success(request, f"Created fleet part list '{fleet_list.name}'.")
+            _log_inventory_activity(
+                request,
+                action="inventory_fleet_list_created",
+                object_type="inventory_fleet_list",
+                object_id=fleet_list.pk,
+                description=f"Created fleet list {fleet_list.name}",
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "add_fleet_list_item":
+            fleet_list_id = _safe_int(request.POST.get("fleet_list_id"), minimum=1)
+            product_id = _safe_int(request.POST.get("product_id"), minimum=1)
+            fleet_list = FleetPartList.objects.filter(user=business_user, pk=fleet_list_id).first()
+            product = Product.objects.filter(pk=product_id, user__in=product_user_ids).first()
+            if not fleet_list or not product:
+                messages.error(request, "Fleet list or product not found.")
+                return redirect("accounts:inventory_operations")
+
+            item, created = FleetPartListItem.objects.get_or_create(
+                part_list=fleet_list,
+                product=product,
+                defaults={
+                    "quantity": _safe_int(request.POST.get("quantity"), default=1, minimum=1),
+                },
+            )
+            item.quantity = _safe_int(request.POST.get("quantity"), default=item.quantity or 1, minimum=1)
+            item.install_interval_days = _safe_int(request.POST.get("install_interval_days"), default=0, minimum=0) or None
+            item.install_interval_km = _safe_int(request.POST.get("install_interval_km"), default=0, minimum=0) or None
+            item.is_required = request.POST.get("is_required") in {"on", "true", "1"}
+            item.notes = (request.POST.get("notes") or "").strip()
+            item.save()
+
+            messages.success(request, f"{'Added' if created else 'Updated'} fleet list item for {product.name}.")
+            _log_inventory_activity(
+                request,
+                action="inventory_fleet_list_item_saved",
+                object_type="inventory_fleet_list_item",
+                object_id=item.pk,
+                description=f"Saved fleet list item {product.name}",
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "update_margin_guardrails":
+            guardrail, _ = MarginGuardrailSetting.objects.get_or_create(user=business_user)
+            min_margin = _safe_decimal(request.POST.get("min_margin_percent"), default=guardrail.min_margin_percent, minimum=Decimal("0.00"))
+            warning_margin = _safe_decimal(request.POST.get("warning_margin_percent"), default=guardrail.warning_margin_percent, minimum=Decimal("0.00"))
+            if warning_margin < min_margin:
+                warning_margin = min_margin
+
+            guardrail.min_margin_percent = min_margin
+            guardrail.warning_margin_percent = warning_margin
+            guardrail.enforce_min_margin = request.POST.get("enforce_min_margin") in {"on", "true", "1"}
+            try:
+                guardrail.full_clean()
+                guardrail.save()
+                messages.success(request, "Margin guardrail settings updated.")
+            except ValidationError as exc:
+                messages.error(request, "; ".join(exc.messages))
+            else:
+                _log_inventory_activity(
+                    request,
+                    action="inventory_margin_guardrails_updated",
+                    object_type="inventory_margin_guardrails",
+                    object_id=guardrail.pk,
+                    description="Updated margin guardrail settings",
+                )
+            return redirect("accounts:inventory_operations")
+
+        if action == "create_dispatch":
+            destination_name = (request.POST.get("destination_name") or "").strip()
+            if not destination_name:
+                messages.error(request, "Destination name is required for dispatch.")
+                return redirect("accounts:inventory_operations")
+
+            po_id = _safe_int(request.POST.get("purchase_order_id"), minimum=1)
+            supplier_id = _safe_int(request.POST.get("supplier_id"), minimum=1)
+            customer_id = _safe_int(request.POST.get("customer_id"), minimum=1)
+            dispatch = DispatchTicket.objects.create(
+                user=business_user,
+                purchase_order=PurchaseOrder.objects.filter(user=business_user, pk=po_id).first(),
+                supplier=Supplier.objects.filter(user__in=product_user_ids, pk=supplier_id).first(),
+                customer=Customer.objects.filter(user=business_user, pk=customer_id).first(),
+                destination_name=destination_name,
+                destination_address=(request.POST.get("destination_address") or "").strip(),
+                scheduled_at=_parse_datetime_input(request.POST.get("scheduled_at")),
+                driver_name=(request.POST.get("driver_name") or "").strip(),
+                vehicle_reference=(request.POST.get("vehicle_reference") or "").strip(),
+                tracking_notes=(request.POST.get("tracking_notes") or "").strip(),
+                created_by=request.user,
+            )
+            messages.success(request, f"Dispatch ticket {dispatch.reference_number} created.")
+            _log_inventory_activity(
+                request,
+                action="inventory_dispatch_created",
+                object_type="inventory_dispatch",
+                object_id=dispatch.pk,
+                description=f"Created dispatch ticket {dispatch.reference_number}",
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "update_dispatch_status":
+            dispatch_id = _safe_int(request.POST.get("dispatch_id"), minimum=1)
+            status_value = (request.POST.get("status") or "").strip()
+            dispatch = DispatchTicket.objects.filter(user=business_user, pk=dispatch_id).first()
+            if not dispatch:
+                messages.error(request, "Dispatch ticket not found.")
+                return redirect("accounts:inventory_operations")
+            if status_value not in {choice[0] for choice in DispatchTicket._meta.get_field("status").choices}:
+                messages.error(request, "Invalid dispatch status.")
+                return redirect("accounts:inventory_operations")
+
+            note = (request.POST.get("tracking_note") or "").strip()
+            if note:
+                existing_notes = dispatch.tracking_notes or ""
+                dispatch.tracking_notes = f"{existing_notes}\n{note}".strip()
+            dispatch.status = status_value
+            dispatch.save()
+            messages.success(request, f"Dispatch {dispatch.reference_number} updated.")
+            _log_inventory_activity(
+                request,
+                action="inventory_dispatch_updated",
+                object_type="inventory_dispatch",
+                object_id=dispatch.pk,
+                description=f"Dispatch {dispatch.reference_number} moved to {dispatch.status}",
+            )
+            return redirect("accounts:inventory_operations")
+
+        if action == "refresh_supplier_scorecards":
+            period_days = _safe_int(request.POST.get("period_days"), default=90, minimum=30)
+            scorecards = _build_supplier_scorecards(
+                business_user=business_user,
+                since_date=timezone.now() - timedelta(days=period_days),
+                period_days=period_days,
+            )
+            snapshot_date = timezone.localdate()
+            saved_count = 0
+            for entry in scorecards:
+                SupplierScorecardSnapshot.objects.update_or_create(
+                    user=business_user,
+                    supplier=entry["supplier"],
+                    snapshot_date=snapshot_date,
+                    period_days=period_days,
+                    defaults={
+                        "po_count": entry["po_count"],
+                        "on_time_rate": entry["on_time_rate"],
+                        "fill_rate": entry["fill_rate"],
+                        "avg_lead_time_days": entry["avg_lead_time_days"],
+                        "rma_rate": entry["rma_rate"],
+                        "weighted_score": entry["weighted_score"],
+                    },
+                )
+                saved_count += 1
+            messages.success(request, f"Refreshed supplier scorecards for {saved_count} supplier(s).")
+            _log_inventory_activity(
+                request,
+                action="inventory_supplier_scorecards_refreshed",
+                object_type="inventory_supplier_scorecard",
+                description=f"Refreshed supplier scorecards ({period_days} days)",
+                metadata={"supplier_count": saved_count, "period_days": period_days},
+            )
+            return redirect("accounts:inventory_operations")
+
+        messages.info(request, "No operation was executed.")
+        return redirect("accounts:inventory_operations")
+
+    products = annotate_products_with_stock(
+        Product.objects.filter(user__in=product_user_ids, item_type="inventory")
+        .select_related("supplier")
+        .order_by("name"),
+        request.user,
+    )
+    products = apply_stock_fields(list(products))
+
+    guardrail, _ = MarginGuardrailSetting.objects.get_or_create(user=business_user)
+
+    rule_map = {
+        rule.product_id: rule
+        for rule in ReplenishmentRule.objects.filter(
+            user=business_user,
+            product_id__in=[product.id for product in products],
+        )
+    }
+
+    low_stock_products = [product for product in products if product.quantity_in_stock < product.reorder_level]
+    replenishment_rows = []
+    for product in low_stock_products[:30]:
+        recommendation = _recommended_reorder_for_product(
+            product,
+            transaction_scope=transaction_scope,
+            rule=rule_map.get(product.id),
+        )
+        replenishment_rows.append(
+            {
+                "product": product,
+                "rule": rule_map.get(product.id),
+                "recommendation": recommendation,
+            }
+        )
+
+    purchase_orders = (
+        PurchaseOrder.objects.filter(user=business_user)
+        .select_related("supplier")
+        .prefetch_related("items__product")
+        .order_by("-created_at")[:20]
+    )
+    open_purchase_orders = [po for po in purchase_orders if po.status not in {"received", "cancelled"}]
+
+    open_cycle_session = (
+        CycleCountSession.objects.filter(user=business_user, status="open")
+        .prefetch_related("entries__product")
+        .first()
+    )
+    recent_cycle_sessions = CycleCountSession.objects.filter(user=business_user).order_by("-started_at")[:10]
+
+    rma_entries = (
+        ProductRMA.objects.filter(user=business_user)
+        .select_related("product", "supplier", "customer")
+        .order_by("-opened_at")[:25]
+    )
+
+    fleet_lists = (
+        FleetPartList.objects.filter(user=business_user, is_active=True)
+        .select_related("fleet_vehicle")
+        .prefetch_related("items__product")
+        .order_by("name")[:20]
+    )
+
+    dispatch_tickets = (
+        DispatchTicket.objects.filter(user=business_user)
+        .select_related("purchase_order", "supplier", "customer")
+        .order_by("-created_at")[:20]
+    )
+
+    scorecards = _build_supplier_scorecards(
+        business_user=business_user,
+        since_date=timezone.now() - timedelta(days=90),
+        period_days=90,
+    )
+    latest_snapshots = (
+        SupplierScorecardSnapshot.objects.filter(user=business_user)
+        .select_related("supplier")
+        .order_by("-snapshot_date", "-created_at")[:20]
+    )
+
+    team_user_ids = sorted(set(get_product_user_ids(request.user) + [business_user.id]))
+    team_users = User.objects.filter(id__in=team_user_ids).order_by("username")
+    role_assignments = {
+        assignment.member_id: assignment
+        for assignment in InventoryRoleAssignment.objects.filter(business=business_user, member_id__in=team_user_ids)
+    }
+    role_rows = []
+    for member in team_users:
+        assignment = role_assignments.get(member.id)
+        resolved_role = InventoryRoleAssignment.resolve_role(business_user, member)
+        role_rows.append(
+            {
+                "member": member,
+                "assignment": assignment,
+                "resolved_role": resolved_role,
+            }
+        )
+
+    margin_alerts = []
+    for product in products:
+        margin_percent = _calculate_margin_percent(product.cost_price, product.sale_price)
+        if margin_percent is None:
+            continue
+        if margin_percent >= guardrail.warning_margin_percent:
+            continue
+        margin_alerts.append(
+            {
+                "product": product,
+                "margin_percent": margin_percent,
+                "below_floor": margin_percent < guardrail.min_margin_percent,
+            }
+        )
+    margin_alerts.sort(key=lambda entry: (entry["margin_percent"], entry["product"].name))
+    margin_alerts = margin_alerts[:25]
+
+    now_ts = timezone.now()
+    dead_stock_candidates = []
+    dead_stock_buckets = {
+        "bucket_60_89": 0,
+        "bucket_90_179": 0,
+        "bucket_180_plus": 0,
+    }
+    dead_stock_qs = Product.objects.filter(user__in=product_user_ids, item_type="inventory").annotate(
+        last_sale=Max(
+            "transactions__transaction_date",
+            filter=Q(transactions__transaction_type="OUT") & _product_transaction_scope_filter(_get_inventory_transaction_user_ids(request)),
+        )
+    )
+    for product in dead_stock_qs:
+        if product.last_sale:
+            days_unsold = max((now_ts - product.last_sale).days, 0)
+        else:
+            days_unsold = 9999
+        if days_unsold >= 180:
+            dead_stock_buckets["bucket_180_plus"] += 1
+        elif days_unsold >= 90:
+            dead_stock_buckets["bucket_90_179"] += 1
+        elif days_unsold >= 60:
+            dead_stock_buckets["bucket_60_89"] += 1
+        if days_unsold >= 60:
+            dead_stock_candidates.append(
+                {
+                    "product": product,
+                    "days_unsold": days_unsold,
+                    "last_sale": product.last_sale,
+                }
+            )
+    dead_stock_candidates.sort(key=lambda entry: (-entry["days_unsold"], entry["product"].name))
+    dead_stock_candidates = dead_stock_candidates[:25]
+
+    inventory_audit_logs = (
+        ActivityLog.objects.filter(
+            business=business_user,
+            object_type__startswith="inventory_",
+        )
+        .select_related("actor")
+        .order_by("-created_at")[:30]
+    )
+
+    capabilities = {
+        InventoryRoleAssignment.CAP_PURCHASE_ORDERS: _can_inventory(request, InventoryRoleAssignment.CAP_PURCHASE_ORDERS),
+        InventoryRoleAssignment.CAP_CYCLE_COUNTS: _can_inventory(request, InventoryRoleAssignment.CAP_CYCLE_COUNTS),
+        InventoryRoleAssignment.CAP_REPLENISHMENT: _can_inventory(request, InventoryRoleAssignment.CAP_REPLENISHMENT),
+        InventoryRoleAssignment.CAP_RMA: _can_inventory(request, InventoryRoleAssignment.CAP_RMA),
+        InventoryRoleAssignment.CAP_FLEET_LISTS: _can_inventory(request, InventoryRoleAssignment.CAP_FLEET_LISTS),
+        InventoryRoleAssignment.CAP_MARGIN_GUARDRAILS: _can_inventory(request, InventoryRoleAssignment.CAP_MARGIN_GUARDRAILS),
+        InventoryRoleAssignment.CAP_DISPATCH: _can_inventory(request, InventoryRoleAssignment.CAP_DISPATCH),
+        InventoryRoleAssignment.CAP_SUPPLIER_SCORECARDS: _can_inventory(request, InventoryRoleAssignment.CAP_SUPPLIER_SCORECARDS),
+        InventoryRoleAssignment.CAP_ROLE_ADMIN: _can_inventory(request, InventoryRoleAssignment.CAP_ROLE_ADMIN),
+    }
+
+    context = {
+        "inventory_role": _get_inventory_role(request),
+        "capabilities": capabilities,
+        "purchase_orders": purchase_orders,
+        "open_purchase_orders": open_purchase_orders,
+        "replenishment_rows": replenishment_rows,
+        "open_cycle_session": open_cycle_session,
+        "recent_cycle_sessions": recent_cycle_sessions,
+        "rma_entries": rma_entries,
+        "fleet_lists": fleet_lists,
+        "dispatch_tickets": dispatch_tickets,
+        "scorecards": scorecards,
+        "latest_snapshots": latest_snapshots,
+        "team_users": team_users,
+        "role_assignments": role_assignments,
+        "role_rows": role_rows,
+        "guardrail": guardrail,
+        "margin_alerts": margin_alerts,
+        "dead_stock_buckets": dead_stock_buckets,
+        "dead_stock_candidates": dead_stock_candidates,
+        "inventory_audit_logs": inventory_audit_logs,
+        "products_for_forms": products[:300],
+        "suppliers_for_forms": Supplier.objects.filter(user__in=product_user_ids).order_by("name"),
+        "customers_for_forms": Customer.objects.filter(user=business_user).order_by("name"),
+        "fleet_vehicles_for_forms": FleetVehicle.objects.filter(user=business_user).order_by("truck_number", "vin_number"),
+        "fleet_lists_for_forms": fleet_lists,
+        "rma_type_choices": ProductRMA._meta.get_field("rma_type").choices,
+        "rma_status_choices": ProductRMA._meta.get_field("status").choices,
+        "dispatch_status_choices": DispatchTicket._meta.get_field("status").choices,
+        "po_status_choices": PurchaseOrder._meta.get_field("status").choices,
+        "role_choices": InventoryRoleAssignment._meta.get_field("role").choices,
+    }
+    return render(request, "inventory/operations.html", context)

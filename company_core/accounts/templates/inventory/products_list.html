@@ -409,6 +409,12 @@
                     </div>
                     <div class="tab-pane fade" id="create-pane-catalog" role="tabpanel" aria-labelledby="create-tab-catalog" data-attribute-context="create-product">
                         <div class="row g-3">
+                            <div class="col-12">
+                                <div class="catalog-pane-intro">
+                                    <div class="catalog-pane-title">Catalog details</div>
+                                    <div class="catalog-pane-copy">Link this product to category, supplier, brand, model, VIN, and location.</div>
+                                </div>
+                            </div>
                             <div class="col-lg-4">
                                 <label for="newProductCategory" class="form-label">Category</label>
                                 <div class="input-group catalog-input-group">
@@ -466,7 +472,7 @@
                                 </div>
                             </div>
                             <div class="col-lg-4">
-                                <label for="newProductVin" class="form-label">VIN</label>
+                                <label for="newProductVin" class="form-label">VIN number</label>
                                 <div class="input-group catalog-input-group">
                                     <select class="form-select" id="newProductVin">
                                         <option value="">No VIN</option>
@@ -480,7 +486,7 @@
                                 </div>
                             </div>
                             <div class="col-lg-2">
-                                <label for="newProductItemType" class="form-label">Type</label>
+                                <label for="newProductItemType" class="form-label">Item type</label>
                                 <select class="form-select" id="newProductItemType">
                                     {% for value, label in item_type_choices %}
                                     <option value="{{ value }}">{{ label }}</option>
@@ -503,13 +509,16 @@
                             </div>
                             <div class="col-12">
                                 <div class="catalog-attribute-shell">
-                                    <div class="attribute-create-actions">
+                                    <div class="catalog-attribute-head">
+                                        <div>
+                                            <div class="catalog-attribute-title">Category attributes</div>
+                                            <div class="catalog-attribute-subtitle">These fields update based on the selected category and save with this product.</div>
+                                        </div>
                                         <button type="button" class="btn btn-outline-primary btn-sm" data-attribute-create-toggle>
                                             <i class="fas fa-plus me-1"></i> Create custom attribute
                                         </button>
-                                        <span class="form-text text-muted">Attributes are loaded from the selected category.</span>
                                     </div>
-                                    <div class="form-group mt-3" data-attribute-fields="true" data-attribute-url="{% url 'accounts:get_attribute_fields' %}" data-product-id="" data-empty-message="Select a category above to load custom attributes.">
+                                    <div class="form-group mt-3 catalog-attribute-fields" data-attribute-fields="true" data-attribute-url="{% url 'accounts:get_attribute_fields' %}" data-product-id="" data-empty-message="Select a category above to load custom attributes.">
                                         <div class="text-muted small">Select a category above to load custom attributes.</div>
                                     </div>
                                     <div class="attribute-create-wrapper">
@@ -1821,6 +1830,33 @@
         padding: 0.85rem 1.25rem;
     }
 
+    #createProductModal #create-pane-catalog .form-label {
+        margin-bottom: 0.45rem;
+        font-size: 0.84rem;
+        font-weight: 700;
+        color: #334155;
+    }
+
+    #createProductModal .catalog-pane-intro {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+        padding: 0.75rem 0.9rem;
+    }
+
+    #createProductModal .catalog-pane-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.2;
+    }
+
+    #createProductModal .catalog-pane-copy {
+        margin-top: 0.15rem;
+        font-size: 0.79rem;
+        color: #64748b;
+    }
+
     #createProductModal .catalog-input-group .form-select {
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
@@ -1845,17 +1881,41 @@
 
     #createProductModal .catalog-attribute-shell {
         margin-top: 0.25rem;
-        padding: 1rem;
+        padding: 1rem 1rem 0.95rem;
         border-radius: 14px;
         border: 1px solid #e2e8f0;
         background: #ffffff;
     }
 
-    #createProductModal .attribute-create-actions {
+    #createProductModal .catalog-attribute-head {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
+        justify-content: space-between;
         gap: 0.75rem;
+    }
+
+    #createProductModal .catalog-attribute-title {
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    #createProductModal .catalog-attribute-subtitle {
+        margin-top: 0.12rem;
+        font-size: 0.79rem;
+        color: #64748b;
+    }
+
+    #createProductModal .catalog-attribute-fields {
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        background: #f8fafc;
+        padding: 0.8rem 0.85rem;
+    }
+
+    #createProductModal .attribute-fields-grid {
+        margin: 0;
     }
 
     #createProductModal .attribute-create-wrapper {
@@ -1934,6 +1994,10 @@
 
     #createProductModal .attribute-edit-link:hover {
         text-decoration: underline;
+    }
+
+    #createProductModal .attribute-empty-state {
+        padding: 0.1rem 0;
     }
 
     @media (max-width: 991.98px) {
@@ -2106,6 +2170,77 @@
 
     #editProductModal .btn-link {
         font-weight: 600;
+    }
+
+    #editProductModal #edit-pane-catalog .form-label {
+        margin-bottom: 0.45rem;
+        font-size: 0.84rem;
+        font-weight: 700;
+        color: #334155;
+    }
+
+    #editProductModal .catalog-pane-intro {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #f8fafc;
+        padding: 0.72rem 0.9rem;
+    }
+
+    #editProductModal .catalog-pane-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.2;
+    }
+
+    #editProductModal .catalog-pane-copy {
+        margin-top: 0.15rem;
+        font-size: 0.79rem;
+        color: #64748b;
+    }
+
+    #editProductModal .catalog-attributes-card {
+        margin-top: 0.25rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+        padding: 0.85rem 0.9rem 0.9rem;
+    }
+
+    #editProductModal .catalog-attributes-header {
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    #editProductModal .catalog-attributes-copy {
+        margin-top: 0.12rem;
+        font-size: 0.79rem;
+        color: #64748b;
+    }
+
+    #editProductModal .catalog-attributes-fields {
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        background: #f8fafc;
+        padding: 0.8rem 0.85rem;
+    }
+
+    #editProductModal .attribute-fields-grid {
+        margin: 0;
+    }
+
+    #editProductModal .catalog-tab-note {
+        border: 1px solid #dbeafe;
+        border-radius: 12px;
+        background: #eff6ff;
+        color: #1e40af;
+        padding: 0.7rem 0.85rem;
+        font-size: 0.84rem;
+    }
+
+    #editProductModal .attribute-empty-state {
+        padding: 0.1rem 0;
     }
 
     #editProductModal .attribute-create-actions {
@@ -4864,6 +4999,10 @@
                     }
                 }
                 initializeAttributeCreatePanel(createProductModal);
+                const categoryInput = document.getElementById('newProductCategory');
+                if (categoryInput && categoryInput.value) {
+                    fetchAttributeFields(categoryInput);
+                }
             });
         }
 

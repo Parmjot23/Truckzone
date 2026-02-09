@@ -14,6 +14,7 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.min.css">
 
     <style>
         :root {
@@ -847,9 +848,10 @@
             .app-loading-ring { animation: none; }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/portal_redesign.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body class="sidebar-initializing{% if ui_scale_is_active %} ui-scale-active{% endif %}{% block body_class %}{% endblock %}" style="--ui-scale-factor: {{ ui_scale_factor }}; --ui-font-size-factor: {{ ui_portal_font_size_factor }}; --font-primary: {{ ui_portal_font_family_css }}; --font-heading: {{ ui_portal_heading_font_family_css }}; --font-body-weight: {{ ui_portal_font_weight }}; --font-heading-weight: {{ ui_portal_heading_font_weight }};">
+<body class="business-portal-app sidebar-initializing{% if ui_scale_is_active %} ui-scale-active{% endif %}{% block body_class %}{% endblock %}" style="--ui-scale-factor: {{ ui_scale_factor }}; --ui-font-size-factor: {{ ui_portal_font_size_factor }}; --font-primary: {{ ui_portal_font_family_css }}; --font-heading: {{ ui_portal_heading_font_family_css }}; --font-body-weight: {{ ui_portal_font_weight }}; --font-heading-weight: {{ ui_portal_heading_font_weight }};">
     <script>
         (function() {
             try {
@@ -881,65 +883,65 @@
             <nav class="sidebar-nav">
                 {% with occupation=request.user.profile.occupation|default:""|lower %}
                 <a href="{% url 'accounts:home' %}" class="sidebar-link" data-nav="dashboard" aria-label="Dashboard" title="Dashboard">
-                    <i class="fa-solid fa-gauge-high"></i>
+                    <i class="ri-dashboard-line"></i>
                     <span class="sidebar-label">Dashboard</span>
                 </a>
                 <a href="{% url 'accounts:customer_list' %}" class="sidebar-link" data-nav="customers" aria-label="Customers" title="Customers">
-                    <i class="fa-solid fa-users"></i>
+                    <i class="ri-group-line"></i>
                     <span class="sidebar-label">Customers</span>
                 </a>
                 <a href="{% url 'accounts:supplier_list' %}" class="sidebar-link" data-nav="suppliers" aria-label="Suppliers" title="Suppliers">
-                    <i class="fa-solid fa-handshake-angle"></i>
+                    <i class="ri-shake-hands-line"></i>
                     <span class="sidebar-label">Suppliers</span>
                 </a>
                 <div class="sidebar-group" data-sidebar-group="invoices">
                     <div class="sidebar-group-header">
                         <a href="{% url 'accounts:groupedinvoice_list' %}" class="sidebar-link" data-nav="invoices" aria-label="Invoices" title="Invoices">
-                            <i class="fa-solid fa-file-invoice"></i>
+                            <i class="ri-file-list-3-line"></i>
                             <span class="sidebar-label">Invoices</span>
                         </a>
                         <button type="button" class="sidebar-subtoggle" data-submenu-toggle aria-label="Toggle invoices menu" aria-expanded="false" aria-controls="invoicesSubnav">
-                            <i class="fa-solid fa-chevron-down"></i>
+                            <i class="ri-arrow-down-s-line"></i>
                         </button>
                     </div>
                     <div class="sidebar-subnav" id="invoicesSubnav">
                         <a href="{% url 'accounts:pending_invoice_list' %}" class="sidebar-link sidebar-sublink" data-nav="pending" aria-label="Pending invoices" title="Pending invoices">
-                            <i class="fa-regular fa-clock"></i>
+                            <i class="ri-time-line"></i>
                             <span class="sidebar-label">Pending invoices</span>
                         </a>
                         <a href="{% url 'accounts:overdue_invoice_list' %}" class="sidebar-link sidebar-sublink" data-nav="overdue" aria-label="Overdue invoices" title="Overdue invoices">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <i class="ri-alert-line"></i>
                             <span class="sidebar-label">Overdue invoices</span>
                         </a>
                         <a href="{% url 'accounts:customer_credit_list' %}" class="sidebar-link sidebar-sublink" data-nav="customer-credits" aria-label="Customer credits" title="Customer credits">
-                            <i class="fa-solid fa-undo-alt"></i>
+                            <i class="ri-arrow-go-back-line"></i>
                             <span class="sidebar-label">Customer credits</span>
                         </a>
                     </div>
                 </div>
                 {% if occupation != 'parts_store' %}
                 <a href="{% url 'accounts:workorder_list' %}" class="sidebar-link" data-nav="workorders" aria-label="Workorders" title="Workorders">
-                    <i class="fa-solid fa-clipboard-check"></i>
+                    <i class="ri-file-check-line"></i>
                     <span class="sidebar-label">Workorders</span>
                 </a>
                 {% endif %}
                 <div class="sidebar-group" data-sidebar-group="bills">
                     <div class="sidebar-group-header">
                         <a href="{% url 'accounts:mechexpense_list' %}" class="sidebar-link" data-nav="bills" aria-label="Bills" title="Bills">
-                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                            <i class="ri-bill-line"></i>
                             <span class="sidebar-label">Bills</span>
                         </a>
                         <button type="button" class="sidebar-subtoggle" data-submenu-toggle aria-label="Toggle bills menu" aria-expanded="false" aria-controls="billsSubnav">
-                            <i class="fa-solid fa-chevron-down"></i>
+                            <i class="ri-arrow-down-s-line"></i>
                         </button>
                     </div>
                     <div class="sidebar-subnav" id="billsSubnav">
                         <a href="{% url 'accounts:supplier_credit_list' %}" class="sidebar-link sidebar-sublink" data-nav="supplier-credits" aria-label="Supplier credits" title="Supplier credits">
-                            <i class="fa-solid fa-undo-alt"></i>
+                            <i class="ri-arrow-go-back-line"></i>
                             <span class="sidebar-label">Supplier credits</span>
                         </a>
                         <a href="{% url 'accounts:supplier_cheque_list' %}" class="sidebar-link sidebar-sublink" data-nav="supplier-cheques" aria-label="Supplier cheques" title="Supplier cheques">
-                            <i class="fa-solid fa-money-check"></i>
+                            <i class="ri-bank-card-line"></i>
                             <span class="sidebar-label">Supplier cheques</span>
                         </a>
                     </div>
@@ -947,48 +949,48 @@
                 <div class="sidebar-group" data-sidebar-group="inventory">
                     <div class="sidebar-group-header">
                         <a href="{% url 'accounts:inventory_hub' %}" class="sidebar-link" data-nav="inventory" aria-label="Inventory" title="Inventory">
-                            <i class="fa-solid fa-boxes-stacked"></i>
+                            <i class="ri-box-3-line"></i>
                             <span class="sidebar-label">Inventory</span>
                         </a>
                         <button type="button" class="sidebar-subtoggle" data-submenu-toggle aria-label="Toggle inventory menu" aria-expanded="false" aria-controls="inventorySubnav">
-                            <i class="fa-solid fa-chevron-down"></i>
+                            <i class="ri-arrow-down-s-line"></i>
                         </button>
                     </div>
                     <div class="sidebar-subnav" id="inventorySubnav">
                         <a href="{% url 'accounts:inventory_products' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-products" aria-label="Products" title="Products">
-                            <i class="fa-solid fa-box"></i>
+                            <i class="ri-box-1-line"></i>
                             <span class="sidebar-label">Products</span>
                         </a>
                         <a href="{% url 'accounts:inventory_category_groups' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-category-groups" aria-label="Category groups" title="Category groups">
-                            <i class="fa-solid fa-layer-group"></i>
+                            <i class="ri-stack-line"></i>
                             <span class="sidebar-label">Category Groups</span>
                         </a>
                         <a href="{% url 'accounts:inventory_categories' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-categories" aria-label="Categories" title="Categories">
-                            <i class="fa-solid fa-tags"></i>
+                            <i class="ri-price-tag-3-line"></i>
                             <span class="sidebar-label">Categories</span>
                         </a>
                         <a href="{% url 'accounts:inventory_attributes' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-attributes" aria-label="Attributes" title="Attributes">
-                            <i class="fa-solid fa-sliders"></i>
+                            <i class="ri-equalizer-2-line"></i>
                             <span class="sidebar-label">Attributes</span>
                         </a>
                         <a href="{% url 'accounts:inventory_brands' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-brands" aria-label="Brands" title="Brands">
-                            <i class="fa-solid fa-certificate"></i>
+                            <i class="ri-award-line"></i>
                             <span class="sidebar-label">Brands</span>
                         </a>
                         <a href="{% url 'accounts:inventory_models' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-models" aria-label="Models" title="Models">
-                            <i class="fa-solid fa-truck"></i>
+                            <i class="ri-truck-line"></i>
                             <span class="sidebar-label">Models</span>
                         </a>
                         <a href="{% url 'accounts:inventory_vins' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-vins" aria-label="VINs" title="VINs">
-                            <i class="fa-solid fa-barcode"></i>
+                            <i class="ri-barcode-line"></i>
                             <span class="sidebar-label">VINs</span>
                         </a>
                         <a href="{% url 'accounts:inventory_suppliers' %}" class="sidebar-link sidebar-sublink" data-nav="inventory-suppliers" aria-label="Suppliers" title="Suppliers">
-                            <i class="fa-solid fa-truck-field"></i>
+                            <i class="ri-building-2-line"></i>
                             <span class="sidebar-label">Suppliers</span>
                         </a>
                         <a href="{% url 'accounts:service_list' %}" class="sidebar-link sidebar-sublink" data-nav="services" aria-label="Services" title="Services">
-                            <i class="fa-solid fa-list-check"></i>
+                            <i class="ri-task-line"></i>
                             <span class="sidebar-label">Services</span>
                         </a>
                     </div>
@@ -996,48 +998,48 @@
                 <div class="sidebar-group" data-sidebar-group="store-management">
                     <div class="sidebar-group-header">
                         <a href="{% url 'accounts:store_hub' %}" class="sidebar-link" data-nav="store-management" aria-label="Manage store" title="Manage store">
-                            <i class="fa-solid fa-store"></i>
+                            <i class="ri-store-2-line"></i>
                             <span class="sidebar-label">Manage Store</span>
                         </a>
                         <button type="button" class="sidebar-subtoggle" data-submenu-toggle aria-label="Toggle store menu" aria-expanded="false" aria-controls="storeSubnav">
-                            <i class="fa-solid fa-chevron-down"></i>
+                            <i class="ri-arrow-down-s-line"></i>
                         </button>
                     </div>
                     <div class="sidebar-subnav" id="storeSubnav">
                         <a href="{% url 'accounts:store_manage' %}" class="sidebar-link sidebar-sublink" data-nav="storefront-manage" aria-label="Storefront settings" title="Storefront settings">
-                            <i class="fa-solid fa-sliders"></i>
+                            <i class="ri-equalizer-2-line"></i>
                             <span class="sidebar-label">Storefront</span>
                         </a>
                         <a href="{% url 'accounts:store_hero' %}" class="sidebar-link sidebar-sublink" data-nav="storefront-hero" aria-label="Promotions" title="Promotions">
-                            <i class="fa-solid fa-tags"></i>
+                            <i class="ri-price-tag-3-line"></i>
                             <span class="sidebar-label">Promotions</span>
                         </a>
                         <a href="{% url 'accounts:store_product_list' %}" class="sidebar-link sidebar-sublink" data-nav="storefront-public" aria-label="Public storefront" title="Public storefront" target="_blank" rel="noopener">
-                            <i class="fa-solid fa-up-right-from-square"></i>
+                            <i class="ri-external-link-line"></i>
                             <span class="sidebar-label">Public Store</span>
                         </a>
                     </div>
                 </div>
                 {% if occupation != 'parts_store' %}
                 <a href="{% url 'accounts:maintenance_center' %}" class="sidebar-link" data-nav="maintenance" aria-label="Maintenance" title="Maintenance">
-                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                    <i class="ri-tools-line"></i>
                     <span class="sidebar-label">Maintenance</span>
                 </a>
                 {% endif %}
                 {% if occupation != 'parts_store' %}
                 <a href="{% url 'accounts:vehicle_management' %}#fleet" class="sidebar-link" data-nav="vehicles" aria-label="Vehicles" title="Vehicles">
-                    <i class="fa-solid fa-truck-front"></i>
+                    <i class="ri-truck-line"></i>
                     <span class="sidebar-label">Vehicles</span>
                 </a>
                 {% endif %}
                 {% if occupation != 'parts_store' %}
                 <a href="{% url 'accounts:payroll_settings' %}" class="sidebar-link" data-nav="payroll" aria-label="Payroll" title="Payroll">
-                    <i class="fa-solid fa-receipt"></i>
+                    <i class="ri-receipt-line"></i>
                     <span class="sidebar-label">Payroll</span>
                 </a>
                 {% endif %}
                 <a href="{% url 'accounts:accountant_hub' %}" class="sidebar-link" data-nav="accountant" aria-label="My accountant" title="My accountant">
-                    <i class="fa-solid fa-user-tie"></i>
+                    <i class="ri-user-star-line"></i>
                     <span class="sidebar-label">My accountant</span>
                 </a>
                 {% endwith %}
@@ -1045,18 +1047,18 @@
 
             <div class="sidebar-footer">
                 <a href="{% url 'accounts:mechanic_list' %}" class="sidebar-link sidebar-footer-link" data-nav="mechanics" aria-label="Mechanics" title="Mechanics">
-                    <i class="fa-solid fa-user-gear"></i>
+                    <i class="ri-user-settings-line"></i>
                 </a>
                 <a href="{% url 'accounts:account_settings' %}" class="sidebar-link sidebar-footer-link" data-nav="settings" aria-label="Settings" title="Settings">
-                    <i class="fa-solid fa-gear"></i>
+                    <i class="ri-settings-4-line"></i>
                 </a>
                 <a href="{% url 'accounts:communication_hub' %}" class="sidebar-link sidebar-footer-link" data-nav="communications" aria-label="Communication Hub" title="Communication Hub">
-                    <i class="fa-solid fa-comments"></i>
+                    <i class="ri-message-3-line"></i>
                 </a>
                 <form action="{% url 'accounts:logout' %}" method="post" class="sidebar-footer-form" aria-label="Logout">
                     {% csrf_token %}
                     <button type="submit" class="sidebar-footer-link" title="Logout" aria-label="Logout">
-                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        <i class="ri-logout-box-r-line"></i>
                     </button>
                 </form>
             </div>
@@ -1074,17 +1076,23 @@
         <div class="app-main">
             {% if portal_read_only %}
             <div class="app-topbar">
-                <div class="topbar-title">Accountant Portal</div>
+                <div class="topbar-title">
+                    <span class="topbar-eyebrow">Read-only workspace</span>
+                    <span class="topbar-heading">Accountant Portal</span>
+                </div>
                 <div class="topbar-actions">
                     <button type="button" class="ghost-btn" data-nav-action="back">
-                        <i class="fa-solid fa-arrow-left"></i> Back
+                        <i class="ri-arrow-left-line"></i> Back
                     </button>
                     <button type="button" class="ghost-btn" data-nav-action="forward">
-                        <i class="fa-solid fa-arrow-right"></i> Forward
+                        <i class="ri-arrow-right-line"></i> Forward
                     </button>
                     <a class="pill-btn" href="{% url 'accounts:accountant_portal_dashboard' %}">
-                        <i class="fa-solid fa-chart-line"></i> Portal
+                        <i class="ri-line-chart-line"></i> Portal
                     </a>
+                    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle color theme">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
                 </div>
             </div>
             {% endif %}
